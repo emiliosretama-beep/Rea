@@ -1,0 +1,18 @@
+{
+  "name": "rea-lovable",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rea Studio: crea páginas web describiéndolas en un chat, con vista previa en vivo.",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --watch --env-file-if-exists=.env server.js"
+  },
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0"
+  }
+}

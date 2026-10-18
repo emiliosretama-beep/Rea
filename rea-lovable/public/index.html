@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rea Studio</title>
+  <meta name="description" content="Crea páginas web describiéndolas en un chat." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- ============ INICIO ============ -->
+  <div id="home" class="view">
+    <div class="glow" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Rea Studio, inicio">
+        <img src="/favicon.svg" alt="" width="28" height="28" />
+        <span>Rea<b>Studio</b></span>
+      </a>
+      <span class="mode-badge" id="modeBadge">…</span>
+    </header>
+
+    <main class="home-main">
+      <p class="eyebrow">Construye · Inspecciona · Mejora</p>
+      <h1>Crea tu web <span class="grad">hablando</span>.</h1>
+      <p class="sub">Describe lo que quieres y Rea la construye en segundos. Luego inspecciona cada pieza y pule los detalles en el chat.</p>
+
+      <form id="homeForm" class="prompt-box">
+        <label for="homePrompt" class="sr-only">Describe tu web</label>
+        <textarea id="homePrompt" rows="3" placeholder="Una landing para mi cafetería &quot;Grano &amp; Horno&quot; con menú, horario y reservas…" required></textarea>
+        <div class="prompt-actions">
+          <span class="hint">Enter para enviar · Shift+Enter nueva línea</span>
+          <button class="send" type="submit" aria-label="Crear web">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </form>
+
+      <div class="chips" id="chips">
+        <button type="button" data-prompt="Landing para un restaurante de tacos llamado &quot;El Fogón&quot; con menú, ubicación y botón de reservas">🌮 Restaurante</button>
+        <button type="button" data-prompt="Página de presentación para mi videojuego indie &quot;Nova Rift&quot;, estilo oscuro y futurista, con tráiler, características y registro a la beta">🎮 Videojuego</button>
+        <button type="button" data-prompt="Portafolio personal de un desarrollador web joven, minimalista, con proyectos, habilidades y contacto">💼 Portafolio</button>
+        <button type="button" data-prompt="Tienda online de ropa urbana con catálogo de productos, carrito simple y ofertas">🛍️ Tienda</button>
+        <button type="button" data-prompt="Web para un gimnasio llamado &quot;Pulso Gym&quot; con planes de precios, horarios de clases y testimonios">💪 Gimnasio</button>
+      </div>
+
+      <section class="projects" aria-labelledby="projectsTitle">
+        <div class="projects-head">
+          <h2 id="projectsTitle">Tus proyectos</h2>
+          <span id="projectCount" class="muted"></span>
+        </div>
+        <div id="projectGrid" class="project-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============ EDITOR ============ -->
+  <div id="editor" class="view" hidden>
+    <header class="editor-bar">
+      <div class="bar-left">
+        <button class="icon-btn" id="backBtn" title="Volver a proyectos" aria-label="Volver a proyectos">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <img src="/favicon.svg" alt="" width="22" height="22" />
+        <input id="projectName" class="project-name" aria-label="Nombre del proyecto" />
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Panel">
+        <button role="tab" data-tab="preview" aria-selected="true">Vista</button>
+        <button role="tab" data-tab="code" aria-selected="false">Código</button>
+        <button role="tab" data-tab="audit" aria-selected="false">Análisis Rea</button>
+      </div>
+
+      <div class="bar-right">
+        <div class="devices" role="group" aria-label="Tamaño de vista previa">
+          <button data-device="desktop" class="active" title="Escritorio" aria-label="Escritorio">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button data-device="tablet" title="Tableta" aria-label="Tableta">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button data-device="mobile" title="Móvil" aria-label="Móvil">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <button class="pill" id="inspectBtn" aria-pressed="false" title="Haz clic en un elemento de la vista previa para editarlo">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 4l7 17 2.5-7.5L21 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Inspector
+        </button>
+        <div class="menu-wrap">
+          <button class="pill" id="versionsBtn" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7L3 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="versionLabel">v0</span>
+          </button>
+          <div class="menu" id="versionsMenu" hidden></div>
+        </div>
+        <button class="icon-btn" id="openBtn" title="Abrir en pestaña nueva" aria-label="Abrir en pestaña nueva">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn-primary" id="downloadBtn">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Descargar
+        </button>
+      </div>
+    </header>
+
+    <div class="editor-body">
+      <aside class="chat" aria-label="Chat">
+        <div class="messages" id="messages" aria-live="polite"></div>
+        <form class="chat-form" id="chatForm">
+          <div class="selection-chip" id="selectionChip" hidden>
+            <span>Editando: <code id="selectionLabel"></code></span>
+            <button type="button" id="clearSelection" aria-label="Quitar selección">×</button>
+          </div>
+          <label for="chatInput" class="sr-only">Pide un cambio</label>
+          <textarea id="chatInput" rows="2" placeholder="Pide un cambio: «haz el menú más grande», «añade una sección de precios»…"></textarea>
+          <div class="chat-actions">
+            <span class="muted small" id="statusText"></span>
+            <button class="send" id="chatSend" type="submit" aria-label="Enviar">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="send stop" id="chatStop" type="button" aria-label="Detener" hidden>
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="stage" aria-label="Resultado">
+        <div class="panel" data-panel="preview">
+          <div class="frame-wrap" id="frameWrap">
+            <iframe id="preview" title="Vista previa de la web" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+            <div class="building" id="building" hidden>
+              <div class="orb"></div>
+              <p id="buildingText">Pensando el diseño…</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="code" hidden>
+          <div class="code-bar">
+            <span class="muted small">index.html · <span id="codeSize">0 KB</span></span>
+            <div>
+              <button class="pill" id="copyCode">Copiar</button>
+              <button class="pill" id="saveCode">Guardar cambios</button>
+            </div>
+          </div>
+          <textarea id="codeArea" class="code-area" spellcheck="false" aria-label="Código HTML"></textarea>
+        </div>
+
+        <div class="panel" data-panel="audit" hidden>
+          <div class="audit">
+            <div class="audit-head">
+              <div>
+                <h2>Análisis Rea</h2>
+                <p class="muted">Revisión estática de la página con la evidencia de cada resultado.</p>
+              </div>
+              <div class="score" id="auditScore">–</div>
+            </div>
+            <ul class="checks" id="auditList"></ul>
+            <button class="btn-primary" id="fixBtn" hidden>Arreglar los problemas con Rea</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
