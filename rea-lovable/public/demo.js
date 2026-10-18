@@ -109,7 +109,7 @@ const FALLBACK = {
   kind: "negocio",
   name: "Tu Marca",
   tagline: "Una web clara para contar lo que haces.",
-  accent: "#ff5a36",
+  accent: "#f04e23",
   seed: "city",
   sections: [
     [
