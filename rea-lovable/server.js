@@ -1,4 +1,4 @@
-// Rea Studio — servidor local.
+// ERA Studio — servidor local.
 // Sirve la interfaz (carpeta public/) y expone POST /api/generate, que pide a
 // Claude la página completa y la reenvía al navegador en streaming (SSE).
 // Sin credenciales funciona en "modo demo" con plantillas locales.
@@ -177,7 +177,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`\n  Rea Studio listo en http://localhost:${PORT}`);
+  console.log(`\n  ERA Studio listo en http://localhost:${PORT}`);
   console.log(
     client
       ? `  Modo IA (${MODEL})\n`

@@ -1,4 +1,4 @@
-// Rea Studio — lógica del cliente.
+// ERA Studio — lógica del cliente.
 // Proyectos y versiones se guardan en localStorage del navegador.
 import { createBackend } from "./backend.js";
 
@@ -171,7 +171,7 @@ function showHome() {
   state.project = null;
   els.editor.hidden = true;
   els.home.hidden = false;
-  document.title = "Rea Studio";
+  document.title = "ERA Studio";
   renderProjects();
 }
 
@@ -267,7 +267,7 @@ function openEditor(project) {
   els.home.hidden = true;
   els.editor.hidden = false;
   els.projectName.value = project.name;
-  document.title = `${project.name} · Rea Studio`;
+  document.title = `${project.name} · ERA Studio`;
   renderMessages();
   renderSelection();
   renderVersion();
@@ -502,7 +502,7 @@ async function generate(prompt) {
       if (title) {
         p.name = title;
         els.projectName.value = title;
-        document.title = `${title} · Rea Studio`;
+        document.title = `${title} · ERA Studio`;
       }
     }
     if (failed) toast(failed);
@@ -577,7 +577,7 @@ function closeVersions() {
   els.versionsBtn.setAttribute("aria-expanded", "false");
 }
 
-// ---------------- Análisis Rea ----------------
+// ---------------- Análisis ERA ----------------
 
 function snippet(el) {
   const html = el.outerHTML.replace(/\s+/g, " ");
@@ -905,7 +905,7 @@ els.projectName.addEventListener("change", () => {
   state.project.name = name;
   state.project.autoName = false;
   saveProjects();
-  document.title = `${name} · Rea Studio`;
+  document.title = `${name} · ERA Studio`;
 });
 
 document
@@ -1007,7 +1007,7 @@ els.fixBtn.addEventListener("click", () => {
   if (!state.auditIssues.length) return;
   setTab("preview");
   generate(
-    `Corrige estos problemas que detectó el Análisis Rea, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
+    `Corrige estos problemas que detectó el Análisis ERA, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
   );
 });
 

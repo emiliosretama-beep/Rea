@@ -1,7 +1,7 @@
-// Arma la versión online de Rea Studio: un único HTML para publicar en claude.ai.
+// Arma la versión online de ERA Studio: un único HTML para publicar en claude.ai.
 // Junta index.html, styles.css, el logo y los módulos JS de public/ en un
 // solo archivo, sin cambiar la lógica (backend.js detecta que corre online).
-//   node scripts/build-online.mjs  ->  online/rea-studio.html
+//   node scripts/build-online.mjs  ->  online/era-studio.html
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
@@ -67,7 +67,7 @@ ${js}
 `;
 
 await mkdir(new URL("online/", root), { recursive: true });
-await writeFile(new URL("online/rea-studio.html", root), html);
+await writeFile(new URL("online/era-studio.html", root), html);
 console.log(
-  `online/rea-studio.html · ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`,
+  `online/era-studio.html · ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`,
 );

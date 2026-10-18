@@ -280,7 +280,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
       </div>
     </section>
   </main>
-  <footer>© ${new Date().getFullYear()} ${n}. Hecho con Rea Studio.</footer>
+  <footer>© ${new Date().getFullYear()} ${n}. Hecho con ERA Studio.</footer>
 </body>
 </html>`;
 }

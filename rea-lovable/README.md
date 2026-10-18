@@ -1,7 +1,7 @@
-# Rea Studio
+# ERA Studio
 
 Crea páginas web describiéndolas en un chat. Inspirado en el flujo de los
-constructores web con IA, hecho desde cero con identidad propia de **Rea**.
+constructores web con IA, hecho desde cero con identidad propia de **ERA Studio**.
 
 ## Qué incluye
 
@@ -15,8 +15,8 @@ constructores web con IA, hecho desde cero con identidad propia de **Rea**.
 | Historial de versiones      | Vuelve a cualquier versión anterior con un clic.                                                                                                         |
 | Proyectos                   | Se guardan en tu navegador con miniatura.                                                                                                                |
 | Exportar                    | Descarga un `.html` listo para subir a cualquier hosting, o ábrelo en otra pestaña.                                                                      |
-| **Inspector Rea**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
-| **Análisis Rea**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
+| **Inspector ERA**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
+| **Análisis ERA**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
 
 ## Versión online
 
@@ -26,7 +26,7 @@ la abre (la primera vez pide permiso). Es privada hasta que la compartas desde
 el menú Compartir.
 
 Para regenerarla después de cambiar la app: `npm run build:online` crea
-`online/rea-studio.html` a partir de los mismos archivos de `public/`.
+`online/era-studio.html` a partir de los mismos archivos de `public/`.
 
 ## Cómo usarlo en tu computadora
 
@@ -57,7 +57,7 @@ rea-lovable/
 │   ├── backend.js   # De dónde sale la IA: servidor local, claude.ai o demo
 │   ├── prompt.js    # Instrucciones para la IA (compartidas)
 │   ├── demo.js      # Plantillas del modo demo
-│   └── favicon.svg  # Logo Rea
+│   └── favicon.svg  # Logo ERA Studio (el sol que sale es una E)
 ├── scripts/build-online.mjs  # Arma la versión online en un solo HTML
 ├── online/rea-studio.html    # Versión online generada
 └── .env.example
