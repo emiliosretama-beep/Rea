@@ -1,5 +1,6 @@
 // Rea Studio — lógica del cliente.
 // Proyectos y versiones se guardan en localStorage del navegador.
+import { createBackend } from "./backend.js";
 
 const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
@@ -48,6 +49,7 @@ const state = {
   inspecting: false,
   selection: null,
   auditIssues: [],
+  backend: null,
 };
 
 // ---------------- Almacenamiento ----------------
@@ -157,7 +159,7 @@ function splitResponse(full) {
 // ---------------- Router ----------------
 
 function route() {
-  const match = location.hash.match(/^#\/p\/([\w-]+)/);
+  const match = location.hash.match(/^#p-([\w-]+)/);
   const project = match && state.projects.find((p) => p.id === match[1]);
   if (project && state.project?.id === project.id && !els.editor.hidden) return;
   if (project) openEditor(project);
@@ -224,13 +226,21 @@ function renderProjects() {
     del.setAttribute("aria-label", `Borrar ${p.name}`);
     del.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (!confirm(`¿Borrar "${p.name}"? No se puede deshacer.`)) return;
+      if (!del.classList.contains("armed")) {
+        del.classList.add("armed");
+        del.textContent = "¿Borrar?";
+        setTimeout(() => {
+          del.classList.remove("armed");
+          del.textContent = "×";
+        }, 3000);
+        return;
+      }
       state.projects = state.projects.filter((x) => x.id !== p.id);
       saveProjects();
       renderProjects();
     });
 
-    const open = () => (location.hash = `#/p/${p.id}`);
+    const open = () => (location.hash = `#p-${p.id}`);
     card.addEventListener("click", open);
     card.addEventListener("keydown", (e) => e.key === "Enter" && open());
     card.append(thumb, meta, del);
@@ -243,7 +253,7 @@ function startFromHome(prompt) {
   if (!prompt) return;
   const project = createProject(prompt);
   els.homePrompt.value = "";
-  location.hash = `#/p/${project.id}`;
+  location.hash = `#p-${project.id}`;
   openEditor(project);
   generate(prompt);
 }
@@ -401,6 +411,7 @@ function setTab(tab) {
 async function generate(prompt) {
   const p = state.project;
   if (!p || state.busy || !prompt.trim()) return;
+  if (!state.backend) return toast("Conectando… inténtalo en un segundo.");
   prompt = prompt.trim();
 
   const history = p.messages
@@ -429,62 +440,38 @@ async function generate(prompt) {
   let failed = null;
   let lastPaint = 0;
 
+  const onText = (text) => {
+    full = text;
+    const { explanation, code } = splitResponse(full);
+    if (explanation) bubble.textContent = explanation;
+    if (code) {
+      els.building.hidden = true;
+      els.statusText.textContent = `Escribiendo código · ${kb(code)}`;
+      if (state.tab === "code") {
+        els.codeArea.value = code;
+        els.codeArea.scrollTop = els.codeArea.scrollHeight;
+      }
+      // Vista previa en vivo mientras se escribe, limitada para no parpadear.
+      const now = performance.now();
+      if (
+        state.tab === "preview" &&
+        now - lastPaint > 1500 &&
+        code.includes("<body")
+      ) {
+        lastPaint = now;
+        renderPreview(code);
+      }
+    }
+    els.messages.scrollTop = els.messages.scrollHeight;
+  };
+
   try {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        currentHtml: baseHtml,
-        history,
-        selection,
-      }),
-      signal: controller.signal,
-    });
-    if (!res.ok || !res.body) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `El servidor respondió ${res.status}`);
-    }
-
-    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
-    let buffer = "";
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += value;
-      let sep;
-      while ((sep = buffer.indexOf("\n\n")) >= 0) {
-        const raw = buffer.slice(0, sep);
-        buffer = buffer.slice(sep + 2);
-        const event = raw.match(/^event: (.*)$/m)?.[1];
-        const dataLine = raw.match(/^data: (.*)$/m)?.[1];
-        const data = dataLine ? JSON.parse(dataLine) : {};
-        if (event === "delta") full += data.text;
-        else if (event === "error") failed = data.message;
-      }
-
-      const { explanation, code } = splitResponse(full);
-      if (explanation) bubble.textContent = explanation;
-      if (code) {
-        els.building.hidden = true;
-        els.statusText.textContent = `Escribiendo código · ${kb(code)}`;
-        if (state.tab === "code") {
-          els.codeArea.value = code;
-          els.codeArea.scrollTop = els.codeArea.scrollHeight;
-        }
-        // Vista previa en vivo mientras se escribe, limitada para no parpadear.
-        const now = performance.now();
-        if (
-          state.tab === "preview" &&
-          now - lastPaint > 1500 &&
-          code.includes("<body")
-        ) {
-          lastPaint = now;
-          renderPreview(code);
-        }
-      }
-      els.messages.scrollTop = els.messages.scrollHeight;
-    }
+    const { truncated } = await state.backend.generate(
+      { prompt, currentHtml: baseHtml, history, selection },
+      { signal: controller.signal, onText },
+    );
+    if (truncated)
+      failed = "La respuesta se cortó por longitud. Pide una página más corta.";
   } catch (err) {
     if (controller.signal.aborted) failed = "Generación detenida.";
     else failed = err.message || "No se pudo conectar con el servidor.";
@@ -962,11 +949,10 @@ document.addEventListener("keydown", (e) => {
 $("#downloadBtn").addEventListener("click", () => {
   const html = currentHtml();
   if (!html) return toast("Aún no hay nada que descargar.");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-  a.download = `${slug(state.project.name)}.html`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  state.backend.save(`${slug(state.project.name)}.html`, html).then((r) => {
+    if (r === "failed")
+      toast("No se pudo descargar. Copia el código desde la pestaña Código.");
+  });
 });
 
 $("#openBtn").addEventListener("click", () => {
@@ -1027,17 +1013,15 @@ els.fixBtn.addEventListener("click", () => {
 
 window.addEventListener("hashchange", route);
 
-fetch("/api/status")
-  .then((r) => r.json())
-  .then((s) => {
-    els.modeBadge.textContent =
-      s.mode === "ai" ? "● IA conectada" : "Modo demo";
-    els.modeBadge.classList.toggle("ai", s.mode === "ai");
-    els.modeBadge.title =
-      s.mode === "ai"
-        ? `Modelo: ${s.model}`
-        : "Añade ANTHROPIC_API_KEY en .env para usar IA real";
-  })
-  .catch(() => (els.modeBadge.textContent = "Sin servidor"));
+function applyBackend(backend) {
+  state.backend = { ...state.backend, ...backend };
+  els.modeBadge.textContent = state.backend.label;
+  els.modeBadge.classList.toggle("ai", state.backend.mode !== "demo");
+  els.modeBadge.title = state.backend.title;
+  // Dentro de claude.ai no se pueden abrir pestañas con contenido generado.
+  $("#openBtn").hidden = state.backend.online;
+  $("#downloadBtn").hidden = !state.backend.canSave;
+}
 
 route();
+applyBackend(await createBackend(applyBackend));

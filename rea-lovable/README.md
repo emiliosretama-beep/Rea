@@ -18,7 +18,17 @@ constructores web con IA, hecho desde cero con identidad propia de **Rea**.
 | **Inspector Rea**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
 | **Análisis Rea**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
 
-## Cómo usarlo
+## Versión online
+
+Abre <https://claude.ai/artifact/Rmc1e7R2W8YoAvtNt3BGR7> desde cualquier
+navegador o el celular. No necesita API key: usa la cuenta de Claude de quien
+la abre (la primera vez pide permiso). Es privada hasta que la compartas desde
+el menú Compartir.
+
+Para regenerarla después de cambiar la app: `npm run build:online` crea
+`online/rea-studio.html` a partir de los mismos archivos de `public/`.
+
+## Cómo usarlo en tu computadora
 
 Requisitos: Node.js 22.9 o superior.
 
@@ -40,12 +50,16 @@ Claude (`claude-opus-5-5`) y acepta cualquier petición.
 ```
 rea-lovable/
 ├── server.js        # Servidor HTTP + llamada a Claude en streaming (SSE)
-├── demo.js          # Generador de plantillas para el modo demo
 ├── public/
 │   ├── index.html   # Interfaz (inicio + editor)
 │   ├── styles.css   # Estilos (tema oscuro/claro automático)
 │   ├── app.js       # Lógica: proyectos, chat, versiones, Inspector, Análisis
+│   ├── backend.js   # De dónde sale la IA: servidor local, claude.ai o demo
+│   ├── prompt.js    # Instrucciones para la IA (compartidas)
+│   ├── demo.js      # Plantillas del modo demo
 │   └── favicon.svg  # Logo Rea
+├── scripts/build-online.mjs  # Arma la versión online en un solo HTML
+├── online/rea-studio.html    # Versión online generada
 └── .env.example
 ```
 

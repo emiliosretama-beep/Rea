@@ -1,0 +1,1986 @@
+<title>Rea Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #0b0b10;
+  --bg-2: #12121a;
+  --panel: #16161f;
+  --line: #262633;
+  --fg: #f4f4f7;
+  --muted: #9a9aad;
+  --accent: #ff5a36;
+  --accent-2: #ff3d6e;
+  --accent-3: #8b5cf6;
+  --grad: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --radius: 16px;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #faf9f7;
+    --bg-2: #f1efeb;
+    --panel: #ffffff;
+    --line: #e4e1db;
+    --fg: #17171c;
+    --muted: #6b6b7b;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #faf9f7;
+  --bg-2: #f1efeb;
+  --panel: #ffffff;
+  --line: #e4e1db;
+  --fg: #17171c;
+  --muted: #6b6b7b;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+
+/* ---------- Inicio ---------- */
+.view { min-height: 100%; }
+#home { position: relative; overflow-x: hidden; }
+.glow {
+  position: absolute; inset: -20% -10% auto; height: 720px; pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 30% 40%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%),
+    radial-gradient(35% 45% at 70% 30%, color-mix(in srgb, var(--accent-3) 35%, transparent), transparent 70%),
+    radial-gradient(30% 40% at 50% 70%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent 70%);
+  filter: blur(40px); opacity: .7;
+}
+.topbar { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); font-weight: 700; font-size: 1.1rem; }
+.brand b { font-weight: 800; margin-left: 3px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mode-badge { font-size: .78rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--muted); }
+.mode-badge.ai { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+
+.home-main { position: relative; width: min(860px, 100% - 32px); margin: 0 auto; padding: 64px 0 80px; text-align: center; }
+.eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: .75rem; color: var(--muted); font-weight: 600; }
+.home-main h1 { font-size: clamp(2.4rem, 7vw, 4.4rem); letter-spacing: -0.04em; line-height: 1.02; margin: 14px 0; }
+.grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { color: var(--muted); font-size: 1.1rem; max-width: 560px; margin: 0 auto 36px; line-height: 1.6; }
+
+.prompt-box {
+  text-align: left; background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--line); border-radius: 22px; padding: 16px;
+  box-shadow: 0 30px 80px -40px rgb(0 0 0 / .7);
+  transition: border-color .2s, box-shadow .2s;
+}
+.prompt-box:focus-within { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent), 0 30px 80px -40px rgb(0 0 0 / .7); }
+.prompt-box textarea { width: 100%; resize: none; border: 0; outline: 0; background: transparent; font-size: 1.05rem; line-height: 1.5; }
+.prompt-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.hint { font-size: .78rem; color: var(--muted); }
+.send {
+  width: 40px; height: 40px; border-radius: 12px; border: 0; display: grid; place-items: center;
+  background: var(--grad); color: #fff; transition: transform .15s, opacity .15s; flex: none;
+}
+.send:hover { transform: translateY(-1px); }
+.send:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.send.stop { background: var(--fg); color: var(--bg); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+.chips button { border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, transparent); border-radius: 999px; padding: 8px 14px; font-size: .88rem; color: var(--muted); transition: color .15s, border-color .15s; }
+.chips button:hover { color: var(--fg); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+
+.projects { margin-top: 80px; text-align: left; }
+.projects-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+.projects-head h2 { font-size: 1.2rem; margin: 0; }
+.project-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.project-card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; text-align: left; padding: 0; transition: transform .15s, border-color .15s; }
+.project-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.thumb { height: 130px; overflow: hidden; position: relative; background: var(--bg-2); pointer-events: none; }
+.thumb iframe { width: 1280px; height: 720px; border: 0; transform: scale(.19); transform-origin: 0 0; }
+.project-meta { padding: 12px 14px; }
+.project-meta strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.project-meta span { font-size: .78rem; color: var(--muted); }
+.delete-btn { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 8px; border: 0; background: rgb(0 0 0 / .55); color: #fff; opacity: 0; transition: opacity .15s; }
+.project-card:hover .delete-btn, .delete-btn:focus-visible { opacity: 1; }
+.delete-btn.armed { width: auto; padding: 0 10px; opacity: 1; background: var(--bad); font-size: .78rem; font-weight: 600; }
+.empty { grid-column: 1 / -1; padding: 32px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); text-align: center; }
+
+/* ---------- Editor ---------- */
+#editor { display: flex; flex-direction: column; height: 100%; }
+.editor-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--bg); flex-wrap: wrap; }
+.bar-left, .bar-right { display: flex; align-items: center; gap: 8px; }
+.project-name { background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; font-weight: 600; width: 220px; }
+.project-name:hover, .project-name:focus { border-color: var(--line); outline: 0; }
+.icon-btn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+.icon-btn:hover { border-color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-size: .86rem; font-weight: 500; }
+.pill:hover { border-color: var(--muted); }
+.pill[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+.btn-primary { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--grad); color: #fff; font-weight: 600; font-size: .88rem; }
+.btn-primary:hover { filter: brightness(1.08); }
+
+.tabs { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+.tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 9px; font-size: .86rem; font-weight: 500; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--bg-2); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
+.devices { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.devices button { width: 34px; height: 32px; display: grid; place-items: center; border: 0; background: var(--panel); color: var(--muted); }
+.devices button.active { color: var(--fg); background: var(--bg-2); }
+
+.menu-wrap { position: relative; }
+.menu { position: absolute; right: 0; top: 40px; width: 290px; max-height: 360px; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 6px; z-index: 30; box-shadow: 0 20px 50px -20px rgb(0 0 0 / .7); }
+.menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; border-radius: 8px; padding: 8px 10px; font-size: .85rem; }
+.menu button:hover { background: var(--bg-2); }
+.menu button.current { color: var(--accent); }
+.menu small { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.editor-body { flex: 1; display: grid; grid-template-columns: 380px 1fr; min-height: 0; }
+.chat { display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg); min-height: 0; }
+.messages { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 92%; line-height: 1.55; font-size: .93rem; white-space: pre-wrap; word-wrap: break-word; }
+.msg.user { align-self: flex-end; background: var(--panel); border: 1px solid var(--line); padding: 10px 14px; border-radius: 16px 16px 4px 16px; }
+.msg.assistant { align-self: flex-start; display: flex; gap: 10px; }
+.msg.assistant img { width: 24px; height: 24px; flex: none; margin-top: 2px; }
+.msg.error { color: var(--bad); }
+.msg .tag { display: inline-block; margin-top: 8px; font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+.typing span { display: inline-block; width: 6px; height: 6px; margin-right: 3px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite both; }
+.typing span:nth-child(2) { animation-delay: .2s; }
+.typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+
+.chat-form { margin: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 10px; }
+.chat-form:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.chat-form textarea { width: 100%; resize: none; border: 0; outline: 0; background: transparent; line-height: 1.5; }
+.chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chat-actions .send { width: 34px; height: 34px; border-radius: 10px; }
+.selection-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding: 6px 10px; border-radius: 10px; font-size: .8rem; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.selection-chip code { font-family: var(--mono); }
+.selection-chip button { border: 0; background: transparent; color: inherit; font-size: 1.1rem; line-height: 1; }
+
+.stage { position: relative; background: var(--bg-2); min-height: 0; min-width: 0; }
+.panel { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.frame-wrap { position: relative; flex: 1; margin: 14px; display: flex; justify-content: center; min-height: 0; }
+#preview { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 12px; background: #fff; transition: width .3s ease; }
+.frame-wrap[data-device="tablet"] #preview { width: 820px; max-width: 100%; }
+.frame-wrap[data-device="mobile"] #preview { width: 390px; max-width: 100%; border-radius: 28px; border-width: 8px; border-color: #1e1e28; }
+.building { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; background: color-mix(in srgb, var(--bg-2) 82%, transparent); backdrop-filter: blur(6px); border-radius: 12px; color: var(--muted); }
+.orb { width: 72px; height: 72px; border-radius: 50%; background: var(--grad); filter: blur(2px); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(.85); opacity: .7; } 50% { transform: scale(1.05); opacity: 1; } }
+
+.code-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; gap: 8px; }
+.code-bar > div { display: flex; gap: 8px; }
+.code-area { flex: 1; margin: 0 14px 14px; padding: 16px; resize: none; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: .82rem; line-height: 1.6; tab-size: 2; outline: 0; white-space: pre; }
+
+.audit { overflow-y: auto; padding: 28px; max-width: 820px; width: 100%; margin: 0 auto; }
+.audit-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-bottom: 20px; }
+.audit-head h2 { margin: 0 0 4px; }
+.audit-head p { margin: 0; }
+.score { width: 76px; height: 76px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; border: 4px solid var(--line); }
+.checks { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 10px; }
+.check { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; }
+.check.ok .dot { background: var(--ok); }
+.check.warn .dot { background: var(--warn); }
+.check.bad .dot { background: var(--bad); }
+.check strong { display: block; font-size: .92rem; }
+.check span { color: var(--muted); font-size: .85rem; }
+.check code { display: block; margin-top: 6px; font-family: var(--mono); font-size: .76rem; color: var(--muted); background: var(--bg); padding: 6px 8px; border-radius: 6px; overflow-x: auto; white-space: pre; }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: .88rem; font-weight: 500; z-index: 50; box-shadow: 0 10px 30px rgb(0 0 0 / .4); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+  .editor-body { grid-template-columns: 320px 1fr; }
+  .project-name { width: 140px; }
+}
+@media (max-width: 820px) {
+  .editor-body { grid-template-columns: 1fr; grid-template-rows: 1fr 46%; }
+  .chat { border-right: 0; border-top: 1px solid var(--line); order: 2; }
+  .devices, #openBtn, .hint { display: none; }
+  .editor-bar { padding: 8px 10px; }
+  .tabs { order: 3; width: 100%; justify-content: stretch; }
+  .tabs button { flex: 1; }
+  .bar-right { gap: 6px; }
+  .btn-primary span { display: none; }
+}
+
+</style>
+<!-- ============ INICIO ============ -->
+  <div id="home" class="view">
+    <div class="glow" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Rea Studio, inicio">
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a3d%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23ff3d6e%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b5cf6%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M20%2046V18h13a9%209%200%200%201%202.5%2017.6L44%2046h-8.5l-7.6-9.8H27.5V46z%20M27.5%2030.2h5a3.6%203.6%200%200%200%200-7.2h-5z%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2220%22%20r%3D%224%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%0A%3C%2Fsvg%3E" alt="" width="28" height="28" />
+        <span>Rea<b>Studio</b></span>
+      </a>
+      <span class="mode-badge" id="modeBadge">…</span>
+    </header>
+
+    <main class="home-main">
+      <p class="eyebrow">Construye · Inspecciona · Mejora</p>
+      <h1>Crea tu web <span class="grad">hablando</span>.</h1>
+      <p class="sub">Describe lo que quieres y Rea la construye en segundos. Luego inspecciona cada pieza y pule los detalles en el chat.</p>
+
+      <form id="homeForm" class="prompt-box">
+        <label for="homePrompt" class="sr-only">Describe tu web</label>
+        <textarea id="homePrompt" rows="3" placeholder="Una landing para mi cafetería &quot;Grano &amp; Horno&quot; con menú, horario y reservas…" required></textarea>
+        <div class="prompt-actions">
+          <span class="hint">Enter para enviar · Shift+Enter nueva línea</span>
+          <button class="send" type="submit" aria-label="Crear web">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </form>
+
+      <div class="chips" id="chips">
+        <button type="button" data-prompt="Landing para un restaurante de tacos llamado &quot;El Fogón&quot; con menú, ubicación y botón de reservas">🌮 Restaurante</button>
+        <button type="button" data-prompt="Página de presentación para mi videojuego indie &quot;Nova Rift&quot;, estilo oscuro y futurista, con tráiler, características y registro a la beta">🎮 Videojuego</button>
+        <button type="button" data-prompt="Portafolio personal de un desarrollador web joven, minimalista, con proyectos, habilidades y contacto">💼 Portafolio</button>
+        <button type="button" data-prompt="Tienda online de ropa urbana con catálogo de productos, carrito simple y ofertas">🛍️ Tienda</button>
+        <button type="button" data-prompt="Web para un gimnasio llamado &quot;Pulso Gym&quot; con planes de precios, horarios de clases y testimonios">💪 Gimnasio</button>
+      </div>
+
+      <section class="projects" aria-labelledby="projectsTitle">
+        <div class="projects-head">
+          <h2 id="projectsTitle">Tus proyectos</h2>
+          <span id="projectCount" class="muted"></span>
+        </div>
+        <div id="projectGrid" class="project-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============ EDITOR ============ -->
+  <div id="editor" class="view" hidden>
+    <header class="editor-bar">
+      <div class="bar-left">
+        <button class="icon-btn" id="backBtn" title="Volver a proyectos" aria-label="Volver a proyectos">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a3d%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23ff3d6e%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b5cf6%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M20%2046V18h13a9%209%200%200%201%202.5%2017.6L44%2046h-8.5l-7.6-9.8H27.5V46z%20M27.5%2030.2h5a3.6%203.6%200%200%200%200-7.2h-5z%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2220%22%20r%3D%224%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%0A%3C%2Fsvg%3E" alt="" width="22" height="22" />
+        <input id="projectName" class="project-name" aria-label="Nombre del proyecto" />
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Panel">
+        <button role="tab" data-tab="preview" aria-selected="true">Vista</button>
+        <button role="tab" data-tab="code" aria-selected="false">Código</button>
+        <button role="tab" data-tab="audit" aria-selected="false">Análisis Rea</button>
+      </div>
+
+      <div class="bar-right">
+        <div class="devices" role="group" aria-label="Tamaño de vista previa">
+          <button data-device="desktop" class="active" title="Escritorio" aria-label="Escritorio">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button data-device="tablet" title="Tableta" aria-label="Tableta">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button data-device="mobile" title="Móvil" aria-label="Móvil">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <button class="pill" id="inspectBtn" aria-pressed="false" title="Haz clic en un elemento de la vista previa para editarlo">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 4l7 17 2.5-7.5L21 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Inspector
+        </button>
+        <div class="menu-wrap">
+          <button class="pill" id="versionsBtn" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7L3 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="versionLabel">v0</span>
+          </button>
+          <div class="menu" id="versionsMenu" hidden></div>
+        </div>
+        <button class="icon-btn" id="openBtn" title="Abrir en pestaña nueva" aria-label="Abrir en pestaña nueva">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn-primary" id="downloadBtn">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Descargar
+        </button>
+      </div>
+    </header>
+
+    <div class="editor-body">
+      <aside class="chat" aria-label="Chat">
+        <div class="messages" id="messages" aria-live="polite"></div>
+        <form class="chat-form" id="chatForm">
+          <div class="selection-chip" id="selectionChip" hidden>
+            <span>Editando: <code id="selectionLabel"></code></span>
+            <button type="button" id="clearSelection" aria-label="Quitar selección">×</button>
+          </div>
+          <label for="chatInput" class="sr-only">Pide un cambio</label>
+          <textarea id="chatInput" rows="2" placeholder="Pide un cambio: «haz el menú más grande», «añade una sección de precios»…"></textarea>
+          <div class="chat-actions">
+            <span class="muted small" id="statusText"></span>
+            <button class="send" id="chatSend" type="submit" aria-label="Enviar">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="send stop" id="chatStop" type="button" aria-label="Detener" hidden>
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="stage" aria-label="Resultado">
+        <div class="panel" data-panel="preview">
+          <div class="frame-wrap" id="frameWrap">
+            <iframe id="preview" title="Vista previa de la web" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+            <div class="building" id="building" hidden>
+              <div class="orb"></div>
+              <p id="buildingText">Pensando el diseño…</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="code" hidden>
+          <div class="code-bar">
+            <span class="muted small">index.html · <span id="codeSize">0 KB</span></span>
+            <div>
+              <button class="pill" id="copyCode">Copiar</button>
+              <button class="pill" id="saveCode">Guardar cambios</button>
+            </div>
+          </div>
+          <textarea id="codeArea" class="code-area" spellcheck="false" aria-label="Código HTML"></textarea>
+        </div>
+
+        <div class="panel" data-panel="audit" hidden>
+          <div class="audit">
+            <div class="audit-head">
+              <div>
+                <h2>Análisis Rea</h2>
+                <p class="muted">Revisión estática de la página con la evidencia de cada resultado.</p>
+              </div>
+              <div class="score" id="auditScore">–</div>
+            </div>
+            <ul class="checks" id="auditList"></ul>
+            <button class="btn-primary" id="fixBtn" hidden>Arreglar los problemas con Rea</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+<script type="module">
+// ---- public/prompt.js ----
+// Instrucciones del generador, compartidas por el servidor local y la versión online.
+
+const SYSTEM_PROMPT = `Eres el motor de Rea Studio, un constructor de páginas web.
+El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo HTML completo y autocontenido.
+
+Reglas del archivo:
+- Empieza con <!doctype html>, incluye <meta name="viewport" content="width=device-width, initial-scale=1"> y un <title> descriptivo.
+- Todo el CSS va en <style> y todo el JavaScript en <script> dentro del mismo archivo. Puedes usar Google Fonts.
+- No uses frameworks, CDNs ni imágenes externas (no cargarían en la vista previa). Ilustra con SVG en línea, degradados y formas CSS o emojis, siempre con texto alternativo o aria-label.
+- Diseño moderno y profesional: buena tipografía, espaciado generoso, jerarquía visual clara, paleta coherente definida en variables CSS en :root.
+- Responsive de verdad (móvil primero), sin scroll horizontal, accesible (contraste, alt, etiquetas en formularios, HTML semántico).
+- Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
+- Cuando te den código actual, modifícalo respetando lo que ya existe: cambia solo lo que se pide y conserva el resto.
+
+Formato de respuesta:
+1. Una o dos frases cortas explicando lo que hiciste.
+2. El archivo completo dentro de un único bloque \`\`\`html ... \`\`\`.
+No escribas nada después del bloque de código.`;
+
+function buildUserMessage({ prompt, currentHtml, history, selection }) {
+  const parts = [];
+  if (history?.length) {
+    parts.push(
+      "Peticiones anteriores en este proyecto (de la más antigua a la más reciente):",
+    );
+    history.slice(-8).forEach((h, i) => parts.push(`${i + 1}. ${h}`));
+    parts.push("");
+  }
+  if (currentHtml) {
+    parts.push(
+      "Código actual de la página:",
+      "```html",
+      currentHtml,
+      "```",
+      "",
+    );
+  }
+  if (selection) {
+    parts.push(
+      "El usuario seleccionó este elemento en la vista previa; aplica el cambio sobre él:",
+      "```html",
+      selection,
+      "```",
+      "",
+    );
+  }
+  parts.push(
+    currentHtml ? `Cambio pedido: ${prompt}` : `Crea esta web: ${prompt}`,
+  );
+  return parts.join("\n");
+}
+
+// ---- public/demo.js ----
+// Modo demo: genera webs a partir de plantillas locales cuando no hay API key.
+// No es IA: detecta palabras clave del prompt para elegir tema, nombre y colores.
+// Devuelve el mismo formato que el modelo (explicación + bloque ```html).
+
+const THEMES = [
+  {
+    match: /restaurante|comida|cocina|taquer|pizz|sushi|bar\b/i,
+    kind: "restaurante",
+    name: "La Mesa",
+    tagline: "Cocina de temporada, hecha con calma.",
+    accent: "#e2572b",
+    seed: "food",
+    sections: [
+      [
+        "Menú del día",
+        "Platos frescos que cambian cada semana según el mercado.",
+      ],
+      ["Reservas", "Aparta tu mesa en segundos y te confirmamos por mensaje."],
+      [
+        "Eventos privados",
+        "Celebra cumpleaños y cenas de empresa en nuestro salón.",
+      ],
+    ],
+    cta: "Reservar mesa",
+  },
+  {
+    match: /caf[eé]|cafeter|panader|reposter/i,
+    kind: "cafetería",
+    name: "Grano & Horno",
+    tagline: "Café de especialidad y pan recién salido del horno.",
+    accent: "#a0663a",
+    seed: "coffee",
+    sections: [
+      ["Café de origen", "Granos seleccionados de pequeños productores."],
+      ["Pan artesanal", "Masa madre con 24 horas de fermentación."],
+      ["Para llevar", "Pide desde tu móvil y recoge sin hacer fila."],
+    ],
+    cta: "Ver la carta",
+  },
+  {
+    match: /gimnasio|gym|fitness|entrena|crossfit|yoga/i,
+    kind: "gimnasio",
+    name: "Pulso Gym",
+    tagline: "Entrena con propósito. Resultados que se notan.",
+    accent: "#16a34a",
+    seed: "gym",
+    sections: [
+      ["Clases grupales", "HIIT, spinning y funcional todos los días."],
+      [
+        "Entrenador personal",
+        "Un plan hecho a tu medida y seguimiento semanal.",
+      ],
+      ["Abierto 24/7", "Entra cuando quieras con tu acceso digital."],
+    ],
+    cta: "Prueba gratis 7 días",
+  },
+  {
+    match: /videojuego|juego|game|gamer|indie/i,
+    kind: "videojuego",
+    name: "Nova Rift",
+    tagline: "Un mundo abierto que reacciona a cada decisión.",
+    accent: "#8b5cf6",
+    seed: "galaxy",
+    sections: [
+      ["Explora", "Biomas generados a mano con secretos en cada rincón."],
+      ["Combate", "Sistema de habilidades combinables y jefes únicos."],
+      ["Cooperativo", "Juega con hasta 4 amigos en línea."],
+    ],
+    cta: "Únete a la beta",
+  },
+  {
+    match:
+      /portafolio|portfolio|personal|curr[ií]culum|freelance|dise[ñn]ador/i,
+    kind: "portafolio",
+    name: "Estudio Propio",
+    tagline: "Diseño y desarrollo de productos digitales.",
+    accent: "#0ea5e9",
+    seed: "studio",
+    sections: [
+      [
+        "Proyectos",
+        "Una selección de trabajos recientes para marcas y startups.",
+      ],
+      ["Servicios", "Branding, sitios web y prototipos interactivos."],
+      ["Contacto", "Cuéntame tu idea y te respondo en menos de 24 horas."],
+    ],
+    cta: "Hablemos",
+  },
+  {
+    match: /tienda|ecommerce|venta|ropa|producto|shop/i,
+    kind: "tienda",
+    name: "Bazar Norte",
+    tagline: "Productos bien hechos, a precio justo.",
+    accent: "#db2777",
+    seed: "shop",
+    sections: [
+      ["Novedades", "Nuevos productos cada semana, en cantidades limitadas."],
+      ["Envío rápido", "Recíbelo en 24-48 horas en toda la ciudad."],
+      [
+        "Devoluciones fáciles",
+        "30 días para cambiar de opinión, sin preguntas.",
+      ],
+    ],
+    cta: "Comprar ahora",
+  },
+];
+
+const FALLBACK = {
+  kind: "negocio",
+  name: "Tu Marca",
+  tagline: "Una web clara para contar lo que haces.",
+  accent: "#ff5a36",
+  seed: "city",
+  sections: [
+    [
+      "Qué hacemos",
+      "Explica en una frase el valor que ofreces a tus clientes.",
+    ],
+    ["Cómo funciona", "Tres pasos simples para empezar a trabajar juntos."],
+    ["Opiniones", "Lo que dicen las personas que ya confiaron en nosotros."],
+  ],
+  cta: "Empezar",
+};
+
+const COLORS = {
+  azul: "#2563eb",
+  rojo: "#dc2626",
+  verde: "#16a34a",
+  morado: "#7c3aed",
+  violeta: "#7c3aed",
+  naranja: "#ea580c",
+  rosa: "#db2777",
+  amarillo: "#ca8a04",
+  negro: "#111827",
+  dorado: "#b8860b",
+};
+
+function escapeHtml(s) {
+  return s.replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+  );
+}
+
+function pickName(prompt, fallback) {
+  const quoted = prompt.match(/["“«']([^"”»']{2,40})["”»']/);
+  if (quoted) return quoted[1].trim();
+  const called = prompt.match(
+    /(?:llamad[oa]|se llama|nombre)\s+([A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ&]*(?:\s+[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ&]*){0,3})/,
+  );
+  return called ? called[1].trim() : fallback;
+}
+
+function pickColor(prompt) {
+  const lower = prompt.toLowerCase();
+  for (const [word, hex] of Object.entries(COLORS))
+    if (lower.includes(word)) return hex;
+  return null;
+}
+
+// Ilustración SVG abstracta y determinista (sin imágenes externas: funciona
+// sin conexión y dentro de la vista previa aislada).
+function art(seed, accent, w, h) {
+  let x = 0;
+  for (const c of seed) x = (x * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const shapes = Array.from({ length: 5 }, (_, i) => {
+    const r = (0.18 + rnd() * 0.3) * Math.min(w, h);
+    const op = (0.25 + rnd() * 0.5).toFixed(2);
+    const fill = i % 2 ? "#ffffff" : accent;
+    return `<circle cx="${(rnd() * w).toFixed(0)}" cy="${(rnd() * h).toFixed(0)}" r="${r.toFixed(0)}" fill="${fill}" opacity="${op}"/>`;
+  }).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="#1b1b24"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g)"/>${shapes}</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function page({ name, tagline, accent, seed, sections, cta, dark }) {
+  const bg = dark ? "#0d0f14" : "#fbfaf8";
+  const fg = dark ? "#f2f2f5" : "#16171d";
+  const muted = dark ? "#a3a6b3" : "#5d6070";
+  const card = dark ? "#171a22" : "#ffffff";
+  const n = escapeHtml(name);
+  const cards = sections
+    .map(
+      ([t, d], i) => `
+      <article class="card">
+        <img src="${art(seed + i, accent, 640, 420)}" alt="${escapeHtml(t)}" loading="lazy" />
+        <h3>${escapeHtml(t)}</h3>
+        <p>${escapeHtml(d)}</p>
+      </article>`,
+    )
+    .join("");
+  return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${n} — ${escapeHtml(tagline)}</title>
+  <meta name="description" content="${escapeHtml(tagline)}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: ${bg};
+      --fg: ${fg};
+      --muted: ${muted};
+      --card: ${card};
+      --accent: ${accent};
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
+    a { color: inherit; }
+    .wrap { width: min(1100px, 100% - 32px); margin-inline: auto; }
+    header { position: sticky; top: 0; backdrop-filter: blur(10px); background: color-mix(in srgb, var(--bg) 82%, transparent); z-index: 10; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+    .logo { font-weight: 800; font-size: 1.2rem; text-decoration: none; }
+    .logo span { color: var(--accent); }
+    .links { display: flex; gap: 22px; list-style: none; padding: 0; }
+    .links a { text-decoration: none; color: var(--muted); font-weight: 600; }
+    .btn { display: inline-block; background: var(--accent); color: #fff; padding: 12px 22px; border-radius: 999px; font-weight: 700; text-decoration: none; border: 0; cursor: pointer; transition: transform .15s; }
+    .btn:hover { transform: translateY(-2px); }
+    .hero { padding: 88px 0 64px; display: grid; gap: 40px; grid-template-columns: 1.1fr 1fr; align-items: center; }
+    .hero h1 { font-size: clamp(2.3rem, 6vw, 4rem); line-height: 1.05; letter-spacing: -0.03em; }
+    .hero p { color: var(--muted); font-size: 1.15rem; margin: 18px 0 28px; }
+    .hero img { width: 100%; border-radius: calc(var(--radius) * 1.4); aspect-ratio: 4/3; object-fit: cover; }
+    section { padding: 56px 0; }
+    h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); letter-spacing: -0.02em; margin-bottom: 28px; }
+    .grid { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card { background: var(--card); border-radius: var(--radius); padding: 14px 14px 22px; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 10px 30px -18px rgb(0 0 0 / .3); }
+    .card img { width: 100%; border-radius: 12px; aspect-ratio: 16/10; object-fit: cover; margin-bottom: 14px; }
+    .card h3 { margin-bottom: 6px; }
+    .card p { color: var(--muted); }
+    .cta { background: var(--accent); color: #fff; border-radius: calc(var(--radius) * 1.4); padding: 48px 32px; text-align: center; }
+    .cta p { opacity: .9; margin: 10px 0 24px; }
+    .cta .btn { background: #fff; color: var(--accent); }
+    form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    input { padding: 12px 16px; border-radius: 999px; border: 0; min-width: 240px; font: inherit; }
+    footer { padding: 36px 0; color: var(--muted); text-align: center; font-size: .9rem; }
+    @media (max-width: 760px) {
+      .hero { grid-template-columns: 1fr; padding-top: 48px; }
+      .links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap">
+      <a class="logo" href="#">${n}<span>.</span></a>
+      <ul class="links">
+        <li><a href="#servicios">Servicios</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+      </ul>
+      <a class="btn" href="#contacto">${escapeHtml(cta)}</a>
+    </nav>
+  </header>
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <h1>${escapeHtml(tagline)}</h1>
+        <p>${n} es el lugar para quienes buscan calidad sin complicaciones. Conoce lo que ofrecemos y da el primer paso hoy.</p>
+        <a class="btn" href="#contacto">${escapeHtml(cta)}</a>
+      </div>
+      <img src="${art(seed + "hero", accent, 900, 680)}" alt="Imagen principal de ${n}" />
+    </section>
+    <section id="servicios">
+      <h2>Lo que ofrecemos</h2>
+      <div class="grid">${cards}
+      </div>
+    </section>
+    <section id="contacto">
+      <div class="cta">
+        <h2>¿Listo para empezar?</h2>
+        <p>Déjanos tu correo y te escribimos con todos los detalles.</p>
+        <form onsubmit="event.preventDefault(); this.innerHTML = '<p>¡Gracias! Te escribiremos pronto.</p>';">
+          <label for="email" hidden>Correo electrónico</label>
+          <input id="email" type="email" placeholder="tu@correo.com" required />
+          <button class="btn" type="submit">${escapeHtml(cta)}</button>
+        </form>
+      </div>
+    </section>
+  </main>
+  <footer>© ${new Date().getFullYear()} ${n}. Hecho con Rea Studio.</footer>
+</body>
+</html>`;
+}
+
+function editExisting(prompt, html) {
+  let out = html;
+  const changes = [];
+  const color = pickColor(prompt);
+  if (color) {
+    out = out.replace(/--accent:\s*[^;]+;/, `--accent: ${color};`);
+    changes.push("cambié el color principal");
+  }
+  if (/oscur|dark|noche|negro/i.test(prompt)) {
+    out = out
+      .replace(/--bg:\s*[^;]+;/, "--bg: #0d0f14;")
+      .replace(/--fg:\s*[^;]+;/, "--fg: #f2f2f5;")
+      .replace(/--muted:\s*[^;]+;/, "--muted: #a3a6b3;")
+      .replace(/--card:\s*[^;]+;/, "--card: #171a22;");
+    changes.push("activé el tema oscuro");
+  } else if (/clar|light|blanco/i.test(prompt)) {
+    out = out
+      .replace(/--bg:\s*[^;]+;/, "--bg: #fbfaf8;")
+      .replace(/--fg:\s*[^;]+;/, "--fg: #16171d;")
+      .replace(/--muted:\s*[^;]+;/, "--muted: #5d6070;")
+      .replace(/--card:\s*[^;]+;/, "--card: #ffffff;");
+    changes.push("activé el tema claro");
+  }
+  if (/redond/i.test(prompt)) {
+    out = out.replace(/--radius:\s*[^;]+;/, "--radius: 28px;");
+    changes.push("hice las esquinas más redondeadas");
+  }
+  if (/cuadrad|recto|sin redond/i.test(prompt)) {
+    out = out.replace(/--radius:\s*[^;]+;/, "--radius: 4px;");
+    changes.push("hice las esquinas más rectas");
+  }
+  if (!changes.length) {
+    return `En modo demo solo puedo cambiar colores (azul, rojo, verde…), tema claro/oscuro y esquinas. Para cambios libres como "${prompt}", añade tu ANTHROPIC_API_KEY en el archivo .env.\n\n\`\`\`html\n${html}\n\`\`\``;
+  }
+  return `Listo (modo demo): ${changes.join(", ")}.\n\n\`\`\`html\n${out}\n\`\`\``;
+}
+
+function buildDemoSite(prompt, currentHtml) {
+  if (currentHtml) return editExisting(prompt, currentHtml);
+  const theme = THEMES.find((t) => t.match.test(prompt)) || FALLBACK;
+  const name = pickName(prompt, theme.name);
+  const accent = pickColor(prompt) || theme.accent;
+  const dark = /oscur|dark|noche/i.test(prompt);
+  const html = page({ ...theme, name, accent, dark });
+  return `Creé una web de ${theme.kind} para "${name}" (modo demo, sin IA). Pide cambios en el chat o añade tu API key para resultados a medida.\n\n\`\`\`html\n${html}\n\`\`\``;
+}
+
+// ---- public/backend.js ----
+// De dónde sale la IA. Hay tres modos con la misma interfaz:
+// - "server": app local (npm start); el servidor llama a Claude con tu API key.
+// - "cloud": versión online publicada en claude.ai; usa la cuenta de Claude de
+//   quien la abre (capability `sample`), sin API key.
+// - "demo": sin IA, plantillas locales (en el servidor o en el navegador).
+
+
+const SAMPLE_ERRORS = {
+  not_granted:
+    "No diste permiso para usar Claude. Recarga la página y acéptalo para usar la IA.",
+  sampling_disabled: "Claude no está disponible en esta cuenta.",
+  rate_limited:
+    "Llegaste al límite de uso. Espera un poco y vuelve a intentarlo.",
+  session_expired: "Tu sesión caducó. Vuelve a iniciar sesión en Claude.",
+  prompt_too_large:
+    "La página es demasiado grande para editarla de una vez. Pide algo más pequeño.",
+  refused: "Claude no puede hacer esta petición. Prueba a reformularla.",
+  empty_completion: "No llegó respuesta. Prueba a pedirlo de otra forma.",
+};
+
+// Errores que significan "esta vista no puede usar Claude": se pasa a demo.
+const SAMPLE_GONE = new Set([
+  "not_granted",
+  "sampling_disabled",
+  "not_declared",
+  "capability_disabled",
+  "capability_removed",
+]);
+
+async function simulateStream(text, { signal, onText }) {
+  for (let i = 180; i < text.length + 180; i += 180) {
+    if (signal?.aborted)
+      throw Object.assign(new Error("Generación detenida."), {
+        cancelled: true,
+      });
+    onText(text.slice(0, i));
+    await new Promise((r) => setTimeout(r, 12));
+  }
+  return { truncated: false };
+}
+
+function demoBackend(label, title) {
+  return {
+    mode: "demo",
+    label,
+    title,
+    generate: (body, opts) =>
+      simulateStream(buildDemoSite(body.prompt, body.currentHtml || ""), opts),
+  };
+}
+
+function serverBackend(status) {
+  return {
+    mode: status.mode === "ai" ? "server" : "demo",
+    label: status.mode === "ai" ? "● IA conectada" : "Modo demo",
+    title:
+      status.mode === "ai"
+        ? `Modelo: ${status.model}`
+        : "Añade ANTHROPIC_API_KEY en .env para usar IA real",
+    async generate(body, { signal, onText }) {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `El servidor respondió ${res.status}`);
+      }
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      let full = "";
+      let failed = null;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        let sep;
+        while ((sep = buffer.indexOf("\n\n")) >= 0) {
+          const raw = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          const event = raw.match(/^event: (.*)$/m)?.[1];
+          const dataLine = raw.match(/^data: (.*)$/m)?.[1];
+          const data = dataLine ? JSON.parse(dataLine) : {};
+          if (event === "delta") full += data.text;
+          else if (event === "error") failed = data.message;
+        }
+        onText(full);
+      }
+      if (failed) throw new Error(failed);
+      return { truncated: false };
+    },
+  };
+}
+
+function cloudBackend(sample, onGone) {
+  return {
+    mode: "cloud",
+    label: "● IA con tu cuenta de Claude",
+    title: "Cada petición usa el plan de Claude de quien abre la página",
+    async generate(body, { signal, onText }) {
+      try {
+        const { truncated } = await sample(
+          `${SYSTEM_PROMPT}\n\n---\n\n${buildUserMessage(body)}`,
+          {
+            signal,
+            cache: false,
+            onText: ({ text }) => onText(text),
+          },
+        );
+        return { truncated };
+      } catch (e) {
+        if (e?.code === "cancelled")
+          throw Object.assign(new Error("Generación detenida."), {
+            cancelled: true,
+          });
+        if (SAMPLE_GONE.has(e?.code)) onGone();
+        if (typeof e?.text === "string") onText(e.text);
+        throw new Error(
+          SAMPLE_ERRORS[e?.code] ||
+            "Se cortó la conexión con Claude. Vuelve a intentarlo.",
+        );
+      }
+    },
+  };
+}
+
+// Guardar el HTML como archivo. En claude.ai las descargas pasan por la
+// capability `downloads` (un <a download> no funciona dentro del visor).
+function makeSaver(downloads) {
+  if (downloads) {
+    return async (filename, html) => {
+      try {
+        await downloads.save({ filename, data: html });
+        return "saved";
+      } catch (e) {
+        return e?.code === "declined" ? "declined" : "failed";
+      }
+    };
+  }
+  return async (filename, html) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return "saved";
+  };
+}
+
+async function createBackend(onChange) {
+  if (window.claude?.use) {
+    const [sample, downloads] = await Promise.all([
+      window.claude.use("sample").catch(() => null),
+      window.claude.use("downloads").catch(() => null),
+    ]);
+    const demo = demoBackend(
+      "Modo demo",
+      "Esta vista no puede usar Claude: se usan plantillas",
+    );
+    const backend = sample
+      ? cloudBackend(sample, () => onChange?.(demo))
+      : demo;
+    return {
+      ...backend,
+      online: true,
+      save: makeSaver(downloads),
+      canSave: Boolean(downloads),
+    };
+  }
+  try {
+    const status = await fetch("/api/status").then((r) => r.json());
+    return {
+      ...serverBackend(status),
+      online: false,
+      save: makeSaver(null),
+      canSave: true,
+    };
+  } catch {
+    return {
+      ...demoBackend("Modo demo", "No hay servidor: se usan plantillas"),
+      online: false,
+      save: makeSaver(null),
+      canSave: true,
+    };
+  }
+}
+
+// ---- public/app.js ----
+// Rea Studio — lógica del cliente.
+// Proyectos y versiones se guardan en localStorage del navegador.
+
+const STORAGE_KEY = "rea-studio:projects";
+const MAX_VERSIONS = 25;
+const $ = (sel) => document.querySelector(sel);
+
+const els = {
+  home: $("#home"),
+  editor: $("#editor"),
+  modeBadge: $("#modeBadge"),
+  homeForm: $("#homeForm"),
+  homePrompt: $("#homePrompt"),
+  chips: $("#chips"),
+  projectGrid: $("#projectGrid"),
+  projectCount: $("#projectCount"),
+  projectName: $("#projectName"),
+  messages: $("#messages"),
+  chatForm: $("#chatForm"),
+  chatInput: $("#chatInput"),
+  chatSend: $("#chatSend"),
+  chatStop: $("#chatStop"),
+  statusText: $("#statusText"),
+  selectionChip: $("#selectionChip"),
+  selectionLabel: $("#selectionLabel"),
+  preview: $("#preview"),
+  frameWrap: $("#frameWrap"),
+  building: $("#building"),
+  buildingText: $("#buildingText"),
+  codeArea: $("#codeArea"),
+  codeSize: $("#codeSize"),
+  versionsBtn: $("#versionsBtn"),
+  versionsMenu: $("#versionsMenu"),
+  versionLabel: $("#versionLabel"),
+  inspectBtn: $("#inspectBtn"),
+  auditList: $("#auditList"),
+  auditScore: $("#auditScore"),
+  fixBtn: $("#fixBtn"),
+  toast: $("#toast"),
+};
+
+const state = {
+  projects: loadProjects(),
+  project: null,
+  tab: "preview",
+  busy: false,
+  controller: null,
+  inspecting: false,
+  selection: null,
+  auditIssues: [],
+  backend: null,
+};
+
+// ---------------- Almacenamiento ----------------
+
+function loadProjects() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveProjects() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.projects));
+  } catch {
+    // Sin espacio: recorta versiones antiguas y reintenta una vez.
+    for (const p of state.projects) {
+      if (p.versions.length > 5) {
+        const drop = p.versions.length - 5;
+        p.versions = p.versions.slice(drop);
+        p.current = Math.max(0, p.current - drop);
+      }
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.projects));
+      toast("Espacio lleno: se borraron versiones antiguas.");
+    } catch {
+      toast("No se pudo guardar. Descarga tu web para no perderla.");
+    }
+  }
+}
+
+function currentHtml(project = state.project) {
+  return project?.versions[project.current]?.html || "";
+}
+
+function createProject(prompt) {
+  const project = {
+    id: crypto.randomUUID(),
+    name: prompt.length > 42 ? `${prompt.slice(0, 40).trim()}…` : prompt,
+    autoName: true,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    messages: [],
+    versions: [],
+    current: -1,
+  };
+  state.projects.unshift(project);
+  saveProjects();
+  return project;
+}
+
+// ---------------- Utilidades ----------------
+
+function toast(text) {
+  els.toast.textContent = text;
+  els.toast.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (els.toast.hidden = true), 2600);
+}
+
+function timeAgo(ts) {
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 60) return "hace un momento";
+  if (s < 3600) return `hace ${Math.round(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.round(s / 3600)} h`;
+  return new Date(ts).toLocaleDateString("es");
+}
+
+function slug(text) {
+  return (
+    text
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 50) || "mi-web"
+  );
+}
+
+function kb(text) {
+  return `${(new Blob([text]).size / 1024).toFixed(1)} KB`;
+}
+
+// Separa la respuesta del modelo en explicación y código HTML (aunque esté a medias).
+function splitResponse(full) {
+  let idx = full.indexOf("```html");
+  let start = idx >= 0 ? idx + 7 : -1;
+  if (idx < 0) {
+    const raw = full.search(/<!doctype html|<html[\s>]/i);
+    if (raw >= 0) {
+      idx = raw;
+      start = raw;
+    }
+  }
+  if (idx < 0) return { explanation: full.trim(), code: "" };
+  let code = full.slice(start).replace(/^[^\n]*\n/, (m) => (m.trim() ? m : ""));
+  const end = code.indexOf("```");
+  if (end >= 0) code = code.slice(0, end);
+  return { explanation: full.slice(0, idx).trim(), code: code.trim() };
+}
+
+// ---------------- Router ----------------
+
+function route() {
+  const match = location.hash.match(/^#p-([\w-]+)/);
+  const project = match && state.projects.find((p) => p.id === match[1]);
+  if (project && state.project?.id === project.id && !els.editor.hidden) return;
+  if (project) openEditor(project);
+  else showHome();
+}
+
+function showHome() {
+  stopGeneration();
+  state.project = null;
+  els.editor.hidden = true;
+  els.home.hidden = false;
+  document.title = "Rea Studio";
+  renderProjects();
+}
+
+// ---------------- Inicio ----------------
+
+function renderProjects() {
+  const grid = els.projectGrid;
+  grid.replaceChildren();
+  els.projectCount.textContent = state.projects.length
+    ? `${state.projects.length}`
+    : "";
+  if (!state.projects.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent =
+      "Aún no tienes proyectos. Describe tu primera web arriba.";
+    grid.append(empty);
+    return;
+  }
+  for (const p of state.projects) {
+    const card = document.createElement("div");
+    card.className = "project-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "link");
+    card.setAttribute("aria-label", `Abrir ${p.name}`);
+
+    const thumb = document.createElement("div");
+    thumb.className = "thumb";
+    const html = currentHtml(p);
+    if (html) {
+      const frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "");
+      frame.setAttribute("loading", "lazy");
+      frame.setAttribute("tabindex", "-1");
+      frame.setAttribute("aria-hidden", "true");
+      frame.srcdoc = html;
+      thumb.append(frame);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "project-meta";
+    const name = document.createElement("strong");
+    name.textContent = p.name;
+    const info = document.createElement("span");
+    info.textContent = `${p.versions.length} versión${p.versions.length === 1 ? "" : "es"} · ${timeAgo(p.updatedAt)}`;
+    meta.append(name, info);
+
+    const del = document.createElement("button");
+    del.className = "delete-btn";
+    del.type = "button";
+    del.textContent = "×";
+    del.setAttribute("aria-label", `Borrar ${p.name}`);
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!del.classList.contains("armed")) {
+        del.classList.add("armed");
+        del.textContent = "¿Borrar?";
+        setTimeout(() => {
+          del.classList.remove("armed");
+          del.textContent = "×";
+        }, 3000);
+        return;
+      }
+      state.projects = state.projects.filter((x) => x.id !== p.id);
+      saveProjects();
+      renderProjects();
+    });
+
+    const open = () => (location.hash = `#p-${p.id}`);
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", (e) => e.key === "Enter" && open());
+    card.append(thumb, meta, del);
+    grid.append(card);
+  }
+}
+
+function startFromHome(prompt) {
+  prompt = prompt.trim();
+  if (!prompt) return;
+  const project = createProject(prompt);
+  els.homePrompt.value = "";
+  location.hash = `#p-${project.id}`;
+  openEditor(project);
+  generate(prompt);
+}
+
+// ---------------- Editor ----------------
+
+function openEditor(project) {
+  if (state.project?.id !== project.id) stopGeneration();
+  state.project = project;
+  state.selection = null;
+  els.home.hidden = true;
+  els.editor.hidden = false;
+  els.projectName.value = project.name;
+  document.title = `${project.name} · Rea Studio`;
+  renderMessages();
+  renderSelection();
+  renderVersion();
+  setTab(state.tab);
+  els.chatInput.focus();
+}
+
+function renderMessages() {
+  els.messages.replaceChildren();
+  const msgs = state.project.messages;
+  if (!msgs.length) {
+    addBubble(
+      "assistant",
+      "¡Hola! Describe la web que quieres o pide cambios sobre la actual. Activa el Inspector para elegir un elemento concreto.",
+    );
+  }
+  for (const m of msgs) addBubble(m.role, m.text, m.version);
+}
+
+function addBubble(role, text, version) {
+  const div = document.createElement("div");
+  div.className = `msg ${role === "error" ? "assistant error" : role}`;
+  const body = document.createElement("div");
+  if (role !== "user") {
+    const avatar = document.createElement("img");
+    avatar.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a3d%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23ff3d6e%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b5cf6%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M20%2046V18h13a9%209%200%200%201%202.5%2017.6L44%2046h-8.5l-7.6-9.8H27.5V46z%20M27.5%2030.2h5a3.6%203.6%200%200%200%200-7.2h-5z%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2220%22%20r%3D%224%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%0A%3C%2Fsvg%3E";
+    avatar.alt = "";
+    div.append(avatar);
+  }
+  body.textContent = text;
+  if (version) {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = `Versión ${version}`;
+    body.append(document.createElement("br"), tag);
+  }
+  div.append(body);
+  els.messages.append(div);
+  els.messages.scrollTop = els.messages.scrollHeight;
+  return body;
+}
+
+function renderVersion() {
+  const p = state.project;
+  const html = currentHtml();
+  els.versionLabel.textContent = p.versions.length ? `v${p.current + 1}` : "v0";
+  els.codeArea.value = html;
+  els.codeSize.textContent = kb(html);
+  renderPreview(html);
+  if (state.tab === "audit") runAudit();
+}
+
+// Script inyectado SOLO en la vista previa (no en la descarga) para el Inspector.
+const INSPECTOR_SCRIPT = `<script data-rea-inspector>(() => {
+  let on = false;
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #ff5a36;background:rgba(255,90,54,.08);border-radius:4px;display:none;transition:all .06s";
+  const tag = document.createElement("div");
+  tag.style.cssText = "position:absolute;top:-22px;left:-2px;background:#ff5a36;color:#fff;font:600 11px/1 system-ui;padding:4px 6px;border-radius:4px;white-space:nowrap";
+  box.appendChild(tag);
+  const label = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + (typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\\s+/).slice(0, 2).join(".") : "");
+  addEventListener("message", (e) => {
+    if (e.data && e.data.type === "rea-inspect") {
+      on = !!e.data.on;
+      if (!box.isConnected) document.body.appendChild(box);
+      box.style.display = "none";
+      document.documentElement.style.cursor = on ? "crosshair" : "";
+    }
+  });
+  document.addEventListener("mouseover", (e) => {
+    if (!on || e.target === box) return;
+    const r = e.target.getBoundingClientRect();
+    Object.assign(box.style, { display: "block", top: r.top + "px", left: r.left + "px", width: r.width + "px", height: r.height + "px" });
+    tag.textContent = label(e.target);
+  }, true);
+  document.addEventListener("click", (e) => {
+    if (!on) return;
+    e.preventDefault();
+    e.stopPropagation();
+    box.remove();
+    parent.postMessage({ type: "rea-selected", html: e.target.outerHTML.slice(0, 4000), label: label(e.target) }, "*");
+  }, true);
+})();<\/script>`;
+
+function withInspector(html) {
+  if (!html) return "";
+  return /<\/body>/i.test(html)
+    ? html.replace(/<\/body>(?![\s\S]*<\/body>)/i, `${INSPECTOR_SCRIPT}</body>`)
+    : html + INSPECTOR_SCRIPT;
+}
+
+function renderPreview(html) {
+  els.preview.srcdoc = html
+    ? withInspector(html)
+    : `<!doctype html><body style="margin:0;display:grid;place-items:center;height:100vh;font-family:system-ui;color:#999;background:#fafafa"><p>Tu web aparecerá aquí</p></body>`;
+}
+
+els.preview.addEventListener("load", () => {
+  els.preview.contentWindow?.postMessage(
+    { type: "rea-inspect", on: state.inspecting },
+    "*",
+  );
+});
+
+window.addEventListener("message", (e) => {
+  if (e.source !== els.preview.contentWindow || e.data?.type !== "rea-selected")
+    return;
+  state.selection = { html: String(e.data.html), label: String(e.data.label) };
+  setInspecting(false);
+  renderSelection();
+  els.chatInput.focus();
+});
+
+function setInspecting(on) {
+  state.inspecting = on;
+  els.inspectBtn.setAttribute("aria-pressed", String(on));
+  if (on) setTab("preview");
+  els.preview.contentWindow?.postMessage({ type: "rea-inspect", on }, "*");
+}
+
+function renderSelection() {
+  els.selectionChip.hidden = !state.selection;
+  if (state.selection) els.selectionLabel.textContent = state.selection.label;
+}
+
+function setTab(tab) {
+  state.tab = tab;
+  document
+    .querySelectorAll(".tabs [role=tab]")
+    .forEach((b) =>
+      b.setAttribute("aria-selected", String(b.dataset.tab === tab)),
+    );
+  document
+    .querySelectorAll(".panel")
+    .forEach((p) => (p.hidden = p.dataset.panel !== tab));
+  if (tab === "audit") runAudit();
+}
+
+// ---------------- Generación ----------------
+
+async function generate(prompt) {
+  const p = state.project;
+  if (!p || state.busy || !prompt.trim()) return;
+  if (!state.backend) return toast("Conectando… inténtalo en un segundo.");
+  prompt = prompt.trim();
+
+  const history = p.messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.text);
+  const baseHtml = currentHtml(p);
+  const selection = state.selection?.html || null;
+
+  p.messages.push({ role: "user", text: prompt });
+  addBubble("user", prompt);
+  state.selection = null;
+  renderSelection();
+
+  const bubble = addBubble("assistant", "");
+  bubble.innerHTML =
+    '<span class="typing"><span></span><span></span><span></span></span>';
+  setBusy(true);
+  els.building.hidden = false;
+  els.buildingText.textContent = baseHtml
+    ? "Aplicando tus cambios…"
+    : "Pensando el diseño…";
+
+  const controller = new AbortController();
+  state.controller = controller;
+  let full = "";
+  let failed = null;
+  let lastPaint = 0;
+
+  const onText = (text) => {
+    full = text;
+    const { explanation, code } = splitResponse(full);
+    if (explanation) bubble.textContent = explanation;
+    if (code) {
+      els.building.hidden = true;
+      els.statusText.textContent = `Escribiendo código · ${kb(code)}`;
+      if (state.tab === "code") {
+        els.codeArea.value = code;
+        els.codeArea.scrollTop = els.codeArea.scrollHeight;
+      }
+      // Vista previa en vivo mientras se escribe, limitada para no parpadear.
+      const now = performance.now();
+      if (
+        state.tab === "preview" &&
+        now - lastPaint > 1500 &&
+        code.includes("<body")
+      ) {
+        lastPaint = now;
+        renderPreview(code);
+      }
+    }
+    els.messages.scrollTop = els.messages.scrollHeight;
+  };
+
+  try {
+    const { truncated } = await state.backend.generate(
+      { prompt, currentHtml: baseHtml, history, selection },
+      { signal: controller.signal, onText },
+    );
+    if (truncated)
+      failed = "La respuesta se cortó por longitud. Pide una página más corta.";
+  } catch (err) {
+    if (controller.signal.aborted) failed = "Generación detenida.";
+    else failed = err.message || "No se pudo conectar con el servidor.";
+  }
+
+  const { explanation, code } = splitResponse(full);
+  const valid = code.length > 200 && /<\/html>/i.test(code);
+
+  if (valid && !(failed && controller.signal.aborted)) {
+    p.versions.push({ html: code, prompt, at: Date.now() });
+    if (p.versions.length > MAX_VERSIONS) p.versions.shift();
+    p.current = p.versions.length - 1;
+    const text = explanation || "Listo, aquí tienes la nueva versión.";
+    p.messages.push({ role: "assistant", text, version: p.versions.length });
+    bubble.textContent = text;
+    bubble.append(
+      document.createElement("br"),
+      Object.assign(document.createElement("span"), {
+        className: "tag",
+        textContent: `Versión ${p.versions.length}`,
+      }),
+    );
+    if (p.autoName) {
+      const title = code
+        .match(/<title>([^<]{2,80})<\/title>/i)?.[1]
+        ?.split(/[—|·-]/)[0]
+        ?.trim();
+      if (title) {
+        p.name = title;
+        els.projectName.value = title;
+        document.title = `${title} · Rea Studio`;
+      }
+    }
+    if (failed) toast(failed);
+  } else {
+    const msg =
+      failed ||
+      (explanation
+        ? explanation
+        : "No llegó una página válida. Inténtalo otra vez.");
+    p.messages.push({ role: failed ? "error" : "assistant", text: msg });
+    bubble.textContent = msg;
+    if (failed) bubble.parentElement.classList.add("error");
+  }
+
+  p.updatedAt = Date.now();
+  saveProjects();
+  state.controller = null;
+  setBusy(false);
+  els.building.hidden = true;
+  els.statusText.textContent = "";
+  renderVersion();
+}
+
+function setBusy(busy) {
+  state.busy = busy;
+  els.chatSend.hidden = busy;
+  els.chatStop.hidden = !busy;
+  els.fixBtn.disabled = busy;
+}
+
+function stopGeneration() {
+  state.controller?.abort();
+}
+
+// ---------------- Versiones ----------------
+
+function renderVersionsMenu() {
+  const p = state.project;
+  els.versionsMenu.replaceChildren();
+  if (!p.versions.length) {
+    const b = document.createElement("button");
+    b.disabled = true;
+    b.textContent = "Aún no hay versiones";
+    els.versionsMenu.append(b);
+    return;
+  }
+  p.versions
+    .map((v, i) => ({ v, i }))
+    .reverse()
+    .forEach(({ v, i }) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      if (i === p.current) b.className = "current";
+      b.textContent = `Versión ${i + 1}${i === p.current ? " · actual" : ""} — ${timeAgo(v.at)}`;
+      const small = document.createElement("small");
+      small.textContent = v.prompt;
+      b.append(small);
+      b.addEventListener("click", () => {
+        p.current = i;
+        p.updatedAt = Date.now();
+        saveProjects();
+        renderVersion();
+        closeVersions();
+        toast(`Restaurada la versión ${i + 1}`);
+      });
+      els.versionsMenu.append(b);
+    });
+}
+
+function closeVersions() {
+  els.versionsMenu.hidden = true;
+  els.versionsBtn.setAttribute("aria-expanded", "false");
+}
+
+// ---------------- Análisis Rea ----------------
+
+function snippet(el) {
+  const html = el.outerHTML.replace(/\s+/g, " ");
+  return html.length > 110 ? `${html.slice(0, 110)}…` : html;
+}
+
+function audit(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const checks = [];
+  const add = (status, title, detail, evidence, fix) =>
+    checks.push({ status, title, detail, evidence, fix });
+
+  const title = doc.querySelector("title")?.textContent.trim() || "";
+  if (!title)
+    add(
+      "bad",
+      "Título de la página",
+      "No hay <title>. Es lo que se ve en la pestaña y en Google.",
+      "",
+      "añadir un <title> descriptivo",
+    );
+  else if (title.length > 65)
+    add(
+      "warn",
+      "Título de la página",
+      `Mide ${title.length} caracteres; Google corta a partir de ~60.`,
+      `<title>${title}</title>`,
+      "acortar el <title> a menos de 60 caracteres",
+    );
+  else add("ok", "Título de la página", `"${title}"`, "");
+
+  const desc = doc
+    .querySelector('meta[name="description"]')
+    ?.getAttribute("content")
+    ?.trim();
+  if (desc)
+    add(
+      "ok",
+      "Meta descripción",
+      desc.length > 160
+        ? `Algo larga (${desc.length} caracteres).`
+        : "Presente.",
+      `content="${desc.slice(0, 90)}${desc.length > 90 ? "…" : ""}"`,
+    );
+  else
+    add(
+      "bad",
+      "Meta descripción",
+      "Falta. Google la usa como resumen en los resultados.",
+      "",
+      'añadir <meta name="description">',
+    );
+
+  if (doc.querySelector('meta[name="viewport"]'))
+    add("ok", "Preparada para móvil", "Tiene la meta viewport.", "");
+  else
+    add(
+      "bad",
+      "Preparada para móvil",
+      "Sin meta viewport el móvil la mostrará diminuta.",
+      "",
+      "añadir la meta viewport",
+    );
+
+  const lang = doc.documentElement.getAttribute("lang");
+  if (lang) add("ok", "Idioma declarado", `lang="${lang}"`, "");
+  else
+    add(
+      "warn",
+      "Idioma declarado",
+      "Falta lang en <html>; ayuda a lectores de pantalla y traductores.",
+      "",
+      'añadir lang="es" a <html>',
+    );
+
+  const h1s = [...doc.querySelectorAll("h1")];
+  if (h1s.length === 1)
+    add("ok", "Encabezado principal", "Exactamente un <h1>.", snippet(h1s[0]));
+  else if (!h1s.length)
+    add(
+      "bad",
+      "Encabezado principal",
+      "No hay ningún <h1>.",
+      "",
+      "añadir un único <h1> con el mensaje principal",
+    );
+  else
+    add(
+      "warn",
+      "Encabezado principal",
+      `Hay ${h1s.length} <h1>; lo ideal es uno.`,
+      h1s.slice(0, 2).map(snippet).join("\n"),
+      "dejar un único <h1>",
+    );
+
+  const levels = [...doc.querySelectorAll("h1,h2,h3,h4,h5,h6")].map((h) => ({
+    h,
+    n: Number(h.tagName[1]),
+  }));
+  const jump = levels.find((x, i) => i > 0 && x.n - levels[i - 1].n > 1);
+  if (jump)
+    add(
+      "warn",
+      "Jerarquía de encabezados",
+      `Salta de h${levels[levels.indexOf(jump) - 1].n} a h${jump.n}.`,
+      snippet(jump.h),
+      "corregir los saltos de nivel en los encabezados",
+    );
+  else
+    add(
+      "ok",
+      "Jerarquía de encabezados",
+      `${levels.length} encabezados en orden.`,
+      "",
+    );
+
+  const imgs = [...doc.querySelectorAll("img")];
+  const noAlt = imgs.filter((i) => !i.hasAttribute("alt"));
+  if (noAlt.length)
+    add(
+      "bad",
+      "Texto alternativo en imágenes",
+      `${noAlt.length} de ${imgs.length} imágenes sin alt.`,
+      noAlt.slice(0, 3).map(snippet).join("\n"),
+      "añadir alt descriptivo a todas las imágenes",
+    );
+  else
+    add(
+      "ok",
+      "Texto alternativo en imágenes",
+      imgs.length
+        ? `Las ${imgs.length} imágenes tienen alt.`
+        : "No hay imágenes.",
+      "",
+    );
+
+  const fields = [
+    ...doc.querySelectorAll(
+      "input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea",
+    ),
+  ];
+  const unlabeled = fields.filter(
+    (f) =>
+      !(f.id && doc.querySelector(`label[for="${CSS.escape(f.id)}"]`)) &&
+      !f.closest("label") &&
+      !f.getAttribute("aria-label") &&
+      !f.getAttribute("aria-labelledby"),
+  );
+  if (unlabeled.length)
+    add(
+      "warn",
+      "Etiquetas en formularios",
+      `${unlabeled.length} campo(s) sin etiqueta accesible (el placeholder no cuenta).`,
+      unlabeled.slice(0, 3).map(snippet).join("\n"),
+      "añadir <label> o aria-label a los campos de formulario",
+    );
+  else
+    add(
+      "ok",
+      "Etiquetas en formularios",
+      fields.length
+        ? `Los ${fields.length} campos tienen etiqueta.`
+        : "No hay formularios.",
+      "",
+    );
+
+  const deadLinks = [...doc.querySelectorAll("a")].filter(
+    (a) => !a.getAttribute("href") || a.getAttribute("href") === "#",
+  );
+  if (deadLinks.length)
+    add(
+      "warn",
+      "Enlaces sin destino",
+      `${deadLinks.length} enlace(s) con href vacío o "#".`,
+      deadLinks.slice(0, 3).map(snippet).join("\n"),
+      "dar destino real a los enlaces vacíos (anclas a secciones o páginas)",
+    );
+  else
+    add(
+      "ok",
+      "Enlaces sin destino",
+      "Todos los enlaces llevan a algún sitio.",
+      "",
+    );
+
+  const scripts = [...doc.querySelectorAll("script[src]")];
+  if (scripts.length)
+    add(
+      "warn",
+      "Scripts externos",
+      `Carga ${scripts.length} script(s) de terceros; afectan velocidad y privacidad.`,
+      scripts.slice(0, 3).map(snippet).join("\n"),
+      "eliminar scripts externos innecesarios",
+    );
+  else
+    add(
+      "ok",
+      "Scripts externos",
+      "Ninguno: todo el código va dentro de la página.",
+      "",
+    );
+
+  const size = new Blob([html]).size;
+  if (size > 200 * 1024)
+    add(
+      "warn",
+      "Peso del archivo",
+      `${(size / 1024).toFixed(0)} KB; por encima de 200 KB tarda más en cargar.`,
+      "",
+      "reducir el tamaño del HTML y CSS",
+    );
+  else add("ok", "Peso del archivo", `${(size / 1024).toFixed(1)} KB`, "");
+
+  const css = [...doc.querySelectorAll("style")]
+    .map((s) => s.textContent)
+    .join("\n");
+  const vars = css.match(/--[\w-]+\s*:/g) || [];
+  if (vars.length >= 3)
+    add(
+      "ok",
+      "Sistema de diseño",
+      `${vars.length} variables CSS: colores y medidas fáciles de cambiar.`,
+      "",
+    );
+  else
+    add(
+      "warn",
+      "Sistema de diseño",
+      "Casi no usa variables CSS; cambiar la paleta será más difícil.",
+      "",
+      "definir la paleta y medidas en variables CSS en :root",
+    );
+
+  return checks;
+}
+
+function runAudit() {
+  const html = currentHtml();
+  els.auditList.replaceChildren();
+  if (!html) {
+    els.auditScore.textContent = "–";
+    els.auditScore.style.borderColor = "";
+    els.fixBtn.hidden = true;
+    const li = document.createElement("li");
+    li.className = "muted";
+    li.textContent = "Genera una web para analizarla.";
+    els.auditList.append(li);
+    return;
+  }
+  const checks = audit(html);
+  const points = checks.reduce(
+    (s, c) => s + (c.status === "ok" ? 1 : c.status === "warn" ? 0.5 : 0),
+    0,
+  );
+  const score = Math.round((points / checks.length) * 100);
+  els.auditScore.textContent = score;
+  els.auditScore.style.borderColor =
+    score >= 85 ? "var(--ok)" : score >= 60 ? "var(--warn)" : "var(--bad)";
+
+  const order = { bad: 0, warn: 1, ok: 2 };
+  for (const c of checks.sort((a, b) => order[a.status] - order[b.status])) {
+    const li = document.createElement("li");
+    li.className = `check ${c.status}`;
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    const body = document.createElement("div");
+    const t = document.createElement("strong");
+    t.textContent = c.title;
+    const d = document.createElement("span");
+    d.textContent = c.detail;
+    body.append(t, d);
+    if (c.evidence) {
+      const code = document.createElement("code");
+      code.textContent = c.evidence;
+      body.append(code);
+    }
+    li.append(dot, body);
+    els.auditList.append(li);
+  }
+  state.auditIssues = checks.filter((c) => c.fix).map((c) => c.fix);
+  els.fixBtn.hidden = !state.auditIssues.length;
+}
+
+// ---------------- Eventos ----------------
+
+function submitOnEnter(textarea, form) {
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+}
+
+els.homeForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  startFromHome(els.homePrompt.value);
+});
+submitOnEnter(els.homePrompt, els.homeForm);
+
+els.chips.addEventListener("click", (e) => {
+  const prompt = e.target.closest("button")?.dataset.prompt;
+  if (prompt) startFromHome(prompt);
+});
+
+els.chatForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = els.chatInput.value;
+  if (!text.trim() || state.busy) return;
+  els.chatInput.value = "";
+  generate(text);
+});
+submitOnEnter(els.chatInput, els.chatForm);
+els.chatStop.addEventListener("click", stopGeneration);
+
+$("#backBtn").addEventListener("click", () => (location.hash = ""));
+$("#clearSelection").addEventListener("click", () => {
+  state.selection = null;
+  renderSelection();
+});
+
+els.projectName.addEventListener("change", () => {
+  const name = els.projectName.value.trim();
+  if (!name) return (els.projectName.value = state.project.name);
+  state.project.name = name;
+  state.project.autoName = false;
+  saveProjects();
+  document.title = `${name} · Rea Studio`;
+});
+
+document
+  .querySelectorAll(".tabs [role=tab]")
+  .forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+document.querySelectorAll(".devices button").forEach((b) =>
+  b.addEventListener("click", () => {
+    document
+      .querySelectorAll(".devices button")
+      .forEach((x) => x.classList.toggle("active", x === b));
+    els.frameWrap.dataset.device = b.dataset.device;
+    setTab("preview");
+  }),
+);
+
+els.inspectBtn.addEventListener("click", () => {
+  if (!currentHtml()) return toast("Primero genera una web.");
+  setInspecting(!state.inspecting);
+  if (state.inspecting) toast("Haz clic en un elemento de la vista previa");
+});
+
+els.versionsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = els.versionsMenu.hidden;
+  if (open) renderVersionsMenu();
+  els.versionsMenu.hidden = !open;
+  els.versionsBtn.setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("click", (e) => {
+  if (!els.versionsMenu.hidden && !e.target.closest(".menu-wrap"))
+    closeVersions();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeVersions();
+    if (state.inspecting) setInspecting(false);
+  }
+});
+
+$("#downloadBtn").addEventListener("click", () => {
+  const html = currentHtml();
+  if (!html) return toast("Aún no hay nada que descargar.");
+  state.backend.save(`${slug(state.project.name)}.html`, html).then((r) => {
+    if (r === "failed")
+      toast("No se pudo descargar. Copia el código desde la pestaña Código.");
+  });
+});
+
+$("#openBtn").addEventListener("click", () => {
+  const html = currentHtml();
+  if (!html) return toast("Aún no hay nada que abrir.");
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  window.open(url, "_blank", "noopener");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+});
+
+$("#copyCode").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(els.codeArea.value);
+    toast("Código copiado");
+  } catch {
+    els.codeArea.select();
+    toast("Selecciona y copia con Ctrl+C");
+  }
+});
+
+$("#saveCode").addEventListener("click", () => {
+  const p = state.project;
+  const html = els.codeArea.value.trim();
+  if (!html || html === currentHtml())
+    return toast("No hay cambios que guardar.");
+  p.versions.push({
+    html,
+    prompt: "Edición manual del código",
+    at: Date.now(),
+  });
+  if (p.versions.length > MAX_VERSIONS) p.versions.shift();
+  p.current = p.versions.length - 1;
+  p.updatedAt = Date.now();
+  saveProjects();
+  renderVersion();
+  toast(`Guardada como versión ${p.versions.length}`);
+});
+
+els.codeArea.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    els.codeArea.setRangeText(
+      "  ",
+      els.codeArea.selectionStart,
+      els.codeArea.selectionEnd,
+      "end",
+    );
+  }
+});
+
+els.fixBtn.addEventListener("click", () => {
+  if (!state.auditIssues.length) return;
+  setTab("preview");
+  generate(
+    `Corrige estos problemas que detectó el Análisis Rea, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
+  );
+});
+
+window.addEventListener("hashchange", route);
+
+function applyBackend(backend) {
+  state.backend = { ...state.backend, ...backend };
+  els.modeBadge.textContent = state.backend.label;
+  els.modeBadge.classList.toggle("ai", state.backend.mode !== "demo");
+  els.modeBadge.title = state.backend.title;
+  // Dentro de claude.ai no se pueden abrir pestañas con contenido generado.
+  $("#openBtn").hidden = state.backend.online;
+  $("#downloadBtn").hidden = !state.backend.canSave;
+}
+
+route();
+applyBackend(await createBackend(applyBackend));
+
+</script>

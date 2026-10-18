@@ -158,6 +158,22 @@ function pickColor(prompt) {
   return null;
 }
 
+// Ilustración SVG abstracta y determinista (sin imágenes externas: funciona
+// sin conexión y dentro de la vista previa aislada).
+function art(seed, accent, w, h) {
+  let x = 0;
+  for (const c of seed) x = (x * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => (x = (x * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const shapes = Array.from({ length: 5 }, (_, i) => {
+    const r = (0.18 + rnd() * 0.3) * Math.min(w, h);
+    const op = (0.25 + rnd() * 0.5).toFixed(2);
+    const fill = i % 2 ? "#ffffff" : accent;
+    return `<circle cx="${(rnd() * w).toFixed(0)}" cy="${(rnd() * h).toFixed(0)}" r="${r.toFixed(0)}" fill="${fill}" opacity="${op}"/>`;
+  }).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="#1b1b24"/></linearGradient></defs><rect width="${w}" height="${h}" fill="url(#g)"/>${shapes}</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 function page({ name, tagline, accent, seed, sections, cta, dark }) {
   const bg = dark ? "#0d0f14" : "#fbfaf8";
   const fg = dark ? "#f2f2f5" : "#16171d";
@@ -168,7 +184,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
     .map(
       ([t, d], i) => `
       <article class="card">
-        <img src="https://picsum.photos/seed/${seed}${i}/640/420" alt="${escapeHtml(t)}" loading="lazy" />
+        <img src="${art(seed + i, accent, 640, 420)}" alt="${escapeHtml(t)}" loading="lazy" />
         <h3>${escapeHtml(t)}</h3>
         <p>${escapeHtml(d)}</p>
       </article>`,
@@ -245,7 +261,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
         <p>${n} es el lugar para quienes buscan calidad sin complicaciones. Conoce lo que ofrecemos y da el primer paso hoy.</p>
         <a class="btn" href="#contacto">${escapeHtml(cta)}</a>
       </div>
-      <img src="https://picsum.photos/seed/${seed}hero/900/680" alt="Imagen principal de ${n}" />
+      <img src="${art(seed + "hero", accent, 900, 680)}" alt="Imagen principal de ${n}" />
     </section>
     <section id="servicios">
       <h2>Lo que ofrecemos</h2>

@@ -7,7 +7,8 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
-import { buildDemoSite } from "./demo.js";
+import { buildDemoSite } from "./public/demo.js";
+import { SYSTEM_PROMPT, buildUserMessage } from "./public/prompt.js";
 
 const ROOT = fileURLToPath(new URL("./public/", import.meta.url));
 const PORT = Number(process.env.PORT) || 5173;
@@ -19,23 +20,6 @@ const hasCredentials = Boolean(
 );
 const client = hasCredentials ? new Anthropic() : null;
 
-const SYSTEM_PROMPT = `Eres el motor de Rea Studio, un constructor de páginas web.
-El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo HTML completo y autocontenido.
-
-Reglas del archivo:
-- Empieza con <!doctype html>, incluye <meta name="viewport" content="width=device-width, initial-scale=1"> y un <title> descriptivo.
-- Todo el CSS va en <style> y todo el JavaScript en <script> dentro del mismo archivo. Puedes usar Google Fonts.
-- No uses frameworks ni CDNs de JavaScript. Para imágenes usa https://picsum.photos/seed/<palabra>/<ancho>/<alto> con alt descriptivo, o SVG en línea.
-- Diseño moderno y profesional: buena tipografía, espaciado generoso, jerarquía visual clara, paleta coherente definida en variables CSS en :root.
-- Responsive de verdad (móvil primero), sin scroll horizontal, accesible (contraste, alt, etiquetas en formularios, HTML semántico).
-- Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
-- Cuando te den código actual, modifícalo respetando lo que ya existe: cambia solo lo que se pide y conserva el resto.
-
-Formato de respuesta:
-1. Una o dos frases cortas explicando lo que hiciste.
-2. El archivo completo dentro de un único bloque \`\`\`html ... \`\`\`.
-No escribas nada después del bloque de código.`;
-
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -45,39 +29,6 @@ const MIME = {
   ".ico": "image/x-icon",
   ".json": "application/json; charset=utf-8",
 };
-
-function buildUserMessage({ prompt, currentHtml, history, selection }) {
-  const parts = [];
-  if (history?.length) {
-    parts.push(
-      "Peticiones anteriores en este proyecto (de la más antigua a la más reciente):",
-    );
-    history.slice(-8).forEach((h, i) => parts.push(`${i + 1}. ${h}`));
-    parts.push("");
-  }
-  if (currentHtml) {
-    parts.push(
-      "Código actual de la página:",
-      "```html",
-      currentHtml,
-      "```",
-      "",
-    );
-  }
-  if (selection) {
-    parts.push(
-      "El usuario seleccionó este elemento en la vista previa; aplica el cambio sobre él:",
-      "```html",
-      selection,
-      "```",
-      "",
-    );
-  }
-  parts.push(
-    currentHtml ? `Cambio pedido: ${prompt}` : `Crea esta web: ${prompt}`,
-  );
-  return parts.join("\n");
-}
 
 function sse(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
