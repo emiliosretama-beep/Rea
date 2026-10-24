@@ -2,7 +2,7 @@
   "name": "rea-lovable",
   "version": "1.0.0",
   "private": true,
-  "description": "Rea Studio: crea páginas web describiéndolas en un chat, con vista previa en vivo.",
+  "description": "ERA Studio: crea páginas web describiéndolas en un chat, con vista previa en vivo.",
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",

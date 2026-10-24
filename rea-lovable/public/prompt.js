@@ -1,6 +1,6 @@
 // Instrucciones del generador, compartidas por el servidor local y la versión online.
 
-export const SYSTEM_PROMPT = `Eres el motor de Rea Studio, un constructor de páginas web.
+export const SYSTEM_PROMPT = `Eres el motor de ERA Studio, un constructor de páginas web.
 El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo HTML completo y autocontenido.
 
 Reglas del archivo:

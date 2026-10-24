@@ -1,7 +1,7 @@
-# Rea Studio
+# ERA Studio
 
 Crea páginas web describiéndolas en un chat. Inspirado en el flujo de los
-constructores web con IA, hecho desde cero con identidad propia de **Rea**.
+constructores web con IA, hecho desde cero con identidad propia de **ERA**.
 
 ## Qué incluye
 
@@ -16,8 +16,8 @@ constructores web con IA, hecho desde cero con identidad propia de **Rea**.
 | Proyectos                   | Se guardan en tu navegador con miniatura.                                                                                                                |
 | Exportar                    | Descarga un `.html` listo para subir a cualquier hosting, o ábrelo en otra pestaña.                                                                      |
 | Imágenes propias            | Sube logos o capturas (botón, pegar o arrastrar). La IA las ve y las coloca; se incluyen dentro del `.html` descargado.                                  |
-| **Inspector Rea**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
-| **Análisis Rea**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
+| **Inspector ERA**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
+| **Análisis ERA**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
 
 ## Versión online
 
@@ -59,7 +59,7 @@ rea-lovable/
 │   ├── prompt.js    # Instrucciones para la IA (compartidas)
 │   ├── demo.js      # Plantillas del modo demo
 │   ├── assets.js    # Imágenes subidas: reducir, guardar (IndexedDB) y resolver
-│   └── favicon.svg  # Logo Rea
+│   └── favicon.svg  # Logo ERA
 ├── scripts/build-online.mjs  # Arma la versión online en un solo HTML
 ├── online/rea-studio.html    # Versión online generada
 └── .env.example

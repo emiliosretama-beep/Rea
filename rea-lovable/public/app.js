@@ -1,4 +1,4 @@
-// Rea Studio — lógica del cliente.
+// ERA Studio — lógica del cliente.
 // Proyectos y versiones se guardan en localStorage del navegador; las imágenes
 // subidas, en IndexedDB (ver assets.js).
 import {
@@ -191,7 +191,7 @@ function showHome() {
   state.project = null;
   els.editor.hidden = true;
   els.home.hidden = false;
-  document.title = "Rea Studio";
+  document.title = "ERA Studio";
   renderProjects();
 }
 
@@ -398,7 +398,7 @@ function openEditor(project) {
   els.home.hidden = true;
   els.editor.hidden = false;
   els.projectName.value = project.name;
-  document.title = `${project.name} · Rea Studio`;
+  document.title = `${project.name} · ERA Studio`;
   renderMessages();
   renderSelection();
   renderVersion();
@@ -467,9 +467,9 @@ function renderVersion() {
 const INSPECTOR_SCRIPT = `<script data-rea-inspector>(() => {
   let on = false;
   const box = document.createElement("div");
-  box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #ff5a36;background:rgba(255,90,54,.08);border-radius:4px;display:none;transition:all .06s";
+  box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #f04e23;background:rgba(240,78,35,.08);border-radius:4px;display:none;transition:all .06s";
   const tag = document.createElement("div");
-  tag.style.cssText = "position:absolute;top:-22px;left:-2px;background:#ff5a36;color:#fff;font:600 11px/1 system-ui;padding:4px 6px;border-radius:4px;white-space:nowrap";
+  tag.style.cssText = "position:absolute;top:-22px;left:-2px;background:#f04e23;color:#fff;font:600 11px/1 system-ui;padding:4px 6px;border-radius:4px;white-space:nowrap";
   box.appendChild(tag);
   const label = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + (typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\\s+/).slice(0, 2).join(".") : "");
   addEventListener("message", (e) => {
@@ -662,7 +662,7 @@ async function generate(prompt, images = []) {
       if (title) {
         p.name = title;
         els.projectName.value = title;
-        document.title = `${title} · Rea Studio`;
+        document.title = `${title} · ERA Studio`;
       }
     }
     if (failed) toast(failed);
@@ -737,7 +737,7 @@ function closeVersions() {
   els.versionsBtn.setAttribute("aria-expanded", "false");
 }
 
-// ---------------- Análisis Rea ----------------
+// ---------------- Análisis ERA ----------------
 
 function snippet(el) {
   const html = el.outerHTML.replace(/\s+/g, " ");
@@ -1075,7 +1075,7 @@ els.projectName.addEventListener("change", () => {
   state.project.name = name;
   state.project.autoName = false;
   saveProjects();
-  document.title = `${name} · Rea Studio`;
+  document.title = `${name} · ERA Studio`;
 });
 
 document
@@ -1179,7 +1179,7 @@ els.fixBtn.addEventListener("click", () => {
   if (!state.auditIssues.length) return;
   setTab("preview");
   generate(
-    `Corrige estos problemas que detectó el Análisis Rea, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
+    `Corrige estos problemas que detectó el Análisis ERA, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
   );
 });
 

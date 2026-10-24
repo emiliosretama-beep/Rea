@@ -1,18 +1,22 @@
-<title>Rea Studio</title>
+<title>ERA Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
+/* Paleta ERA Studio — concepto "Nueva Era": naranja de amanecer + azul ERA sobre azul noche */
 :root {
-  --bg: #0b0b10;
-  --bg-2: #12121a;
-  --panel: #16161f;
-  --line: #262633;
-  --fg: #f4f4f7;
-  --muted: #9a9aad;
-  --accent: #ff5a36;
-  --accent-2: #ff3d6e;
-  --accent-3: #8b5cf6;
-  --grad: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+  --bg: #0c0f24;
+  --bg-2: #12163a;
+  --panel: #161b40;
+  --line: #262d5c;
+  --fg: #f2f3f9;
+  --muted: #9ba1c2;
+  --accent: #f04e23;      /* naranja ERA */
+  --accent-2: #ff8a5b;    /* luz del amanecer */
+  --accent-3: #6f7ff0;    /* azul ERA aclarado para fondo oscuro */
+  --grad: linear-gradient(120deg, var(--accent), var(--accent-2) 45%, var(--accent-3));
+  --sun-1: #ffb089;       /* sol del logo en tema oscuro */
+  --sun-2: #f04e23;
+  --sun-3: #ffffff;
   --ok: #22c55e;
   --warn: #f59e0b;
   --bad: #ef4444;
@@ -23,23 +27,31 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #faf9f7;
-    --bg-2: #f1efeb;
+    --bg: #f6f6fb;
+    --bg-2: #eceef7;
     --panel: #ffffff;
-    --line: #e4e1db;
-    --fg: #17171c;
-    --muted: #6b6b7b;
+    --line: #dcdfee;
+    --fg: #14183a;
+    --muted: #5a6080;
+    --accent-3: #26337f;  /* azul ERA original */
+    --sun-1: #f04e23;
+    --sun-2: #b8413f;
+    --sun-3: #26337f;
     color-scheme: light;
   }
 }
 
 :root[data-theme="light"] {
-  --bg: #faf9f7;
-  --bg-2: #f1efeb;
+  --bg: #f6f6fb;
+  --bg-2: #eceef7;
   --panel: #ffffff;
-  --line: #e4e1db;
-  --fg: #17171c;
-  --muted: #6b6b7b;
+  --line: #dcdfee;
+  --fg: #14183a;
+  --muted: #5a6080;
+  --accent-3: #26337f;
+  --sun-1: #f04e23;
+  --sun-2: #b8413f;
+  --sun-3: #26337f;
   color-scheme: light;
 }
 
@@ -73,6 +85,7 @@ button { cursor: pointer; }
 .topbar { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); font-weight: 700; font-size: 1.1rem; }
 .brand b { font-weight: 800; margin-left: 3px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand-logo { height: 46px; width: auto; display: block; color: var(--fg); }
 .mode-badge { font-size: .78rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--muted); }
 .mode-badge.ai { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
 
@@ -176,7 +189,7 @@ button { cursor: pointer; }
 .frame-wrap { position: relative; flex: 1; margin: 14px; display: flex; justify-content: center; min-height: 0; }
 #preview { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 12px; background: #fff; transition: width .3s ease; }
 .frame-wrap[data-device="tablet"] #preview { width: 820px; max-width: 100%; }
-.frame-wrap[data-device="mobile"] #preview { width: 390px; max-width: 100%; border-radius: 28px; border-width: 8px; border-color: #1e1e28; }
+.frame-wrap[data-device="mobile"] #preview { width: 390px; max-width: 100%; border-radius: 28px; border-width: 8px; border-color: #1a1f45; }
 .building { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; background: color-mix(in srgb, var(--bg-2) 82%, transparent); backdrop-filter: blur(6px); border-radius: 12px; color: var(--muted); }
 .orb { width: 72px; height: 72px; border-radius: 50%; background: var(--grad); filter: blur(2px); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(.85); opacity: .7; } 50% { transform: scale(1.05); opacity: 1; } }
@@ -238,9 +251,8 @@ button { cursor: pointer; }
   <div id="home" class="view">
     <div class="glow" aria-hidden="true"></div>
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Rea Studio, inicio">
-        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a3d%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23ff3d6e%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b5cf6%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M20%2046V18h13a9%209%200%200%201%202.5%2017.6L44%2046h-8.5l-7.6-9.8H27.5V46z%20M27.5%2030.2h5a3.6%203.6%200%200%200%200-7.2h-5z%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2220%22%20r%3D%224%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%0A%3C%2Fsvg%3E" alt="" width="28" height="28" />
-        <span>Rea<b>Studio</b></span>
+      <a class="brand" href="/" aria-label="ERA Studio, inicio">
+        <svg class="brand-logo" viewBox="-4 -4 243 108" role="img" aria-label="ERA Studio"><defs><linearGradient id="brandSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sun-1)"/><stop offset=".55" style="stop-color:var(--sun-2)"/><stop offset="1" style="stop-color:var(--sun-3)"/></linearGradient><mask id="brandCut"><rect x="-1" y="-1" width="102" height="102" fill="#fff"/><rect x="50" y="30" width="52" height="12" fill="#000"/><rect x="50" y="58" width="52" height="12" fill="#000"/><rect x="84" y="41" width="18" height="18" fill="#000"/></mask></defs><circle cx="50" cy="50" r="50" fill="url(#brandSun)" mask="url(#brandCut)"/><rect x="128" y="64" width="107" height="3" fill="var(--accent)"/><g transform="translate(128 14) skewX(0) scale(0.46)"><clipPath id="hb0"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(0 0)"><path d="M60 10.0 H10.0 V90.0 H60 M10.0 50 H46.800000000000004" clip-path="url(#hb0)" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hb1"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(86 0)"><path d="M10.0 100 V10.0 H50.0 V52 H10.0 M29.333333333333332 60 L50.0 100" clip-path="url(#hb1)" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hb2"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(172 0)"><path d="M10.0 100 V10.0 H50.0 V100 M10.0 54 H50.0" clip-path="url(#hb2)" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g></g><g transform="translate(129 74) skewX(0) scale(0.14)"><clipPath id="hs0"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(0 0)"><path d="M60 9.0 H9.0 V50 H51.0 V91.0 H0" clip-path="url(#hs0)" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hs1"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(116 0)"><path d="M0 9.0 H60 M30.0 9.0 V100" clip-path="url(#hs1)" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hs2"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(232 0)"><path d="M9.0 0 V91.0 H51.0 V0" clip-path="url(#hs2)" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hs3"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(348 0)"><path d="M9.0 9.0 H37.8 L51.0 22.2 V77.8 L37.8 91.0 H9.0 Z" clip-path="url(#hs3)" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hs4"><rect x="0" y="0" width="18" height="100"/></clipPath><g transform="translate(464 0)"><path d="M9.0 0 V100" clip-path="url(#hs4)" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="hs5"><rect x="0" y="0" width="60" height="100"/></clipPath><g transform="translate(538 0)"><path d="M9.0 9.0 H51.0 V91.0 H9.0 Z" clip-path="url(#hs5)" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g></g></svg>
       </a>
       <span class="mode-badge" id="modeBadge">…</span>
     </header>
@@ -248,7 +260,7 @@ button { cursor: pointer; }
     <main class="home-main">
       <p class="eyebrow">Construye · Inspecciona · Mejora</p>
       <h1>Crea tu web <span class="grad">hablando</span>.</h1>
-      <p class="sub">Describe lo que quieres y Rea la construye en segundos. Luego inspecciona cada pieza y pule los detalles en el chat.</p>
+      <p class="sub">Describe lo que quieres y ERA la construye en segundos. Luego inspecciona cada pieza y pule los detalles en el chat.</p>
 
       <form id="homeForm" class="prompt-box">
         <label for="homePrompt" class="sr-only">Describe tu web</label>
@@ -292,14 +304,14 @@ button { cursor: pointer; }
         <button class="icon-btn" id="backBtn" title="Volver a proyectos" aria-label="Volver a proyectos">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a3d%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23ff3d6e%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b5cf6%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M20%2046V18h13a9%209%200%200%201%202.5%2017.6L44%2046h-8.5l-7.6-9.8H27.5V46z%20M27.5%2030.2h5a3.6%203.6%200%200%200%200-7.2h-5z%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2220%22%20r%3D%224%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%0A%3C%2Fsvg%3E" alt="" width="22" height="22" />
+        <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22sun%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23FFB089%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%23F04E23%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FFFFFF%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3Cmask%20id%3D%22cut%22%3E%0A%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%23fff%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2232%22%20y%3D%2222.4%22%20width%3D%2222%22%20height%3D%225.6%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2232%22%20y%3D%2236%22%20width%3D%2222%22%20height%3D%225.6%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2247.5%22%20y%3D%2227.5%22%20width%3D%228%22%20height%3D%229%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%3C%2Fmask%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3C!--%20ERA%20Studio%3A%20el%20sol%20que%20sale%20es%20una%20E%20(concepto%20%22Nueva%20Era%22)%20--%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2314183A%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2222%22%20fill%3D%22url(%23sun)%22%20mask%3D%22url(%23cut)%22%2F%3E%0A%3C%2Fsvg%3E" alt="" width="22" height="22" />
         <input id="projectName" class="project-name" aria-label="Nombre del proyecto" />
       </div>
 
       <div class="tabs" role="tablist" aria-label="Panel">
         <button role="tab" data-tab="preview" aria-selected="true">Vista</button>
         <button role="tab" data-tab="code" aria-selected="false">Código</button>
-        <button role="tab" data-tab="audit" aria-selected="false">Análisis Rea</button>
+        <button role="tab" data-tab="audit" aria-selected="false">Análisis ERA</button>
       </div>
 
       <div class="bar-right">
@@ -389,13 +401,13 @@ button { cursor: pointer; }
           <div class="audit">
             <div class="audit-head">
               <div>
-                <h2>Análisis Rea</h2>
+                <h2>Análisis ERA</h2>
                 <p class="muted">Revisión estática de la página con la evidencia de cada resultado.</p>
               </div>
               <div class="score" id="auditScore">–</div>
             </div>
             <ul class="checks" id="auditList"></ul>
-            <button class="btn-primary" id="fixBtn" hidden>Arreglar los problemas con Rea</button>
+            <button class="btn-primary" id="fixBtn" hidden>Arreglar los problemas con ERA</button>
           </div>
         </div>
       </section>
@@ -408,7 +420,7 @@ button { cursor: pointer; }
 // ---- public/prompt.js ----
 // Instrucciones del generador, compartidas por el servidor local y la versión online.
 
-const SYSTEM_PROMPT = `Eres el motor de Rea Studio, un constructor de páginas web.
+const SYSTEM_PROMPT = `Eres el motor de ERA Studio, un constructor de páginas web.
 El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo HTML completo y autocontenido.
 
 Reglas del archivo:
@@ -602,7 +614,7 @@ const FALLBACK = {
   kind: "negocio",
   name: "Tu Marca",
   tagline: "Una web clara para contar lo que haces.",
-  accent: "#ff5a36",
+  accent: "#f04e23",
   seed: "city",
   sections: [
     [
@@ -805,7 +817,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
     </section>
 ${images.length > sections.length + 1 ? gallery(images.slice(sections.length + 1)) : ""}
   </main>
-  <footer>© ${new Date().getFullYear()} ${n}. Hecho con Rea Studio.</footer>
+  <footer>© ${new Date().getFullYear()} ${n}. Hecho con ERA Studio.</footer>
 </body>
 </html>`;
 }
@@ -1265,7 +1277,7 @@ async function createBackend(onChange) {
 }
 
 // ---- public/app.js ----
-// Rea Studio — lógica del cliente.
+// ERA Studio — lógica del cliente.
 // Proyectos y versiones se guardan en localStorage del navegador; las imágenes
 // subidas, en IndexedDB (ver assets.js).
 
@@ -1449,7 +1461,7 @@ function showHome() {
   state.project = null;
   els.editor.hidden = true;
   els.home.hidden = false;
-  document.title = "Rea Studio";
+  document.title = "ERA Studio";
   renderProjects();
 }
 
@@ -1656,7 +1668,7 @@ function openEditor(project) {
   els.home.hidden = true;
   els.editor.hidden = false;
   els.projectName.value = project.name;
-  document.title = `${project.name} · Rea Studio`;
+  document.title = `${project.name} · ERA Studio`;
   renderMessages();
   renderSelection();
   renderVersion();
@@ -1682,7 +1694,7 @@ function addBubble(role, text, version, imageIds = []) {
   const body = document.createElement("div");
   if (role !== "user") {
     const avatar = document.createElement("img");
-    avatar.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff7a3d%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23ff3d6e%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238b5cf6%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url(%23g)%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M20%2046V18h13a9%209%200%200%201%202.5%2017.6L44%2046h-8.5l-7.6-9.8H27.5V46z%20M27.5%2030.2h5a3.6%203.6%200%200%200%200-7.2h-5z%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2220%22%20r%3D%224%22%20fill%3D%22%23fff%22%20opacity%3D%22.9%22%2F%3E%0A%3C%2Fsvg%3E";
+    avatar.src = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22sun%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23FFB089%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%23F04E23%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FFFFFF%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3Cmask%20id%3D%22cut%22%3E%0A%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%23fff%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2232%22%20y%3D%2222.4%22%20width%3D%2222%22%20height%3D%225.6%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2232%22%20y%3D%2236%22%20width%3D%2222%22%20height%3D%225.6%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2247.5%22%20y%3D%2227.5%22%20width%3D%228%22%20height%3D%229%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%3C%2Fmask%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3C!--%20ERA%20Studio%3A%20el%20sol%20que%20sale%20es%20una%20E%20(concepto%20%22Nueva%20Era%22)%20--%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2314183A%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2222%22%20fill%3D%22url(%23sun)%22%20mask%3D%22url(%23cut)%22%2F%3E%0A%3C%2Fsvg%3E";
     avatar.alt = "";
     div.append(avatar);
   }
@@ -1725,9 +1737,9 @@ function renderVersion() {
 const INSPECTOR_SCRIPT = `<script data-rea-inspector>(() => {
   let on = false;
   const box = document.createElement("div");
-  box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #ff5a36;background:rgba(255,90,54,.08);border-radius:4px;display:none;transition:all .06s";
+  box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #f04e23;background:rgba(240,78,35,.08);border-radius:4px;display:none;transition:all .06s";
   const tag = document.createElement("div");
-  tag.style.cssText = "position:absolute;top:-22px;left:-2px;background:#ff5a36;color:#fff;font:600 11px/1 system-ui;padding:4px 6px;border-radius:4px;white-space:nowrap";
+  tag.style.cssText = "position:absolute;top:-22px;left:-2px;background:#f04e23;color:#fff;font:600 11px/1 system-ui;padding:4px 6px;border-radius:4px;white-space:nowrap";
   box.appendChild(tag);
   const label = (el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + (typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\\s+/).slice(0, 2).join(".") : "");
   addEventListener("message", (e) => {
@@ -1920,7 +1932,7 @@ async function generate(prompt, images = []) {
       if (title) {
         p.name = title;
         els.projectName.value = title;
-        document.title = `${title} · Rea Studio`;
+        document.title = `${title} · ERA Studio`;
       }
     }
     if (failed) toast(failed);
@@ -1995,7 +2007,7 @@ function closeVersions() {
   els.versionsBtn.setAttribute("aria-expanded", "false");
 }
 
-// ---------------- Análisis Rea ----------------
+// ---------------- Análisis ERA ----------------
 
 function snippet(el) {
   const html = el.outerHTML.replace(/\s+/g, " ");
@@ -2333,7 +2345,7 @@ els.projectName.addEventListener("change", () => {
   state.project.name = name;
   state.project.autoName = false;
   saveProjects();
-  document.title = `${name} · Rea Studio`;
+  document.title = `${name} · ERA Studio`;
 });
 
 document
@@ -2437,7 +2449,7 @@ els.fixBtn.addEventListener("click", () => {
   if (!state.auditIssues.length) return;
   setTab("preview");
   generate(
-    `Corrige estos problemas que detectó el Análisis Rea, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
+    `Corrige estos problemas que detectó el Análisis ERA, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
   );
 });
 

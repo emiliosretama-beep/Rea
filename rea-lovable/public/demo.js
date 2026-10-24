@@ -109,7 +109,7 @@ const FALLBACK = {
   kind: "negocio",
   name: "Tu Marca",
   tagline: "Una web clara para contar lo que haces.",
-  accent: "#ff5a36",
+  accent: "#f04e23",
   seed: "city",
   sections: [
     [
@@ -312,7 +312,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
     </section>
 ${images.length > sections.length + 1 ? gallery(images.slice(sections.length + 1)) : ""}
   </main>
-  <footer>© ${new Date().getFullYear()} ${n}. Hecho con Rea Studio.</footer>
+  <footer>© ${new Date().getFullYear()} ${n}. Hecho con ERA Studio.</footer>
 </body>
 </html>`;
 }

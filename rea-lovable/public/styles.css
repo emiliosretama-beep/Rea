@@ -1,14 +1,18 @@
+/* Paleta ERA Studio — concepto "Nueva Era": naranja de amanecer + azul ERA sobre azul noche */
 :root {
-  --bg: #0b0b10;
-  --bg-2: #12121a;
-  --panel: #16161f;
-  --line: #262633;
-  --fg: #f4f4f7;
-  --muted: #9a9aad;
-  --accent: #ff5a36;
-  --accent-2: #ff3d6e;
-  --accent-3: #8b5cf6;
-  --grad: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+  --bg: #0c0f24;
+  --bg-2: #12163a;
+  --panel: #161b40;
+  --line: #262d5c;
+  --fg: #f2f3f9;
+  --muted: #9ba1c2;
+  --accent: #f04e23;      /* naranja ERA */
+  --accent-2: #ff8a5b;    /* luz del amanecer */
+  --accent-3: #6f7ff0;    /* azul ERA aclarado para fondo oscuro */
+  --grad: linear-gradient(120deg, var(--accent), var(--accent-2) 45%, var(--accent-3));
+  --sun-1: #ffb089;       /* sol del logo en tema oscuro */
+  --sun-2: #f04e23;
+  --sun-3: #ffffff;
   --ok: #22c55e;
   --warn: #f59e0b;
   --bad: #ef4444;
@@ -19,23 +23,31 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #faf9f7;
-    --bg-2: #f1efeb;
+    --bg: #f6f6fb;
+    --bg-2: #eceef7;
     --panel: #ffffff;
-    --line: #e4e1db;
-    --fg: #17171c;
-    --muted: #6b6b7b;
+    --line: #dcdfee;
+    --fg: #14183a;
+    --muted: #5a6080;
+    --accent-3: #26337f;  /* azul ERA original */
+    --sun-1: #f04e23;
+    --sun-2: #b8413f;
+    --sun-3: #26337f;
     color-scheme: light;
   }
 }
 
 :root[data-theme="light"] {
-  --bg: #faf9f7;
-  --bg-2: #f1efeb;
+  --bg: #f6f6fb;
+  --bg-2: #eceef7;
   --panel: #ffffff;
-  --line: #e4e1db;
-  --fg: #17171c;
-  --muted: #6b6b7b;
+  --line: #dcdfee;
+  --fg: #14183a;
+  --muted: #5a6080;
+  --accent-3: #26337f;
+  --sun-1: #f04e23;
+  --sun-2: #b8413f;
+  --sun-3: #26337f;
   color-scheme: light;
 }
 
@@ -69,6 +81,7 @@ button { cursor: pointer; }
 .topbar { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); font-weight: 700; font-size: 1.1rem; }
 .brand b { font-weight: 800; margin-left: 3px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand-logo { height: 46px; width: auto; display: block; color: var(--fg); }
 .mode-badge { font-size: .78rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--muted); }
 .mode-badge.ai { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
 
@@ -172,7 +185,7 @@ button { cursor: pointer; }
 .frame-wrap { position: relative; flex: 1; margin: 14px; display: flex; justify-content: center; min-height: 0; }
 #preview { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 12px; background: #fff; transition: width .3s ease; }
 .frame-wrap[data-device="tablet"] #preview { width: 820px; max-width: 100%; }
-.frame-wrap[data-device="mobile"] #preview { width: 390px; max-width: 100%; border-radius: 28px; border-width: 8px; border-color: #1e1e28; }
+.frame-wrap[data-device="mobile"] #preview { width: 390px; max-width: 100%; border-radius: 28px; border-width: 8px; border-color: #1a1f45; }
 .building { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; background: color-mix(in srgb, var(--bg-2) 82%, transparent); backdrop-filter: blur(6px); border-radius: 12px; color: var(--muted); }
 .orb { width: 72px; height: 72px; border-radius: 50%; background: var(--grad); filter: blur(2px); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(.85); opacity: .7; } 50% { transform: scale(1.05); opacity: 1; } }
