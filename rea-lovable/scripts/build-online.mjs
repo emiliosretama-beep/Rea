@@ -11,6 +11,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 const MODULES = [
   "public/prompt.js",
   "public/demo.js",
+  "public/assets.js",
   "public/backend.js",
   "public/app.js",
 ];

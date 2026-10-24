@@ -15,6 +15,7 @@ constructores web con IA, hecho desde cero con identidad propia de **Rea**.
 | Historial de versiones      | Vuelve a cualquier versión anterior con un clic.                                                                                                         |
 | Proyectos                   | Se guardan en tu navegador con miniatura.                                                                                                                |
 | Exportar                    | Descarga un `.html` listo para subir a cualquier hosting, o ábrelo en otra pestaña.                                                                      |
+| Imágenes propias            | Sube logos o capturas (botón, pegar o arrastrar). La IA las ve y las coloca; se incluyen dentro del `.html` descargado.                                  |
 | **Inspector Rea**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
 | **Análisis Rea**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
 
@@ -57,6 +58,7 @@ rea-lovable/
 │   ├── backend.js   # De dónde sale la IA: servidor local, claude.ai o demo
 │   ├── prompt.js    # Instrucciones para la IA (compartidas)
 │   ├── demo.js      # Plantillas del modo demo
+│   ├── assets.js    # Imágenes subidas: reducir, guardar (IndexedDB) y resolver
 │   └── favicon.svg  # Logo Rea
 ├── scripts/build-online.mjs  # Arma la versión online en un solo HTML
 ├── online/rea-studio.html    # Versión online generada

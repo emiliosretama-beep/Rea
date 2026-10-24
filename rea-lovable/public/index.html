@@ -29,9 +29,15 @@
 
       <form id="homeForm" class="prompt-box">
         <label for="homePrompt" class="sr-only">Describe tu web</label>
-        <textarea id="homePrompt" rows="3" placeholder="Una landing para mi cafetería &quot;Grano &amp; Horno&quot; con menú, horario y reservas…" required></textarea>
+        <textarea id="homePrompt" rows="3" placeholder="Una landing para mi cafetería &quot;Grano &amp; Horno&quot; con menú, horario y reservas…"></textarea>
+        <div class="attachments" id="homeAttachments" hidden></div>
         <div class="prompt-actions">
-          <span class="hint">Enter para enviar · Shift+Enter nueva línea</span>
+          <div class="prompt-tools">
+            <button class="attach-btn" type="button" data-attach="home" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </button>
+            <span class="hint">Enter para enviar · Shift+Enter nueva línea · pega o arrastra imágenes</span>
+          </div>
           <button class="send" type="submit" aria-label="Crear web">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -114,10 +120,16 @@
             <span>Editando: <code id="selectionLabel"></code></span>
             <button type="button" id="clearSelection" aria-label="Quitar selección">×</button>
           </div>
+          <div class="attachments" id="chatAttachments" hidden></div>
           <label for="chatInput" class="sr-only">Pide un cambio</label>
           <textarea id="chatInput" rows="2" placeholder="Pide un cambio: «haz el menú más grande», «añade una sección de precios»…"></textarea>
           <div class="chat-actions">
-            <span class="muted small" id="statusText"></span>
+            <div class="prompt-tools">
+              <button class="attach-btn" type="button" data-attach="chat" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="muted small" id="statusText"></span>
+            </div>
             <button class="send" id="chatSend" type="submit" aria-label="Enviar">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -167,6 +179,7 @@
     </div>
   </div>
 
+  <input type="file" id="fileInput" accept="image/*" multiple hidden />
   <div class="toast" id="toast" role="status" hidden></div>
   <script type="module" src="/app.js"></script>
 </body>

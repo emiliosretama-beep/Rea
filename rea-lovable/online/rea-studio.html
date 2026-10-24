@@ -218,6 +218,21 @@ button { cursor: pointer; }
   .btn-primary span { display: none; }
 }
 
+/* ---------- Imágenes adjuntas ---------- */
+.prompt-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.attach-btn { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); transition: color .15s, border-color .15s; }
+.attach-btn:hover, .attach-btn:focus-visible { color: var(--fg); border-color: var(--muted); }
+.attachments { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.attachment { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg-2); }
+.attachment img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attachment.loading::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--fg) 12%, transparent), transparent); animation: shimmer 1s infinite; }
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.attachment button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgb(0 0 0 / .65); color: #fff; font-size: 13px; line-height: 1; display: grid; place-items: center; }
+.drop-target.dragging { border-color: var(--accent) !important; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.msg-images img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .attachment.loading::after { animation: none; } }
+
 </style>
 <!-- ============ INICIO ============ -->
   <div id="home" class="view">
@@ -237,9 +252,15 @@ button { cursor: pointer; }
 
       <form id="homeForm" class="prompt-box">
         <label for="homePrompt" class="sr-only">Describe tu web</label>
-        <textarea id="homePrompt" rows="3" placeholder="Una landing para mi cafetería &quot;Grano &amp; Horno&quot; con menú, horario y reservas…" required></textarea>
+        <textarea id="homePrompt" rows="3" placeholder="Una landing para mi cafetería &quot;Grano &amp; Horno&quot; con menú, horario y reservas…"></textarea>
+        <div class="attachments" id="homeAttachments" hidden></div>
         <div class="prompt-actions">
-          <span class="hint">Enter para enviar · Shift+Enter nueva línea</span>
+          <div class="prompt-tools">
+            <button class="attach-btn" type="button" data-attach="home" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </button>
+            <span class="hint">Enter para enviar · Shift+Enter nueva línea · pega o arrastra imágenes</span>
+          </div>
           <button class="send" type="submit" aria-label="Crear web">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -322,10 +343,16 @@ button { cursor: pointer; }
             <span>Editando: <code id="selectionLabel"></code></span>
             <button type="button" id="clearSelection" aria-label="Quitar selección">×</button>
           </div>
+          <div class="attachments" id="chatAttachments" hidden></div>
           <label for="chatInput" class="sr-only">Pide un cambio</label>
           <textarea id="chatInput" rows="2" placeholder="Pide un cambio: «haz el menú más grande», «añade una sección de precios»…"></textarea>
           <div class="chat-actions">
-            <span class="muted small" id="statusText"></span>
+            <div class="prompt-tools">
+              <button class="attach-btn" type="button" data-attach="chat" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="muted small" id="statusText"></span>
+            </div>
             <button class="send" id="chatSend" type="submit" aria-label="Enviar">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -375,6 +402,7 @@ button { cursor: pointer; }
     </div>
   </div>
 
+  <input type="file" id="fileInput" accept="image/*" multiple hidden />
   <div class="toast" id="toast" role="status" hidden></div>
 <script type="module">
 // ---- public/prompt.js ----
@@ -387,6 +415,7 @@ Reglas del archivo:
 - Empieza con <!doctype html>, incluye <meta name="viewport" content="width=device-width, initial-scale=1"> y un <title> descriptivo.
 - Todo el CSS va en <style> y todo el JavaScript en <script> dentro del mismo archivo. Puedes usar Google Fonts.
 - No uses frameworks, CDNs ni imágenes externas (no cargarían en la vista previa). Ilustra con SVG en línea, degradados y formas CSS o emojis, siempre con texto alternativo o aria-label.
+- Si el usuario subió imágenes, aparecen en su lista con una referencia del tipo rea-asset:ID (cada una con su ID real). Úsalas escribiendo esa referencia exacta como src (<img src="rea-asset:ID" alt="...">) o en CSS (url(rea-asset:ID)). Nunca la cambies, la conviertas a base64 ni inventes otras rutas. Ponle a cada una un alt descriptivo y colócala donde tenga sentido (un logo en la cabecera, capturas de un producto o juego en su tarjeta o galería).
 - Diseño moderno y profesional: buena tipografía, espaciado generoso, jerarquía visual clara, paleta coherente definida en variables CSS en :root.
 - Responsive de verdad (móvil primero), sin scroll horizontal, accesible (contraste, alt, etiquetas en formularios, HTML semántico).
 - Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
@@ -397,7 +426,20 @@ Formato de respuesta:
 2. El archivo completo dentro de un único bloque \`\`\`html ... \`\`\`.
 No escribas nada después del bloque de código.`;
 
-function buildUserMessage({ prompt, currentHtml, history, selection }) {
+function describeImage(img, i) {
+  const size = img.width && img.height ? ` (${img.width}×${img.height})` : "";
+  return `${i + 1}. rea-asset:${img.id} — "${img.name}"${size}`;
+}
+
+function buildUserMessage({
+  prompt,
+  currentHtml,
+  history,
+  selection,
+  images = [],
+  assets = [],
+  imagesVisible = true,
+}) {
   const parts = [];
   if (history?.length) {
     parts.push(
@@ -421,6 +463,24 @@ function buildUserMessage({ prompt, currentHtml, history, selection }) {
       "```html",
       selection,
       "```",
+      "",
+    );
+  }
+  const newIds = new Set(images.map((img) => img.id));
+  const earlier = assets.filter((a) => !newIds.has(a.id));
+  if (earlier.length) {
+    parts.push(
+      "Imágenes que ya existen en el proyecto (puedes seguir usándolas):",
+      ...earlier.map(describeImage),
+      "",
+    );
+  }
+  if (images.length) {
+    parts.push(
+      imagesVisible
+        ? "Imágenes nuevas que el usuario acaba de subir, en este orden (las tienes adjuntas para verlas):"
+        : "Imágenes nuevas que el usuario acaba de subir (no puedes verlas: decide dónde van por su nombre y por lo que pide el usuario):",
+      ...images.map(describeImage),
       "",
     );
   }
@@ -607,7 +667,38 @@ function art(seed, accent, w, h) {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-function page({ name, tagline, accent, seed, sections, cta, dark }) {
+// Texto alternativo a partir del nombre del archivo: "born-to-rally_01.png" -> "born to rally 01".
+function altFromName(name) {
+  return (
+    name
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_]+/g, " ")
+      .trim() || "Imagen"
+  );
+}
+
+// Galería con las imágenes del usuario; estilos propios para que funcione
+// también dentro de páginas hechas por la IA, que no tienen .grid ni .card.
+function gallery(images, id = "galeria") {
+  const items = images
+    .map(
+      (img) =>
+        `<img src="rea-asset:${img.id}" alt="${escapeHtml(altFromName(img.name))}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px" />`,
+    )
+    .join("\n        ");
+  return `
+    <section id="${id}" style="padding:56px 0">
+      <h2>Galería</h2>
+      <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+        ${items}
+      </div>
+    </section>`;
+}
+
+function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
+  // La primera imagen del usuario va en la portada y las siguientes en las tarjetas.
+  const imageSrc = (i, fallback) =>
+    images[i] ? `rea-asset:${images[i].id}` : fallback;
   const bg = dark ? "#0d0f14" : "#fbfaf8";
   const fg = dark ? "#f2f2f5" : "#16171d";
   const muted = dark ? "#a3a6b3" : "#5d6070";
@@ -617,7 +708,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
     .map(
       ([t, d], i) => `
       <article class="card">
-        <img src="${art(seed + i, accent, 640, 420)}" alt="${escapeHtml(t)}" loading="lazy" />
+        <img src="${imageSrc(i + 1, art(seed + i, accent, 640, 420))}" alt="${escapeHtml(images[i + 1] ? altFromName(images[i + 1].name) : t)}" loading="lazy" />
         <h3>${escapeHtml(t)}</h3>
         <p>${escapeHtml(d)}</p>
       </article>`,
@@ -694,7 +785,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
         <p>${n} es el lugar para quienes buscan calidad sin complicaciones. Conoce lo que ofrecemos y da el primer paso hoy.</p>
         <a class="btn" href="#contacto">${escapeHtml(cta)}</a>
       </div>
-      <img src="${art(seed + "hero", accent, 900, 680)}" alt="Imagen principal de ${n}" />
+      <img src="${imageSrc(0, art(seed + "hero", accent, 900, 680))}" alt="${images[0] ? escapeHtml(altFromName(images[0].name)) : `Imagen principal de ${n}`}" />
     </section>
     <section id="servicios">
       <h2>Lo que ofrecemos</h2>
@@ -712,15 +803,29 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
         </form>
       </div>
     </section>
+${images.length > sections.length + 1 ? gallery(images.slice(sections.length + 1)) : ""}
   </main>
   <footer>© ${new Date().getFullYear()} ${n}. Hecho con Rea Studio.</footer>
 </body>
 </html>`;
 }
 
-function editExisting(prompt, html) {
+function editExisting(prompt, html, images) {
   let out = html;
   const changes = [];
+  if (images.length) {
+    let id = "galeria";
+    for (let n = 2; out.includes(`id="${id}"`); n++) id = `galeria-${n}`;
+    const section = gallery(images, id);
+    out = /<\/main>/i.test(out)
+      ? out.replace(/<\/main>/i, `${section}\n  </main>`)
+      : out.replace(/<\/body>/i, `${section}\n</body>`);
+    changes.push(
+      images.length === 1
+        ? "agregué tu imagen en una galería"
+        : `agregué tus ${images.length} imágenes en una galería`,
+    );
+  }
   const color = pickColor(prompt);
   if (color) {
     out = out.replace(/--accent:\s*[^;]+;/, `--accent: ${color};`);
@@ -755,14 +860,190 @@ function editExisting(prompt, html) {
   return `Listo (modo demo): ${changes.join(", ")}.\n\n\`\`\`html\n${out}\n\`\`\``;
 }
 
-function buildDemoSite(prompt, currentHtml) {
-  if (currentHtml) return editExisting(prompt, currentHtml);
+function buildDemoSite(prompt, currentHtml, images = []) {
+  if (currentHtml) return editExisting(prompt, currentHtml, images);
   const theme = THEMES.find((t) => t.match.test(prompt)) || FALLBACK;
   const name = pickName(prompt, theme.name);
   const accent = pickColor(prompt) || theme.accent;
   const dark = /oscur|dark|noche/i.test(prompt);
-  const html = page({ ...theme, name, accent, dark });
+  const html = page({ ...theme, name, accent, dark, images });
   return `Creé una web de ${theme.kind} para "${name}" (modo demo, sin IA). Pide cambios en el chat o añade tu API key para resultados a medida.\n\n\`\`\`html\n${html}\n\`\`\``;
+}
+
+// ---- public/assets.js ----
+// Imágenes que el usuario sube a un proyecto.
+// - Se reducen en el navegador (máx. 1600 px, WebP o JPEG) para que pesen poco.
+// - Se guardan en IndexedDB, no en localStorage: así el HTML de cada versión
+//   solo lleva una referencia corta `rea-asset:<id>` y no se llena el espacio.
+// - Al mostrar o descargar la página, `resolveAssets` cambia esas referencias
+//   por la imagen real (data URI), así el .html descargado funciona solo.
+
+const DB_NAME = "rea-studio";
+const STORE = "assets";
+const MAX_SIDE = 1600;
+const ASSET_SCHEME = "rea-asset:";
+const TOKEN_RE = /rea-asset:([a-z0-9]{6,32})/g;
+const DATA_URI_RE = /data:image\/[\w+.-]+;base64,[A-Za-z0-9+/=]+/g;
+
+// Si IndexedDB no está disponible (modo privado, visor que lo bloquea), las
+// imágenes viven solo en memoria hasta recargar.
+const memory = new Map();
+let persistent = true;
+let dbPromise = null;
+
+function openDb() {
+  dbPromise ??= new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const store = req.result.createObjectStore(STORE, { keyPath: "id" });
+      store.createIndex("projectId", "projectId");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }).catch((err) => {
+    persistent = false;
+    throw err;
+  });
+  return dbPromise;
+}
+
+function tx(mode, run) {
+  return openDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const t = db.transaction(STORE, mode);
+        const result = run(t.objectStore(STORE));
+        t.oncomplete = () => resolve(result?.result ?? result);
+        t.onerror = () => reject(t.error);
+        t.onabort = () => reject(t.error);
+      }),
+  );
+}
+
+function assetsArePersistent() {
+  return persistent;
+}
+
+async function putAsset(asset) {
+  memory.set(asset.id, asset);
+  try {
+    await tx("readwrite", (s) => s.put(asset));
+  } catch {
+    persistent = false;
+  }
+}
+
+// Devuelve Map id -> dataUrl con las imágenes de un proyecto.
+async function loadProjectAssets(projectId) {
+  const map = new Map();
+  for (const a of memory.values())
+    if (a.projectId === projectId) map.set(a.id, a.dataUrl);
+  try {
+    const rows = await tx("readonly", (s) =>
+      s.index("projectId").getAll(projectId),
+    );
+    for (const a of rows) {
+      memory.set(a.id, a);
+      map.set(a.id, a.dataUrl);
+    }
+  } catch {
+    persistent = false;
+  }
+  return map;
+}
+
+async function deleteProjectAssets(projectId) {
+  for (const [id, a] of memory)
+    if (a.projectId === projectId) memory.delete(id);
+  try {
+    const keys = await tx("readonly", (s) =>
+      s.index("projectId").getAllKeys(projectId),
+    );
+    await tx("readwrite", (s) => keys.forEach((k) => s.delete(k)));
+  } catch {
+    // Nada que limpiar si IndexedDB no está disponible.
+  }
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+// Convierte un archivo de imagen en un asset listo para guardar.
+// Lanza Error con un mensaje para el usuario si no es una imagen válida.
+async function prepareImage(file, projectId) {
+  if (!file.type.startsWith("image/"))
+    throw new Error(`"${file.name}" no es una imagen.`);
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(`No se pudo leer "${file.name}". Prueba con PNG o JPG.`);
+  }
+  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+
+  // WebP conserva transparencia (logos); si el navegador no sabe crear WebP,
+  // usa PNG para imágenes con transparencia probable y JPEG para fotos.
+  let blob = await canvasToBlob(canvas, "image/webp", 0.85);
+  if (!blob || blob.type !== "image/webp") {
+    const keepAlpha = file.type === "image/png" || file.type === "image/gif";
+    blob = await canvasToBlob(
+      canvas,
+      keepAlpha ? "image/png" : "image/jpeg",
+      0.85,
+    );
+  }
+  if (!blob) throw new Error(`No se pudo procesar "${file.name}".`);
+
+  const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+  return {
+    id,
+    projectId,
+    name: file.name || "imagen",
+    type: blob.type,
+    width,
+    height,
+    blob,
+    dataUrl: await blobToDataUrl(blob),
+  };
+}
+
+// Cambia `rea-asset:<id>` por la imagen real. Las referencias desconocidas
+// se dejan tal cual (se verán como imagen rota, no se inventa nada).
+function resolveAssets(html, map) {
+  if (!html || !map?.size) return html;
+  return html.replace(TOKEN_RE, (m, id) => map.get(id) ?? m);
+}
+
+// Clave corta que identifica un data URI sin compararlo entero.
+function dataUriKey(uri) {
+  return `${uri.length}:${uri.slice(0, 160)}`;
+}
+
+// Lo contrario de resolveAssets, para el HTML que el Inspector saca de la
+// vista previa (donde las imágenes ya están resueltas).
+function tokenizeDataUris(html, map) {
+  if (!map?.size) return html;
+  const byKey = new Map(
+    [...map].map(([id, uri]) => [dataUriKey(uri), ASSET_SCHEME + id]),
+  );
+  return html.replace(DATA_URI_RE, (m) => byKey.get(dataUriKey(m)) ?? m);
 }
 
 // ---- public/backend.js ----
@@ -771,6 +1052,10 @@ function buildDemoSite(prompt, currentHtml) {
 // - "cloud": versión online publicada en claude.ai; usa la cuenta de Claude de
 //   quien la abre (capability `sample`), sin API key.
 // - "demo": sin IA, plantillas locales (en el servidor o en el navegador).
+//
+// `body` = { prompt, currentHtml, history, selection, images, assets }:
+// `images` son las imágenes nuevas de este mensaje ({id, name, width, height,
+// type, dataUrl, blob}); `assets` todas las del proyecto (sin los datos).
 
 
 const SAMPLE_ERRORS = {
@@ -784,6 +1069,8 @@ const SAMPLE_ERRORS = {
     "La página es demasiado grande para editarla de una vez. Pide algo más pequeño.",
   refused: "Claude no puede hacer esta petición. Prueba a reformularla.",
   empty_completion: "No llegó respuesta. Prueba a pedirlo de otra forma.",
+  image_rejected:
+    "Claude no pudo leer alguna imagen. Prueba con otra en PNG o JPG.",
 };
 
 // Errores que significan "esta vista no puede usar Claude": se pasa a demo.
@@ -813,7 +1100,10 @@ function demoBackend(label, title) {
     label,
     title,
     generate: (body, opts) =>
-      simulateStream(buildDemoSite(body.prompt, body.currentHtml || ""), opts),
+      simulateStream(
+        buildDemoSite(body.prompt, body.currentHtml || "", body.images),
+        opts,
+      ),
   };
 }
 
@@ -829,7 +1119,11 @@ function serverBackend(status) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        // Los Blob no viajan en JSON: al servidor le basta el data URI.
+        body: JSON.stringify({
+          ...body,
+          images: body.images?.map(({ blob, ...img }) => img),
+        }),
         signal,
       });
       if (!res.ok || !res.body) {
@@ -862,19 +1156,28 @@ function serverBackend(status) {
   };
 }
 
-function cloudBackend(sample, onGone) {
+function cloudBackend(sample, limits, onGone) {
+  // Solo si la página declara `sample: {images: true}` y esta vista lo permite.
+  const maxImages = limits?.images?.maxCount ?? 0;
   return {
     mode: "cloud",
     label: "● IA con tu cuenta de Claude",
     title: "Cada petición usa el plan de Claude de quien abre la página",
     async generate(body, { signal, onText }) {
+      const images = body.images ?? [];
+      const visible = images.slice(0, maxImages);
+      const message = buildUserMessage({
+        ...body,
+        imagesVisible: images.length > 0 && visible.length === images.length,
+      });
       try {
         const { truncated } = await sample(
-          `${SYSTEM_PROMPT}\n\n---\n\n${buildUserMessage(body)}`,
+          `${SYSTEM_PROMPT}\n\n---\n\n${message}`,
           {
             signal,
             cache: false,
             onText: ({ text }) => onText(text),
+            ...(visible.length && { images: visible.map((img) => img.blob) }),
           },
         );
         return { truncated };
@@ -927,8 +1230,14 @@ async function createBackend(onChange) {
       "Modo demo",
       "Esta vista no puede usar Claude: se usan plantillas",
     );
+    // limits() falta en visores antiguos: sin límites conocidos, no se envían imágenes.
+    const limits = sample
+      ? await Promise.resolve()
+          .then(() => sample.limits())
+          .catch(() => null)
+      : null;
     const backend = sample
-      ? cloudBackend(sample, () => onChange?.(demo))
+      ? cloudBackend(sample, limits, () => onChange?.(demo))
       : demo;
     return {
       ...backend,
@@ -957,10 +1266,13 @@ async function createBackend(onChange) {
 
 // ---- public/app.js ----
 // Rea Studio — lógica del cliente.
-// Proyectos y versiones se guardan en localStorage del navegador.
+// Proyectos y versiones se guardan en localStorage del navegador; las imágenes
+// subidas, en IndexedDB (ver assets.js).
+
 
 const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
+const MAX_IMAGES_PER_MESSAGE = 6;
 const $ = (sel) => document.querySelector(sel);
 
 const els = {
@@ -994,6 +1306,8 @@ const els = {
   auditList: $("#auditList"),
   auditScore: $("#auditScore"),
   fixBtn: $("#fixBtn"),
+  fileInput: $("#fileInput"),
+  attachments: { home: $("#homeAttachments"), chat: $("#chatAttachments") },
   toast: $("#toast"),
 };
 
@@ -1007,6 +1321,12 @@ const state = {
   selection: null,
   auditIssues: [],
   backend: null,
+  // Imágenes listas para enviar con el próximo mensaje, por caja de texto.
+  pending: { home: [], chat: [] },
+  attachTarget: "chat",
+  // id -> data URI de las imágenes del proyecto abierto.
+  assetMap: new Map(),
+  warnedVolatile: false,
 };
 
 // ---------------- Almacenamiento ----------------
@@ -1055,6 +1375,7 @@ function createProject(prompt) {
     updatedAt: Date.now(),
     messages: [],
     versions: [],
+    assets: [],
     current: -1,
   };
   state.projects.unshift(project);
@@ -1165,6 +1486,10 @@ function renderProjects() {
       frame.setAttribute("tabindex", "-1");
       frame.setAttribute("aria-hidden", "true");
       frame.srcdoc = html;
+      if (html.includes("rea-asset:"))
+        loadProjectAssets(p.id).then(
+          (map) => (frame.srcdoc = resolveAssets(html, map)),
+        );
       thumb.append(frame);
     }
 
@@ -1194,6 +1519,7 @@ function renderProjects() {
       }
       state.projects = state.projects.filter((x) => x.id !== p.id);
       saveProjects();
+      deleteProjectAssets(p.id);
       renderProjects();
     });
 
@@ -1207,18 +1533,124 @@ function renderProjects() {
 
 function startFromHome(prompt) {
   prompt = prompt.trim();
-  if (!prompt) return;
+  const images = takePending("home");
+  if (!prompt && !images.length) return;
+  if (!prompt) prompt = "Crea una página web usando estas imágenes.";
   const project = createProject(prompt);
   els.homePrompt.value = "";
   location.hash = `#p-${project.id}`;
   openEditor(project);
-  generate(prompt);
+  generate(prompt, images);
+}
+
+// ---------------- Imágenes adjuntas ----------------
+
+async function addAttachments(target, files) {
+  const list = state.pending[target];
+  const images = [...files].filter((f) => f.type.startsWith("image/"));
+  if (!images.length) return toast("Solo se pueden añadir imágenes.");
+  const room = MAX_IMAGES_PER_MESSAGE - list.length;
+  if (room <= 0)
+    return toast(`Máximo ${MAX_IMAGES_PER_MESSAGE} imágenes por mensaje.`);
+  if (images.length > room)
+    toast(
+      `Solo se añadieron ${room}: máximo ${MAX_IMAGES_PER_MESSAGE} por mensaje.`,
+    );
+  for (const file of images.slice(0, room)) {
+    const slot = { loading: true, name: file.name };
+    list.push(slot);
+    renderAttachments(target);
+    try {
+      Object.assign(slot, await prepareImage(file, null), { loading: false });
+    } catch (err) {
+      list.splice(list.indexOf(slot), 1);
+      toast(err.message);
+    }
+    renderAttachments(target);
+  }
+}
+
+function renderAttachments(target) {
+  const box = els.attachments[target];
+  const list = state.pending[target];
+  box.replaceChildren();
+  box.hidden = !list.length;
+  for (const item of list) {
+    const chip = document.createElement("div");
+    chip.className = `attachment${item.loading ? " loading" : ""}`;
+    if (!item.loading) {
+      const img = document.createElement("img");
+      img.src = item.dataUrl;
+      img.alt = item.name;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `Quitar ${item.name}`);
+      remove.addEventListener("click", () => {
+        list.splice(list.indexOf(item), 1);
+        renderAttachments(target);
+      });
+      chip.append(img, remove);
+    }
+    box.append(chip);
+  }
+}
+
+// Saca las imágenes listas de una caja (las que siguen procesándose se quedan).
+function takePending(target) {
+  const ready = state.pending[target].filter((i) => !i.loading);
+  state.pending[target] = state.pending[target].filter((i) => i.loading);
+  renderAttachments(target);
+  return ready;
+}
+
+// Guarda las imágenes nuevas en el proyecto antes de enviarlas a la IA.
+async function attachToProject(p, images) {
+  for (const img of images) {
+    img.projectId = p.id;
+    await putAsset({
+      id: img.id,
+      projectId: p.id,
+      name: img.name,
+      type: img.type,
+      width: img.width,
+      height: img.height,
+      dataUrl: img.dataUrl,
+    });
+    p.assets ??= [];
+    p.assets.push({
+      id: img.id,
+      name: img.name,
+      width: img.width,
+      height: img.height,
+    });
+    if (state.project?.id === p.id) state.assetMap.set(img.id, img.dataUrl);
+  }
+  if (images.length && !assetsArePersistent() && !state.warnedVolatile) {
+    state.warnedVolatile = true;
+    toast(
+      "Este navegador no deja guardar imágenes: se perderán al recargar. Descarga tu web.",
+    );
+  }
 }
 
 // ---------------- Editor ----------------
 
 function openEditor(project) {
   if (state.project?.id !== project.id) stopGeneration();
+  if (state.project?.id !== project.id) {
+    state.assetMap = new Map();
+    state.pending.chat = [];
+    renderAttachments("chat");
+    loadProjectAssets(project.id).then((map) => {
+      if (state.project?.id !== project.id) return;
+      for (const [id, uri] of map) state.assetMap.set(id, uri);
+      if (map.size) {
+        renderMessages();
+        if (!state.busy) renderVersion();
+      }
+    });
+  }
   state.project = project;
   state.selection = null;
   els.home.hidden = true;
@@ -1241,10 +1673,10 @@ function renderMessages() {
       "¡Hola! Describe la web que quieres o pide cambios sobre la actual. Activa el Inspector para elegir un elemento concreto.",
     );
   }
-  for (const m of msgs) addBubble(m.role, m.text, m.version);
+  for (const m of msgs) addBubble(m.role, m.text, m.version, m.images);
 }
 
-function addBubble(role, text, version) {
+function addBubble(role, text, version, imageIds = []) {
   const div = document.createElement("div");
   div.className = `msg ${role === "error" ? "assistant error" : role}`;
   const body = document.createElement("div");
@@ -1255,6 +1687,18 @@ function addBubble(role, text, version) {
     div.append(avatar);
   }
   body.textContent = text;
+  const thumbs = imageIds.map((id) => state.assetMap.get(id)).filter(Boolean);
+  if (thumbs.length) {
+    const row = document.createElement("div");
+    row.className = "msg-images";
+    for (const src of thumbs) {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "Imagen adjunta";
+      row.append(img);
+    }
+    body.append(row);
+  }
   if (version) {
     const tag = document.createElement("span");
     tag.className = "tag";
@@ -1305,7 +1749,7 @@ const INSPECTOR_SCRIPT = `<script data-rea-inspector>(() => {
     e.preventDefault();
     e.stopPropagation();
     box.remove();
-    parent.postMessage({ type: "rea-selected", html: e.target.outerHTML.slice(0, 4000), label: label(e.target) }, "*");
+    parent.postMessage({ type: "rea-selected", html: e.target.outerHTML, label: label(e.target) }, "*");
   }, true);
 })();<\/script>`;
 
@@ -1318,7 +1762,7 @@ function withInspector(html) {
 
 function renderPreview(html) {
   els.preview.srcdoc = html
-    ? withInspector(html)
+    ? withInspector(resolveAssets(html, state.assetMap))
     : `<!doctype html><body style="margin:0;display:grid;place-items:center;height:100vh;font-family:system-ui;color:#999;background:#fafafa"><p>Tu web aparecerá aquí</p></body>`;
 }
 
@@ -1332,7 +1776,10 @@ els.preview.addEventListener("load", () => {
 window.addEventListener("message", (e) => {
   if (e.source !== els.preview.contentWindow || e.data?.type !== "rea-selected")
     return;
-  state.selection = { html: String(e.data.html), label: String(e.data.label) };
+  // La vista previa tiene las imágenes ya resueltas: se vuelven a referencias
+  // cortas antes de recortar, para no mandar base64 a la IA.
+  const html = tokenizeDataUris(String(e.data.html), state.assetMap);
+  state.selection = { html: html.slice(0, 4000), label: String(e.data.label) };
   setInspecting(false);
   renderSelection();
   els.chatInput.focus();
@@ -1365,11 +1812,13 @@ function setTab(tab) {
 
 // ---------------- Generación ----------------
 
-async function generate(prompt) {
+async function generate(prompt, images = []) {
   const p = state.project;
   if (!p || state.busy || !prompt.trim()) return;
   if (!state.backend) return toast("Conectando… inténtalo en un segundo.");
   prompt = prompt.trim();
+  state.busy = true;
+  await attachToProject(p, images);
 
   const history = p.messages
     .filter((m) => m.role === "user")
@@ -1377,8 +1826,13 @@ async function generate(prompt) {
   const baseHtml = currentHtml(p);
   const selection = state.selection?.html || null;
 
-  p.messages.push({ role: "user", text: prompt });
-  addBubble("user", prompt);
+  const imageIds = images.map((img) => img.id);
+  p.messages.push({
+    role: "user",
+    text: prompt,
+    ...(imageIds.length && { images: imageIds }),
+  });
+  addBubble("user", prompt, undefined, imageIds);
   state.selection = null;
   renderSelection();
 
@@ -1424,7 +1878,14 @@ async function generate(prompt) {
 
   try {
     const { truncated } = await state.backend.generate(
-      { prompt, currentHtml: baseHtml, history, selection },
+      {
+        prompt,
+        currentHtml: baseHtml,
+        history,
+        selection,
+        images,
+        assets: p.assets ?? [],
+      },
       { signal: controller.signal, onText },
     );
     if (truncated)
@@ -1541,7 +2002,8 @@ function snippet(el) {
   return html.length > 110 ? `${html.slice(0, 110)}…` : html;
 }
 
-function audit(html) {
+// `size`: bytes reales de la página con sus imágenes incluidas.
+function audit(html, size) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const checks = [];
   const add = (status, title, detail, evidence, fix) =>
@@ -1737,12 +2199,12 @@ function audit(html) {
       "",
     );
 
-  const size = new Blob([html]).size;
-  if (size > 200 * 1024)
+  const weightLimit = 200 * 1024 + 400 * 1024 * imgs.length;
+  if (size > weightLimit)
     add(
       "warn",
       "Peso del archivo",
-      `${(size / 1024).toFixed(0)} KB; por encima de 200 KB tarda más en cargar.`,
+      `${(size / 1024).toFixed(0)} KB con imágenes; tardará en cargar en datos móviles.`,
       "",
       "reducir el tamaño del HTML y CSS",
     );
@@ -1784,7 +2246,10 @@ function runAudit() {
     els.auditList.append(li);
     return;
   }
-  const checks = audit(html);
+  const checks = audit(
+    html,
+    new Blob([resolveAssets(html, state.assetMap)]).size,
+  );
   const points = checks.reduce(
     (s, c) => s + (c.status === "ok" ? 1 : c.status === "warn" ? 0.5 : 0),
     0,
@@ -1842,10 +2307,16 @@ els.chips.addEventListener("click", (e) => {
 
 els.chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const text = els.chatInput.value;
-  if (!text.trim() || state.busy) return;
+  if (state.busy) return;
+  const images = takePending("chat");
+  const text =
+    els.chatInput.value.trim() ||
+    (images.length
+      ? "Agrega estas imágenes a la página donde tengan más sentido."
+      : "");
+  if (!text) return;
   els.chatInput.value = "";
-  generate(text);
+  generate(text, images);
 });
 submitOnEnter(els.chatInput, els.chatForm);
 els.chatStop.addEventListener("click", stopGeneration);
@@ -1906,7 +2377,8 @@ document.addEventListener("keydown", (e) => {
 $("#downloadBtn").addEventListener("click", () => {
   const html = currentHtml();
   if (!html) return toast("Aún no hay nada que descargar.");
-  state.backend.save(`${slug(state.project.name)}.html`, html).then((r) => {
+  const file = resolveAssets(html, state.assetMap);
+  state.backend.save(`${slug(state.project.name)}.html`, file).then((r) => {
     if (r === "failed")
       toast("No se pudo descargar. Copia el código desde la pestaña Código.");
   });
@@ -1915,7 +2387,8 @@ $("#downloadBtn").addEventListener("click", () => {
 $("#openBtn").addEventListener("click", () => {
   const html = currentHtml();
   if (!html) return toast("Aún no hay nada que abrir.");
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const file = resolveAssets(html, state.assetMap);
+  const url = URL.createObjectURL(new Blob([file], { type: "text/html" }));
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 });
@@ -1967,6 +2440,48 @@ els.fixBtn.addEventListener("click", () => {
     `Corrige estos problemas que detectó el Análisis Rea, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
   );
 });
+
+document.querySelectorAll("[data-attach]").forEach((btn) =>
+  btn.addEventListener("click", () => {
+    state.attachTarget = btn.dataset.attach;
+    els.fileInput.value = "";
+    els.fileInput.click();
+  }),
+);
+els.fileInput.addEventListener("change", () => {
+  if (els.fileInput.files.length)
+    addAttachments(state.attachTarget, els.fileInput.files);
+});
+
+// Pegar (Ctrl+V) y arrastrar imágenes a cada caja de texto.
+for (const [target, form, input] of [
+  ["home", els.homeForm, els.homePrompt],
+  ["chat", els.chatForm, els.chatInput],
+]) {
+  form.classList.add("drop-target");
+  input.addEventListener("paste", (e) => {
+    const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (!files.length) return;
+    e.preventDefault();
+    addAttachments(target, files);
+  });
+  form.addEventListener("dragover", (e) => {
+    if (![...(e.dataTransfer?.types ?? [])].includes("Files")) return;
+    e.preventDefault();
+    form.classList.add("dragging");
+  });
+  form.addEventListener("dragleave", (e) => {
+    if (!form.contains(e.relatedTarget)) form.classList.remove("dragging");
+  });
+  form.addEventListener("drop", (e) => {
+    form.classList.remove("dragging");
+    if (!e.dataTransfer?.files.length) return;
+    e.preventDefault();
+    addAttachments(target, e.dataTransfer.files);
+  });
+}
 
 window.addEventListener("hashchange", route);
 

@@ -213,3 +213,18 @@ button { cursor: pointer; }
   .bar-right { gap: 6px; }
   .btn-primary span { display: none; }
 }
+
+/* ---------- Imágenes adjuntas ---------- */
+.prompt-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.attach-btn { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); transition: color .15s, border-color .15s; }
+.attach-btn:hover, .attach-btn:focus-visible { color: var(--fg); border-color: var(--muted); }
+.attachments { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.attachment { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg-2); }
+.attachment img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attachment.loading::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--fg) 12%, transparent), transparent); animation: shimmer 1s infinite; }
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.attachment button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgb(0 0 0 / .65); color: #fff; font-size: 13px; line-height: 1; display: grid; place-items: center; }
+.drop-target.dragging { border-color: var(--accent) !important; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.msg-images img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .attachment.loading::after { animation: none; } }

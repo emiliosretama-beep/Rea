@@ -13,7 +13,11 @@ import { SYSTEM_PROMPT, buildUserMessage } from "./public/prompt.js";
 const ROOT = fileURLToPath(new URL("./public/", import.meta.url));
 const PORT = Number(process.env.PORT) || 5173;
 const MODEL = process.env.REA_MODEL || "claude-opus-5-5";
-const MAX_BODY_BYTES = 2 * 1024 * 1024;
+// Las imágenes llegan como data URI dentro del JSON (ya reducidas en el navegador).
+const MAX_BODY_BYTES = 30 * 1024 * 1024;
+const MAX_IMAGES = 6;
+const IMAGE_RE =
+  /^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/;
 
 const hasCredentials = Boolean(
   process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
@@ -46,7 +50,41 @@ async function readJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
 }
 
+// Valida las imágenes una sola vez, al recibirlas: lo que no sea un data URI
+// de imagen admitida se descarta aquí y nadie más lo vuelve a interpretar.
+function parseImages(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, MAX_IMAGES).flatMap((img) => {
+    const match =
+      typeof img?.dataUrl === "string" && img.dataUrl.match(IMAGE_RE);
+    if (
+      !match ||
+      typeof img.id !== "string" ||
+      !/^[a-z0-9]{6,32}$/.test(img.id)
+    )
+      return [];
+    return [
+      {
+        id: img.id,
+        name: String(img.name || "imagen").slice(0, 120),
+        width: Number(img.width) || undefined,
+        height: Number(img.height) || undefined,
+        mediaType: match[1],
+        data: match[2],
+      },
+    ];
+  });
+}
+
 async function streamFromClaude(body, res, signal) {
+  // Las imágenes van antes del texto, en el mismo orden en que se describen.
+  const content = [
+    ...body.images.map((img) => ({
+      type: "image",
+      source: { type: "base64", media_type: img.mediaType, data: img.data },
+    })),
+    { type: "text", text: buildUserMessage(body) },
+  ];
   const stream = client.beta.messages.stream(
     {
       model: MODEL,
@@ -55,7 +93,7 @@ async function streamFromClaude(body, res, signal) {
       fallbacks: "default",
       output_config: { effort: "medium" },
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserMessage(body) }],
+      messages: [{ role: "user", content }],
     },
     { signal },
   );
@@ -82,7 +120,11 @@ async function streamFromClaude(body, res, signal) {
 }
 
 async function streamDemo(body, res, signal) {
-  const text = buildDemoSite(body.prompt || "", body.currentHtml || "");
+  const text = buildDemoSite(
+    body.prompt || "",
+    body.currentHtml || "",
+    body.images,
+  );
   // Simula el streaming en trozos para que la interfaz se comporte igual.
   for (let i = 0; i < text.length; i += 180) {
     if (signal.aborted) return;
@@ -105,6 +147,8 @@ async function handleGenerate(req, res) {
     res.end(JSON.stringify({ error: "Falta el campo prompt." }));
     return;
   }
+  body.images = parseImages(body.images);
+  body.assets = Array.isArray(body.assets) ? body.assets.slice(0, 50) : [];
 
   res.writeHead(200, {
     "Content-Type": "text/event-stream; charset=utf-8",

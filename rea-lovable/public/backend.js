@@ -3,6 +3,10 @@
 // - "cloud": versión online publicada en claude.ai; usa la cuenta de Claude de
 //   quien la abre (capability `sample`), sin API key.
 // - "demo": sin IA, plantillas locales (en el servidor o en el navegador).
+//
+// `body` = { prompt, currentHtml, history, selection, images, assets }:
+// `images` son las imágenes nuevas de este mensaje ({id, name, width, height,
+// type, dataUrl, blob}); `assets` todas las del proyecto (sin los datos).
 import { buildDemoSite } from "./demo.js";
 import { SYSTEM_PROMPT, buildUserMessage } from "./prompt.js";
 
@@ -17,6 +21,8 @@ const SAMPLE_ERRORS = {
     "La página es demasiado grande para editarla de una vez. Pide algo más pequeño.",
   refused: "Claude no puede hacer esta petición. Prueba a reformularla.",
   empty_completion: "No llegó respuesta. Prueba a pedirlo de otra forma.",
+  image_rejected:
+    "Claude no pudo leer alguna imagen. Prueba con otra en PNG o JPG.",
 };
 
 // Errores que significan "esta vista no puede usar Claude": se pasa a demo.
@@ -46,7 +52,10 @@ function demoBackend(label, title) {
     label,
     title,
     generate: (body, opts) =>
-      simulateStream(buildDemoSite(body.prompt, body.currentHtml || ""), opts),
+      simulateStream(
+        buildDemoSite(body.prompt, body.currentHtml || "", body.images),
+        opts,
+      ),
   };
 }
 
@@ -62,7 +71,11 @@ function serverBackend(status) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        // Los Blob no viajan en JSON: al servidor le basta el data URI.
+        body: JSON.stringify({
+          ...body,
+          images: body.images?.map(({ blob, ...img }) => img),
+        }),
         signal,
       });
       if (!res.ok || !res.body) {
@@ -95,19 +108,28 @@ function serverBackend(status) {
   };
 }
 
-function cloudBackend(sample, onGone) {
+function cloudBackend(sample, limits, onGone) {
+  // Solo si la página declara `sample: {images: true}` y esta vista lo permite.
+  const maxImages = limits?.images?.maxCount ?? 0;
   return {
     mode: "cloud",
     label: "● IA con tu cuenta de Claude",
     title: "Cada petición usa el plan de Claude de quien abre la página",
     async generate(body, { signal, onText }) {
+      const images = body.images ?? [];
+      const visible = images.slice(0, maxImages);
+      const message = buildUserMessage({
+        ...body,
+        imagesVisible: images.length > 0 && visible.length === images.length,
+      });
       try {
         const { truncated } = await sample(
-          `${SYSTEM_PROMPT}\n\n---\n\n${buildUserMessage(body)}`,
+          `${SYSTEM_PROMPT}\n\n---\n\n${message}`,
           {
             signal,
             cache: false,
             onText: ({ text }) => onText(text),
+            ...(visible.length && { images: visible.map((img) => img.blob) }),
           },
         );
         return { truncated };
@@ -160,8 +182,14 @@ export async function createBackend(onChange) {
       "Modo demo",
       "Esta vista no puede usar Claude: se usan plantillas",
     );
+    // limits() falta en visores antiguos: sin límites conocidos, no se envían imágenes.
+    const limits = sample
+      ? await Promise.resolve()
+          .then(() => sample.limits())
+          .catch(() => null)
+      : null;
     const backend = sample
-      ? cloudBackend(sample, () => onChange?.(demo))
+      ? cloudBackend(sample, limits, () => onChange?.(demo))
       : demo;
     return {
       ...backend,

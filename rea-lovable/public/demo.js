@@ -174,7 +174,38 @@ function art(seed, accent, w, h) {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-function page({ name, tagline, accent, seed, sections, cta, dark }) {
+// Texto alternativo a partir del nombre del archivo: "born-to-rally_01.png" -> "born to rally 01".
+function altFromName(name) {
+  return (
+    name
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_]+/g, " ")
+      .trim() || "Imagen"
+  );
+}
+
+// Galería con las imágenes del usuario; estilos propios para que funcione
+// también dentro de páginas hechas por la IA, que no tienen .grid ni .card.
+function gallery(images, id = "galeria") {
+  const items = images
+    .map(
+      (img) =>
+        `<img src="rea-asset:${img.id}" alt="${escapeHtml(altFromName(img.name))}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px" />`,
+    )
+    .join("\n        ");
+  return `
+    <section id="${id}" style="padding:56px 0">
+      <h2>Galería</h2>
+      <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+        ${items}
+      </div>
+    </section>`;
+}
+
+function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
+  // La primera imagen del usuario va en la portada y las siguientes en las tarjetas.
+  const imageSrc = (i, fallback) =>
+    images[i] ? `rea-asset:${images[i].id}` : fallback;
   const bg = dark ? "#0d0f14" : "#fbfaf8";
   const fg = dark ? "#f2f2f5" : "#16171d";
   const muted = dark ? "#a3a6b3" : "#5d6070";
@@ -184,7 +215,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
     .map(
       ([t, d], i) => `
       <article class="card">
-        <img src="${art(seed + i, accent, 640, 420)}" alt="${escapeHtml(t)}" loading="lazy" />
+        <img src="${imageSrc(i + 1, art(seed + i, accent, 640, 420))}" alt="${escapeHtml(images[i + 1] ? altFromName(images[i + 1].name) : t)}" loading="lazy" />
         <h3>${escapeHtml(t)}</h3>
         <p>${escapeHtml(d)}</p>
       </article>`,
@@ -261,7 +292,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
         <p>${n} es el lugar para quienes buscan calidad sin complicaciones. Conoce lo que ofrecemos y da el primer paso hoy.</p>
         <a class="btn" href="#contacto">${escapeHtml(cta)}</a>
       </div>
-      <img src="${art(seed + "hero", accent, 900, 680)}" alt="Imagen principal de ${n}" />
+      <img src="${imageSrc(0, art(seed + "hero", accent, 900, 680))}" alt="${images[0] ? escapeHtml(altFromName(images[0].name)) : `Imagen principal de ${n}`}" />
     </section>
     <section id="servicios">
       <h2>Lo que ofrecemos</h2>
@@ -279,15 +310,29 @@ function page({ name, tagline, accent, seed, sections, cta, dark }) {
         </form>
       </div>
     </section>
+${images.length > sections.length + 1 ? gallery(images.slice(sections.length + 1)) : ""}
   </main>
   <footer>© ${new Date().getFullYear()} ${n}. Hecho con Rea Studio.</footer>
 </body>
 </html>`;
 }
 
-function editExisting(prompt, html) {
+function editExisting(prompt, html, images) {
   let out = html;
   const changes = [];
+  if (images.length) {
+    let id = "galeria";
+    for (let n = 2; out.includes(`id="${id}"`); n++) id = `galeria-${n}`;
+    const section = gallery(images, id);
+    out = /<\/main>/i.test(out)
+      ? out.replace(/<\/main>/i, `${section}\n  </main>`)
+      : out.replace(/<\/body>/i, `${section}\n</body>`);
+    changes.push(
+      images.length === 1
+        ? "agregué tu imagen en una galería"
+        : `agregué tus ${images.length} imágenes en una galería`,
+    );
+  }
   const color = pickColor(prompt);
   if (color) {
     out = out.replace(/--accent:\s*[^;]+;/, `--accent: ${color};`);
@@ -322,12 +367,12 @@ function editExisting(prompt, html) {
   return `Listo (modo demo): ${changes.join(", ")}.\n\n\`\`\`html\n${out}\n\`\`\``;
 }
 
-export function buildDemoSite(prompt, currentHtml) {
-  if (currentHtml) return editExisting(prompt, currentHtml);
+export function buildDemoSite(prompt, currentHtml, images = []) {
+  if (currentHtml) return editExisting(prompt, currentHtml, images);
   const theme = THEMES.find((t) => t.match.test(prompt)) || FALLBACK;
   const name = pickName(prompt, theme.name);
   const accent = pickColor(prompt) || theme.accent;
   const dark = /oscur|dark|noche/i.test(prompt);
-  const html = page({ ...theme, name, accent, dark });
+  const html = page({ ...theme, name, accent, dark, images });
   return `Creé una web de ${theme.kind} para "${name}" (modo demo, sin IA). Pide cambios en el chat o añade tu API key para resultados a medida.\n\n\`\`\`html\n${html}\n\`\`\``;
 }

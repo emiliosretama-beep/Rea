@@ -1,9 +1,20 @@
 // Rea Studio — lógica del cliente.
-// Proyectos y versiones se guardan en localStorage del navegador.
+// Proyectos y versiones se guardan en localStorage del navegador; las imágenes
+// subidas, en IndexedDB (ver assets.js).
+import {
+  assetsArePersistent,
+  deleteProjectAssets,
+  loadProjectAssets,
+  prepareImage,
+  putAsset,
+  resolveAssets,
+  tokenizeDataUris,
+} from "./assets.js";
 import { createBackend } from "./backend.js";
 
 const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
+const MAX_IMAGES_PER_MESSAGE = 6;
 const $ = (sel) => document.querySelector(sel);
 
 const els = {
@@ -37,6 +48,8 @@ const els = {
   auditList: $("#auditList"),
   auditScore: $("#auditScore"),
   fixBtn: $("#fixBtn"),
+  fileInput: $("#fileInput"),
+  attachments: { home: $("#homeAttachments"), chat: $("#chatAttachments") },
   toast: $("#toast"),
 };
 
@@ -50,6 +63,12 @@ const state = {
   selection: null,
   auditIssues: [],
   backend: null,
+  // Imágenes listas para enviar con el próximo mensaje, por caja de texto.
+  pending: { home: [], chat: [] },
+  attachTarget: "chat",
+  // id -> data URI de las imágenes del proyecto abierto.
+  assetMap: new Map(),
+  warnedVolatile: false,
 };
 
 // ---------------- Almacenamiento ----------------
@@ -98,6 +117,7 @@ function createProject(prompt) {
     updatedAt: Date.now(),
     messages: [],
     versions: [],
+    assets: [],
     current: -1,
   };
   state.projects.unshift(project);
@@ -208,6 +228,10 @@ function renderProjects() {
       frame.setAttribute("tabindex", "-1");
       frame.setAttribute("aria-hidden", "true");
       frame.srcdoc = html;
+      if (html.includes("rea-asset:"))
+        loadProjectAssets(p.id).then(
+          (map) => (frame.srcdoc = resolveAssets(html, map)),
+        );
       thumb.append(frame);
     }
 
@@ -237,6 +261,7 @@ function renderProjects() {
       }
       state.projects = state.projects.filter((x) => x.id !== p.id);
       saveProjects();
+      deleteProjectAssets(p.id);
       renderProjects();
     });
 
@@ -250,18 +275,124 @@ function renderProjects() {
 
 function startFromHome(prompt) {
   prompt = prompt.trim();
-  if (!prompt) return;
+  const images = takePending("home");
+  if (!prompt && !images.length) return;
+  if (!prompt) prompt = "Crea una página web usando estas imágenes.";
   const project = createProject(prompt);
   els.homePrompt.value = "";
   location.hash = `#p-${project.id}`;
   openEditor(project);
-  generate(prompt);
+  generate(prompt, images);
+}
+
+// ---------------- Imágenes adjuntas ----------------
+
+async function addAttachments(target, files) {
+  const list = state.pending[target];
+  const images = [...files].filter((f) => f.type.startsWith("image/"));
+  if (!images.length) return toast("Solo se pueden añadir imágenes.");
+  const room = MAX_IMAGES_PER_MESSAGE - list.length;
+  if (room <= 0)
+    return toast(`Máximo ${MAX_IMAGES_PER_MESSAGE} imágenes por mensaje.`);
+  if (images.length > room)
+    toast(
+      `Solo se añadieron ${room}: máximo ${MAX_IMAGES_PER_MESSAGE} por mensaje.`,
+    );
+  for (const file of images.slice(0, room)) {
+    const slot = { loading: true, name: file.name };
+    list.push(slot);
+    renderAttachments(target);
+    try {
+      Object.assign(slot, await prepareImage(file, null), { loading: false });
+    } catch (err) {
+      list.splice(list.indexOf(slot), 1);
+      toast(err.message);
+    }
+    renderAttachments(target);
+  }
+}
+
+function renderAttachments(target) {
+  const box = els.attachments[target];
+  const list = state.pending[target];
+  box.replaceChildren();
+  box.hidden = !list.length;
+  for (const item of list) {
+    const chip = document.createElement("div");
+    chip.className = `attachment${item.loading ? " loading" : ""}`;
+    if (!item.loading) {
+      const img = document.createElement("img");
+      img.src = item.dataUrl;
+      img.alt = item.name;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `Quitar ${item.name}`);
+      remove.addEventListener("click", () => {
+        list.splice(list.indexOf(item), 1);
+        renderAttachments(target);
+      });
+      chip.append(img, remove);
+    }
+    box.append(chip);
+  }
+}
+
+// Saca las imágenes listas de una caja (las que siguen procesándose se quedan).
+function takePending(target) {
+  const ready = state.pending[target].filter((i) => !i.loading);
+  state.pending[target] = state.pending[target].filter((i) => i.loading);
+  renderAttachments(target);
+  return ready;
+}
+
+// Guarda las imágenes nuevas en el proyecto antes de enviarlas a la IA.
+async function attachToProject(p, images) {
+  for (const img of images) {
+    img.projectId = p.id;
+    await putAsset({
+      id: img.id,
+      projectId: p.id,
+      name: img.name,
+      type: img.type,
+      width: img.width,
+      height: img.height,
+      dataUrl: img.dataUrl,
+    });
+    p.assets ??= [];
+    p.assets.push({
+      id: img.id,
+      name: img.name,
+      width: img.width,
+      height: img.height,
+    });
+    if (state.project?.id === p.id) state.assetMap.set(img.id, img.dataUrl);
+  }
+  if (images.length && !assetsArePersistent() && !state.warnedVolatile) {
+    state.warnedVolatile = true;
+    toast(
+      "Este navegador no deja guardar imágenes: se perderán al recargar. Descarga tu web.",
+    );
+  }
 }
 
 // ---------------- Editor ----------------
 
 function openEditor(project) {
   if (state.project?.id !== project.id) stopGeneration();
+  if (state.project?.id !== project.id) {
+    state.assetMap = new Map();
+    state.pending.chat = [];
+    renderAttachments("chat");
+    loadProjectAssets(project.id).then((map) => {
+      if (state.project?.id !== project.id) return;
+      for (const [id, uri] of map) state.assetMap.set(id, uri);
+      if (map.size) {
+        renderMessages();
+        if (!state.busy) renderVersion();
+      }
+    });
+  }
   state.project = project;
   state.selection = null;
   els.home.hidden = true;
@@ -284,10 +415,10 @@ function renderMessages() {
       "¡Hola! Describe la web que quieres o pide cambios sobre la actual. Activa el Inspector para elegir un elemento concreto.",
     );
   }
-  for (const m of msgs) addBubble(m.role, m.text, m.version);
+  for (const m of msgs) addBubble(m.role, m.text, m.version, m.images);
 }
 
-function addBubble(role, text, version) {
+function addBubble(role, text, version, imageIds = []) {
   const div = document.createElement("div");
   div.className = `msg ${role === "error" ? "assistant error" : role}`;
   const body = document.createElement("div");
@@ -298,6 +429,18 @@ function addBubble(role, text, version) {
     div.append(avatar);
   }
   body.textContent = text;
+  const thumbs = imageIds.map((id) => state.assetMap.get(id)).filter(Boolean);
+  if (thumbs.length) {
+    const row = document.createElement("div");
+    row.className = "msg-images";
+    for (const src of thumbs) {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "Imagen adjunta";
+      row.append(img);
+    }
+    body.append(row);
+  }
   if (version) {
     const tag = document.createElement("span");
     tag.className = "tag";
@@ -348,7 +491,7 @@ const INSPECTOR_SCRIPT = `<script data-rea-inspector>(() => {
     e.preventDefault();
     e.stopPropagation();
     box.remove();
-    parent.postMessage({ type: "rea-selected", html: e.target.outerHTML.slice(0, 4000), label: label(e.target) }, "*");
+    parent.postMessage({ type: "rea-selected", html: e.target.outerHTML, label: label(e.target) }, "*");
   }, true);
 })();</script>`;
 
@@ -361,7 +504,7 @@ function withInspector(html) {
 
 function renderPreview(html) {
   els.preview.srcdoc = html
-    ? withInspector(html)
+    ? withInspector(resolveAssets(html, state.assetMap))
     : `<!doctype html><body style="margin:0;display:grid;place-items:center;height:100vh;font-family:system-ui;color:#999;background:#fafafa"><p>Tu web aparecerá aquí</p></body>`;
 }
 
@@ -375,7 +518,10 @@ els.preview.addEventListener("load", () => {
 window.addEventListener("message", (e) => {
   if (e.source !== els.preview.contentWindow || e.data?.type !== "rea-selected")
     return;
-  state.selection = { html: String(e.data.html), label: String(e.data.label) };
+  // La vista previa tiene las imágenes ya resueltas: se vuelven a referencias
+  // cortas antes de recortar, para no mandar base64 a la IA.
+  const html = tokenizeDataUris(String(e.data.html), state.assetMap);
+  state.selection = { html: html.slice(0, 4000), label: String(e.data.label) };
   setInspecting(false);
   renderSelection();
   els.chatInput.focus();
@@ -408,11 +554,13 @@ function setTab(tab) {
 
 // ---------------- Generación ----------------
 
-async function generate(prompt) {
+async function generate(prompt, images = []) {
   const p = state.project;
   if (!p || state.busy || !prompt.trim()) return;
   if (!state.backend) return toast("Conectando… inténtalo en un segundo.");
   prompt = prompt.trim();
+  state.busy = true;
+  await attachToProject(p, images);
 
   const history = p.messages
     .filter((m) => m.role === "user")
@@ -420,8 +568,13 @@ async function generate(prompt) {
   const baseHtml = currentHtml(p);
   const selection = state.selection?.html || null;
 
-  p.messages.push({ role: "user", text: prompt });
-  addBubble("user", prompt);
+  const imageIds = images.map((img) => img.id);
+  p.messages.push({
+    role: "user",
+    text: prompt,
+    ...(imageIds.length && { images: imageIds }),
+  });
+  addBubble("user", prompt, undefined, imageIds);
   state.selection = null;
   renderSelection();
 
@@ -467,7 +620,14 @@ async function generate(prompt) {
 
   try {
     const { truncated } = await state.backend.generate(
-      { prompt, currentHtml: baseHtml, history, selection },
+      {
+        prompt,
+        currentHtml: baseHtml,
+        history,
+        selection,
+        images,
+        assets: p.assets ?? [],
+      },
       { signal: controller.signal, onText },
     );
     if (truncated)
@@ -584,7 +744,8 @@ function snippet(el) {
   return html.length > 110 ? `${html.slice(0, 110)}…` : html;
 }
 
-function audit(html) {
+// `size`: bytes reales de la página con sus imágenes incluidas.
+function audit(html, size) {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const checks = [];
   const add = (status, title, detail, evidence, fix) =>
@@ -780,12 +941,12 @@ function audit(html) {
       "",
     );
 
-  const size = new Blob([html]).size;
-  if (size > 200 * 1024)
+  const weightLimit = 200 * 1024 + 400 * 1024 * imgs.length;
+  if (size > weightLimit)
     add(
       "warn",
       "Peso del archivo",
-      `${(size / 1024).toFixed(0)} KB; por encima de 200 KB tarda más en cargar.`,
+      `${(size / 1024).toFixed(0)} KB con imágenes; tardará en cargar en datos móviles.`,
       "",
       "reducir el tamaño del HTML y CSS",
     );
@@ -827,7 +988,10 @@ function runAudit() {
     els.auditList.append(li);
     return;
   }
-  const checks = audit(html);
+  const checks = audit(
+    html,
+    new Blob([resolveAssets(html, state.assetMap)]).size,
+  );
   const points = checks.reduce(
     (s, c) => s + (c.status === "ok" ? 1 : c.status === "warn" ? 0.5 : 0),
     0,
@@ -885,10 +1049,16 @@ els.chips.addEventListener("click", (e) => {
 
 els.chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const text = els.chatInput.value;
-  if (!text.trim() || state.busy) return;
+  if (state.busy) return;
+  const images = takePending("chat");
+  const text =
+    els.chatInput.value.trim() ||
+    (images.length
+      ? "Agrega estas imágenes a la página donde tengan más sentido."
+      : "");
+  if (!text) return;
   els.chatInput.value = "";
-  generate(text);
+  generate(text, images);
 });
 submitOnEnter(els.chatInput, els.chatForm);
 els.chatStop.addEventListener("click", stopGeneration);
@@ -949,7 +1119,8 @@ document.addEventListener("keydown", (e) => {
 $("#downloadBtn").addEventListener("click", () => {
   const html = currentHtml();
   if (!html) return toast("Aún no hay nada que descargar.");
-  state.backend.save(`${slug(state.project.name)}.html`, html).then((r) => {
+  const file = resolveAssets(html, state.assetMap);
+  state.backend.save(`${slug(state.project.name)}.html`, file).then((r) => {
     if (r === "failed")
       toast("No se pudo descargar. Copia el código desde la pestaña Código.");
   });
@@ -958,7 +1129,8 @@ $("#downloadBtn").addEventListener("click", () => {
 $("#openBtn").addEventListener("click", () => {
   const html = currentHtml();
   if (!html) return toast("Aún no hay nada que abrir.");
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const file = resolveAssets(html, state.assetMap);
+  const url = URL.createObjectURL(new Blob([file], { type: "text/html" }));
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 });
@@ -1010,6 +1182,48 @@ els.fixBtn.addEventListener("click", () => {
     `Corrige estos problemas que detectó el Análisis Rea, sin cambiar el diseño: ${state.auditIssues.join("; ")}.`,
   );
 });
+
+document.querySelectorAll("[data-attach]").forEach((btn) =>
+  btn.addEventListener("click", () => {
+    state.attachTarget = btn.dataset.attach;
+    els.fileInput.value = "";
+    els.fileInput.click();
+  }),
+);
+els.fileInput.addEventListener("change", () => {
+  if (els.fileInput.files.length)
+    addAttachments(state.attachTarget, els.fileInput.files);
+});
+
+// Pegar (Ctrl+V) y arrastrar imágenes a cada caja de texto.
+for (const [target, form, input] of [
+  ["home", els.homeForm, els.homePrompt],
+  ["chat", els.chatForm, els.chatInput],
+]) {
+  form.classList.add("drop-target");
+  input.addEventListener("paste", (e) => {
+    const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (!files.length) return;
+    e.preventDefault();
+    addAttachments(target, files);
+  });
+  form.addEventListener("dragover", (e) => {
+    if (![...(e.dataTransfer?.types ?? [])].includes("Files")) return;
+    e.preventDefault();
+    form.classList.add("dragging");
+  });
+  form.addEventListener("dragleave", (e) => {
+    if (!form.contains(e.relatedTarget)) form.classList.remove("dragging");
+  });
+  form.addEventListener("drop", (e) => {
+    form.classList.remove("dragging");
+    if (!e.dataTransfer?.files.length) return;
+    e.preventDefault();
+    addAttachments(target, e.dataTransfer.files);
+  });
+}
 
 window.addEventListener("hashchange", route);
 
