@@ -253,6 +253,12 @@ button { cursor: pointer; }
 .style-select select { height: 34px; max-width: 132px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--muted); font-size: .82rem; }
 .style-select select:hover, .style-select select:focus { color: var(--fg); border-color: var(--muted); }
 .style-select option { background: var(--panel); color: var(--fg); }
+.refero-box { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); text-align: left; }
+.refero-box label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 8px; }
+.refero-box textarea { width: 100%; resize: vertical; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-family: var(--mono); font-size: .8rem; line-height: 1.5; outline: 0; }
+.refero-box textarea:focus { border-color: var(--accent); }
+.refero-box .hint { display: block; margin: 8px 0 0; }
+.refero-box a { color: var(--accent-ink); }
 @media (max-width: 480px) {
   .style-picker { align-items: flex-start; flex-direction: column; gap: 8px; }
   .style-options { width: 100%; }
@@ -264,4 +270,5 @@ button { cursor: pointer; }
 @media (pointer: coarse) {
   .attach-btn { width: 44px; height: 44px; }
   .style-select select { height: 44px; font-size: 16px; }
+  .refero-box textarea { font-size: 16px; }
 }

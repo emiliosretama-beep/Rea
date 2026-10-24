@@ -12,7 +12,12 @@ import {
   tokenizeDataUris,
 } from "./assets.js";
 import { createBackend } from "./backend.js";
-import { DESIGN_STYLES, findDesignStyle } from "./design-styles.js";
+import {
+  DESIGN_STYLES,
+  MAX_REFERO_STYLE_CHARS,
+  REFERO_STYLE_ID,
+  findDesignStyle,
+} from "./design-styles.js";
 
 const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
@@ -28,6 +33,8 @@ const els = {
   chips: $("#chips"),
   stylePicker: $("#stylePicker"),
   chatStyle: $("#chatStyle"),
+  referoBox: $("#referoBox"),
+  referoText: $("#referoText"),
   projectGrid: $("#projectGrid"),
   projectCount: $("#projectCount"),
   projectName: $("#projectName"),
@@ -112,7 +119,7 @@ function currentHtml(project = state.project) {
   return project?.versions[project.current]?.html || "";
 }
 
-function createProject(prompt, style = null) {
+function createProject(prompt, style = null, customStyle = null) {
   const project = {
     id: crypto.randomUUID(),
     name: prompt.length > 42 ? `${prompt.slice(0, 40).trim()}…` : prompt,
@@ -124,6 +131,7 @@ function createProject(prompt, style = null) {
     assets: [],
     current: -1,
     style,
+    ...(customStyle && { customStyle }),
   };
   state.projects.unshift(project);
   saveProjects();
@@ -283,7 +291,18 @@ function startFromHome(prompt) {
   const images = takePending("home");
   if (!prompt && !images.length) return;
   if (!prompt) prompt = "Crea una página web usando estas imágenes.";
-  const project = createProject(prompt, state.homeStyle);
+  let customStyle = null;
+  if (state.homeStyle === REFERO_STYLE_ID) {
+    customStyle = els.referoText.value.trim();
+    if (!customStyle) {
+      els.referoText.focus();
+      return toast("Pega primero el DESIGN.md del estilo de Refero.");
+    }
+    if (customStyle.length > MAX_REFERO_STYLE_CHARS)
+      toast("Es muy largo: se usará el principio. Prueba la versión Compact.");
+    customStyle = customStyle.slice(0, MAX_REFERO_STYLE_CHARS);
+  }
+  const project = createProject(prompt, state.homeStyle, customStyle);
   els.homePrompt.value = "";
   location.hash = `#p-${project.id}`;
   openEditor(project);
@@ -292,11 +311,22 @@ function startFromHome(prompt) {
 
 // ---------------- Estilos ----------------
 
+const FREE_STYLE = {
+  id: null,
+  emoji: "✨",
+  name: "Libre",
+  summary: "La IA elige el estilo.",
+};
+const REFERO_STYLE = {
+  id: REFERO_STYLE_ID,
+  emoji: "📋",
+  name: "De Refero",
+  summary: "Pega el DESIGN.md de un estilo real.",
+};
+
 function renderStylePicker() {
-  const options = [
-    { id: null, emoji: "✨", name: "Libre", summary: "La IA elige el estilo." },
-    ...DESIGN_STYLES,
-  ];
+  const options = [FREE_STYLE, ...DESIGN_STYLES, REFERO_STYLE];
+  els.referoBox.hidden = state.homeStyle !== REFERO_STYLE_ID;
   els.stylePicker.replaceChildren(
     ...options.map((s) => {
       const btn = document.createElement("button");
@@ -316,13 +346,21 @@ function renderStylePicker() {
       return btn;
     }),
   );
+}
+
+// El estilo De Refero solo se puede elegir en el editor si el proyecto ya
+// tiene un DESIGN.md guardado (se pega al crear el proyecto).
+function renderProjectStyle() {
+  const p = state.project;
+  const options = [FREE_STYLE, ...DESIGN_STYLES];
+  if (p?.customStyle) options.push(REFERO_STYLE);
   els.chatStyle.replaceChildren(
     ...options.map((s) => new Option(`${s.emoji} ${s.name}`, s.id ?? "")),
   );
-}
-
-function renderProjectStyle() {
-  els.chatStyle.value = findDesignStyle(state.project?.style)?.id ?? "";
+  els.chatStyle.value =
+    p?.style === REFERO_STYLE_ID && p.customStyle
+      ? REFERO_STYLE_ID
+      : (findDesignStyle(p?.style)?.id ?? "");
 }
 
 // ---------------- Imágenes adjuntas ----------------
@@ -669,6 +707,7 @@ async function generate(prompt, images = []) {
         images,
         assets: p.assets ?? [],
         styleId: p.style ?? null,
+        customStyle: p.style === REFERO_STYLE_ID ? p.customStyle : null,
       },
       { signal: controller.signal, onText },
     );
@@ -1249,10 +1288,13 @@ els.chatStyle.addEventListener("change", () => {
   p.style = els.chatStyle.value || null;
   p.updatedAt = Date.now();
   saveProjects();
-  const style = findDesignStyle(p.style);
+  const name =
+    p.style === REFERO_STYLE_ID
+      ? REFERO_STYLE.name
+      : findDesignStyle(p.style)?.name;
   toast(
-    style
-      ? `Estilo ${style.name}: se aplicará en tu próximo cambio.`
+    name
+      ? `Estilo ${name}: se aplicará en tu próximo cambio.`
       : "Estilo libre: la IA decide el diseño.",
   );
 });

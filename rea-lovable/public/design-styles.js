@@ -22,6 +22,11 @@ export const DESIGN_STYLES = [
   },
 ];
 
+// Estilo propio del proyecto: el usuario pega el DESIGN.md de un estilo de
+// styles.refero.design. Se recorta porque viaja en cada petición a la IA.
+export const REFERO_STYLE_ID = "refero";
+export const MAX_REFERO_STYLE_CHARS = 12000;
+
 export function findDesignStyle(id) {
   return DESIGN_STYLES.find((s) => s.id === id) ?? null;
 }

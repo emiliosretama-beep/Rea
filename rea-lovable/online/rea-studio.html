@@ -257,6 +257,12 @@ button { cursor: pointer; }
 .style-select select { height: 34px; max-width: 132px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--muted); font-size: .82rem; }
 .style-select select:hover, .style-select select:focus { color: var(--fg); border-color: var(--muted); }
 .style-select option { background: var(--panel); color: var(--fg); }
+.refero-box { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); text-align: left; }
+.refero-box label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 8px; }
+.refero-box textarea { width: 100%; resize: vertical; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-family: var(--mono); font-size: .8rem; line-height: 1.5; outline: 0; }
+.refero-box textarea:focus { border-color: var(--accent); }
+.refero-box .hint { display: block; margin: 8px 0 0; }
+.refero-box a { color: var(--accent-ink); }
 @media (max-width: 480px) {
   .style-picker { align-items: flex-start; flex-direction: column; gap: 8px; }
   .style-options { width: 100%; }
@@ -268,6 +274,7 @@ button { cursor: pointer; }
 @media (pointer: coarse) {
   .attach-btn { width: 44px; height: 44px; }
   .style-select select { height: 44px; font-size: 16px; }
+  .refero-box textarea { font-size: 16px; }
 }
 
 </style>
@@ -306,6 +313,11 @@ button { cursor: pointer; }
       <div class="style-picker" role="group" aria-labelledby="styleLabel">
         <span id="styleLabel" class="style-label">Estilo</span>
         <div class="style-options" id="stylePicker"></div>
+      </div>
+      <div class="refero-box" id="referoBox" hidden>
+        <label for="referoText">Pega el DESIGN.md del estilo</label>
+        <textarea id="referoText" rows="4" placeholder="# Nombre — Style Reference…"></textarea>
+        <p class="hint">En <a href="https://styles.refero.design" target="_blank" rel="noopener">styles.refero.design</a> abre un estilo, ve a la pestaña DESIGN.md y toca Copy. La versión Compact gasta menos.</p>
       </div>
 
       <div class="chips" id="chips">
@@ -475,6 +487,11 @@ const DESIGN_STYLES = [
   },
 ];
 
+// Estilo propio del proyecto: el usuario pega el DESIGN.md de un estilo de
+// styles.refero.design. Se recorta porque viaja en cada petición a la IA.
+const REFERO_STYLE_ID = "refero";
+const MAX_REFERO_STYLE_CHARS = 12000;
+
 function findDesignStyle(id) {
   return DESIGN_STYLES.find((s) => s.id === id) ?? null;
 }
@@ -542,6 +559,7 @@ function buildUserMessage({
   assets = [],
   imagesVisible = true,
   styleId = null,
+  customStyle = null,
 }) {
   const parts = [];
   const style = findDesignStyle(styleId);
@@ -549,6 +567,19 @@ function buildUserMessage({
     parts.push(
       `Estilo visual elegido para este proyecto: ${style.name}. Síguelo en cada versión: sustituye a tu elección de estilo, colores, fuentes y forma (aunque contradiga la dirección visual del estándar), pero no a las reglas del archivo ni a las de calidad. Si el usuario pide expresamente algo distinto, su petición manda.`,
       style.guide,
+      "",
+    );
+  } else if (
+    styleId === REFERO_STYLE_ID &&
+    typeof customStyle === "string" &&
+    customStyle.trim()
+  ) {
+    parts.push(
+      "Estilo de referencia elegido por el usuario: el DESIGN.md de un sitio real, sacado de Refero Styles. Úsalo como referencia en cada versión: toma su paleta, tipografía (o el sustituto de Google Fonts que indique), espaciado, forma de los componentes y composición, y adáptalo al contenido de esta web. Sustituye a tu elección de estilo, pero no a las reglas del archivo ni a las de calidad. Copia solo el lenguaje visual: nunca el nombre, el logo, los textos ni las imágenes de la marca de origen. Si el usuario pide expresamente algo distinto, su petición manda.",
+      // El DESIGN.md trae sus propios bloques ```, así que va entre etiquetas.
+      "<design_md>",
+      customStyle.trim().slice(0, MAX_REFERO_STYLE_CHARS),
+      "</design_md>",
       "",
     );
   }
@@ -1412,6 +1443,8 @@ const els = {
   chips: $("#chips"),
   stylePicker: $("#stylePicker"),
   chatStyle: $("#chatStyle"),
+  referoBox: $("#referoBox"),
+  referoText: $("#referoText"),
   projectGrid: $("#projectGrid"),
   projectCount: $("#projectCount"),
   projectName: $("#projectName"),
@@ -1496,7 +1529,7 @@ function currentHtml(project = state.project) {
   return project?.versions[project.current]?.html || "";
 }
 
-function createProject(prompt, style = null) {
+function createProject(prompt, style = null, customStyle = null) {
   const project = {
     id: crypto.randomUUID(),
     name: prompt.length > 42 ? `${prompt.slice(0, 40).trim()}…` : prompt,
@@ -1508,6 +1541,7 @@ function createProject(prompt, style = null) {
     assets: [],
     current: -1,
     style,
+    ...(customStyle && { customStyle }),
   };
   state.projects.unshift(project);
   saveProjects();
@@ -1667,7 +1701,18 @@ function startFromHome(prompt) {
   const images = takePending("home");
   if (!prompt && !images.length) return;
   if (!prompt) prompt = "Crea una página web usando estas imágenes.";
-  const project = createProject(prompt, state.homeStyle);
+  let customStyle = null;
+  if (state.homeStyle === REFERO_STYLE_ID) {
+    customStyle = els.referoText.value.trim();
+    if (!customStyle) {
+      els.referoText.focus();
+      return toast("Pega primero el DESIGN.md del estilo de Refero.");
+    }
+    if (customStyle.length > MAX_REFERO_STYLE_CHARS)
+      toast("Es muy largo: se usará el principio. Prueba la versión Compact.");
+    customStyle = customStyle.slice(0, MAX_REFERO_STYLE_CHARS);
+  }
+  const project = createProject(prompt, state.homeStyle, customStyle);
   els.homePrompt.value = "";
   location.hash = `#p-${project.id}`;
   openEditor(project);
@@ -1676,11 +1721,22 @@ function startFromHome(prompt) {
 
 // ---------------- Estilos ----------------
 
+const FREE_STYLE = {
+  id: null,
+  emoji: "✨",
+  name: "Libre",
+  summary: "La IA elige el estilo.",
+};
+const REFERO_STYLE = {
+  id: REFERO_STYLE_ID,
+  emoji: "📋",
+  name: "De Refero",
+  summary: "Pega el DESIGN.md de un estilo real.",
+};
+
 function renderStylePicker() {
-  const options = [
-    { id: null, emoji: "✨", name: "Libre", summary: "La IA elige el estilo." },
-    ...DESIGN_STYLES,
-  ];
+  const options = [FREE_STYLE, ...DESIGN_STYLES, REFERO_STYLE];
+  els.referoBox.hidden = state.homeStyle !== REFERO_STYLE_ID;
   els.stylePicker.replaceChildren(
     ...options.map((s) => {
       const btn = document.createElement("button");
@@ -1700,13 +1756,21 @@ function renderStylePicker() {
       return btn;
     }),
   );
+}
+
+// El estilo De Refero solo se puede elegir en el editor si el proyecto ya
+// tiene un DESIGN.md guardado (se pega al crear el proyecto).
+function renderProjectStyle() {
+  const p = state.project;
+  const options = [FREE_STYLE, ...DESIGN_STYLES];
+  if (p?.customStyle) options.push(REFERO_STYLE);
   els.chatStyle.replaceChildren(
     ...options.map((s) => new Option(`${s.emoji} ${s.name}`, s.id ?? "")),
   );
-}
-
-function renderProjectStyle() {
-  els.chatStyle.value = findDesignStyle(state.project?.style)?.id ?? "";
+  els.chatStyle.value =
+    p?.style === REFERO_STYLE_ID && p.customStyle
+      ? REFERO_STYLE_ID
+      : (findDesignStyle(p?.style)?.id ?? "");
 }
 
 // ---------------- Imágenes adjuntas ----------------
@@ -2053,6 +2117,7 @@ async function generate(prompt, images = []) {
         images,
         assets: p.assets ?? [],
         styleId: p.style ?? null,
+        customStyle: p.style === REFERO_STYLE_ID ? p.customStyle : null,
       },
       { signal: controller.signal, onText },
     );
@@ -2633,10 +2698,13 @@ els.chatStyle.addEventListener("change", () => {
   p.style = els.chatStyle.value || null;
   p.updatedAt = Date.now();
   saveProjects();
-  const style = findDesignStyle(p.style);
+  const name =
+    p.style === REFERO_STYLE_ID
+      ? REFERO_STYLE.name
+      : findDesignStyle(p.style)?.name;
   toast(
-    style
-      ? `Estilo ${style.name}: se aplicará en tu próximo cambio.`
+    name
+      ? `Estilo ${name}: se aplicará en tu próximo cambio.`
       : "Estilo libre: la IA decide el diseño.",
   );
 });

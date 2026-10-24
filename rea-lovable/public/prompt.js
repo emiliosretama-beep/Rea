@@ -1,5 +1,9 @@
 // Instrucciones del generador, compartidas por el servidor local y la versión online.
-import { findDesignStyle } from "./design-styles.js";
+import {
+  MAX_REFERO_STYLE_CHARS,
+  REFERO_STYLE_ID,
+  findDesignStyle,
+} from "./design-styles.js";
 
 export const SYSTEM_PROMPT = `Eres el motor de ERA Studio, un constructor de páginas web.
 El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo HTML completo y autocontenido.
@@ -61,6 +65,7 @@ export function buildUserMessage({
   assets = [],
   imagesVisible = true,
   styleId = null,
+  customStyle = null,
 }) {
   const parts = [];
   const style = findDesignStyle(styleId);
@@ -68,6 +73,19 @@ export function buildUserMessage({
     parts.push(
       `Estilo visual elegido para este proyecto: ${style.name}. Síguelo en cada versión: sustituye a tu elección de estilo, colores, fuentes y forma (aunque contradiga la dirección visual del estándar), pero no a las reglas del archivo ni a las de calidad. Si el usuario pide expresamente algo distinto, su petición manda.`,
       style.guide,
+      "",
+    );
+  } else if (
+    styleId === REFERO_STYLE_ID &&
+    typeof customStyle === "string" &&
+    customStyle.trim()
+  ) {
+    parts.push(
+      "Estilo de referencia elegido por el usuario: el DESIGN.md de un sitio real, sacado de Refero Styles. Úsalo como referencia en cada versión: toma su paleta, tipografía (o el sustituto de Google Fonts que indique), espaciado, forma de los componentes y composición, y adáptalo al contenido de esta web. Sustituye a tu elección de estilo, pero no a las reglas del archivo ni a las de calidad. Copia solo el lenguaje visual: nunca el nombre, el logo, los textos ni las imágenes de la marca de origen. Si el usuario pide expresamente algo distinto, su petición manda.",
+      // El DESIGN.md trae sus propios bloques ```, así que va entre etiquetas.
+      "<design_md>",
+      customStyle.trim().slice(0, MAX_REFERO_STYLE_CHARS),
+      "</design_md>",
       "",
     );
   }
