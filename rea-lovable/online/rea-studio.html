@@ -233,8 +233,10 @@ button { cursor: pointer; }
 
 /* ---------- Imágenes adjuntas ---------- */
 .prompt-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.attach-btn { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); transition: color .15s, border-color .15s; }
-.attach-btn:hover, .attach-btn:focus-visible { color: var(--fg); border-color: var(--muted); }
+.attach-btn { position: relative; overflow: hidden; cursor: pointer; width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); transition: color .15s, border-color .15s; }
+.attach-btn:hover, .attach-btn:has(.file-picker:focus-visible) { color: var(--fg); border-color: var(--muted); }
+.attach-btn:has(.file-picker:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-picker { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; font-size: 0; }
 .attachments { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .attachment { position: relative; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg-2); }
 .attachment img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -245,6 +247,8 @@ button { cursor: pointer; }
 .msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .msg-images img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) { .attachment.loading::after { animation: none; } }
+/* En pantallas táctiles, objetivo de al menos 44 px (recomendación de Apple). */
+@media (pointer: coarse) { .attach-btn { width: 44px; height: 44px; } }
 
 </style>
 <!-- ============ INICIO ============ -->
@@ -268,9 +272,10 @@ button { cursor: pointer; }
         <div class="attachments" id="homeAttachments" hidden></div>
         <div class="prompt-actions">
           <div class="prompt-tools">
-            <button class="attach-btn" type="button" data-attach="home" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+            <label class="attach-btn" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)">
+              <input type="file" class="file-picker" data-attach="home" accept="image/*" multiple aria-label="Añadir imágenes" />
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            </button>
+            </label>
             <span class="hint">Enter para enviar · Shift+Enter nueva línea · pega o arrastra imágenes</span>
           </div>
           <button class="send" type="submit" aria-label="Crear web">
@@ -360,9 +365,10 @@ button { cursor: pointer; }
           <textarea id="chatInput" rows="2" placeholder="Pide un cambio: «haz el menú más grande», «añade una sección de precios»…"></textarea>
           <div class="chat-actions">
             <div class="prompt-tools">
-              <button class="attach-btn" type="button" data-attach="chat" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+              <label class="attach-btn" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)">
+                <input type="file" class="file-picker" data-attach="chat" accept="image/*" multiple aria-label="Añadir imágenes" />
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-              </button>
+              </label>
               <span class="muted small" id="statusText"></span>
             </div>
             <button class="send" id="chatSend" type="submit" aria-label="Enviar">
@@ -414,7 +420,6 @@ button { cursor: pointer; }
     </div>
   </div>
 
-  <input type="file" id="fileInput" accept="image/*" multiple hidden />
   <div class="toast" id="toast" role="status" hidden></div>
 <script type="module">
 // ---- public/prompt.js ----
@@ -977,6 +982,15 @@ async function deleteProjectAssets(projectId) {
   }
 }
 
+// iOS a veces entrega fotos sin tipo MIME (o como HEIC): se acepta también
+// por extensión, y es createImageBitmap quien decide si se puede leer.
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|heic|heif|avif|bmp)$/i;
+function isImageFile(file) {
+  return (
+    file.type.startsWith("image/") || (!file.type && IMAGE_EXT.test(file.name))
+  );
+}
+
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
@@ -993,13 +1007,14 @@ function blobToDataUrl(blob) {
 // Convierte un archivo de imagen en un asset listo para guardar.
 // Lanza Error con un mensaje para el usuario si no es una imagen válida.
 async function prepareImage(file, projectId) {
-  if (!file.type.startsWith("image/"))
-    throw new Error(`"${file.name}" no es una imagen.`);
+  if (!isImageFile(file)) throw new Error(`"${file.name}" no es una imagen.`);
   let bitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error(`No se pudo leer "${file.name}". Prueba con PNG o JPG.`);
+    throw new Error(
+      `No se pudo leer "${file.name}". Prueba con una foto en JPG o PNG.`,
+    );
   }
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);
@@ -1318,7 +1333,6 @@ const els = {
   auditList: $("#auditList"),
   auditScore: $("#auditScore"),
   fixBtn: $("#fixBtn"),
-  fileInput: $("#fileInput"),
   attachments: { home: $("#homeAttachments"), chat: $("#chatAttachments") },
   toast: $("#toast"),
 };
@@ -1335,7 +1349,6 @@ const state = {
   backend: null,
   // Imágenes listas para enviar con el próximo mensaje, por caja de texto.
   pending: { home: [], chat: [] },
-  attachTarget: "chat",
   // id -> data URI de las imágenes del proyecto abierto.
   assetMap: new Map(),
   warnedVolatile: false,
@@ -1559,7 +1572,7 @@ function startFromHome(prompt) {
 
 async function addAttachments(target, files) {
   const list = state.pending[target];
-  const images = [...files].filter((f) => f.type.startsWith("image/"));
+  const images = [...files].filter(isImageFile);
   if (!images.length) return toast("Solo se pueden añadir imágenes.");
   const room = MAX_IMAGES_PER_MESSAGE - list.length;
   if (room <= 0)
@@ -2453,17 +2466,14 @@ els.fixBtn.addEventListener("click", () => {
   );
 });
 
-document.querySelectorAll("[data-attach]").forEach((btn) =>
-  btn.addEventListener("click", () => {
-    state.attachTarget = btn.dataset.attach;
-    els.fileInput.value = "";
-    els.fileInput.click();
+// Cada botón de imágenes es un <input type="file"> transparente encima del
+// ícono: el toque lo abre de forma nativa, también en iPhone y iPad.
+document.querySelectorAll(".file-picker").forEach((input) =>
+  input.addEventListener("change", () => {
+    if (input.files.length) addAttachments(input.dataset.attach, input.files);
+    input.value = ""; // permite volver a elegir la misma foto
   }),
 );
-els.fileInput.addEventListener("change", () => {
-  if (els.fileInput.files.length)
-    addAttachments(state.attachTarget, els.fileInput.files);
-});
 
 // Pegar (Ctrl+V) y arrastrar imágenes a cada caja de texto.
 for (const [target, form, input] of [
@@ -2472,9 +2482,7 @@ for (const [target, form, input] of [
 ]) {
   form.classList.add("drop-target");
   input.addEventListener("paste", (e) => {
-    const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
-      f.type.startsWith("image/"),
-    );
+    const files = [...(e.clipboardData?.files ?? [])].filter(isImageFile);
     if (!files.length) return;
     e.preventDefault();
     addAttachments(target, files);

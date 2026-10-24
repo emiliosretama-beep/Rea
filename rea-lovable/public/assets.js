@@ -92,6 +92,15 @@ export async function deleteProjectAssets(projectId) {
   }
 }
 
+// iOS a veces entrega fotos sin tipo MIME (o como HEIC): se acepta también
+// por extensión, y es createImageBitmap quien decide si se puede leer.
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|heic|heif|avif|bmp)$/i;
+export function isImageFile(file) {
+  return (
+    file.type.startsWith("image/") || (!file.type && IMAGE_EXT.test(file.name))
+  );
+}
+
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
@@ -108,13 +117,14 @@ function blobToDataUrl(blob) {
 // Convierte un archivo de imagen en un asset listo para guardar.
 // Lanza Error con un mensaje para el usuario si no es una imagen válida.
 export async function prepareImage(file, projectId) {
-  if (!file.type.startsWith("image/"))
-    throw new Error(`"${file.name}" no es una imagen.`);
+  if (!isImageFile(file)) throw new Error(`"${file.name}" no es una imagen.`);
   let bitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error(`No se pudo leer "${file.name}". Prueba con PNG o JPG.`);
+    throw new Error(
+      `No se pudo leer "${file.name}". Prueba con una foto en JPG o PNG.`,
+    );
   }
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);

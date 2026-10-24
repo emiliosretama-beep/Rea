@@ -32,9 +32,10 @@
         <div class="attachments" id="homeAttachments" hidden></div>
         <div class="prompt-actions">
           <div class="prompt-tools">
-            <button class="attach-btn" type="button" data-attach="home" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+            <label class="attach-btn" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)">
+              <input type="file" class="file-picker" data-attach="home" accept="image/*" multiple aria-label="Añadir imágenes" />
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            </button>
+            </label>
             <span class="hint">Enter para enviar · Shift+Enter nueva línea · pega o arrastra imágenes</span>
           </div>
           <button class="send" type="submit" aria-label="Crear web">
@@ -124,9 +125,10 @@
           <textarea id="chatInput" rows="2" placeholder="Pide un cambio: «haz el menú más grande», «añade una sección de precios»…"></textarea>
           <div class="chat-actions">
             <div class="prompt-tools">
-              <button class="attach-btn" type="button" data-attach="chat" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)" aria-label="Añadir imágenes">
+              <label class="attach-btn" title="Añadir imágenes (también puedes pegarlas o arrastrarlas)">
+                <input type="file" class="file-picker" data-attach="chat" accept="image/*" multiple aria-label="Añadir imágenes" />
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><path d="M21 16l-5-5-7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-              </button>
+              </label>
               <span class="muted small" id="statusText"></span>
             </div>
             <button class="send" id="chatSend" type="submit" aria-label="Enviar">
@@ -178,7 +180,6 @@
     </div>
   </div>
 
-  <input type="file" id="fileInput" accept="image/*" multiple hidden />
   <div class="toast" id="toast" role="status" hidden></div>
   <script type="module" src="/app.js"></script>
 </body>

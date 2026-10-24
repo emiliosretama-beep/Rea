@@ -4,6 +4,7 @@
 import {
   assetsArePersistent,
   deleteProjectAssets,
+  isImageFile,
   loadProjectAssets,
   prepareImage,
   putAsset,
@@ -48,7 +49,6 @@ const els = {
   auditList: $("#auditList"),
   auditScore: $("#auditScore"),
   fixBtn: $("#fixBtn"),
-  fileInput: $("#fileInput"),
   attachments: { home: $("#homeAttachments"), chat: $("#chatAttachments") },
   toast: $("#toast"),
 };
@@ -65,7 +65,6 @@ const state = {
   backend: null,
   // Imágenes listas para enviar con el próximo mensaje, por caja de texto.
   pending: { home: [], chat: [] },
-  attachTarget: "chat",
   // id -> data URI de las imágenes del proyecto abierto.
   assetMap: new Map(),
   warnedVolatile: false,
@@ -289,7 +288,7 @@ function startFromHome(prompt) {
 
 async function addAttachments(target, files) {
   const list = state.pending[target];
-  const images = [...files].filter((f) => f.type.startsWith("image/"));
+  const images = [...files].filter(isImageFile);
   if (!images.length) return toast("Solo se pueden añadir imágenes.");
   const room = MAX_IMAGES_PER_MESSAGE - list.length;
   if (room <= 0)
@@ -1183,17 +1182,14 @@ els.fixBtn.addEventListener("click", () => {
   );
 });
 
-document.querySelectorAll("[data-attach]").forEach((btn) =>
-  btn.addEventListener("click", () => {
-    state.attachTarget = btn.dataset.attach;
-    els.fileInput.value = "";
-    els.fileInput.click();
+// Cada botón de imágenes es un <input type="file"> transparente encima del
+// ícono: el toque lo abre de forma nativa, también en iPhone y iPad.
+document.querySelectorAll(".file-picker").forEach((input) =>
+  input.addEventListener("change", () => {
+    if (input.files.length) addAttachments(input.dataset.attach, input.files);
+    input.value = ""; // permite volver a elegir la misma foto
   }),
 );
-els.fileInput.addEventListener("change", () => {
-  if (els.fileInput.files.length)
-    addAttachments(state.attachTarget, els.fileInput.files);
-});
 
 // Pegar (Ctrl+V) y arrastrar imágenes a cada caja de texto.
 for (const [target, form, input] of [
@@ -1202,9 +1198,7 @@ for (const [target, form, input] of [
 ]) {
   form.classList.add("drop-target");
   input.addEventListener("paste", (e) => {
-    const files = [...(e.clipboardData?.files ?? [])].filter((f) =>
-      f.type.startsWith("image/"),
-    );
+    const files = [...(e.clipboardData?.files ?? [])].filter(isImageFile);
     if (!files.length) return;
     e.preventDefault();
     addAttachments(target, files);
