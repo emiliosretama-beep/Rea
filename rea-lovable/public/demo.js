@@ -228,6 +228,10 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${n} — ${escapeHtml(tagline)}</title>
   <meta name="description" content="${escapeHtml(tagline)}" />
+  <meta property="og:title" content="${n}" />
+  <meta property="og:description" content="${escapeHtml(tagline)}" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${accent}"/><text x="32" y="44" font-family="system-ui" font-size="34" font-weight="800" text-anchor="middle" fill="#fff">${escapeHtml(name.trim().charAt(0).toUpperCase() || "W")}</text></svg>`)}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet" />
   <style>
@@ -264,6 +268,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
     .card p { color: var(--muted); }
     .cta { background: var(--accent); color: #fff; border-radius: calc(var(--radius) * 1.4); padding: 48px 32px; text-align: center; }
     .cta p { opacity: .9; margin: 10px 0 24px; }
+    .cta .privacy { font-size: .85rem; margin: 16px 0 0; opacity: .85; }
     .cta .btn { background: #fff; color: var(--accent); }
     form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     input { padding: 12px 16px; border-radius: 999px; border: 0; min-width: 240px; font: inherit; }
@@ -275,9 +280,9 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
   </style>
 </head>
 <body>
-  <header>
+  <header id="inicio">
     <nav class="wrap">
-      <a class="logo" href="#">${n}<span>.</span></a>
+      <a class="logo" href="#inicio">${n}<span>.</span></a>
       <ul class="links">
         <li><a href="#servicios">Servicios</a></li>
         <li><a href="#contacto">Contacto</a></li>
@@ -308,6 +313,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
           <input id="email" type="email" placeholder="tu@correo.com" required />
           <button class="btn" type="submit">${escapeHtml(cta)}</button>
         </form>
+        <p class="privacy">Usaremos tu correo solo para responderte. Consulta nuestro <a href="#contacto">[Aviso de privacidad]</a>.</p>
       </div>
     </section>
 ${images.length > sections.length + 1 ? gallery(images.slice(sections.length + 1)) : ""}

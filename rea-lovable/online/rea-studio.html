@@ -433,13 +433,25 @@ Reglas del archivo:
 - Todo el CSS va en <style> y todo el JavaScript en <script> dentro del mismo archivo. Puedes usar Google Fonts.
 - No uses frameworks, CDNs ni imágenes externas (no cargarían en la vista previa). Ilustra con SVG en línea, degradados y formas CSS o emojis, siempre con texto alternativo o aria-label.
 - Si el usuario subió imágenes, aparecen en su lista con una referencia del tipo rea-asset:ID (cada una con su ID real). Úsalas escribiendo esa referencia exacta como src (<img src="rea-asset:ID" alt="...">) o en CSS (url(rea-asset:ID)). Nunca la cambies, la conviertas a base64 ni inventes otras rutas. Ponle a cada una un alt descriptivo y colócala donde tenga sentido (un logo en la cabecera, capturas de un producto o juego en su tarjeta o galería).
-- Diseño moderno y profesional: buena tipografía, espaciado generoso, jerarquía visual clara, paleta coherente definida en variables CSS en :root.
-- Responsive de verdad (móvil primero), sin scroll horizontal, accesible (contraste, alt, etiquetas en formularios, HTML semántico).
-- Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
 - Cuando te den código actual, modifícalo respetando lo que ya existe: cambia solo lo que se pide y conserva el resto.
 
+Estándar de agencia (guía profesional de diseño web de ERA Studio; aplícalo en cada página):
+- Diseña primero para celular (360 px) y luego amplía a tableta y escritorio. Sin scroll horizontal.
+- Arriba del todo, sin hacer scroll: la propuesta de valor en una frase y un botón con la acción principal (contactar, reservar, comprar, jugar...).
+- Para un negocio, sigue este orden salvo que el usuario pida otro: portada → servicios o productos → por qué elegirnos → galería → ubicación y horarios → contacto → pie de página. Para otros proyectos (un juego, un portafolio) adapta las secciones a lo que el visitante viene a hacer.
+- Máximo 2 fuentes de Google Fonts. Paleta en variables CSS en :root con la regla 60-30-10 (60 % color base, 30 % secundario, 10 % acento para los botones). Espaciados en múltiplos de 8 px. Contraste suficiente para leer bien.
+- Usa patrones que la gente ya conoce (menú arriba, botones que parecen botones). Dale una dirección visual propia del giro del negocio; nada de plantilla genérica.
+- HTML semántico (header, nav, main, section, footer), un solo h1 y encabezados en orden. JavaScript solo cuando aporte (menú en celular, validar un formulario, una galería).
+- SEO: <title> y <meta name="description"> propios, etiquetas Open Graph (og:title, og:description, og:type) y un favicon en SVG en línea. Si es un negocio local, añade datos estructurados schema.org LocalBusiness en JSON-LD con los datos que el usuario dio.
+- Accesibilidad: alt en todas las imágenes, foco visible, todo usable con teclado, <label> en cada campo de formulario.
+- Si es un negocio en México y el usuario dio un número de WhatsApp, añade un botón flotante a https://wa.me/52NUMERO?text= con un mensaje prellenado.
+- Si la página pide datos personales (un formulario), incluye un enlace o texto de aviso de privacidad junto al formulario.
+- Datos de contacto y horarios visibles cuando sea un negocio.
+- NUNCA inventes testimonios, reseñas, cifras, premios, logos de clientes, teléfonos, correos ni direcciones. Si faltan, pon un marcador claro entre corchetes que el cliente deba completar, por ejemplo "[Testimonio real de un cliente]" o "[Tu número de WhatsApp]".
+- Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
+
 Formato de respuesta:
-1. Una o dos frases cortas explicando lo que hiciste.
+1. Una o dos frases cortas: qué hiciste y la decisión de diseño más importante (y por qué), para que el usuario aprenda.
 2. El archivo completo dentro de un único bloque \`\`\`html ... \`\`\`.
 No escribas nada después del bloque de código.`;
 
@@ -738,6 +750,10 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${n} — ${escapeHtml(tagline)}</title>
   <meta name="description" content="${escapeHtml(tagline)}" />
+  <meta property="og:title" content="${n}" />
+  <meta property="og:description" content="${escapeHtml(tagline)}" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${accent}"/><text x="32" y="44" font-family="system-ui" font-size="34" font-weight="800" text-anchor="middle" fill="#fff">${escapeHtml(name.trim().charAt(0).toUpperCase() || "W")}</text></svg>`)}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet" />
   <style>
@@ -774,6 +790,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
     .card p { color: var(--muted); }
     .cta { background: var(--accent); color: #fff; border-radius: calc(var(--radius) * 1.4); padding: 48px 32px; text-align: center; }
     .cta p { opacity: .9; margin: 10px 0 24px; }
+    .cta .privacy { font-size: .85rem; margin: 16px 0 0; opacity: .85; }
     .cta .btn { background: #fff; color: var(--accent); }
     form { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     input { padding: 12px 16px; border-radius: 999px; border: 0; min-width: 240px; font: inherit; }
@@ -785,9 +802,9 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
   </style>
 </head>
 <body>
-  <header>
+  <header id="inicio">
     <nav class="wrap">
-      <a class="logo" href="#">${n}<span>.</span></a>
+      <a class="logo" href="#inicio">${n}<span>.</span></a>
       <ul class="links">
         <li><a href="#servicios">Servicios</a></li>
         <li><a href="#contacto">Contacto</a></li>
@@ -818,6 +835,7 @@ function page({ name, tagline, accent, seed, sections, cta, dark, images }) {
           <input id="email" type="email" placeholder="tu@correo.com" required />
           <button class="btn" type="submit">${escapeHtml(cta)}</button>
         </form>
+        <p class="privacy">Usaremos tu correo solo para responderte. Consulta nuestro <a href="#contacto">[Aviso de privacidad]</a>.</p>
       </div>
     </section>
 ${images.length > sections.length + 1 ? gallery(images.slice(sections.length + 1)) : ""}
@@ -2222,6 +2240,76 @@ function audit(html, size) {
       "Scripts externos",
       "Ninguno: todo el código va dentro de la página.",
       "",
+    );
+
+  // Puntos del checklist de la guía de diseño web (SEO social, favicon,
+  // privacidad y datos por completar).
+  const og = ["og:title", "og:description"].filter(
+    (prop) => !doc.querySelector(`meta[property="${prop}"]`),
+  );
+  if (og.length)
+    add(
+      "warn",
+      "Vista al compartir (Open Graph)",
+      `Falta ${og.join(" y ")}: al compartir el enlace en WhatsApp o redes no se verá bien.`,
+      "",
+      "añadir etiquetas Open Graph (og:title, og:description, og:type)",
+    );
+  else
+    add(
+      "ok",
+      "Vista al compartir (Open Graph)",
+      "Tiene og:title y og:description.",
+      "",
+    );
+
+  if (doc.querySelector('link[rel~="icon"]'))
+    add("ok", "Favicon", "La pestaña del navegador muestra un ícono.", "");
+  else
+    add(
+      "warn",
+      "Favicon",
+      "No hay ícono para la pestaña del navegador.",
+      "",
+      "añadir un favicon en SVG en línea",
+    );
+
+  // Texto que ve el visitante (sin el código de <script> ni <style>).
+  const body = doc.body?.cloneNode(true);
+  body
+    ?.querySelectorAll("script, style, noscript, template")
+    .forEach((n) => n.remove());
+  const visibleText = body?.textContent || "";
+
+  const personal = fields.filter((f) =>
+    /^(email|tel|text|)$/i.test(f.getAttribute("type") || ""),
+  );
+  if (personal.length) {
+    if (/privacidad/i.test(visibleText))
+      add(
+        "ok",
+        "Aviso de privacidad",
+        "El formulario menciona el aviso de privacidad.",
+        "",
+      );
+    else
+      add(
+        "bad",
+        "Aviso de privacidad",
+        "El formulario pide datos personales y no hay aviso de privacidad (lo exige la ley mexicana).",
+        personal.slice(0, 2).map(snippet).join("\n"),
+        "añadir junto al formulario un texto o enlace de aviso de privacidad",
+      );
+  }
+
+  // Marcadores como "[Tu número de WhatsApp]": datos que el cliente debe dar.
+  const pending = [...new Set(visibleText.match(/\[[^\]\n]{3,60}\]/g) || [])];
+  if (pending.length)
+    add(
+      "warn",
+      "Datos por completar",
+      `${pending.length} dato(s) pendientes del cliente antes de publicar.`,
+      pending.slice(0, 5).join("\n"),
     );
 
   const weightLimit = 200 * 1024 + 400 * 1024 * imgs.length;

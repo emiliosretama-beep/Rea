@@ -940,6 +940,76 @@ function audit(html, size) {
       "",
     );
 
+  // Puntos del checklist de la guía de diseño web (SEO social, favicon,
+  // privacidad y datos por completar).
+  const og = ["og:title", "og:description"].filter(
+    (prop) => !doc.querySelector(`meta[property="${prop}"]`),
+  );
+  if (og.length)
+    add(
+      "warn",
+      "Vista al compartir (Open Graph)",
+      `Falta ${og.join(" y ")}: al compartir el enlace en WhatsApp o redes no se verá bien.`,
+      "",
+      "añadir etiquetas Open Graph (og:title, og:description, og:type)",
+    );
+  else
+    add(
+      "ok",
+      "Vista al compartir (Open Graph)",
+      "Tiene og:title y og:description.",
+      "",
+    );
+
+  if (doc.querySelector('link[rel~="icon"]'))
+    add("ok", "Favicon", "La pestaña del navegador muestra un ícono.", "");
+  else
+    add(
+      "warn",
+      "Favicon",
+      "No hay ícono para la pestaña del navegador.",
+      "",
+      "añadir un favicon en SVG en línea",
+    );
+
+  // Texto que ve el visitante (sin el código de <script> ni <style>).
+  const body = doc.body?.cloneNode(true);
+  body
+    ?.querySelectorAll("script, style, noscript, template")
+    .forEach((n) => n.remove());
+  const visibleText = body?.textContent || "";
+
+  const personal = fields.filter((f) =>
+    /^(email|tel|text|)$/i.test(f.getAttribute("type") || ""),
+  );
+  if (personal.length) {
+    if (/privacidad/i.test(visibleText))
+      add(
+        "ok",
+        "Aviso de privacidad",
+        "El formulario menciona el aviso de privacidad.",
+        "",
+      );
+    else
+      add(
+        "bad",
+        "Aviso de privacidad",
+        "El formulario pide datos personales y no hay aviso de privacidad (lo exige la ley mexicana).",
+        personal.slice(0, 2).map(snippet).join("\n"),
+        "añadir junto al formulario un texto o enlace de aviso de privacidad",
+      );
+  }
+
+  // Marcadores como "[Tu número de WhatsApp]": datos que el cliente debe dar.
+  const pending = [...new Set(visibleText.match(/\[[^\]\n]{3,60}\]/g) || [])];
+  if (pending.length)
+    add(
+      "warn",
+      "Datos por completar",
+      `${pending.length} dato(s) pendientes del cliente antes de publicar.`,
+      pending.slice(0, 5).join("\n"),
+    );
+
   const weightLimit = 200 * 1024 + 400 * 1024 * imgs.length;
   if (size > weightLimit)
     add(
