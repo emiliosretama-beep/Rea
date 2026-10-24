@@ -1,4 +1,5 @@
 // Instrucciones del generador, compartidas por el servidor local y la versión online.
+import { findDesignStyle } from "./design-styles.js";
 
 export const SYSTEM_PROMPT = `Eres el motor de ERA Studio, un constructor de páginas web.
 El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo HTML completo y autocontenido.
@@ -43,8 +44,17 @@ export function buildUserMessage({
   images = [],
   assets = [],
   imagesVisible = true,
+  styleId = null,
 }) {
   const parts = [];
+  const style = findDesignStyle(styleId);
+  if (style) {
+    parts.push(
+      `Estilo visual elegido para este proyecto: ${style.name}. Síguelo en cada versión sin romper las reglas del archivo ni el estándar de agencia; si el usuario pide expresamente algo distinto, su petición manda.`,
+      style.guide,
+      "",
+    );
+  }
   if (history?.length) {
     parts.push(
       "Peticiones anteriores en este proyecto (de la más antigua a la más reciente):",

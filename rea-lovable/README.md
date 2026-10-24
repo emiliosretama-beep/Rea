@@ -15,6 +15,7 @@ constructores web con IA, hecho desde cero con identidad propia de **ERA**.
 | Historial de versiones      | Vuelve a cualquier versión anterior con un clic.                                                                                                         |
 | Proyectos                   | Se guardan en tu navegador con miniatura.                                                                                                                |
 | Exportar                    | Descarga un `.html` listo para subir a cualquier hosting, o ábrelo en otra pestaña.                                                                      |
+| Estilos de diseño          | Elige un estilo (por ejemplo **Arena**: negro, verde lima y títulos de cartel) y la IA lo respeta en cada versión del proyecto. Se cambia desde el chat.   |
 | Imágenes propias            | Sube logos o capturas (botón, pegar o arrastrar). La IA las ve y las coloca; se incluyen dentro del `.html` descargado.                                  |
 | **Inspector ERA**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
 | **Análisis ERA**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
@@ -57,6 +58,7 @@ rea-lovable/
 │   ├── app.js       # Lógica: proyectos, chat, versiones, Inspector, Análisis
 │   ├── backend.js   # De dónde sale la IA: servidor local, claude.ai o demo
 │   ├── prompt.js    # Instrucciones para la IA (compartidas)
+│   ├── design-styles.js # Estilos de diseño elegibles (guías resumidas)
 │   ├── demo.js      # Plantillas del modo demo
 │   ├── assets.js    # Imágenes subidas: reducir, guardar (IndexedDB) y resolver
 │   └── favicon.svg  # Logo ERA

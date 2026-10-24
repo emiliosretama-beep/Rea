@@ -9,6 +9,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 
 // Orden de dependencias: cada módulo va después de los que importa.
 const MODULES = [
+  "public/design-styles.js",
   "public/prompt.js",
   "public/demo.js",
   "public/assets.js",

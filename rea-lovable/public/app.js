@@ -12,6 +12,7 @@ import {
   tokenizeDataUris,
 } from "./assets.js";
 import { createBackend } from "./backend.js";
+import { DESIGN_STYLES, findDesignStyle } from "./design-styles.js";
 
 const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
@@ -25,6 +26,8 @@ const els = {
   homeForm: $("#homeForm"),
   homePrompt: $("#homePrompt"),
   chips: $("#chips"),
+  stylePicker: $("#stylePicker"),
+  chatStyle: $("#chatStyle"),
   projectGrid: $("#projectGrid"),
   projectCount: $("#projectCount"),
   projectName: $("#projectName"),
@@ -68,6 +71,8 @@ const state = {
   // id -> data URI de las imágenes del proyecto abierto.
   assetMap: new Map(),
   warnedVolatile: false,
+  // Estilo elegido en el inicio para el próximo proyecto (null = libre).
+  homeStyle: null,
 };
 
 // ---------------- Almacenamiento ----------------
@@ -107,7 +112,7 @@ function currentHtml(project = state.project) {
   return project?.versions[project.current]?.html || "";
 }
 
-function createProject(prompt) {
+function createProject(prompt, style = null) {
   const project = {
     id: crypto.randomUUID(),
     name: prompt.length > 42 ? `${prompt.slice(0, 40).trim()}…` : prompt,
@@ -118,6 +123,7 @@ function createProject(prompt) {
     versions: [],
     assets: [],
     current: -1,
+    style,
   };
   state.projects.unshift(project);
   saveProjects();
@@ -277,11 +283,46 @@ function startFromHome(prompt) {
   const images = takePending("home");
   if (!prompt && !images.length) return;
   if (!prompt) prompt = "Crea una página web usando estas imágenes.";
-  const project = createProject(prompt);
+  const project = createProject(prompt, state.homeStyle);
   els.homePrompt.value = "";
   location.hash = `#p-${project.id}`;
   openEditor(project);
   generate(prompt, images);
+}
+
+// ---------------- Estilos ----------------
+
+function renderStylePicker() {
+  const options = [
+    { id: null, emoji: "✨", name: "Libre", summary: "La IA elige el estilo." },
+    ...DESIGN_STYLES,
+  ];
+  els.stylePicker.replaceChildren(
+    ...options.map((s) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "style-option";
+      btn.setAttribute("aria-pressed", String(s.id === state.homeStyle));
+      btn.title = s.source ? `${s.summary} (${s.source})` : s.summary;
+      const name = document.createElement("strong");
+      name.textContent = `${s.emoji} ${s.name}`;
+      const summary = document.createElement("span");
+      summary.textContent = s.summary;
+      btn.append(name, summary);
+      btn.addEventListener("click", () => {
+        state.homeStyle = s.id;
+        renderStylePicker();
+      });
+      return btn;
+    }),
+  );
+  els.chatStyle.replaceChildren(
+    ...options.map((s) => new Option(`${s.emoji} ${s.name}`, s.id ?? "")),
+  );
+}
+
+function renderProjectStyle() {
+  els.chatStyle.value = findDesignStyle(state.project?.style)?.id ?? "";
 }
 
 // ---------------- Imágenes adjuntas ----------------
@@ -400,6 +441,7 @@ function openEditor(project) {
   document.title = `${project.name} · ERA Studio`;
   renderMessages();
   renderSelection();
+  renderProjectStyle();
   renderVersion();
   setTab(state.tab);
   els.chatInput.focus();
@@ -626,6 +668,7 @@ async function generate(prompt, images = []) {
         selection,
         images,
         assets: p.assets ?? [],
+        styleId: p.style ?? null,
       },
       { signal: controller.signal, onText },
     );
@@ -1116,6 +1159,20 @@ els.chips.addEventListener("click", (e) => {
   if (prompt) startFromHome(prompt);
 });
 
+els.chatStyle.addEventListener("change", () => {
+  const p = state.project;
+  if (!p) return;
+  p.style = els.chatStyle.value || null;
+  p.updatedAt = Date.now();
+  saveProjects();
+  const style = findDesignStyle(p.style);
+  toast(
+    style
+      ? `Estilo ${style.name}: se aplicará en tu próximo cambio.`
+      : "Estilo libre: la IA decide el diseño.",
+  );
+});
+
 els.chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
   if (state.busy) return;
@@ -1301,5 +1358,6 @@ function applyBackend(backend) {
   $("#downloadBtn").hidden = !state.backend.canSave;
 }
 
+renderStylePicker();
 route();
 applyBackend(await createBackend(applyBackend));
