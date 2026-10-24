@@ -1084,6 +1084,90 @@ function audit(html, size) {
       "definir la paleta y medidas en variables CSS en :root",
     );
 
+  // Revisiones de la guía web-pro-empresas que se pueden medir en el código.
+  const fontLinks = [
+    ...[...doc.querySelectorAll('link[href*="fonts.googleapis.com"]')].map(
+      (l) => l.getAttribute("href"),
+    ),
+    ...(css.match(
+      /@import\s+url\(["']?[^)"']*fonts\.googleapis\.com[^)"']*/g,
+    ) || []),
+  ];
+  const families = [
+    ...new Set(
+      fontLinks.flatMap((href) =>
+        [...href.matchAll(/family=([^&:;"')]+)/g)].map((m) =>
+          decodeURIComponent(m[1].replace(/\+/g, " ")).trim(),
+        ),
+      ),
+    ),
+  ];
+  const firstFont = css
+    .match(/font-family\s*:\s*["']?([^"',;]+)/i)?.[1]
+    ?.trim();
+  const generic = /^(inter|roboto|arial|open sans|helvetica)$/i;
+  if (families.length > 2)
+    add(
+      "warn",
+      "Tipografía",
+      `Carga ${families.length} familias; la guía pide máximo 2 con roles claros.`,
+      families.join(", "),
+      "dejar máximo 2 familias de Google Fonts",
+    );
+  else if (
+    families.length
+      ? families.every((f) => generic.test(f))
+      : generic.test(firstFont || "")
+  )
+    add(
+      "warn",
+      "Tipografía",
+      "Usa una fuente muy común; la página se parecerá a muchas otras.",
+      families.join(", ") || firstFont,
+      "cambiar la fuente principal por una con más personalidad (Plus Jakarta Sans, Geist, Fraunces o Instrument Serif) acorde al giro",
+    );
+  else
+    add(
+      "ok",
+      "Tipografía",
+      families.length
+        ? `${families.length} familia(s): ${families.join(", ")}.`
+        : "Sin fuentes externas.",
+      "",
+    );
+
+  const animated = /@keyframes|animation\s*:|IntersectionObserver/.test(
+    css +
+      [...doc.querySelectorAll("script")].map((s) => s.textContent).join(""),
+  );
+  if (animated && !/prefers-reduced-motion/.test(css))
+    add(
+      "warn",
+      "Movimiento reducido",
+      "Tiene animaciones pero no respeta a quien desactivó el movimiento en su teléfono.",
+      "",
+      "desactivar o reducir las animaciones dentro de @media (prefers-reduced-motion: reduce)",
+    );
+  else
+    add(
+      "ok",
+      "Movimiento reducido",
+      animated
+        ? "Las animaciones respetan prefers-reduced-motion."
+        : "No hay animaciones.",
+      "",
+    );
+
+  const vh = css.match(/[^;{}]*\b100vh\b[^;{}]*/);
+  if (vh && !/\b100dvh\b/.test(css))
+    add(
+      "warn",
+      "Altura en iPhone",
+      "100vh hace saltar la portada en Safari de iPhone al mostrarse la barra.",
+      vh[0].trim(),
+      "usar min-height: 100dvh en lugar de 100vh",
+    );
+
   return checks;
 }
 

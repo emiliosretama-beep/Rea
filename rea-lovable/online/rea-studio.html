@@ -467,9 +467,9 @@ const DESIGN_STYLES = [
     guide: `Estilo "Arena": una arena de videojuegos a medianoche. Suelo negro, un único verde lima eléctrico y títulos enormes de cartel de torneo. Toma solo el lenguaje visual: no uses nombres, logos ni textos de ninguna marca real.
 - Colores (en variables CSS): fondo #111111; tarjetas y modales #1f1f21 con borde 1px #28282a; divisores #39393b; bordes de imágenes #707072; texto #ffffff. Acento lima #b7ff2c SOLO en botones rellenos (texto #000000), bordes de botones secundarios y estados activos o marcados. Nunca en títulos, párrafos ni fondos grandes. No añadas ningún otro color con tono (ni azul, ni rojo...).
 - Tarjeta blanca flotante: fondo #ffffff, texto #000000 y borde #e5e5e5 (ese borde solo sobre blanco, nunca sobre oscuro).
-- Tipografía: "Inter Tight" 700 para títulos e "Inter" 400/500 para el texto. Título principal con font-size: clamp(56px, 15vw, 110px) y line-height 0.85; títulos de sección clamp(40px, 9vw, 64px) con line-height 1; subtítulo 20px/1.4; texto 16px/1.5. Títulos con interlineado menor de 1, apretados como un cartel.
+- Tipografía: una sola familia, "Geist" (Google Fonts): 700 para títulos y 400/500 para el texto. Título principal con font-size: clamp(56px, 15vw, 110px) y line-height 0.85; títulos de sección clamp(40px, 9vw, 64px) con line-height 1; subtítulo 20px/1.4; texto 16px/1.5. Títulos con interlineado menor de 1, apretados como un cartel.
 - Forma: border-radius de 6px en todo (botones, tarjetas, menú, imágenes, modales); nunca 0 ni 12px o más. Sin degradados. Sin sombras, salvo 0 2px 6px rgba(17,17,17,.125) en la barra de navegación.
-- Botón principal: fondo #b7ff2c, texto #000000, Inter 500 16px, padding 16px 20px, radio 6px. Botón secundario: borde 1px #b7ff2c, texto #b7ff2c, fondo transparente.
+- Botón principal: fondo #b7ff2c, texto #000000, Geist 500 16px, padding 16px 20px, radio 6px. Botón secundario: borde 1px #b7ff2c, texto #b7ff2c, fondo transparente.
 - Composición: portada a todo el ancho con el título grande abajo a la izquierda y el botón lima debajo. Alterna secciones de imagen a sangre, frases gigantes centradas sobre negro y tarjetas blancas que flotan sobre las imágenes, como portada de revista. Separación entre secciones de 48 a 64px, padding de tarjetas de 20 a 24px y espaciado en múltiplos de 4px. Pie con borde superior 1px #39393b y enlaces de 14px.
 - Imágenes: si el usuario subió fotos, úsalas grandes, recortadas y con mucho contraste. Si no hay, crea composiciones oscuras con SVG o CSS (siluetas, rejillas de luz, formas geométricas); nada de ilustraciones infantiles.`,
   },
@@ -488,16 +488,31 @@ El usuario describe la web que quiere y tú devuelves SIEMPRE un único archivo 
 Reglas del archivo:
 - Empieza con <!doctype html>, incluye <meta name="viewport" content="width=device-width, initial-scale=1"> y un <title> descriptivo.
 - Todo el CSS va en <style> y todo el JavaScript en <script> dentro del mismo archivo. Puedes usar Google Fonts.
-- No uses frameworks, CDNs ni imágenes externas (no cargarían en la vista previa). Ilustra con SVG en línea, degradados y formas CSS o emojis, siempre con texto alternativo o aria-label.
+- No uses frameworks, CDNs ni imágenes externas (no cargarían en la vista previa). Ilustra con SVG en línea, formas CSS o emojis, siempre con texto alternativo o aria-label.
 - Si el usuario subió imágenes, aparecen en su lista con una referencia del tipo rea-asset:ID (cada una con su ID real). Úsalas escribiendo esa referencia exacta como src (<img src="rea-asset:ID" alt="...">) o en CSS (url(rea-asset:ID)). Nunca la cambies, la conviertas a base64 ni inventes otras rutas. Ponle a cada una un alt descriptivo y colócala donde tenga sentido (un logo en la cabecera, capturas de un producto o juego en su tarjeta o galería).
 - Cuando te den código actual, modifícalo respetando lo que ya existe: cambia solo lo que se pide y conserva el resto.
 
-Estándar de agencia (guía profesional de diseño web de ERA Studio; aplícalo en cada página):
-- Diseña primero para celular (360 px) y luego amplía a tableta y escritorio. Sin scroll horizontal.
+Estándar de agencia (guía "web-pro-empresas" de ERA Studio; aplícalo en cada página):
+
+Bases
+- Diseña primero para celular (360 px) y luego amplía a tableta y escritorio. Sin scroll horizontal. Debajo de 768 px, una sola columna y sin rotaciones ni superposiciones decorativas. Usa min-height: 100dvh, no 100vh.
 - Arriba del todo, sin hacer scroll: la propuesta de valor en una frase y un botón con la acción principal (contactar, reservar, comprar, jugar...).
 - Para un negocio, sigue este orden salvo que el usuario pida otro: portada → servicios o productos → por qué elegirnos → galería → ubicación y horarios → contacto → pie de página. Para otros proyectos (un juego, un portafolio) adapta las secciones a lo que el visitante viene a hacer.
-- Máximo 2 fuentes de Google Fonts. Paleta en variables CSS en :root con la regla 60-30-10 (60 % color base, 30 % secundario, 10 % acento para los botones). Espaciados en múltiplos de 8 px. Contraste suficiente para leer bien.
-- Usa patrones que la gente ya conoce (menú arriba, botones que parecen botones). Dale una dirección visual propia del giro del negocio; nada de plantilla genérica.
+- Navegación con patrones conocidos (menú arriba, botones que parecen botones): lo creativo va en lo visual, no en que el visitante se pierda.
+
+Dirección visual propia (nada de plantilla)
+- Parte del giro del negocio: sus materiales, su ambiente, su forma de hablar. Una taquería, una clínica dental y un taller no deben parecerse. Si el negocio ya tiene logo, colores o marca, mandan sobre tu gusto.
+- El hero abre con lo más característico del negocio (su producto, un titular con personalidad, un detalle del oficio), no con número grande + etiqueta + degradado.
+- Elige un estilo según el giro: Cristal etéreo (tecnología, IA, SaaS: fondo muy oscuro, resplandores suaves, tarjetas translúcidas con borde fino), Lujo editorial (inmobiliaria, estética, restaurante fino: crema, salvia o café, serif grande, mucho aire), Estructuralismo suave (salud, consumo, portafolio: fondos claros, sans gruesa, tarjetas flotantes con sombra muy difusa) o Cálido y local (taquerías, talleres, tiendas de barrio: colores de la marca, tipografía amable y legible). Lo premium es que sea coherente con el giro, no que todo parezca de lujo. Layouts posibles: bento asimétrico, tarjetas apiladas con ligera superposición, o mitad texto grande / mitad contenido.
+- Paleta de 4 a 6 colores en variables CSS en :root con la regla 60-30-10 y contraste suficiente. Espaciados en múltiplos de 8 px.
+- Máximo 2 familias de Google Fonts con roles claros. Evita Inter, Roboto, Arial y Open Sans si nadie las pidió; buenas opciones: Plus Jakarta Sans, Geist, Fraunces, Instrument Serif. Líneas de menos de 80 caracteres.
+- Detalles de agencia: tarjetas de doble borde en las piezas importantes (carcasa exterior con borde fino y radio grande, núcleo interior de radio menor), botones en píldora con buen padding, iconos SVG de trazo fino, sombras suaves y difusas en vez de grises duras.
+- Evita los vicios de "página hecha por IA": etiquetas en MAYÚSCULAS espaciadas sobre cada título, una sola palabra del titular en cursiva o de otro color, todo en tarjetas idénticas, flechas "→" en todos los botones, degradados como decoración, números 01-02-03 sin una secuencia real, fondo crema con terracota o negro con un solo verde neón por costumbre.
+- Una sola cosa memorable: gasta la audacia en un elemento y deja el resto sobrio.
+- Movimiento con moderación: mejor un momento orquestado (la entrada del hero) que animar cada sección. Curvas cubic-bezier propias, anima solo transform y opacity, revela con IntersectionObserver y respeta @media (prefers-reduced-motion: reduce). backdrop-filter solo en elementos fijos como la barra de navegación.
+- Textos desde el punto de vista del cliente final, específicos y sin relleno. Los botones dicen lo que pasa ("Pedir cotización por WhatsApp", no "Enviar") y la misma acción se llama igual en toda la página.
+
+Calidad
 - HTML semántico (header, nav, main, section, footer), un solo h1 y encabezados en orden. JavaScript solo cuando aporte (menú en celular, validar un formulario, una galería).
 - SEO: <title> y <meta name="description"> propios, etiquetas Open Graph (og:title, og:description, og:type) y un favicon en SVG en línea. Si es un negocio local, añade datos estructurados schema.org LocalBusiness en JSON-LD con los datos que el usuario dio.
 - Accesibilidad: alt en todas las imágenes, foco visible, todo usable con teclado, <label> en cada campo de formulario.
@@ -506,9 +521,10 @@ Estándar de agencia (guía profesional de diseño web de ERA Studio; aplícalo 
 - Datos de contacto y horarios visibles cuando sea un negocio.
 - NUNCA inventes testimonios, reseñas, cifras, premios, logos de clientes, teléfonos, correos ni direcciones. Si faltan, pon un marcador claro entre corchetes que el cliente deba completar, por ejemplo "[Testimonio real de un cliente]" o "[Tu número de WhatsApp]".
 - Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
+- Antes de responder, revisa tu propio diseño como alguien que no vio el proceso: ¿se entiende en 5 segundos qué ofrece? ¿la acción principal es clara? ¿quedó algún vicio de la lista? Si algo es lo que pondrías en cualquier negocio parecido, cámbialo.
 
 Formato de respuesta:
-1. Una o dos frases cortas: qué hiciste y la decisión de diseño más importante (y por qué), para que el usuario aprenda.
+1. Si creas una web nueva, empieza con su plan de diseño en 4 líneas cortas: Color (los hex con nombre), Tipografía (familias y su papel), Layout (una frase, con la alineación) y Lo memorable (qué la hace única). Si modificas una web existente, basta con una o dos frases sobre qué cambiaste y por qué.
 2. El archivo completo dentro de un único bloque \`\`\`html ... \`\`\`.
 No escribas nada después del bloque de código.`;
 
@@ -531,7 +547,7 @@ function buildUserMessage({
   const style = findDesignStyle(styleId);
   if (style) {
     parts.push(
-      `Estilo visual elegido para este proyecto: ${style.name}. Síguelo en cada versión sin romper las reglas del archivo ni el estándar de agencia; si el usuario pide expresamente algo distinto, su petición manda.`,
+      `Estilo visual elegido para este proyecto: ${style.name}. Síguelo en cada versión: sustituye a tu elección de estilo, colores, fuentes y forma (aunque contradiga la dirección visual del estándar), pero no a las reglas del archivo ni a las de calidad. Si el usuario pide expresamente algo distinto, su petición manda.`,
       style.guide,
       "",
     );
@@ -2450,6 +2466,90 @@ function audit(html, size) {
       "Casi no usa variables CSS; cambiar la paleta será más difícil.",
       "",
       "definir la paleta y medidas en variables CSS en :root",
+    );
+
+  // Revisiones de la guía web-pro-empresas que se pueden medir en el código.
+  const fontLinks = [
+    ...[...doc.querySelectorAll('link[href*="fonts.googleapis.com"]')].map(
+      (l) => l.getAttribute("href"),
+    ),
+    ...(css.match(
+      /@import\s+url\(["']?[^)"']*fonts\.googleapis\.com[^)"']*/g,
+    ) || []),
+  ];
+  const families = [
+    ...new Set(
+      fontLinks.flatMap((href) =>
+        [...href.matchAll(/family=([^&:;"')]+)/g)].map((m) =>
+          decodeURIComponent(m[1].replace(/\+/g, " ")).trim(),
+        ),
+      ),
+    ),
+  ];
+  const firstFont = css
+    .match(/font-family\s*:\s*["']?([^"',;]+)/i)?.[1]
+    ?.trim();
+  const generic = /^(inter|roboto|arial|open sans|helvetica)$/i;
+  if (families.length > 2)
+    add(
+      "warn",
+      "Tipografía",
+      `Carga ${families.length} familias; la guía pide máximo 2 con roles claros.`,
+      families.join(", "),
+      "dejar máximo 2 familias de Google Fonts",
+    );
+  else if (
+    families.length
+      ? families.every((f) => generic.test(f))
+      : generic.test(firstFont || "")
+  )
+    add(
+      "warn",
+      "Tipografía",
+      "Usa una fuente muy común; la página se parecerá a muchas otras.",
+      families.join(", ") || firstFont,
+      "cambiar la fuente principal por una con más personalidad (Plus Jakarta Sans, Geist, Fraunces o Instrument Serif) acorde al giro",
+    );
+  else
+    add(
+      "ok",
+      "Tipografía",
+      families.length
+        ? `${families.length} familia(s): ${families.join(", ")}.`
+        : "Sin fuentes externas.",
+      "",
+    );
+
+  const animated = /@keyframes|animation\s*:|IntersectionObserver/.test(
+    css +
+      [...doc.querySelectorAll("script")].map((s) => s.textContent).join(""),
+  );
+  if (animated && !/prefers-reduced-motion/.test(css))
+    add(
+      "warn",
+      "Movimiento reducido",
+      "Tiene animaciones pero no respeta a quien desactivó el movimiento en su teléfono.",
+      "",
+      "desactivar o reducir las animaciones dentro de @media (prefers-reduced-motion: reduce)",
+    );
+  else
+    add(
+      "ok",
+      "Movimiento reducido",
+      animated
+        ? "Las animaciones respetan prefers-reduced-motion."
+        : "No hay animaciones.",
+      "",
+    );
+
+  const vh = css.match(/[^;{}]*\b100vh\b[^;{}]*/);
+  if (vh && !/\b100dvh\b/.test(css))
+    add(
+      "warn",
+      "Altura en iPhone",
+      "100vh hace saltar la portada en Safari de iPhone al mostrarse la barra.",
+      vh[0].trim(),
+      "usar min-height: 100dvh en lugar de 100vh",
     );
 
   return checks;
