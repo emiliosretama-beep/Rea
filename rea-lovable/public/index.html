@@ -78,14 +78,15 @@
         <button class="icon-btn" id="backBtn" title="Volver a proyectos" aria-label="Volver a proyectos">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <img src="/favicon.svg" alt="" width="22" height="22" />
+        <img class="bar-logo" src="/favicon.svg" alt="" width="22" height="22" />
         <input id="projectName" class="project-name" aria-label="Nombre del proyecto" />
       </div>
 
       <div class="tabs" role="tablist" aria-label="Panel">
+        <button role="tab" data-tab="chat" aria-selected="false" class="tab-chat">Chat</button>
         <button role="tab" data-tab="preview" aria-selected="true">Vista</button>
         <button role="tab" data-tab="code" aria-selected="false">Código</button>
-        <button role="tab" data-tab="audit" aria-selected="false">Análisis ERA</button>
+        <button role="tab" data-tab="audit" aria-selected="false">Análisis<span class="tab-extra"> ERA</span></button>
       </div>
 
       <div class="bar-right">
@@ -100,9 +101,9 @@
             <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
-        <button class="pill" id="inspectBtn" aria-pressed="false" title="Haz clic en un elemento de la vista previa para editarlo">
+        <button class="pill" id="inspectBtn" aria-label="Inspector" aria-pressed="false" title="Haz clic en un elemento de la vista previa para editarlo">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 4l7 17 2.5-7.5L21 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-          Inspector
+          <span class="label">Inspector</span>
         </button>
         <div class="menu-wrap">
           <button class="pill" id="versionsBtn" aria-haspopup="true" aria-expanded="false">
@@ -114,9 +115,9 @@
         <button class="icon-btn" id="openBtn" title="Abrir en pestaña nueva" aria-label="Abrir en pestaña nueva">
           <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button class="btn-primary" id="downloadBtn">
+        <button class="btn-primary" id="downloadBtn" aria-label="Descargar">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Descargar
+          <span class="label">Descargar</span>
         </button>
       </div>
     </header>

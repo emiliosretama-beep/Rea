@@ -75,7 +75,7 @@ button { cursor: pointer; }
 /* ---------- Inicio ---------- */
 .view { min-height: 100%; }
 #home { position: relative; overflow-x: hidden; }
-.topbar { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; }
+.topbar { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 18px max(24px, env(safe-area-inset-right)) 18px max(24px, env(safe-area-inset-left)); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); font-weight: 700; font-size: 1.1rem; }
 .brand-logo { height: 46px; width: auto; display: block; color: var(--fg); }
 .mode-badge { font-size: .78rem; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); color: var(--muted); }
@@ -127,7 +127,7 @@ button { cursor: pointer; }
 .empty { grid-column: 1 / -1; padding: 32px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); text-align: center; }
 
 /* ---------- Editor ---------- */
-#editor { display: flex; flex-direction: column; height: 100%; }
+#editor { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
 .editor-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--bg); flex-wrap: wrap; }
 .bar-left, .bar-right { display: flex; align-items: center; gap: 8px; }
 .project-name { background: transparent; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 8px; font-weight: 600; width: 220px; }
@@ -141,6 +141,7 @@ button { cursor: pointer; }
 .btn-primary:hover { filter: brightness(1.08); }
 
 .tabs { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 3px; }
+.tab-chat { display: none; }
 .tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 4px; font-size: .86rem; font-weight: 500; color: var(--muted); }
 .tabs button[aria-selected="true"] { background: var(--bg-2); color: var(--fg); }
 .devices { display: flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -213,15 +214,41 @@ button { cursor: pointer; }
   .editor-body { grid-template-columns: 320px 1fr; }
   .project-name { width: 140px; }
 }
-@media (max-width: 820px) {
-  .editor-body { grid-template-columns: 1fr; grid-template-rows: 1fr 46%; }
-  .chat { border-right: 0; border-top: 1px solid var(--line); order: 2; }
-  .devices, #openBtn, .hint { display: none; }
-  .editor-bar { padding: 8px 10px; }
-  .tabs { order: 3; width: 100%; justify-content: stretch; }
-  .tabs button { flex: 1; }
+/* Celular (vertical u horizontal): una pantalla a la vez —Chat, Vista,
+   Código o Análisis— para que nada quede apretado. La misma consulta está en
+   MOBILE_QUERY de app.js; si cambias una, cambia la otra. */
+@media (max-width: 820px), (max-height: 500px) {
+  .editor-bar {
+    flex-wrap: wrap; gap: 8px;
+    padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+  }
+  .bar-left { flex: 1; min-width: 0; gap: 6px; }
+  .bar-logo, .devices, #openBtn, .hint, .pill .label, .btn-primary .label { display: none; }
+  .project-name { flex: 1; width: auto; min-width: 0; }
   .bar-right { gap: 6px; }
-  .btn-primary span { display: none; }
+  .pill { padding: 0 10px; }
+  .btn-primary { padding: 0 10px; }
+  .tabs { order: 3; width: 100%; }
+  .tabs button { flex: 1; padding: 6px 4px; white-space: nowrap; }
+  .tab-chat { display: block; }
+
+  .editor-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
+  .chat { border-right: 0; }
+  #editor:not([data-tab="chat"]) .chat, #editor[data-tab="chat"] .stage { display: none; }
+  .frame-wrap { margin: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+  .chat-form { margin: 8px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+}
+/* Pantalla angosta: "Análisis ERA" se acorta para que quepan las 4 pestañas. */
+@media (max-width: 420px), (max-height: 500px) { .tab-extra { display: none; } }
+/* Celular en horizontal: hay poco alto, así que las pestañas van en la misma fila. */
+@media (max-height: 500px) and (min-width: 600px) {
+  .editor-bar { flex-wrap: nowrap; }
+  .tabs { order: 0; width: auto; }
+  .tabs button { padding: 6px 12px; }
+}
+@media (pointer: coarse) and (max-width: 820px), (pointer: coarse) and (max-height: 500px) {
+  .icon-btn, .pill, .btn-primary { height: 40px; min-width: 40px; }
+  .tabs button { min-height: 36px; }
 }
 
 /* ---------- Imágenes adjuntas ---------- */

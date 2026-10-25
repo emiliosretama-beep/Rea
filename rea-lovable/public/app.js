@@ -23,6 +23,9 @@ const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
 const MAX_IMAGES_PER_MESSAGE = 6;
 const $ = (sel) => document.querySelector(sel);
+// Igual que la consulta de celular de styles.css: una pantalla a la vez.
+const MOBILE_QUERY = "(max-width: 820px), (max-height: 500px)";
+const mobile = matchMedia(MOBILE_QUERY);
 
 const els = {
   home: $("#home"),
@@ -481,8 +484,12 @@ function openEditor(project) {
   renderSelection();
   renderProjectStyle();
   renderVersion();
-  setTab(state.tab);
-  els.chatInput.focus();
+  // En celular, un proyecto sin versiones abre en el chat; los demás en la vista.
+  setTab(
+    mobile.matches ? (project.versions.length ? "preview" : "chat") : state.tab,
+  );
+  // En iPhone, enfocar abriría el teclado tapando media pantalla.
+  if (!mobile.matches) els.chatInput.focus();
 }
 
 function renderMessages() {
@@ -603,6 +610,7 @@ window.addEventListener("message", (e) => {
   state.selection = { html: html.slice(0, 4000), label: String(e.data.label) };
   setInspecting(false);
   renderSelection();
+  if (mobile.matches) setTab("chat");
   els.chatInput.focus();
 });
 
@@ -619,7 +627,10 @@ function renderSelection() {
 }
 
 function setTab(tab) {
+  // La pestaña Chat solo existe en celular; en pantalla grande el chat siempre se ve.
+  if (tab === "chat" && !mobile.matches) tab = "preview";
   state.tab = tab;
+  els.editor.dataset.tab = tab;
   document
     .querySelectorAll(".tabs [role=tab]")
     .forEach((b) =>
@@ -629,6 +640,8 @@ function setTab(tab) {
     .querySelectorAll(".panel")
     .forEach((p) => (p.hidden = p.dataset.panel !== tab));
   if (tab === "audit") runAudit();
+  // Mientras estaba oculto no se pudo bajar hasta el último mensaje.
+  if (tab === "chat") els.messages.scrollTop = els.messages.scrollHeight;
 }
 
 // ---------------- Generación ----------------
@@ -661,6 +674,9 @@ async function generate(prompt, images = []) {
   bubble.innerHTML =
     '<span class="typing"><span></span><span></span><span></span></span>';
   setBusy(true);
+  // En celular: primero el chat (para leer el plan) y, al empezar el código, la vista.
+  let showedPreview = false;
+  if (mobile.matches) setTab("chat");
   els.building.hidden = false;
   els.buildingText.textContent = baseHtml
     ? "Aplicando tus cambios…"
@@ -677,6 +693,10 @@ async function generate(prompt, images = []) {
     const { explanation, code } = splitResponse(full);
     if (explanation) bubble.textContent = explanation;
     if (code) {
+      if (mobile.matches && !showedPreview && state.tab === "chat") {
+        showedPreview = true;
+        setTab("preview");
+      }
       els.building.hidden = true;
       els.statusText.textContent = `Escribiendo código · ${kb(code)}`;
       if (state.tab === "code") {
@@ -755,6 +775,7 @@ async function generate(prompt, images = []) {
         : "No llegó una página válida. Inténtalo otra vez.");
     p.messages.push({ role: failed ? "error" : "assistant", text: msg });
     bubble.textContent = msg;
+    if (mobile.matches) setTab("chat");
     if (failed) bubble.parentElement.classList.add("error");
   }
 
@@ -1333,6 +1354,10 @@ els.projectName.addEventListener("change", () => {
 document
   .querySelectorAll(".tabs [role=tab]")
   .forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+// Al girar el iPad o agrandar la ventana, la pestaña Chat deja de existir.
+mobile.addEventListener("change", () => {
+  if (state.project) setTab(state.tab);
+});
 
 document.querySelectorAll(".devices button").forEach((b) =>
   b.addEventListener("click", () => {
