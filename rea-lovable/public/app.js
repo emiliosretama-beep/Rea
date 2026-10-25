@@ -646,7 +646,9 @@ function setTab(tab) {
 
 // ---------------- Generación ----------------
 
-async function generate(prompt, images = []) {
+// `polish`: segunda pasada automática (Pulido ERA) sobre una web recién creada.
+// No agrega mensaje del usuario; revisa la versión actual y guarda una nueva.
+async function generate(prompt, images = [], { polish = false, auditIssues = [] } = {}) {
   const p = state.project;
   if (!p || state.busy || !prompt.trim()) return;
   if (!state.backend) return toast("Conectando… inténtalo en un segundo.");
@@ -658,17 +660,19 @@ async function generate(prompt, images = []) {
     .filter((m) => m.role === "user")
     .map((m) => m.text);
   const baseHtml = currentHtml(p);
-  const selection = state.selection?.html || null;
+  const selection = polish ? null : state.selection?.html || null;
 
   const imageIds = images.map((img) => img.id);
-  p.messages.push({
-    role: "user",
-    text: prompt,
-    ...(imageIds.length && { images: imageIds }),
-  });
-  addBubble("user", prompt, undefined, imageIds);
-  state.selection = null;
-  renderSelection();
+  if (!polish) {
+    p.messages.push({
+      role: "user",
+      text: prompt,
+      ...(imageIds.length && { images: imageIds }),
+    });
+    addBubble("user", prompt, undefined, imageIds);
+    state.selection = null;
+    renderSelection();
+  }
 
   const bubble = addBubble("assistant", "");
   bubble.innerHTML =
@@ -678,9 +682,11 @@ async function generate(prompt, images = []) {
   let showedPreview = false;
   if (mobile.matches) setTab("chat");
   els.building.hidden = false;
-  els.buildingText.textContent = baseHtml
-    ? "Aplicando tus cambios…"
-    : "Pensando el diseño…";
+  els.buildingText.textContent = polish
+    ? "Revisando y puliendo el diseño…"
+    : baseHtml
+      ? "Aplicando tus cambios…"
+      : "Pensando el diseño…";
 
   const controller = new AbortController();
   state.controller = controller;
@@ -728,6 +734,7 @@ async function generate(prompt, images = []) {
         assets: p.assets ?? [],
         styleId: p.style ?? null,
         customStyle: p.style === REFERO_STYLE_ID ? p.customStyle : null,
+        ...(polish && { polish: true, auditIssues }),
       },
       { signal: controller.signal, onText },
     );
@@ -767,6 +774,13 @@ async function generate(prompt, images = []) {
       }
     }
     if (failed) toast(failed);
+  } else if (polish) {
+    // El pulido es opcional: si falla o se detiene, la versión anterior queda intacta.
+    const msg = controller.signal.aborted
+      ? `Pulido detenido. Te dejo la versión ${p.versions.length}.`
+      : `No pude terminar el pulido${failed ? ` (${failed})` : ""}. Te dejo la versión ${p.versions.length}.`;
+    p.messages.push({ role: "assistant", text: msg });
+    bubble.textContent = msg;
   } else {
     const msg =
       failed ||
@@ -786,6 +800,17 @@ async function generate(prompt, images = []) {
   els.building.hidden = true;
   els.statusText.textContent = "";
   renderVersion();
+
+  // Una web nueva recibe una segunda pasada de revisión antes de darla por buena.
+  // En modo demo no hay IA que revise, así que se omite.
+  const createdNew = !baseHtml && !polish && valid && !failed;
+  if (createdNew && state.backend?.mode !== "demo" && state.project === p) {
+    const checks = audit(code, new Blob([resolveAssets(code, state.assetMap)]).size);
+    await generate("Pulido ERA", [], {
+      polish: true,
+      auditIssues: checks.filter((c) => c.fix).map((c) => c.fix),
+    });
+  }
 }
 
 function setBusy(busy) {

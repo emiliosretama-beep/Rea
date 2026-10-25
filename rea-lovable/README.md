@@ -19,6 +19,7 @@ constructores web con IA, hecho desde cero con identidad propia de **ERA**.
 | Imágenes propias            | Sube logos o capturas (botón, pegar o arrastrar). La IA las ve y las coloca; se incluyen dentro del `.html` descargado.                                  |
 | **Inspector ERA**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
 | **Análisis ERA**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
+| **Pulido ERA**              | Cada web nueva recibe una segunda pasada automática: la IA la revisa con ojos frescos (más el Análisis ERA) y corrige los 3 problemas de mayor impacto como una versión nueva. Usa una petición extra; no corre en los cambios ni en modo demo. |
 
 ## Versión online
 
