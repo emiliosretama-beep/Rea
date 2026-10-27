@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Emprende City</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: mundo a pantalla completa en canvas; HUD en esquinas, controles en la zona de pulgares, menús como hoja inferior. */
+:root {
+  --ink: #0f1a2e;          /* panel noche */
+  --ink-2: #1a2a45;
+  --line: #2c4166;
+  --paper: #f3efe4;        /* texto claro */
+  --muted: #9fb0cb;
+  --cash: #46d98a;         /* dinero */
+  --gold: #ffb627;         /* acento */
+  --danger: #ff6b5b;
+  --display: "Bricolage Grotesque", "Avenir Next", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Figtree", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; background: #22303f; color: var(--paper); overflow: hidden; }
+body { font-family: var(--body); -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; overscroll-behavior: none; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font-family: var(--body); color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* HUD */
+.hud { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); display: grid; gap: 4px; pointer-events: none; max-width: calc(100vw - 150px); }
+.money { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 6vw, 34px); line-height: 1; color: var(--cash); text-shadow: 0 2px 0 #0b1322, 0 0 12px rgba(0,0,0,.35); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.money.neg { color: var(--danger); }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(15,26,46,.82); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; width: max-content; max-width: 100%; font-variant-numeric: tabular-nums; }
+.goal { background: rgba(15,26,46,.88); border-color: rgba(255,182,39,.7); color: #ffe2a6; white-space: normal; border-radius: 12px; line-height: 1.25; }
+.goal b { color: var(--gold); text-transform: uppercase; font-size: 10.5px; letter-spacing: .08em; }
+
+.topright { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: grid; gap: 8px; justify-items: end; }
+#minimap { width: 112px; height: 112px; border-radius: 14px; border: 2px solid var(--line); background: #0f1a2e; display: block; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.iconrow { display: flex; gap: 8px; }
+.iconbtn { width: 52px; height: 52px; border-radius: 16px; border: 2px solid var(--line); background: rgba(15,26,46,.9); display: grid; place-items: center; font-size: 11px; font-weight: 700; gap: 0; padding: 4px 0; position: relative; }
+.iconbtn svg { width: 22px; height: 22px; }
+.iconbtn:active { transform: scale(.94); }
+.badge { position: absolute; top: -6px; right: -6px; background: var(--danger); color: #fff; border-radius: 999px; font-size: 11px; min-width: 20px; height: 20px; display: grid; place-items: center; padding: 0 5px; }
+
+.ticker { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px)); height: 26px; background: rgba(10,18,32,.86); border-top: 1px solid var(--line); overflow: hidden; pointer-events: none; display: flex; align-items: center; }
+.ticker .tag { flex: none; background: var(--gold); color: #1b1300; font-weight: 800; font-size: 11px; letter-spacing: .08em; padding: 0 10px; height: 100%; display: grid; place-items: center; text-transform: uppercase; z-index: 1; padding-left: max(10px, env(safe-area-inset-left, 0px)); }
+.ticker .track { white-space: nowrap; font-size: 13px; color: #d6deec; animation: tick 38s linear infinite; padding-left: 100%; }
+@keyframes tick { to { transform: translateX(-100%); } }
+
+/* Controles táctiles */
+.actions { position: fixed; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(40px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; justify-items: end; }
+.act { min-width: 92px; height: 92px; border-radius: 50%; border: 3px solid rgba(255,255,255,.18); background: var(--gold); color: #1b1300; font-family: var(--display); font-weight: 800; font-size: 15px; line-height: 1.05; padding: 8px; box-shadow: 0 6px 0 #9c6a00, 0 10px 20px rgba(0,0,0,.35); display: grid; place-items: center; text-align: center; }
+.act.serve { background: var(--cash); box-shadow: 0 6px 0 #1d8a50, 0 10px 20px rgba(0,0,0,.35); }
+.act.alt { min-width: 0; width: auto; height: 46px; border-radius: 999px; font-size: 14px; padding: 0 16px; background: #e9e3d3; box-shadow: 0 4px 0 #9b9482; }
+.act.dim { opacity: .55; }
+.act:active { transform: translateY(4px); box-shadow: 0 2px 0 #9c6a00; }
+.act .ico { font-size: 22px; display: block; }
+#joy { position: fixed; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(15,26,46,.25); pointer-events: none; transform: translate(-50%,-50%); }
+#joy i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(243,239,228,.75); }
+.hint-move { position: fixed; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(44px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--paper); background: rgba(15,26,46,.75); border-radius: 12px; padding: 8px 12px; pointer-events: none; max-width: 46vw; }
+
+/* Toasts y banners */
+.toasts { position: fixed; top: calc(200px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: grid; gap: 6px; width: min(92vw, 420px); pointer-events: none; }
+.toast { background: rgba(15,26,46,.94); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 12px; padding: 9px 12px; font-size: 14px; animation: tin .25s ease-out; box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+.toast.good { border-left-color: var(--cash); }
+.toast.bad { border-left-color: var(--danger); }
+@media (orientation: landscape) and (max-height: 560px) { .toasts { top: calc(10px + env(safe-area-inset-top, 0px)); width: min(42vw, 420px); } .toast { font-size: 13px; padding: 7px 10px; } }
+@keyframes tin { from { opacity: 0; transform: translateY(-8px); } }
+.banner { position: fixed; top: 38%; left: 0; right: 0; text-align: center; pointer-events: none; font-family: var(--display); font-weight: 800; font-size: clamp(30px, 8vw, 52px); color: var(--paper); text-shadow: 0 3px 0 rgba(0,0,0,.45); opacity: 0; transition: opacity .5s; }
+.banner small { display: block; font-family: var(--body); font-size: 13px; letter-spacing: .25em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.banner.on { opacity: 1; }
+
+/* Hoja de menús */
+.scrim { position: fixed; inset: 0; background: rgba(5,10,20,.45); }
+.sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100vw, 480px); max-height: 82dvh; background: var(--ink); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0,0,0,.45); animation: sup .22s ease-out; -webkit-user-select: text; user-select: text; touch-action: pan-y; }
+@keyframes sup { from { transform: translate(-50%, 30px); opacity: .4; } }
+.sheet header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet header h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 22px; flex: 1; min-width: 0; text-wrap: balance; line-height: 1.1; }
+.sheet header .em { font-size: 30px; }
+.close { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--ink-2); font-size: 20px; flex: none; }
+.sheet .body { grid-auto-rows: max-content; overflow-y: auto; padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.tabs { display: flex; gap: 6px; padding: 10px 16px 0; overflow-x: auto; flex: none; }
+.tab { border: 1px solid var(--line); background: var(--ink-2); border-radius: 999px; padding: 8px 13px; font-size: 14px; font-weight: 700; white-space: nowrap; min-height: 40px; }
+.tab.on { background: var(--gold); color: #1b1300; border-color: var(--gold); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.stat { background: var(--ink-2); border-radius: 12px; padding: 8px 10px; }
+.stat span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; }
+.stat b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.btn { border: 0; border-radius: 12px; min-height: 46px; padding: 10px 14px; font-weight: 700; font-size: 15px; background: var(--ink-2); border: 1px solid var(--line); flex: 1 1 auto; }
+.btn.primary { background: var(--gold); color: #1b1300; border-color: var(--gold); }
+.btn.cash { background: var(--cash); color: #05250f; border-color: var(--cash); }
+.btn.danger { background: transparent; color: var(--danger); border-color: rgba(255,107,91,.5); }
+.btn:disabled { opacity: .4; cursor: default; }
+.list { display: grid; gap: 8px; }
+.item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--ink-2); border: 1px solid transparent; border-radius: 14px; padding: 10px; text-align: left; width: 100%; }
+.item .em { font-size: 28px; text-align: center; }
+.item .t { font-weight: 700; font-size: 15px; }
+.item .s { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.item .p { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item.locked { opacity: .45; }
+.item.done .t { text-decoration: line-through; color: var(--muted); }
+.dots { color: var(--gold); letter-spacing: 1px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--ink-2); min-height: 44px; font-weight: 700; font-size: 14px; }
+.seg button.on { background: var(--gold); color: #1b1300; }
+.note { font-size: 13px; color: var(--muted); line-height: 1.45; margin: 0; }
+.lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin: 4px 0 -4px; }
+.bar { height: 8px; background: #0b1322; border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--cash); }
+
+/* Pantalla de título */
+.title { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(120% 80% at 50% 0%, rgba(255,182,39,.25), transparent 60%), rgba(8,14,26,.72); padding: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.title .card { width: min(100%, 420px); display: grid; gap: 14px; text-align: center; }
+.title h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(46px, 14vw, 76px); line-height: .9; letter-spacing: -.03em; color: var(--paper); text-shadow: 0 5px 0 #9c6a00; }
+.title h1 span { color: var(--gold); display: block; }
+.title p { margin: 0; color: #d6deec; line-height: 1.45; }
+.title input { width: 100%; box-sizing: border-box; min-height: 50px; border-radius: 14px; border: 2px solid var(--line); background: var(--ink); color: var(--paper); font: 700 18px var(--body); padding: 0 14px; text-align: center; -webkit-user-select: text; user-select: text; }
+.title .btn { min-height: 54px; font-size: 18px; }
+.keys { font-size: 12.5px; color: var(--muted); }
+
+/* Mapa grande */
+.mapwrap { position: fixed; inset: 0; background: rgba(5,10,20,.88); display: grid; place-items: center; padding: 16px; }
+.mapwrap canvas { max-width: 100%; max-height: 72dvh; border-radius: 16px; border: 2px solid var(--line); touch-action: none; }
+.mapwrap .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; font-size: 13px; margin-top: 10px; color: #d6deec; }
+.mapwrap .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.mapcol { display: grid; justify-items: center; gap: 4px; max-width: 100%; }
+@media (prefers-reduced-motion: reduce) { .ticker .track { animation-duration: 90s; } .sheet, .toast { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Ciudad"></canvas>
+
+<div class="hud" id="hud" hidden>
+  <div class="money" id="money">$0</div>
+  <div class="chip" id="clock"></div>
+  <div class="chip" id="place"></div>
+  <div class="chip goal" id="goal"></div>
+</div>
+
+<div class="topright" id="topright" hidden>
+  <canvas id="minimap" width="224" height="224" aria-label="Mapa"></canvas>
+  <div class="iconrow">
+    <button class="iconbtn" id="btnMap" aria-label="Mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span data-t="map"></span></button>
+    <button class="iconbtn" id="btnPhone" aria-label="Teléfono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg><span data-t="phone"></span><b class="badge" id="phoneBadge" hidden>!</b></button>
+  </div>
+</div>
+
+<div class="actions" id="actions" hidden>
+  <button class="act alt" id="btnAlt" hidden></button>
+  <button class="act" id="btnAct" hidden></button>
+</div>
+<div id="joy" hidden><i></i></div>
+<div class="hint-move" id="hintMove" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="banner" id="banner"></div>
+<div class="ticker" id="ticker" hidden><div class="tag" data-t="news"></div><div class="track" id="tickerTrack"></div></div>
+<div id="ui"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   EMPRENDE CITY — juego de emprendimiento en mundo abierto (ERAGames)
+   Módulos: datos · i18n · mundo · simulación · vida (NPC, autos, clima)
+            · render · entrada · interfaz · guardado
+   ===================================================================== */
+
+// ---------- Constantes del mundo ----------
+const T = 32, BLK = 12, NB = 6, CITY = NB * BLK + 2;      // 74 tiles de ciudad
+const SAND0 = CITY, WATER0 = CITY + 6, W = CITY + 18, H = CITY;
+const TL = { ROAD: 0, WALK: 1, GRASS: 2, LOT: 3, SAND: 4, WATER: 5, PLAZA: 6 };
+const MIN_PER_SEC = 2;                                      // 1 s real = 2 min de juego → día de 12 min
+const SAVE_KEY = 'emprende-city:save:v1', SAVE_VER = 1;
+const DISTRICTS = ['res', 'centro', 'tech', 'ind', 'playa'];
+const LAND = { res: 1, centro: 1.35, tech: 1.25, ind: 0.85, playa: 1.2 };
+
+// ---------- Tipos de negocio ----------
+// fit: qué tan bien funciona en cada distrito · tags: outdoor/heat (sufren con lluvia), rainy (ganan con lluvia), leisure (fin de semana)
+const TYPES = [
+  { id: 'lemon',   em: '🍋', cost: 250,    ticket: 3,   staff: 1, prof: 'day',       roof: '#f7d84a', fit: { res: 1.1, centro: 1.1, tech: .9, ind: .7, playa: 1.45 }, tags: ['outdoor', 'heat'] },
+  { id: 'tacos',   em: '🌮', cost: 1200,   ticket: 6,   staff: 2, prof: 'meal',      roof: '#e8743b', fit: { res: 1, centro: 1.2, tech: 1.1, ind: 1.35, playa: 1.1 }, tags: ['outdoor'] },
+  { id: 'ice',     em: '🍦', cost: 2500,   ticket: 4,   staff: 2, prof: 'afternoon', roof: '#f2a6c8', fit: { res: 1.1, centro: 1.1, tech: .8, ind: .6, playa: 1.55 }, tags: ['heat', 'leisure'] },
+  { id: 'bakery',  em: '🥐', cost: 3200,   ticket: 3,   staff: 2, prof: 'morning',   roof: '#d9a066', fit: { res: 1.4, centro: 1.1, tech: .9, ind: .95, playa: .9 }, tags: [] },
+  { id: 'cafe',    em: '☕', cost: 4500,   ticket: 5,   staff: 3, prof: 'morning',   roof: '#8a5a3c', fit: { res: 1, centro: 1.3, tech: 1.5, ind: .8, playa: .9 }, tags: [] },
+  { id: 'laundry', em: '🧺', cost: 6000,   ticket: 8,   staff: 2, prof: 'day',       roof: '#7fb6e0', fit: { res: 1.4, centro: 1, tech: .8, ind: .9, playa: .9 }, tags: ['rainy'] },
+  { id: 'flowers', em: '💐', cost: 8000,   ticket: 15,  staff: 2, prof: 'day',       roof: '#e46a8e', fit: { res: 1.2, centro: 1.3, tech: 1, ind: .7, playa: 1 }, tags: [] },
+  { id: 'books',   em: '📚', cost: 10000,  ticket: 14,  staff: 2, prof: 'day',       roof: '#4f7a5a', fit: { res: 1, centro: 1.4, tech: 1.2, ind: .7, playa: .9 }, tags: ['rainy'] },
+  { id: 'surf',    em: '🏄', cost: 14000,  ticket: 40,  staff: 2, prof: 'day',       roof: '#2fb7b0', fit: { res: .5, centro: .6, tech: .5, ind: .4, playa: 1.8 }, tags: ['outdoor', 'heat', 'leisure'] },
+  { id: 'gym',     em: '🏋️', cost: 20000,  ticket: 12,  staff: 3, prof: 'fitness',   roof: '#5a5f73', fit: { res: 1.2, centro: 1.2, tech: 1.3, ind: .9, playa: 1.1 }, tags: [] },
+  { id: 'rest',    em: '🍝', cost: 30000,  ticket: 25,  staff: 4, prof: 'meal',      roof: '#c0392b', fit: { res: 1, centro: 1.4, tech: 1.1, ind: .8, playa: 1.3 }, tags: ['leisure'] },
+  { id: 'garage',  em: '🔧', cost: 40000,  ticket: 80,  staff: 3, prof: 'day',       roof: '#6b6f78', fit: { res: 1, centro: .8, tech: .8, ind: 1.6, playa: .7 }, tags: [] },
+  { id: 'pharma',  em: '💊', cost: 55000,  ticket: 18,  staff: 3, prof: 'allday',    roof: '#3fae6a', fit: { res: 1.3, centro: 1.2, tech: 1, ind: .9, playa: 1 }, tags: [] },
+  { id: 'bar',     em: '🍸', cost: 75000,  ticket: 14,  staff: 4, prof: 'night',     roof: '#5b2a86', fit: { res: .8, centro: 1.4, tech: 1.1, ind: .9, playa: 1.5 }, tags: ['leisure'] },
+  { id: 'cinema',  em: '🎬', cost: 110000, ticket: 12,  staff: 4, prof: 'evening',   roof: '#2c3e70', fit: { res: 1.1, centro: 1.5, tech: 1, ind: .7, playa: 1 }, tags: ['leisure', 'rainy'] },
+  { id: 'gamedev', em: '🎮', cost: 160000, ticket: 300, staff: 5, prof: 'day',       roof: '#f04e23', fit: { res: .8, centro: 1.1, tech: 1.7, ind: .9, playa: .8 }, tags: [] },
+  { id: 'hotel',   em: '🏨', cost: 260000, ticket: 120, staff: 6, prof: 'allday',    roof: '#d4b483', fit: { res: .8, centro: 1.3, tech: 1, ind: .6, playa: 1.8 }, tags: ['leisure'] },
+  { id: 'startup', em: '🚀', cost: 400000, ticket: 900, staff: 6, prof: 'day',       roof: '#1f8ef1', fit: { res: .6, centro: 1, tech: 1.8, ind: .7, playa: .8 }, tags: ['volatile'] },
+];
+const TYPE = Object.fromEntries(TYPES.map(t => [t.id, t]));
+
+// Curvas de demanda por hora del día: [centro, ancho, amplitud]
+const PROF = {
+  morning:   [[8.5, 2.2, 1], [13, 2, .45]],
+  meal:      [[14, 1.6, 1], [21, 1.8, .85], [9, 1.5, .25]],
+  day:       [[12, 3.2, .8], [16.5, 2.6, .9]],
+  afternoon: [[15.5, 3, 1], [12, 2, .4]],
+  evening:   [[20.5, 2.4, 1], [16, 2, .35]],
+  night:     [[23.5, 2.6, 1], [20, 1.6, .4]],
+  allday:    [[11, 4, .8], [18, 4, .8]],
+  fitness:   [[7.5, 1.5, 1], [19, 1.8, 1]],
+  crowd:     [[8.5, 2, .9], [13.5, 3, 1], [18.5, 2.5, 1]],
+};
+function curve(p, h) {
+  let v = 0;
+  for (const [c, w, a] of PROF[p]) { let d = Math.abs(h - c); d = Math.min(d, 24 - d); v += a * Math.exp(-((d / w) ** 2)); }
+  return Math.min(1, v);
+}
+function curveSum(p) { let s = 0; for (let i = 0; i < 96; i++) s += curve(p, i / 4); return s / 4; }
+
+// Economía derivada: los negocios baratos recuperan la inversión más rápido; los caros escalan en volumen.
+for (const t of TYPES) {
+  t.wage = Math.round(20 + Math.sqrt(t.cost) * 0.55);
+  t.upkeep = Math.round(t.cost * 0.004) + 3;
+  const roi = Math.max(0.3, 1.9 - 0.12 * Math.log(t.cost));
+  const gross = t.cost * roi + t.wage * t.staff + t.upkeep;
+  t.demand = gross / (t.ticket * curveSum(t.prof));       // clientes/hora en el pico, nivel 1
+  t.perStaff = t.demand * 1.15 / t.staff;                // capacidad por empleado
+}
+const VEHICLES = [
+  { id: 'walk', cost: 0, speed: 125, em: '🚶' },
+  { id: 'bike', cost: 1200, speed: 200, em: '🚲' },
+  { id: 'scooter', cost: 7000, speed: 270, em: '🛵' },
+  { id: 'car', cost: 35000, speed: 350, em: '🚗' },
+];
+
+// ---------- Idiomas ----------
+const I18N = {
+  es: {
+    map: 'Mapa', phone: 'Móvil', news: 'Noticias', play: 'Jugar', cont: 'Continuar', newGame: 'Partida nueva',
+    brandAsk: 'Nombre de tu marca', tagline: 'Empiezas con $800 y un sueño. Abre negocios, contrata gente y conquista la ciudad.',
+    keys: 'Teclado: WASD o flechas para moverte · E comprar o gestionar · Espacio atender · M mapa · P móvil',
+    moveHint: 'Desliza aquí para caminar', moveHintKb: 'Muévete con WASD o las flechas',
+    res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', district: 'Distrito',
+    days: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], day: 'Día',
+    sun: 'Soleado', cloud: 'Nublado', rain: 'Lluvia',
+    buy: 'Comprar', manage: 'Gestionar', serve: 'Atender', offer: 'Ofertar', collect: 'Cobrar',
+    forSale: 'Se vende', lotFor: 'Terreno en venta', chooseBiz: 'Elige qué negocio abrir aquí',
+    fitHere: 'Encaje aquí', rivalsNear: 'competidores cerca', none: 'ninguno', open: 'Abrir',
+    level: 'Nivel', staff: 'Empleados', rep: 'Reputación', register: 'En caja', today: 'Hoy', yesterday: 'Ayer (neto)',
+    hire: 'Contratar', fire: 'Despedir', perDay: '/día', manager: 'Gerente', hireMgr: 'Contratar gerente', fireMgr: 'Despedir gerente',
+    mgrNote: 'El gerente cobra la caja solo y la caja nunca se llena.',
+    price: 'Precio', low: 'Barato', normal: 'Normal', high: 'Caro',
+    upgrade: 'Mejorar a nivel', maxLevel: 'Nivel máximo', sell: 'Vender negocio', sellConfirm: 'Toca otra vez para vender por',
+    closedNote: 'Sin empleados solo vende cuando tú estás aquí atendiendo.', fullNote: '¡La caja está llena! Ven a cobrar o contrata un gerente.',
+    goTo: 'Ir', businesses: 'Negocios', goals: 'Metas', bank: 'Banco', shop: 'Vehículos', settings: 'Ajustes',
+    noBiz: 'Todavía no tienes negocios. Busca un terreno con el letrero verde de “Se vende”.',
+    netWorth: 'Patrimonio', cash: 'Efectivo', loan: 'Préstamo', borrow: 'Pedir', repay: 'Pagar', interest: 'Interés diario',
+    loanNote: 'El préstamo cobra 1.5 % diario a medianoche. Úsalo para crecer más rápido, no para tapar pérdidas.',
+    owned: 'Tuyo', ride: 'Usar', lang: 'Idioma', sound: 'Sonido', on: 'Sí', off: 'No', reset: 'Borrar partida', resetConfirm: 'Toca otra vez para borrar todo',
+    rivalOf: 'Negocio de la competencia', buyout: 'Comprar negocio', buyoutNote: 'Compras el local con su clientela, empleados y reputación.',
+    cantAfford: 'No te alcanza el dinero', bought: '¡Abriste', welcome: 'Bienvenido a Emprende City',
+    goal: 'Meta', allGoals: '¡Eres el magnate de la ciudad! Sigue creciendo.', reward: 'Premio',
+    queue: 'en fila', closed: 'CERRADO', fullReg: 'CAJA LLENA',
+    dailyReport: 'Cierre del día', profit: 'Ganancia', wages: 'Sueldos',
+    offline: 'Mientras no estabas, tus gerentes ganaron', mapTap: 'Toca el mapa para marcar destino', clearWp: 'Quitar destino',
+    legendYou: 'Tú', legendBiz: 'Tus negocios', legendSale: 'En venta', legendRival: 'Competencia',
+    unlockAt: 'Requiere patrimonio de', thanks: '¡Gracias!', save: 'Guardado',
+    perHour: 'clientes/h', capacity: 'capacidad', demandNow: 'demanda ahora',
+    lostQueue: 'Un cliente se cansó de esperar',
+  },
+  en: {
+    map: 'Map', phone: 'Phone', news: 'News', play: 'Play', cont: 'Continue', newGame: 'New game',
+    brandAsk: 'Your brand name', tagline: 'You start with $800 and a dream. Open shops, hire people and take over the city.',
+    keys: 'Keyboard: WASD or arrows to move · E buy or manage · Space serve · M map · P phone',
+    moveHint: 'Drag here to walk', moveHintKb: 'Move with WASD or the arrow keys',
+    res: 'Residential', centro: 'Downtown', tech: 'Tech District', ind: 'Industrial Zone', playa: 'Beach', district: 'District',
+    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], day: 'Day',
+    sun: 'Sunny', cloud: 'Cloudy', rain: 'Rain',
+    buy: 'Buy', manage: 'Manage', serve: 'Serve', offer: 'Make offer', collect: 'Collect',
+    forSale: 'For sale', lotFor: 'Lot for sale', chooseBiz: 'Pick a business to open here',
+    fitHere: 'Fit here', rivalsNear: 'rivals nearby', none: 'none', open: 'Open',
+    level: 'Level', staff: 'Staff', rep: 'Reputation', register: 'In register', today: 'Today', yesterday: 'Yesterday (net)',
+    hire: 'Hire', fire: 'Fire', perDay: '/day', manager: 'Manager', hireMgr: 'Hire manager', fireMgr: 'Fire manager',
+    mgrNote: 'A manager collects the register for you and it never fills up.',
+    price: 'Price', low: 'Cheap', normal: 'Normal', high: 'Pricey',
+    upgrade: 'Upgrade to level', maxLevel: 'Max level', sell: 'Sell business', sellConfirm: 'Tap again to sell for',
+    closedNote: 'With no staff it only sells while you are here serving.', fullNote: 'The register is full! Come collect or hire a manager.',
+    goTo: 'Go', businesses: 'Businesses', goals: 'Goals', bank: 'Bank', shop: 'Vehicles', settings: 'Settings',
+    noBiz: 'No businesses yet. Look for a lot with the green “For sale” sign.',
+    netWorth: 'Net worth', cash: 'Cash', loan: 'Loan', borrow: 'Borrow', repay: 'Repay', interest: 'Daily interest',
+    loanNote: 'The loan charges 1.5% daily at midnight. Use it to grow faster, not to cover losses.',
+    owned: 'Owned', ride: 'Use', lang: 'Language', sound: 'Sound', on: 'On', off: 'Off', reset: 'Delete save', resetConfirm: 'Tap again to delete everything',
+    rivalOf: 'Rival business', buyout: 'Buy business', buyoutNote: 'You get the place with its customers, staff and reputation.',
+    cantAfford: 'Not enough money', bought: 'You opened', welcome: 'Welcome to Emprende City',
+    goal: 'Goal', allGoals: 'You are the city tycoon! Keep growing.', reward: 'Reward',
+    queue: 'in line', closed: 'CLOSED', fullReg: 'FULL',
+    dailyReport: 'End of day', profit: 'Profit', wages: 'Wages',
+    offline: 'While you were away, your managers earned', mapTap: 'Tap the map to set a destination', clearWp: 'Clear destination',
+    legendYou: 'You', legendBiz: 'Your businesses', legendSale: 'For sale', legendRival: 'Rivals',
+    unlockAt: 'Requires net worth of', thanks: 'Thanks!', save: 'Saved',
+    perHour: 'customers/h', capacity: 'capacity', demandNow: 'demand now',
+    lostQueue: 'A customer got tired of waiting',
+  },
+};
+const NAMES = {
+  es: { lemon: 'Limonada', tacos: 'Tacos', ice: 'Heladería', bakery: 'Panadería', cafe: 'Café', laundry: 'Lavandería', flowers: 'Florería', books: 'Librería', surf: 'Surf Shop', gym: 'Gimnasio', rest: 'Restaurante', garage: 'Taller', pharma: 'Farmacia', bar: 'Bar', cinema: 'Cine', gamedev: 'Estudio de Juegos', hotel: 'Hotel', startup: 'Startup' },
+  en: { lemon: 'Lemonade', tacos: 'Tacos', ice: 'Ice Cream', bakery: 'Bakery', cafe: 'Café', laundry: 'Laundromat', flowers: 'Flower Shop', books: 'Bookstore', surf: 'Surf Shop', gym: 'Gym', rest: 'Restaurant', garage: 'Garage', pharma: 'Pharmacy', bar: 'Bar', cinema: 'Cinema', gamedev: 'Game Studio', hotel: 'Hotel', startup: 'Startup' },
+};
+const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' }, en: { walk: 'On foot', bike: 'Bicycle', scooter: 'Scooter', car: 'Car' } };
+const RIVAL_OWNERS = ['Doña Lupe', 'Don Toño', 'La Esquina', 'El Güero', 'Los Primos', 'Mar Azul', 'Tía Chela', 'El Rey', 'Luna', 'Pepe', 'Sol', 'Nova'];
+const GOALS = [
+  { id: 'first', r: 150, es: 'Abre tu primer negocio', en: 'Open your first business', test: () => S.biz.length >= 1 },
+  { id: 'serve', r: 120, es: 'Atiende a 10 clientes tú mismo', en: 'Serve 10 customers yourself', test: () => S.stats.served >= 10 },
+  { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', en: 'Hire your first employee', test: () => S.biz.some(b => b.staff > 0) },
+  { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', en: 'Collect $1,000 from registers', test: () => S.stats.collected >= 1000 },
+  { id: 'three', r: 500, es: 'Ten 3 negocios', en: 'Own 3 businesses', test: () => S.biz.length >= 3 },
+  { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', en: 'Buy a bicycle (Phone › Vehicles)', test: () => S.vehicles.includes('bike') },
+  { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', en: 'Upgrade a business to level 3', test: () => S.biz.some(b => b.level >= 3) },
+  { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', en: 'Reach $25,000 net worth', test: () => netWorth() >= 25000 },
+  { id: 'mgr', r: 2000, es: 'Contrata a un gerente', en: 'Hire a manager', test: () => S.biz.some(b => b.manager) },
+  { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', en: 'Own businesses in 3 districts', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
+  { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', en: 'Buy out a rival business', test: () => S.stats.buyouts >= 1 },
+  { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', en: 'Reach $100,000 net worth', test: () => netWorth() >= 100000 },
+  { id: 'eight', r: 15000, es: 'Ten 8 negocios', en: 'Own 8 businesses', test: () => S.biz.length >= 8 },
+  { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', en: 'Own businesses in all 5 districts', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
+  { id: 'hotel', r: 50000, es: 'Abre un hotel', en: 'Open a hotel', test: () => S.biz.some(b => b.type === 'hotel') },
+  { id: 'startup', r: 80000, es: 'Funda una startup', en: 'Found a startup', test: () => S.biz.some(b => b.type === 'startup') },
+  { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', en: 'Reach $1,000,000: become a tycoon', test: () => netWorth() >= 1e6 },
+];
+// Noticias del día: efectos sobre la demanda
+const EVENTS = [
+  { id: 'heat', w: 3, es: 'Ola de calor: limonadas, helados y surf venden como nunca', en: 'Heat wave: lemonade, ice cream and surf shops are booming', weather: 'sun', mult: b => TYPE[b.type].tags.includes('heat') ? 1.6 : 1 },
+  { id: 'beachfest', w: 2, es: 'Festival de música en la Playa: +40 % de clientes allí', en: 'Music festival at the Beach: +40% customers there', mult: (b, l) => l.district === 'playa' ? 1.4 : 1 },
+  { id: 'techconf', w: 2, es: 'Gran conferencia tech: el Distrito Tech se llena', en: 'Big tech conference: the Tech District is packed', mult: (b, l) => l.district === 'tech' ? 1.35 : 1 },
+  { id: 'fair', w: 2, es: 'Feria en el Centro: más gente que nunca', en: 'Downtown fair: more people than ever', mult: (b, l) => l.district === 'centro' ? 1.3 : 1 },
+  { id: 'rainy', w: 2, es: 'Temporada de lluvias: lavanderías, librerías y cines ganan', en: 'Rainy season: laundromats, bookstores and cinemas win', weather: 'rain', mult: () => 1 },
+  { id: 'strike', w: 1, es: 'Paro de transporte: menos gente en la calle hoy', en: 'Transit strike: fewer people out today', mult: () => .8 },
+  { id: 'match', w: 2, es: 'Final de fútbol esta noche: bares y restaurantes a reventar', en: 'Football final tonight: bars and restaurants packed', mult: b => (b.type === 'bar' ? 1.7 : b.type === 'rest' ? 1.3 : 1) },
+  { id: 'payday', w: 2, es: 'Día de quincena: todos salen a gastar', en: 'Payday: everyone is out spending', mult: () => 1.2 },
+  { id: 'startups', w: 1, es: 'Inversionistas llegan a la ciudad: las startups se disparan', en: 'Investors arrive in town: startups soar', mult: b => b.type === 'startup' || b.type === 'gamedev' ? 1.6 : 1 },
+  { id: 'influencer', w: 2, es: 'Un influencer recomendó uno de tus negocios', en: 'An influencer recommended one of your businesses', special: 'influencer', mult: () => 1 },
+  { id: 'inspect', w: 1, es: 'Inspección sanitaria sorpresa en la ciudad', en: 'Surprise health inspection around town', special: 'inspect', mult: () => 1 },
+  { id: 'calm', w: 3, es: 'Día tranquilo en Emprende City', en: 'A calm day in Emprende City', mult: () => 1 },
+];
+const FLAVOR = {
+  es: ['El alcalde inaugura un nuevo parque', 'Se buscan emprendedores: la ciudad crece', 'Los gatos del Centro ya tienen fans', 'Récord de turistas en la Playa', 'Abre una nueva ciclovía', 'El tráfico mejora esta semana', 'Fábricas de la Zona Industrial contratan', 'Concierto gratis el sábado'],
+  en: ['Mayor opens a new park', 'Entrepreneurs wanted: the city is growing', 'Downtown cats now have fans', 'Record tourism at the Beach', 'A new bike lane opens', 'Traffic is better this week', 'Industrial Zone factories are hiring', 'Free concert on Saturday'],
+};
+const CHAT = {
+  es: { gen: ['Qué bonito día', '¿Dónde comeré hoy?', 'Llego tarde…', 'Necesito café', '¡Me encanta esta ciudad!', '¿Viste las noticias?', 'Voy al parque', 'Uff, qué tráfico'], rain: ['¡Olvidé el paraguas!', 'Qué lluvia…', 'Me voy a mojar'], night: ['¿Vamos por algo?', 'Qué noche', 'A casa a dormir'], heat: ['¡Qué calor!', 'Se me antoja un helado'], boss: ['¡Hola, jefe!', 'Tu negocio es mi favorito', '¡Eres famoso!'], good: ['¡Delicioso!', '¡Volveré!', '¡Gran servicio!', '¡Qué rico!'], pricey: ['Un poco caro…', 'Mmm, caro'], cheap: ['¡Qué barato!', '¡Buen precio!'] },
+  en: { gen: ['What a nice day', 'Where should I eat?', 'Running late…', 'I need coffee', 'I love this city!', 'Did you see the news?', 'Off to the park', 'Ugh, traffic'], rain: ['Forgot my umbrella!', 'So much rain…', "I'm getting soaked"], night: ['Grab a drink?', 'What a night', 'Home to sleep'], heat: ['So hot!', 'I want ice cream'], boss: ['Hi, boss!', 'Your shop is my favorite', "You're famous!"], good: ['Delicious!', "I'll be back!", 'Great service!', 'So good!'], pricey: ['A bit pricey…', 'Hmm, expensive'], cheap: ['So cheap!', 'Good price!'] },
+};
+let LANG = 'es';
+const t = k => (I18N[LANG][k] ?? I18N.es[k] ?? k);
+const nm = id => NAMES[LANG][id];
+const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
+const fmtK = n => { const a = Math.abs(n); const s = n < 0 ? '-$' : '$'; return a >= 1e6 ? s + (a / 1e6).toFixed(2) + 'M' : a >= 1e4 ? s + (a / 1e3).toFixed(1) + 'k' : fmt(n); };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- Utilidades ----------
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let r = Math.imul(a ^ a >>> 15, 1 | a); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; }
+const rnd = Math.random;
+const pick = a => a[(rnd() * a.length) | 0];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, k) => a + (b - a) * k;
+const dist2 = (ax, ay, bx, by) => (ax - bx) ** 2 + (ay - by) ** 2;
+function wpick(list) { let s = 0; for (const e of list) s += e.w; let r = rnd() * s; for (const e of list) { r -= e.w; if (r <= 0) return e; } return list[0]; }
+
+// =====================================================================
+//  MUNDO (generación determinista: la ciudad es igual en cada partida)
+// =====================================================================
+const tiles = new Uint8Array(W * H), solid = new Uint8Array(W * H);
+const lots = [], trees = [], lamps = [], benches = [];
+const PARKS = new Set(['1,1', '4,4']), PLAZA_B = '3,3';
+let FOUNTAIN = { x: 0, y: 0 };
+const isRoadI = i => i < CITY && (i % BLK === 0 || i % BLK === 1);
+function districtOf(bx, by) {
+  if (bx === 5) return 'playa';
+  if (by >= 4 && bx <= 2) return 'ind';
+  if (bx >= 3 && by <= 1) return 'tech';
+  if (bx >= 2 && bx <= 4 && by >= 2 && by <= 3) return 'centro';
+  return 'res';
+}
+function districtAt(px, py) {
+  const tx = px / T | 0, ty = py / T | 0;
+  if (tx >= SAND0) return 'playa';
+  return districtOf(clamp(tx / BLK | 0, 0, NB - 1), clamp(ty / BLK | 0, 0, NB - 1));
+}
+function buildWorld() {
+  const R = mulberry(1977);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let k;
+    if (x >= WATER0) k = TL.WATER;
+    else if (x >= SAND0) k = TL.SAND;
+    else if (isRoadI(x) || isRoadI(y)) k = TL.ROAD;
+    else {
+      const lx = x % BLK, ly = y % BLK, key = (x / BLK | 0) + ',' + (y / BLK | 0);
+      if (lx === 2 || lx === 11 || ly === 2 || ly === 11) k = TL.WALK;
+      else k = PARKS.has(key) ? TL.GRASS : key === PLAZA_B ? TL.PLAZA : TL.LOT;
+    }
+    tiles[y * W + x] = k;
+    if (k === TL.WATER) solid[y * W + x] = 1;
+  }
+  // Farolas en las esquinas de cada manzana
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    for (const [cx, cy] of [[x0, y0], [x0 + 9, y0], [x0, y0 + 9], [x0 + 9, y0 + 9]]) lamps.push({ x: cx * T + 16, y: cy * T + 16 });
+    const key = bx + ',' + by;
+    if (PARKS.has(key)) {
+      for (let i = 0; i < 16; i++) trees.push({ x: (x0 + 1.5 + R() * 7) * T, y: (y0 + 1.5 + R() * 7) * T, r: 13 + R() * 9, s: R() * 6 });
+      benches.push({ x: (x0 + 5) * T, y: (y0 + 2.3) * T }, { x: (x0 + 5) * T, y: (y0 + 7.8) * T });
+      continue;
+    }
+    if (key === PLAZA_B) {
+      FOUNTAIN = { x: (x0 + 5) * T, y: (y0 + 5) * T };
+      for (const [a, b] of [[2, 2], [8, 2], [2, 8], [8, 8]]) trees.push({ x: (x0 + a) * T, y: (y0 + b) * T, r: 15, s: R() * 6 });
+      benches.push({ x: (x0 + 3.2) * T, y: (y0 + 5) * T }, { x: (x0 + 6.8) * T, y: (y0 + 5) * T });
+      const fx = FOUNTAIN.x / T | 0, fy = FOUNTAIN.y / T | 0;
+      for (let yy = fy - 1; yy <= fy; yy++) for (let xx = fx - 1; xx <= fx; xx++) solid[yy * W + xx] = 1;
+      continue;
+    }
+    for (let ly = 0; ly < 2; ly++) for (let lx = 0; lx < 2; lx++) {
+      const tx = bx * BLK + 3 + lx * 4, ty = by * BLK + 3 + ly * 4;
+      const lot = {
+        id: lots.length, bx, by, lx, ly, tx, ty, district: districtOf(bx, by),
+        x: tx * T + 4, y: ty * T + 4, w: 4 * T - 8, h: 4 * T - 8,
+        door: { x: tx * T + 2 * T, y: ly === 0 ? ty * T - 16 : (ty + 4) * T + 16, side: ly === 0 ? 'n' : 's' },
+        kind: 'deco', seed: R(), rival: null,
+      };
+      lots.push(lot);
+    }
+  }
+  // Asigna terrenos: en venta, competencia o decorado
+  const start = new Set(['1,2']);
+  for (const l of lots) {
+    const r = R(), key = l.bx + ',' + l.by;
+    if (start.has(key)) l.kind = l.lx === 0 ? 'sale' : (l.ly === 0 ? 'deco' : 'sale');
+    else if (r < 0.46) l.kind = 'sale';
+    else if (r < 0.6) l.kind = 'rival';
+    else l.kind = 'deco';
+    if (l.kind === 'rival') {
+      const opts = TYPES.filter(ty => ty.cost <= 75000 && ty.fit[l.district] >= 1);
+      const ty = opts[(R() * opts.length) | 0];
+      l.rival = { type: ty.id, owner: RIVAL_OWNERS[(R() * RIVAL_OWNERS.length) | 0], level: 1 + (R() * 3 | 0) };
+    }
+    setLotSolid(l);
+  }
+}
+function setLotSolid(l) {
+  const v = l.kind === 'sale' ? 0 : 1;
+  for (let y = l.ty; y < l.ty + 4; y++) for (let x = l.tx; x < l.tx + 4; x++) solid[y * W + x] = v;
+}
+function isSolidPx(px, py) {
+  if (px < 0 || py < 0 || px >= W * T || py >= H * T) return true;
+  return solid[(py / T | 0) * W + (px / T | 0)] === 1;
+}
+// Nodos de banqueta para peatones (esquinas de manzana + playa)
+const nodes = [];
+function buildNodes() {
+  const idx = {};
+  const add = (tx, ty) => { const k = tx + ',' + ty; if (idx[k] == null) { idx[k] = nodes.length; nodes.push({ x: tx * T + 16, y: ty * T + 16, n: [] }); } return idx[k]; };
+  const link = (a, b) => { nodes[a].n.push(b); nodes[b].n.push(a); };
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    const a = add(x0, y0), b = add(x0 + 9, y0), c = add(x0, y0 + 9), d = add(x0 + 9, y0 + 9);
+    link(a, b); link(c, d); link(a, c); link(b, d);
+  }
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    if (bx < NB - 1) { link(idx[(x0 + 9) + ',' + y0], idx[(x0 + 12) + ',' + y0]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 12) + ',' + (y0 + 9)]); }
+    if (by < NB - 1) { link(idx[x0 + ',' + (y0 + 9)], idx[x0 + ',' + (y0 + 12)]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 9) + ',' + (y0 + 12)]); }
+  }
+  // Playa
+  let prev = null;
+  for (let by = 0; by < NB; by++) for (const dy of [2, 11]) {
+    const ty = by * BLK + dy, b = add(SAND0 + 2, ty);
+    link(idx[(5 * BLK + 11) + ',' + ty], b);
+    if (prev != null) link(prev, b);
+    prev = b;
+  }
+}
+
+// =====================================================================
+//  ESTADO DEL JUEGO
+// =====================================================================
+let S = null;
+function newState(brand) {
+  return {
+    v: SAVE_VER, brand: brand || 'Emprende', money: 800, loan: 0,
+    min: 6 * 60 + 56, day: 1,
+    player: { x: (1 * BLK + 5) * T, y: (2 * BLK + 2) * T + 16 },
+    vehicle: 'walk', vehicles: ['walk'],
+    biz: [], lotKinds: {}, // lotKinds: lotId → 'sale' para locales vendidos (sobrescribe la generación)
+    goalsDone: [], stats: { served: 0, collected: 0, buyouts: 0, earned: 0 },
+    weather: 'sun', event: 'calm', eventBizLot: -1, startupF: 1,
+    sound: true, lang: LANG, savedAt: Date.now(), seenHint: false,
+  };
+}
+const lotOf = b => lots[b.lot];
+const bizAtLot = id => S.biz.find(b => b.lot === id);
+function bizName(b) { return S.brand + ' ' + nm(b.type); }
+function rivalName(l) { return nm(l.rival.type) + ' ' + l.rival.owner; }
+function invested(b) { const ty = TYPE[b.type]; let v = b.paid; for (let L = 1; L < b.level; L++) v += upgradeCost(ty, L); return v; }
+function netWorth() { let v = S.money - S.loan; for (const b of S.biz) v += invested(b) * 0.6; return v; }
+function priceOf(type, district) { return Math.round(TYPE[type].cost * LAND[district]); }
+function buyoutPrice(l) { return Math.round(priceOf(l.rival.type, l.district) * (1.25 + 0.25 * l.rival.level)); }
+function upgradeCost(ty, level) { return Math.round(ty.cost * 0.55 * level); }
+function maxStaff(b) { const ty = TYPE[b.type]; return Math.max(ty.staff + b.level - 1, Math.round(ty.staff * (1 + 0.35 * (b.level - 1)))); }
+function mgrWage(b) { return Math.max(60, TYPE[b.type].wage * 3); }
+function regCap(b) { const ty = TYPE[b.type]; return Math.round(ty.ticket * ty.demand * (1 + 0.35 * (b.level - 1)) * 5); }
+function dailyCost(b) { const ty = TYPE[b.type]; return b.staff * ty.wage + (b.manager ? mgrWage(b) : 0) + ty.upkeep * b.level; }
+const hour = () => (S.min % 1440) / 60;
+const weekday = () => (S.day - 1) % 7;
+
+// Competencia: misma categoría a menos de 10 tiles
+const compCache = new Map();
+function recomputeCompetition() {
+  compCache.clear();
+  const all = [];
+  for (const b of S.biz) all.push({ lot: b.lot, type: b.type });
+  for (const l of lots) if (l.kind === 'rival' && !bizAtLot(l.id)) all.push({ lot: l.id, type: l.rival.type });
+  for (const a of all) {
+    const la = lots[a.lot]; let m = 1, n = 0;
+    for (const o of all) if (o !== a && o.type === a.type) {
+      const lo = lots[o.lot];
+      if (Math.abs(lo.x - la.x) + Math.abs(lo.y - la.y) < 10 * T) { m *= 0.72; n++; }
+    }
+    compCache.set(a.lot, { m: Math.max(0.35, m), n });
+  }
+}
+function fitDots(f) { const n = f < .8 ? 1 : f < 1 ? 2 : f < 1.2 ? 3 : f < 1.45 ? 4 : 5; return '●'.repeat(n) + '○'.repeat(5 - n); }
+
+// Demanda actual (clientes por hora de juego)
+function weatherMult(ty) {
+  const w = S.weather;
+  if (w === 'rain') return ty.tags.includes('rainy') ? 1.3 : (ty.tags.includes('outdoor') || ty.tags.includes('heat')) ? 0.5 : 0.85;
+  if (w === 'cloud') return ty.tags.includes('heat') ? 0.8 : 1;
+  return 1;
+}
+function demandOf(b, presentBonus) {
+  const ty = TYPE[b.type], l = lotOf(b), ev = EVENTS.find(e => e.id === S.event);
+  let d = ty.demand * curve(ty.prof, hour()) * ty.fit[l.district];
+  d *= 1 + 0.35 * (b.level - 1);
+  d *= 0.6 + b.rep / 125;
+  d *= [1.25, 1, 0.75][b.price];
+  d *= (compCache.get(b.lot) || { m: 1 }).m;
+  d *= weatherMult(ty);
+  d *= ev ? ev.mult(b, l) : 1;
+  if (weekday() >= 5) d *= ty.tags.includes('leisure') ? 1.25 : 0.95;
+  if (ty.tags.includes('volatile')) d *= S.startupF;
+  if (presentBonus) d *= 1.5;   // el dueño atendiendo atrae clientes
+  return d;
+}
+function capacityOf(b) { return b.staff * TYPE[b.type].perStaff; }
+
+// =====================================================================
+//  SIMULACIÓN ECONÓMICA (paso fijo)
+// =====================================================================
+const QUEUE_MAX = 7, PATIENCE = 14;
+function playerNearDoor(l, r = 90) { return dist2(P.x, P.y, l.door.x, l.door.y) < r * r; }
+function simEconomy(dtMin, dtReal) {
+  for (const b of S.biz) {
+    const l = lotOf(b), present = playerNearDoor(l);
+    const dem = demandOf(b, present);
+    b.arr += dem / 60 * dtMin;
+    const cap = capacityOf(b);
+    b.tok = Math.min(Math.max(1, b.staff), b.tok + cap / 60 * dtMin);
+    while (b.arr >= 1) {
+      b.arr -= 1;
+      const full = !b.manager && b.cash >= regCap(b);
+      if (full) { b.lostFull++; continue; }
+      if (b.tok >= 1) { b.tok -= 1; sale(b, false); }
+      else if (present && b.queue.length < QUEUE_MAX) b.queue.push({ p: PATIENCE, c: pick(SHIRTS), s: pick(SKINS) });
+      else b.missed++;
+    }
+    // Fila: el personal también atiende; la paciencia se agota con el tiempo real
+    for (let i = b.queue.length - 1; i >= 0; i--) {
+      const q = b.queue[i];
+      if (b.tok >= 1) { b.tok -= 1; b.queue.splice(i, 1); sale(b, false); continue; }
+      q.p -= dtReal;
+      if (q.p <= 0) { b.queue.splice(i, 1); b.rep = Math.max(0, b.rep - 1.2); if (present) floatText(l.door.x, l.door.y - 30, '😤', '#ff6b5b'); }
+    }
+    if (!present && b.queue.length && b.staff === 0) b.queue.length = 0;
+    // La reputación tiende a la calidad del negocio
+    const target = clamp(34 + b.level * 9 + [8, 0, -12][b.price] + (b.manager ? 5 : 0) + (b.staff >= maxStaff(b) ? 6 : 0), 5, 98);
+    b.rep += (target - b.rep) * 0.002 * dtMin;
+    if (b.manager && b.cash > 0) { const c = b.cash; b.cash = 0; S.money += c; S.stats.collected += c; }
+  }
+}
+function sale(b, byPlayer) {
+  const ty = TYPE[b.type];
+  const amt = ty.ticket * [0.8, 1, 1.3][b.price] * (byPlayer ? 1.2 : 1) * (0.85 + rnd() * 0.3);
+  if (byPlayer) { S.money += amt; S.stats.collected += amt; } else b.cash += amt;
+  b.todayRev += amt; b.todaySales++; S.stats.earned += amt;
+  b.rep = Math.min(100, b.rep + 0.04);
+  onSaleVisual(b, amt, byPlayer);
+}
+function serveOne(b) {
+  if (!b.queue.length) return false;
+  b.queue.shift(); sale(b, true); S.stats.served++;
+  sfx('serve'); vibrate(8);
+  return true;
+}
+function collect(b) {
+  if (b.cash < 1) return;
+  const l = lotOf(b), c = b.cash;
+  S.money += c; S.stats.collected += c; b.cash = 0;
+  floatText(l.door.x, l.door.y - 40, '+' + fmt(c), '#46d98a', 1.4);
+  for (let i = 0; i < Math.min(14, 4 + c / 50); i++) spawnParticle('coin', l.door.x, l.door.y - 10);
+  sfx('coin'); vibrate(15);
+}
+function endOfDay() {
+  let wages = 0, rev = 0;
+  for (const b of S.biz) {
+    const c = dailyCost(b); wages += c; rev += b.todayRev;
+    b.yRev = b.todayRev; b.yProfit = b.todayRev - c; b.todayRev = 0; b.todaySales = 0; b.missed = 0; b.lostFull = 0;
+  }
+  const interest = Math.round(S.loan * 0.015);
+  S.money -= wages + interest;
+  S.startupF = 0.25 + rnd() * 1.9;
+  if (S.biz.length) toast(`${t('dailyReport')} ${S.day}: ${t('profit')} ${fmt(rev - wages - interest)} · ${t('wages')} ${fmt(wages)}${interest ? ' · ' + t('interest') + ' ' + fmt(interest) : ''}`, rev - wages - interest >= 0 ? 'good' : 'bad', 6000);
+  S.day++;
+  // Clima del nuevo día
+  S.weather = rnd() < 0.55 ? 'sun' : rnd() < 0.55 ? 'cloud' : 'rain';
+}
+function morningNews() {
+  const ev = wpick(EVENTS);
+  S.event = ev.id;
+  if (ev.weather) S.weather = ev.weather;
+  let text = ev[LANG];
+  if (ev.special && S.biz.length) {
+    const b = pick(S.biz);
+    if (ev.special === 'influencer') { b.rep = Math.min(100, b.rep + 15); text += ': ' + bizName(b) + ' (+15 ' + t('rep') + ')'; }
+    if (ev.special === 'inspect' && b.level < 3) { b.rep = Math.max(0, b.rep - 8); text += ': ' + bizName(b) + ' (-8 ' + t('rep') + ')'; }
+  }
+  setTicker(text);
+  toast('📰 ' + text, '', 6000);
+}
+function checkGoals() {
+  for (const g of GOALS) if (!S.goalsDone.includes(g.id) && g.test()) {
+    S.goalsDone.push(g.id); S.money += g.r;
+    toast(`🏆 ${g[LANG]}${g.r ? ' · ' + t('reward') + ' ' + fmt(g.r) : ''}`, 'good', 5000);
+    sfx('goal');
+    if (g.id === 'nw1m') banner(t('allGoals'), '🏆');
+  }
+  const next = GOALS.find(g => !S.goalsDone.includes(g.id));
+  setText($goal, next ? `<b>${t('goal')}</b> ${next[LANG]}` : t('allGoals'), true);
+}
+
+// =====================================================================
+//  VIDA DE LA CIUDAD: peatones, autos, pájaros, partículas
+// =====================================================================
+const SHIRTS = ['#e63946', '#f1a208', '#2a9d8f', '#457b9d', '#9b5de5', '#f15bb5', '#00bbf9', '#06d6a0', '#ef476f', '#ffd166', '#3a86ff', '#8ac926', '#ff924c'];
+const SKINS = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac', '#a0673b'];
+const HAIR = ['#2b1d14', '#5a3825', '#1b1b1b', '#c9a15a', '#8a3b12', '#d9d9d9'];
+const CAR_COLORS = ['#e63946', '#f4f1de', '#3a86ff', '#2b2d42', '#ffbe0b', '#8ecae6', '#06d6a0', '#bc4749', '#6c757d', '#fb8500'];
+const peds = [], cars = [], birds = [], parts = [], floats = [], boats = [];
+const P = { x: 0, y: 0, vx: 0, vy: 0, face: 1, anim: 0, moving: false };
+const cam = { x: 0, y: 0, z: 1 };
+let viewW = 0, viewH = 0;
+
+function newPed(node) {
+  const n = nodes[node];
+  return {
+    x: n.x + (rnd() - .5) * 8, y: n.y + (rnd() - .5) * 8, from: node, to: pick(n.n), sp: 28 + rnd() * 22,
+    shirt: pick(SHIRTS), skin: pick(SKINS), hair: pick(HAIR), pants: pick(['#2b2d42', '#3d405b', '#6b4f3a', '#1d3557']),
+    mode: 'walk', t: 0, ph: rnd() * 6, bub: null, bubT: 0, dog: rnd() < 0.08, umb: rnd() < 0.7 ? pick(SHIRTS) : null,
+    off: (rnd() - .5) * 12, tx: 0, ty: 0, after: null,
+  };
+}
+function liveRect(m) { return { x0: cam.x - m, y0: cam.y - m, x1: cam.x + viewW / cam.z + m, y1: cam.y + viewH / cam.z + m }; }
+function inRect(x, y, r) { return x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1; }
+function spawnPlace(margin) {
+  // Nodo cercano a la cámara pero fuera de la vista, para que nadie aparezca de la nada
+  const near = liveRect(margin), view = liveRect(20);
+  for (let i = 0; i < 30; i++) { const k = (rnd() * nodes.length) | 0, n = nodes[k]; if (inRect(n.x, n.y, near) && !inRect(n.x, n.y, view)) return k; }
+  return -1;
+}
+function crowdLevel() { const h = hour(); return (0.15 + 0.85 * curve('crowd', h)) * (S.weather === 'rain' ? 0.6 : 1) * (S.event === 'strike' ? 0.7 : 1); }
+function updatePeds(dt) {
+  const want = Math.round(14 + 34 * crowdLevel() * Math.min(1.4, (viewW * viewH) / (cam.z * cam.z) / 420000));
+  const far = liveRect(700);
+  for (let i = peds.length - 1; i >= 0; i--) if (!inRect(peds[i].x, peds[i].y, far) && peds[i].mode === 'walk') peds.splice(i, 1);
+  if (peds.length < want && rnd() < 0.3) { const k = spawnPlace(450); if (k >= 0) peds.push(newPed(k)); }
+  if (peds.length > want + 6) { const view = liveRect(30); const i = peds.findIndex(p => p.mode === 'walk' && !inRect(p.x, p.y, view)); if (i >= 0) peds.splice(i, 1); }
+  for (const p of peds) {
+    p.ph += dt * p.sp * 0.25;
+    if (p.bubT > 0) { p.bubT -= dt; if (p.bubT <= 0) p.bub = null; }
+    if (p.mode === 'walk') {
+      const n = nodes[p.to], ox = p.off, tx = n.x + ox, ty = n.y + ox;
+      const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+      // Evita al jugador
+      const pd = Math.hypot(P.x - p.x, P.y - p.y);
+      const slow = pd < 22 ? 0.2 : 1;
+      if (d < 3) { const prev = p.from; p.from = p.to; const opts = nodes[p.to].n.filter(k => k !== prev); p.to = opts.length ? pick(opts) : prev; }
+      else { p.x += dx / d * p.sp * slow * dt; p.y += dy / d * p.sp * slow * dt; p.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : -1) : p.dir; }
+      if (!p.bub && rnd() < dt * 0.012) say(p, chatLine(p));
+    } else if (p.mode === 'toDoor' || p.mode === 'exit') {
+      const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
+      if (d < 3) {
+        if (p.mode === 'toDoor') { p.mode = 'inside'; p.t = 1.5 + rnd() * 2.5; }
+        else p.mode = 'walk';
+      } else { p.x += dx / d * p.sp * 1.3 * dt; p.y += dy / d * p.sp * 1.3 * dt; }
+    } else if (p.mode === 'inside') {
+      p.t -= dt;
+      if (p.t <= 0) {
+        p.mode = 'exit'; const n = nodes[p.to]; p.tx = n.x + p.off; p.ty = n.y + p.off;
+        if (p.after) { say(p, p.after); p.after = null; }
+      }
+    }
+  }
+}
+function chatLine(p) {
+  const C = CHAT[LANG], h = hour();
+  if (Math.hypot(P.x - p.x, P.y - p.y) < 90 && S.biz.length >= 2 && rnd() < 0.6) return pick(C.boss);
+  if (S.weather === 'rain' && rnd() < 0.6) return pick(C.rain);
+  if ((h > 21 || h < 5) && rnd() < 0.6) return pick(C.night);
+  if (S.event === 'heat' && rnd() < 0.6) return pick(C.heat);
+  return pick(C.gen);
+}
+function say(p, text) {
+  let n = 0; for (const q of peds) if (q.bub) n++;
+  if (n >= 3) return;
+  p.bub = text; p.bubT = 3.2;
+}
+// Un cliente visible entra al local cuando hay venta cerca de la cámara
+function onSaleVisual(b, amt, byPlayer) {
+  const l = lotOf(b), view = liveRect(60);
+  if (!inRect(l.door.x, l.door.y, view)) return;
+  floatText(l.door.x + (rnd() - .5) * 20, l.door.y - 34, '+' + fmt(amt), byPlayer ? '#ffb627' : '#46d98a');
+  const C = CHAT[LANG], line = b.price === 2 && rnd() < .5 ? pick(C.pricey) : b.price === 0 && rnd() < .5 ? pick(C.cheap) : rnd() < .5 ? pick(C.good) : null;
+  if (byPlayer) {
+    // El cliente atendido sale caminando desde la puerta
+    const k = nearestNode(l.door.x, l.door.y), p = newPed(k);
+    p.x = l.door.x; p.y = l.door.y; p.mode = 'exit'; const n = nodes[p.to]; p.tx = n.x; p.ty = n.y;
+    if (line) say(p, line);
+    peds.push(p); return;
+  }
+  let best = null, bd = 260 * 260;
+  for (const p of peds) if (p.mode === 'walk') { const d = dist2(p.x, p.y, l.door.x, l.door.y); if (d < bd && clearLine(p.x, p.y, l.door.x, l.door.y)) { bd = d; best = p; } }
+  if (best) { best.mode = 'toDoor'; best.tx = l.door.x + (rnd() - .5) * 10; best.ty = l.door.y; best.after = line; }
+}
+function nearestNode(x, y) { let k = 0, bd = Infinity; for (let i = 0; i < nodes.length; i++) { const d = dist2(x, y, nodes[i].x, nodes[i].y); if (d < bd) { bd = d; k = i; } } return k; }
+function clearLine(x0, y0, x1, y1) { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 14); for (let i = 1; i < n; i++) if (isSolidPx(lerp(x0, x1, i / n), lerp(y0, y1, i / n))) return false; return true; }
+// Clientes "fantasma" de la competencia: la ciudad entera tiene movimiento
+function rivalLife(dt) {
+  const view = liveRect(40);
+  for (const l of lots) if (l.kind === 'rival' && inRect(l.door.x, l.door.y, view) && rnd() < dt * 0.06 * curve(TYPE[l.rival.type].prof, hour())) {
+    let best = null, bd = 220 * 220;
+    for (const p of peds) if (p.mode === 'walk') { const d = dist2(p.x, p.y, l.door.x, l.door.y); if (d < bd && clearLine(p.x, p.y, l.door.x, l.door.y)) { bd = d; best = p; } }
+    if (best) { best.mode = 'toDoor'; best.tx = l.door.x; best.ty = l.door.y; }
+  }
+}
+
+// ---------- Tráfico ----------
+// Carriles: tráfico por la derecha. Horizontal: este y=+1.5T, oeste y=+0.5T. Vertical: sur x=+0.5T, norte x=+1.5T.
+const DIRS = { E: [1, 0], W: [-1, 0], S: [0, 1], N: [0, -1] };
+const roadsIdx = []; for (let i = 0; i <= NB; i++) roadsIdx.push(i * BLK);
+function laneCoord(dir, r) { return r * T + (dir === 'E' ? 1.5 : dir === 'W' ? 0.5 : dir === 'S' ? 0.5 : 1.5) * T; }
+function newCar() {
+  const view = liveRect(30), near = liveRect(500);
+  for (let tries = 0; tries < 20; tries++) {
+    const dir = pick(['E', 'W', 'S', 'N']), r = pick(roadsIdx);
+    let x, y;
+    if (dir === 'E' || dir === 'W') { y = laneCoord(dir, r); x = near.x0 + rnd() * (near.x1 - near.x0); }
+    else { x = laneCoord(dir, r); y = near.y0 + rnd() * (near.y1 - near.y0); }
+    x = clamp(x, T, (CITY - 1) * T); y = clamp(y, T, (CITY - 1) * T);
+    if (inRect(x, y, view)) continue;
+    return { x, y, dir, sp: 0, max: 80 + rnd() * 50, col: pick(CAR_COLORS), lastI: -1, kind: rnd() < 0.08 ? 'bus' : rnd() < 0.1 ? 'taxi' : 'car', blink: 0 };
+  }
+  return null;
+}
+function turnOptions(dir) { return dir === 'E' || dir === 'W' ? ['N', 'S'] : ['E', 'W']; }
+function updateCars(dt) {
+  const night = darkness() > 0.3;
+  const want = Math.round((6 + 12 * crowdLevel()) * Math.min(1.5, (viewW * viewH) / (cam.z * cam.z) / 420000));
+  const far = liveRect(800);
+  for (let i = cars.length - 1; i >= 0; i--) if (!inRect(cars[i].x, cars[i].y, far)) cars.splice(i, 1);
+  if (cars.length < want && rnd() < 0.1) { const c = newCar(); if (c) cars.push(c); }
+  for (const c of cars) {
+    const [dx, dy] = DIRS[c.dir];
+    // Frena si hay un auto delante en el mismo carril, o el jugador
+    let target = c.max;
+    for (const o of cars) if (o !== c && o.dir === c.dir) {
+      const along = (o.x - c.x) * dx + (o.y - c.y) * dy, side = Math.abs((o.x - c.x) * dy - (o.y - c.y) * dx);
+      if (along > 0 && along < 46 && side < 10) target = Math.min(target, (along - 28) * 3);
+    }
+    { const along = (P.x - c.x) * dx + (P.y - c.y) * dy, side = Math.abs((P.x - c.x) * dy - (P.y - c.y) * dx);
+      if (along > 0 && along < 60 && side < 18) { target = 0; if (c.sp > 40 && rnd() < 0.02) sfx('honk'); } }
+    c.sp = lerp(c.sp, Math.max(0, target), Math.min(1, dt * 3));
+    const step = c.sp * dt, ox = c.x, oy = c.y;
+    c.x += dx * step; c.y += dy * step;
+    carTurn(c, ox, oy);
+    c.night = night;
+  }
+}
+// Intersecciones: al cruzar el carril perpendicular decide girar o seguir
+function carTurn(c, ox, oy) {
+    const along = c.dir === 'E' || c.dir === 'W';
+    for (const r of roadsIdx) for (const nd of turnOptions(c.dir)) {
+      const lc = laneCoord(nd, r), a = along ? ox : oy, b = along ? c.x : c.y;
+      if ((a - lc) * (b - lc) <= 0 && a !== b && c.lastI !== r * 10 + nd.charCodeAt(0)) {
+        c.lastI = r * 10 + nd.charCodeAt(0);
+        const ahead = (along ? c.x : c.y) + (c.dir === 'E' || c.dir === 'S' ? 1 : -1) * 2.5 * T;
+        const straightOk = ahead > T && ahead < (CITY - 1) * T;
+        const pos = along ? c.y : c.x;  // coordenada del carril actual
+        const turnOk = nd === 'N' || nd === 'W' ? pos > 2 * T : pos < (CITY - 2) * T;
+        if (turnOk && (!straightOk || rnd() < 0.22)) {
+          if (along) c.x = lc; else c.y = lc;
+          c.dir = nd; c.sp *= 0.6;
+          return;
+        }
+      }
+    }
+}
+// ---------- Pájaros, barcos, partículas ----------
+function initBirds() {
+  for (let i = 0; i < 26; i++) {
+    const inPark = i < 18;
+    const t0 = inPark ? pick(trees) : null;
+    birds.push({ x: inPark ? t0.x + (rnd() - .5) * 120 : (SAND0 + 1 + rnd() * 4) * T, y: inPark ? t0.y + (rnd() - .5) * 120 : rnd() * H * T, vx: 0, vy: 0, st: 'ground', t: rnd() * 5, gull: !inPark, z: 0 });
+  }
+  for (let i = 0; i < 4; i++) boats.push({ x: (WATER0 + 3 + rnd() * 12) * T, y: rnd() * H * T, sp: 10 + rnd() * 14, d: rnd() < .5 ? 1 : -1, c: pick(['#f4f1de', '#e63946', '#ffbe0b']) });
+}
+function updateBirds(dt) {
+  for (const b of birds) {
+    b.t += dt;
+    if (b.st === 'ground') {
+      if (Math.hypot(P.x - b.x, P.y - b.y) < 70 || (P.moving && Math.hypot(P.x - b.x, P.y - b.y) < 110 && rnd() < 0.05)) {
+        b.st = 'fly'; const a = Math.atan2(b.y - P.y, b.x - P.x) + (rnd() - .5); b.vx = Math.cos(a) * 150; b.vy = Math.sin(a) * 150; b.t = 0; if (rnd() < 0.3) sfx('flap');
+      } else if (rnd() < dt * 0.8) { b.x += (rnd() - .5) * 6; b.y += (rnd() - .5) * 6; }
+    } else {
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z = Math.min(30, b.z + dt * 50);
+      if (b.t > 3 + rnd() * 2) {
+        // Aterriza en un árbol/playa lejos del jugador
+        const tt = b.gull ? { x: (SAND0 + 1 + rnd() * 4) * T, y: clamp(b.y + (rnd() - .5) * 600, 50, H * T - 50) } : pick(trees);
+        b.x = tt.x + (rnd() - .5) * 80; b.y = tt.y + (rnd() - .5) * 80; b.st = 'ground'; b.z = 0;
+      }
+    }
+  }
+  for (const s of boats) { s.y += s.sp * s.d * dt; if (s.y < -80) s.y = H * T + 60; if (s.y > H * T + 80) s.y = -60; }
+}
+function spawnParticle(kind, x, y) {
+  if (parts.length > 260) return;
+  if (kind === 'coin') parts.push({ k: kind, x, y, vx: (rnd() - .5) * 120, vy: -120 - rnd() * 90, z: 0, l: 0.9 });
+  else if (kind === 'smoke') parts.push({ k: kind, x, y, vx: 8 + rnd() * 6, vy: -18 - rnd() * 8, l: 3.5, r: 5 });
+  else if (kind === 'drop') parts.push({ k: kind, x, y, vx: (rnd() - .5) * 40, vy: -70 - rnd() * 30, l: 0.9 });
+  else if (kind === 'splash') parts.push({ k: kind, x, y, l: 0.35 });
+  else if (kind === 'leaf') parts.push({ k: kind, x, y, vx: 15 + rnd() * 20, vy: 10 + rnd() * 10, l: 4, a: rnd() * 6 });
+}
+function updateParticles(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.l -= dt;
+    if (p.l <= 0) { parts.splice(i, 1); continue; }
+    if (p.k === 'coin' || p.k === 'drop') { p.vy += 380 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+    else if (p.k === 'smoke') { p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 4; }
+    else if (p.k === 'leaf') { p.x += p.vx * dt + Math.sin(p.l * 3) * 0.5; p.y += p.vy * dt; p.a += dt * 2; }
+  }
+  for (let i = floats.length - 1; i >= 0; i--) { const f = floats[i]; f.l -= dt; f.y -= 26 * dt; if (f.l <= 0) floats.splice(i, 1); }
+}
+function floatText(x, y, s, c, sc = 1) { if (floats.length < 30) floats.push({ x, y, s, c, l: 1.3, sc }); }
+
+// ---------- Tiempo y luz ----------
+function darkness() {
+  const h = hour();
+  if (h >= 7.5 && h <= 18.5) return 0;
+  if (h > 18.5 && h < 21) return (h - 18.5) / 2.5;
+  if (h >= 5 && h < 7.5) return 1 - (h - 5) / 2.5;
+  return 1;
+}
+function dusk() { const h = hour(); const a = Math.max(0, 1 - Math.abs(h - 19) / 1.5), b = Math.max(0, 1 - Math.abs(h - 6.5) / 1.2); return Math.max(a, b * 0.7); }
+let rainK = 0, cloudK = 0;
+
+// =====================================================================
+//  JUGADOR
+// =====================================================================
+const input = { x: 0, y: 0, keys: new Set(), jx: 0, jy: 0 };
+function updatePlayer(dt) {
+  let ix = input.jx, iy = input.jy;
+  const k = input.keys;
+  if (k.has('ArrowLeft') || k.has('KeyA')) ix -= 1;
+  if (k.has('ArrowRight') || k.has('KeyD')) ix += 1;
+  if (k.has('ArrowUp') || k.has('KeyW')) iy -= 1;
+  if (k.has('ArrowDown') || k.has('KeyS')) iy += 1;
+  const m = Math.hypot(ix, iy); if (m > 1) { ix /= m; iy /= m; }
+  const sp = VEHICLES.find(v => v.id === S.vehicle).speed;
+  const accel = S.vehicle === 'car' ? 4 : 10;
+  P.vx = lerp(P.vx, ix * sp, Math.min(1, dt * accel)); P.vy = lerp(P.vy, iy * sp, Math.min(1, dt * accel));
+  P.moving = Math.hypot(P.vx, P.vy) > 12;
+  if (Math.abs(P.vx) > 5) P.face = P.vx > 0 ? 1 : -1;
+  if (P.moving) P.ang = Math.atan2(P.vy, P.vx);
+  const r = S.vehicle === 'car' ? 11 : 7;
+  // Colisión separada por ejes contra el mapa de tiles (deslizarse por paredes)
+  const nx = P.x + P.vx * dt;
+  if (!hitBox(nx, P.y, r)) P.x = nx; else P.vx = 0;
+  const ny = P.y + P.vy * dt;
+  if (!hitBox(P.x, ny, r)) P.y = ny; else P.vy = 0;
+  P.anim += dt * Math.hypot(P.vx, P.vy) * 0.08;
+  S.player.x = P.x; S.player.y = P.y;
+}
+function hitBox(x, y, r) { return isSolidPx(x - r, y - r) || isSolidPx(x + r, y - r) || isSolidPx(x - r, y + r) || isSolidPx(x + r, y + r); }
+
+// Contexto: qué hay frente al jugador
+let ctxLot = null;
+function findContext() {
+  let best = null, bd = 64 * 64;
+  for (const l of lots) {
+    if (l.kind === 'deco') continue;
+    const d = dist2(P.x, P.y, l.door.x, l.door.y);
+    if (l.kind === 'sale') { const cx = l.x + l.w / 2, cy = l.y + l.h / 2; const d2 = dist2(P.x, P.y, cx, cy); if (d2 < 80 * 80 && d2 < bd) { bd = d2; best = l; } }
+    if (d < bd) { bd = d; best = l; }
+  }
+  ctxLot = best;
+}
+let lastDistrict = '';
+function districtCheck() {
+  const d = districtAt(P.x, P.y);
+  if (d !== lastDistrict) { if (lastDistrict) banner(t(d), t('district')); lastDistrict = d; setText($place, '📍 ' + t(d)); }
+}
+
+// =====================================================================
+//  RENDER
+// =====================================================================
+const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+const lightCv = document.createElement('canvas'), lctx = lightCv.getContext('2d');
+let DPR = 1, now = 0;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  viewW = window.innerWidth; viewH = window.innerHeight;
+  cv.width = Math.round(viewW * DPR); cv.height = Math.round(viewH * DPR);
+  lightCv.width = Math.ceil(viewW / 2); lightCv.height = Math.ceil(viewH / 2);
+  cam.z = clamp(Math.min(viewW, viewH) / 430, 0.78, 1.35) * (S && S.vehicle === 'car' ? 0.9 : 1);
+}
+const GROUND = { [TL.GRASS]: '#79b35d', [TL.LOT]: '#a99068', [TL.SAND]: '#ecd8a2', [TL.PLAZA]: '#d9ccb2', [TL.WALK]: '#c4bcae' };
+function drawGround(x0, y0, x1, y1) {
+  const t0 = now;
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+    if (tx < 0 || ty < 0 || tx >= W || ty >= H) { ctx.fillStyle = (tx + ty) % 2 ? '#6da552' : '#689f4e'; ctx.fillRect(tx * T, ty * T, T + 0.5, T + 0.5); continue; }
+    const k = tiles[ty * W + tx], px = tx * T, py = ty * T;
+    if (k === TL.ROAD) {
+      ctx.fillStyle = '#3d424d'; ctx.fillRect(px, py, T + 0.5, T + 0.5);
+      const rx = isRoadI(tx), ry = isRoadI(ty);
+      ctx.fillStyle = '#e8c547';
+      if (ry && !rx && ty % BLK === 0) for (let i = 0; i < 2; i++) ctx.fillRect(px + 4 + i * 16, py + T - 1, 9, 2);
+      if (rx && !ry && tx % BLK === 0) for (let i = 0; i < 2; i++) ctx.fillRect(px + T - 1, py + 4 + i * 16, 2, 9);
+      // Cebras peatonales junto a intersecciones
+      ctx.fillStyle = 'rgba(240,240,240,.75)';
+      if (ry && !rx && (tx % BLK === 2 || tx % BLK === 11)) for (let i = 0; i < 4; i++) ctx.fillRect(px + 6, py + 2 + i * 8, 20, 4);
+      if (rx && !ry && (ty % BLK === 2 || ty % BLK === 11)) for (let i = 0; i < 4; i++) ctx.fillRect(px + 2 + i * 8, py + 6, 4, 20);
+    } else if (k === TL.WATER) {
+      const shore = tx === WATER0;
+      ctx.fillStyle = shore ? '#46a8d8' : (tx - WATER0 > 6 ? '#1f6fa8' : '#2b88c2'); ctx.fillRect(px, py, T + 0.5, T + 0.5);
+      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      const w = Math.sin(t0 * 1.6 + ty * 0.7 + tx * 1.3) * 6;
+      ctx.fillRect(px + 8 + w, py + 10 + (tx % 3) * 6, 12, 2);
+      if (shore) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(px - 2 + Math.sin(t0 * 1.2 + ty) * 4, py, 5, T); }
+    } else {
+      ctx.fillStyle = GROUND[k]; ctx.fillRect(px, py, T + 0.5, T + 0.5);
+      if (k === TL.WALK) { ctx.fillStyle = 'rgba(0,0,0,.07)'; ctx.fillRect(px, py, T, 1); ctx.fillRect(px, py, 1, T); }
+      else if (k === TL.PLAZA) { ctx.fillStyle = (tx + ty) % 2 ? 'rgba(160,120,80,.12)' : 'rgba(255,255,255,.08)'; ctx.fillRect(px, py, T, T); }
+      else if (k === TL.GRASS) { if ((tx * 7 + ty * 13) % 5 === 0) { ctx.fillStyle = 'rgba(40,90,30,.25)'; ctx.fillRect(px + 9, py + 12, 3, 5); ctx.fillRect(px + 20, py + 6, 3, 4); } }
+      else if (k === TL.SAND && (tx * 3 + ty * 5) % 7 === 0) { ctx.fillStyle = 'rgba(160,120,60,.25)'; ctx.fillRect(px + 10, py + 14, 3, 3); }
+    }
+  }
+}
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+const windowsLit = [];
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255;
+  r = clamp(Math.round(r * k), 0, 255); g = clamp(Math.round(g * k), 0, 255); b = clamp(Math.round(b * k), 0, 255);
+  return `rgb(${r},${g},${b})`;
+}
+function decoOf(l) {
+  if (l._deco) return l._deco;
+  const R = mulberry(l.id * 977 + 3), r = R();
+  const st = { res: r < .65 ? 'house' : 'apt', centro: r < .6 ? 'office' : 'apt', tech: r < .7 ? 'glass' : 'office', ind: r < .55 ? 'factory' : 'warehouse', playa: r < .6 ? 'beachhouse' : 'apt' }[l.district];
+  const pal = { house: ['#c65d4b', '#5d7fa3', '#8a6bb0', '#d08b3a', '#4e8f6b'], apt: ['#b9a58f', '#9a8f86', '#c9b79c'], office: ['#7d8ba3', '#94a3b8', '#6b7a90'], glass: ['#5fa8d3', '#4c90c0', '#77b9de'], factory: ['#8a8f99', '#7b7f87'], warehouse: ['#a07d5c', '#8f8070'], beachhouse: ['#f2c6a0', '#9fd8cb', '#f7d6e0', '#fff1c1'] }[st];
+  const hgt = { house: 14, apt: 34, office: 52, glass: 46, factory: 24, warehouse: 18, beachhouse: 14 }[st];
+  l._deco = { st, col: pal[(R() * pal.length) | 0], h: hgt + (R() * 10 | 0), tree: st === 'house' || st === 'beachhouse', seed: R() };
+  if (l._deco.tree && !l._treeAdded) { l._treeAdded = true; trees.push({ x: l.x + (l.lx ? 14 : l.w - 14), y: l.y + (l.ly ? l.h - 14 : 14), r: 11, s: R() * 6 }); }
+  return l._deco;
+}
+// Un edificio: sombra, fachada (cara sur) y techo levantado h píxeles
+function drawBuilding(x, y, w, d, h, roof, wall, opts = {}) {
+  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(x + 6, y + 6, w, d);
+  ctx.fillStyle = wall; ctx.fillRect(x, y + d - h, w, h);
+  ctx.fillStyle = roof; ctx.fillRect(x, y - h, w, d);
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x, y - h, w, 3);
+  ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(x, y - h + d - 3, w, 3);
+  // Ventanas en la fachada
+  if (opts.win) {
+    const rows = Math.max(1, Math.floor((h - 6) / 13)), cols = Math.floor((w - 8) / 14);
+    const dark = darkness();
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const wx = x + 6 + c * 14, wy = y + d - h + 5 + r * 13;
+      const lit = dark > 0.25 && ((c * 7 + r * 3 + (opts.seed * 100 | 0)) % 5) < 3;
+      ctx.fillStyle = lit ? '#ffd97a' : opts.win;
+      ctx.fillRect(wx, wy, 8, 7);
+      if (lit) windowsLit.push(wx, wy);
+    }
+  }
+}
+function drawLot(l) {
+  if (l.kind === 'sale') {
+    ctx.fillStyle = 'rgba(80,60,30,.25)'; ctx.fillRect(l.x + 6, l.y + 6, l.w - 12, l.h - 12);
+    // Letrero de venta
+    const sx = l.x + l.w / 2, sy = l.y + l.h / 2;
+    ctx.fillStyle = '#5b4632'; ctx.fillRect(sx - 2, sy - 6, 4, 22);
+    ctx.fillStyle = '#2fbf71'; rr(ctx, sx - 30, sy - 26, 60, 24, 5); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '700 10px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(t('forSale').toUpperCase(), sx, sy - 16);
+    ctx.font = '600 9px system-ui, sans-serif'; ctx.fillText(LAND[l.district] === 1 ? '×1.0' : '×' + LAND[l.district].toFixed(2), sx, sy - 6);
+    return;
+  }
+  const b = bizAtLot(l.id);
+  if (b || l.kind === 'rival') {
+    const type = TYPE[b ? b.type : l.rival.type], lvl = b ? b.level : l.rival.level;
+    const w = l.w - (lvl < 2 ? 36 : lvl < 4 ? 18 : 4), d = l.h - (lvl < 2 ? 36 : lvl < 4 ? 18 : 4);
+    const x = l.x + (l.w - w) / 2, y = l.y + (l.h - d) / 2 + (l.door.side === 's' ? (l.h - d) / 2 : 0);
+    const hgt = 14 + lvl * 7;
+    drawBuilding(x, y, w, d, hgt, type.roof, shade(type.roof, 0.62), { win: '#2a3346', seed: l.seed });
+    // Toldo rayado del lado de la puerta
+    const ay = l.door.side === 's' ? y + d - 2 : y - hgt - 8;
+    for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#fff' : (b ? '#f04e23' : type.roof); ctx.fillRect(x + w / 2 - 24 + i * 6, ay, 6, 10); }
+    // Letrero
+    ctx.font = '22px system-ui, "Apple Color Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(15,26,46,.75)'; ctx.beginPath(); ctx.arc(x + w / 2, y - hgt + d / 2, 17, 0, 7); ctx.fill();
+    ctx.fillText(type.em, x + w / 2, y - hgt + d / 2 + 1);
+    ctx.textBaseline = 'alphabetic';
+    if (b) {
+      // Estrella de propiedad + estado
+      ctx.fillStyle = '#f04e23'; ctx.beginPath(); ctx.arc(x + w - 6, y - hgt + 6, 7, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '700 9px system-ui'; ctx.fillText(b.level, x + w - 6, y - hgt + 9);
+      const open = b.staff > 0 || playerNearDoor(l);
+      if (!open || (!b.manager && b.cash >= regCap(b))) {
+        const txt = !open ? t('closed') : t('fullReg');
+        ctx.font = '800 9px system-ui'; const tw = ctx.measureText(txt).width + 10;
+        ctx.fillStyle = !open ? '#2b2d42' : '#ff6b5b'; rr(ctx, x + w / 2 - tw / 2, y - hgt - 26, tw, 14, 4); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillText(txt, x + w / 2, y - hgt - 16);
+      } else if (b.cash > 0 && !b.manager) {
+        // Bolsa de dinero que rebota: invita a venir a cobrar
+        const bob = Math.sin(now * 4 + l.id) * 3;
+        ctx.font = '16px system-ui, "Apple Color Emoji"'; ctx.fillText('💰', x + w / 2, y - hgt - 14 + bob);
+      }
+    }
+    return;
+  }
+  const dc = decoOf(l);
+  const inset = dc.st === 'house' || dc.st === 'beachhouse' ? 26 : 8;
+  const x = l.x + inset / 2 + (dc.tree ? (l.lx ? 10 : -10) : 0), y = l.y + inset / 2, w = l.w - inset, d = l.h - inset;
+  if (dc.st === 'house' || dc.st === 'beachhouse') {
+    ctx.fillStyle = dc.st === 'house' ? '#86bf68' : '#f0dcae'; ctx.fillRect(l.x, l.y, l.w, l.h);
+  }
+  const roof = dc.st === 'glass' ? '#9ccbe6' : dc.st === 'house' ? dc.col : shade(dc.col, 1.1);
+  drawBuilding(x, y, w, d, dc.h, roof, shade(dc.col, 0.7), { win: dc.st === 'glass' ? '#2e5d80' : '#3a4256', seed: dc.seed });
+  if (dc.st === 'house' || dc.st === 'beachhouse') { ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x + w / 2 - 1, y - dc.h, 2, d); }
+  if (dc.st === 'factory') {
+    const cx = x + w - 16, cy = y - dc.h - 14;
+    ctx.fillStyle = '#5a5e66'; ctx.fillRect(cx, cy, 10, 18);
+    if (rnd() < 0.08) spawnParticle('smoke', cx + 5, cy);
+  }
+  if (dc.st === 'office' || dc.st === 'apt') { ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x + 10, y - dc.h + 10, 14, 10); ctx.fillRect(x + w - 30, y - dc.h + d - 26, 18, 12); }
+  if (dc.st === 'glass') { ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(x + 6, y - dc.h + 6, w * 0.35, 4); }
+}
+function drawTree(tr) {
+  const sw = Math.sin(now * 1.3 + tr.s) * 1.5 * (rainK > 0.3 ? 2.2 : 1);
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(tr.x + 5, tr.y + 5, tr.r, tr.r * 0.7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#6b4a2b'; ctx.fillRect(tr.x - 2, tr.y - 4, 4, 8);
+  ctx.fillStyle = '#3f8a3a'; ctx.beginPath(); ctx.arc(tr.x + sw, tr.y - 10, tr.r, 0, 7); ctx.fill();
+  ctx.fillStyle = '#58a84a'; ctx.beginPath(); ctx.arc(tr.x + sw - tr.r * .3, tr.y - 10 - tr.r * .3, tr.r * .6, 0, 7); ctx.fill();
+}
+function drawPerson(x, y, shirt, skin, hair, pants, ph, moving, scale = 1, umb = null) {
+  const bob = moving ? Math.abs(Math.sin(ph)) * 1.6 : 0, leg = moving ? Math.sin(ph) * 2.5 : 0;
+  ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 1, 6, 3, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = pants; ctx.fillRect(-3, -6, 2.5, 6 + leg * .4); ctx.fillRect(0.5, -6, 2.5, 6 - leg * .4);
+  ctx.fillStyle = shirt; rr(ctx, -4.5, -14 - bob, 9, 9, 3); ctx.fill();
+  ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0, -17.5 - bob, 4, 0, 7); ctx.fill();
+  ctx.fillStyle = hair; ctx.beginPath(); ctx.arc(0, -18.5 - bob, 4, Math.PI, 0); ctx.fill();
+  if (umb && rainK > 0.35) { ctx.fillStyle = umb; ctx.beginPath(); ctx.arc(0, -22 - bob, 10, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#333'; ctx.fillRect(-.5, -22 - bob, 1, 6); }
+  ctx.restore();
+}
+function drawPlayer() {
+  const x = P.x, y = P.y;
+  // Anillo de jugador
+  ctx.strokeStyle = 'rgba(255,182,39,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + 1, 12, 6, 0, 0, 7); ctx.stroke();
+  if (S.vehicle === 'car') {
+    ctx.save(); ctx.translate(x, y - 2); ctx.rotate(P.ang || 0);
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; rr(ctx, -15, -7, 32, 18, 5); ctx.fill();
+    ctx.fillStyle = '#f04e23'; rr(ctx, -16, -9, 32, 18, 5); ctx.fill();
+    ctx.fillStyle = '#ffd2c2'; rr(ctx, -6, -7, 14, 14, 3); ctx.fill();
+    ctx.fillStyle = '#1b2a44'; ctx.fillRect(6, -7, 4, 14);
+    ctx.restore(); return;
+  }
+  if (S.vehicle === 'bike' || S.vehicle === 'scooter') {
+    ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = 2;
+    const f = P.face;
+    ctx.beginPath(); ctx.arc(x - 8, y - 3, 4.5, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(x + 8, y - 3, 4.5, 0, 7); ctx.stroke();
+    ctx.strokeStyle = S.vehicle === 'bike' ? '#2fb7b0' : '#e63946'; ctx.lineWidth = S.vehicle === 'bike' ? 2 : 5;
+    ctx.beginPath(); ctx.moveTo(x - 8, y - 3); ctx.lineTo(x + 8 * f, y - 9); ctx.lineTo(x + 8, y - 3); ctx.stroke();
+  }
+  drawPerson(x, y - (S.vehicle === 'walk' ? 0 : 6), '#f04e23', '#e0ac69', '#2b1d14', '#1d3557', P.anim, P.moving && S.vehicle === 'walk', 1.25);
+  // Gorra
+  ctx.fillStyle = '#ffb627'; ctx.beginPath(); ctx.arc(x, y - 23 * 1.25 + 3 - (S.vehicle === 'walk' ? 0 : 6), 5, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x + (P.face > 0 ? 1 : -8), y - 24 - (S.vehicle === 'walk' ? 0 : 6), 7, 2);
+}
+function drawCar(c) {
+  ctx.save(); ctx.translate(c.x, c.y);
+  const a = { E: 0, S: Math.PI / 2, W: Math.PI, N: -Math.PI / 2 }[c.dir]; ctx.rotate(a);
+  const L = c.kind === 'bus' ? 44 : 28, Wd = c.kind === 'bus' ? 16 : 14;
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; rr(ctx, -L / 2 + 3, -Wd / 2 + 3, L, Wd, 4); ctx.fill();
+  ctx.fillStyle = c.kind === 'taxi' ? '#ffcc00' : c.kind === 'bus' ? '#2a9d8f' : c.col; rr(ctx, -L / 2, -Wd / 2, L, Wd, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(20,30,50,.75)'; ctx.fillRect(L / 2 - 10, -Wd / 2 + 2, 5, Wd - 4);
+  if (c.kind !== 'bus') { ctx.fillStyle = 'rgba(255,255,255,.25)'; rr(ctx, -6, -Wd / 2 + 2, 9, Wd - 4, 2); ctx.fill(); }
+  else { ctx.fillStyle = 'rgba(200,240,255,.6)'; for (let i = 0; i < 4; i++) ctx.fillRect(-L / 2 + 4 + i * 8, -Wd / 2 + 1, 5, 2); }
+  if (c.kind === 'taxi') { ctx.fillStyle = '#222'; ctx.fillRect(-2, -3, 4, 6); }
+  if (c.sp < 15) { ctx.fillStyle = '#ff3b3b'; ctx.fillRect(-L / 2, -Wd / 2 + 1, 2, 3); ctx.fillRect(-L / 2, Wd / 2 - 4, 2, 3); }
+  ctx.restore();
+}
+function drawBubble(x, y, text) {
+  ctx.font = '600 11px system-ui, sans-serif'; ctx.textAlign = 'center';
+  const w = Math.min(150, ctx.measureText(text).width + 14);
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; rr(ctx, x - w / 2, y - 22, w, 18, 8); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x, y + 2); ctx.lineTo(x + 4, y - 4); ctx.fill();
+  ctx.fillStyle = '#1b2333'; ctx.fillText(text, x, y - 9);
+}
+function render() {
+  const z = cam.z;
+  ctx.setTransform(DPR * z, 0, 0, DPR * z, -cam.x * DPR * z, -cam.y * DPR * z);
+  windowsLit.length = 0;
+  const x0 = Math.floor(cam.x / T) - 1, y0 = Math.floor(cam.y / T) - 1, x1 = Math.ceil((cam.x + viewW / z) / T) + 1, y1 = Math.ceil((cam.y + viewH / z) / T) + 3;
+  drawGround(x0, y0, x1, y1);
+  const view = liveRect(140);
+  // Fuente de la plaza
+  if (inRect(FOUNTAIN.x, FOUNTAIN.y, view)) {
+    ctx.fillStyle = '#b8a98d'; ctx.beginPath(); ctx.arc(FOUNTAIN.x, FOUNTAIN.y, 30, 0, 7); ctx.fill();
+    ctx.fillStyle = '#4aa8d8'; ctx.beginPath(); ctx.arc(FOUNTAIN.x, FOUNTAIN.y, 24, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(FOUNTAIN.x, FOUNTAIN.y, 10 + Math.sin(now * 3) * 3, 0, 7); ctx.fill();
+    if (rnd() < 0.6) spawnParticle('drop', FOUNTAIN.x + (rnd() - .5) * 6, FOUNTAIN.y - 8);
+  }
+  for (const b of benches) if (inRect(b.x, b.y, view)) { ctx.fillStyle = '#7a5434'; ctx.fillRect(b.x - 14, b.y - 4, 28, 7); ctx.fillStyle = '#5b3e26'; ctx.fillRect(b.x - 14, b.y - 7, 28, 3); }
+  // Fila de clientes en tus negocios
+  // Lista de dibujo ordenada por profundidad (y)
+  const list = [];
+  for (const l of lots) if (inRect(l.x + l.w / 2, l.y + l.h / 2, liveRect(200))) list.push({ y: l.y + l.h, f: 0, o: l });
+  for (const tr of trees) if (inRect(tr.x, tr.y, view)) list.push({ y: tr.y, f: 1, o: tr });
+  for (const p of peds) if (p.mode !== 'inside' && inRect(p.x, p.y, view)) list.push({ y: p.y, f: 2, o: p });
+  for (const c of cars) if (inRect(c.x, c.y, view)) list.push({ y: c.y + 6, f: 3, o: c });
+  for (const b of S.biz) if (b.queue.length) { const l = lotOf(b); b.queue.forEach((q, i) => { const qx = l.door.x + 18 + i * 13, qy = l.door.y + (l.door.side === 'n' ? -2 : 4); if (inRect(qx, qy, view)) list.push({ y: qy, f: 5, o: { x: qx, y: qy, q } }); }); }
+  list.push({ y: P.y, f: 4, o: P });
+  list.sort((a, b) => a.y - b.y);
+  for (const e of list) {
+    if (e.f === 0) drawLot(e.o);
+    else if (e.f === 1) drawTree(e.o);
+    else if (e.f === 2) { const p = e.o; drawPerson(p.x, p.y, p.shirt, p.skin, p.hair, p.pants, p.ph, true, 1, p.umb); if (p.dog) { ctx.fillStyle = '#8a5a3c'; rr(ctx, p.x + 8, p.y - 5, 9, 5, 2); ctx.fill(); ctx.fillRect(p.x + 15, p.y - 8, 4, 4); } }
+    else if (e.f === 3) drawCar(e.o);
+    else if (e.f === 4) drawPlayer();
+    else if (e.f === 5) { const o = e.o; drawPerson(o.x, o.y, o.q.c, o.q.s, '#2b1d14', '#2b2d42', now * 2 + o.x, false, 1); ctx.fillStyle = o.q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(o.x - 5, o.y - 29, 10 * (o.q.p / PATIENCE), 2); }
+  }
+  // Barcos y pájaros
+  for (const s of boats) if (inRect(s.x, s.y, view)) { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(s.x + 4, s.y + 4, 9, 20, 0, 0, 7); ctx.fill(); ctx.fillStyle = s.c; ctx.beginPath(); ctx.ellipse(s.x, s.y, 8, 19, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(s.x - 1, s.y - s.d * 26, 2, 8); }
+  for (const b of birds) if (inRect(b.x, b.y, view)) {
+    const flap = b.st === 'fly' ? Math.sin(now * 20 + b.x) * 4 : 0;
+    if (b.z > 0) { ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = b.gull ? '#f6f6f6' : '#5d6470'; ctx.lineWidth = 2; ctx.beginPath();
+    if (b.st === 'fly') { ctx.moveTo(b.x - 6, b.y - b.z - flap); ctx.lineTo(b.x, b.y - b.z); ctx.lineTo(b.x + 6, b.y - b.z - flap); ctx.stroke(); }
+    else { ctx.fillStyle = b.gull ? '#f6f6f6' : '#6c7380'; ctx.beginPath(); ctx.arc(b.x + Math.sin(b.t * 3) * .5, b.y - 2, 2.6, 0, 7); ctx.fill(); }
+  }
+  // Partículas
+  for (const p of parts) {
+    if (p.k === 'coin') { ctx.fillStyle = '#ffcf3f'; ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, 7); ctx.fill(); }
+    else if (p.k === 'smoke') { ctx.fillStyle = `rgba(200,200,205,${p.l / 7})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+    else if (p.k === 'drop') { ctx.fillStyle = 'rgba(200,235,255,.8)'; ctx.fillRect(p.x, p.y, 2, 2); }
+    else if (p.k === 'splash') { ctx.strokeStyle = `rgba(220,235,255,${p.l * 2})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5 - p.l * 8, 2, 0, 0, 7); ctx.stroke(); }
+    else if (p.k === 'leaf') { ctx.fillStyle = '#7fbf5a'; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillRect(-2, -1, 4, 2); ctx.restore(); }
+  }
+  // Sombras de nubes (cielo nublado)
+  if (cloudK > 0.02) {
+    ctx.fillStyle = `rgba(20,30,50,${0.13 * cloudK})`;
+    for (let i = 0; i < 6; i++) { const cx = ((i * 811 + now * 14) % (W * T + 600)) - 300, cy = (i * 1297) % (H * T); if (inRect(cx, cy, liveRect(400))) { ctx.beginPath(); ctx.ellipse(cx, cy, 240, 120, 0.3, 0, 7); ctx.fill(); } }
+  }
+  // Etiqueta del lugar cercano
+  if (ctxLot) {
+    const l = ctxLot, b = bizAtLot(l.id);
+    const label = l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
+    ctx.font = '700 12px system-ui, sans-serif'; ctx.textAlign = 'center';
+    const w = ctx.measureText(label).width + 16, lx = l.door.x, ly = (l.kind === 'sale' ? l.y + l.h / 2 + 34 : l.door.y + (l.door.side === 'n' ? -48 : 30));
+    ctx.fillStyle = 'rgba(15,26,46,.88)'; rr(ctx, lx - w / 2, ly - 14, w, 20, 8); ctx.fill();
+    ctx.fillStyle = '#f3efe4'; ctx.fillText(label, lx, ly);
+  }
+  for (const p of peds) if (p.bub && p.mode !== 'inside' && inRect(p.x, p.y, view)) drawBubble(p.x, p.y - 26, p.bub);
+  // Noche: oscuridad con huecos de luz
+  const dark = darkness(), dk = dusk();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (dk > 0.01) { ctx.fillStyle = `rgba(255,120,50,${0.13 * dk})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (rainK > 0.02) { ctx.fillStyle = `rgba(40,60,90,${0.18 * rainK})`; ctx.fillRect(0, 0, cv.width, cv.height); }
+  if (dark > 0.01) drawNight(dark);
+  // Lluvia en pantalla
+  if (rainK > 0.02) {
+    ctx.strokeStyle = 'rgba(200,220,255,.45)'; ctx.lineWidth = 1 * DPR; ctx.beginPath();
+    const n = Math.round(120 * rainK);
+    for (let i = 0; i < n; i++) { const rx = ((i * 97.3 + now * 260 * (1 + (i % 3) * .2)) % (viewW + 40)) - 20, ry = ((i * 61.7 + now * 900) % (viewH + 40)) - 20; ctx.moveTo(rx * DPR, ry * DPR); ctx.lineTo((rx - 4) * DPR, (ry + 14) * DPR); }
+    ctx.stroke();
+  }
+  // Textos flotantes y flecha de destino
+  ctx.setTransform(DPR * z, 0, 0, DPR * z, -cam.x * DPR * z, -cam.y * DPR * z);
+  for (const f of floats) { ctx.globalAlpha = Math.min(1, f.l * 1.5); ctx.font = `800 ${Math.round(13 * f.sc)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,15,25,.75)'; ctx.strokeText(f.s, f.x, f.y); ctx.fillStyle = f.c; ctx.fillText(f.s, f.x, f.y); }
+  ctx.globalAlpha = 1;
+  if (waypoint) drawWaypoint();
+}
+function drawNight(dark) {
+  const lc = lctx, sc = 2 / cam.z;
+  lc.globalCompositeOperation = 'source-over';
+  lc.clearRect(0, 0, lightCv.width, lightCv.height);
+  lc.fillStyle = `rgba(8,14,40,${0.66 * dark})`; lc.fillRect(0, 0, lightCv.width, lightCv.height);
+  lc.globalCompositeOperation = 'destination-out';
+  const toS = (x, y) => [(x - cam.x) / sc, (y - cam.y) / sc];
+  const hole = (x, y, r, a = 1) => { const [sx, sy] = toS(x, y), rs = r / sc; if (sx < -rs || sy < -rs || sx > lightCv.width + rs || sy > lightCv.height + rs) return; const g = lc.createRadialGradient(sx, sy, 0, sx, sy, rs); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); lc.fillStyle = g; lc.fillRect(sx - rs, sy - rs, rs * 2, rs * 2); };
+  for (const l of lamps) hole(l.x, l.y, 80, 0.85);
+  for (const c of cars) { const [dx, dy] = DIRS[c.dir]; hole(c.x + dx * 40, c.y + dy * 40, 46, 0.8); }
+  for (const b of S.biz) if (b.staff > 0 || playerNearDoor(lotOf(b))) hole(lotOf(b).door.x, lotOf(b).door.y, 70, 0.9);
+  for (const l of lots) if (l.kind === 'rival') hole(l.door.x, l.door.y, 50, 0.6);
+  hole(P.x, P.y, 60, 0.7);
+  hole(FOUNTAIN.x, FOUNTAIN.y, 70, 0.6);
+  ctx.drawImage(lightCv, 0, 0, cv.width, cv.height);
+  // Elementos que brillan por encima de la oscuridad
+  ctx.setTransform(DPR * cam.z, 0, 0, DPR * cam.z, -cam.x * DPR * cam.z, -cam.y * DPR * cam.z);
+  ctx.fillStyle = `rgba(255,217,122,${0.75 * dark})`;
+  for (let i = 0; i < windowsLit.length; i += 2) ctx.fillRect(windowsLit[i], windowsLit[i + 1], 8, 7);
+  ctx.fillStyle = `rgba(255,230,150,${dark})`;
+  const view = liveRect(60);
+  for (const l of lamps) if (inRect(l.x, l.y, view)) { ctx.beginPath(); ctx.arc(l.x, l.y - 2, 3, 0, 7); ctx.fill(); }
+  ctx.fillStyle = `rgba(255,250,210,${dark})`;
+  for (const c of cars) if (inRect(c.x, c.y, view)) { const [dx, dy] = DIRS[c.dir], L = c.kind === 'bus' ? 22 : 14; ctx.fillRect(c.x + dx * L - 2 + dy * 4, c.y + dy * L - 2 + dx * 4, 3, 3); ctx.fillRect(c.x + dx * L - 2 - dy * 4, c.y + dy * L - 2 - dx * 4, 3, 3); }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+let waypoint = null;
+function drawWaypoint() {
+  const z = cam.z, cx = cam.x + viewW / z / 2, cy = cam.y + viewH / z / 2;
+  const dx = waypoint.x - P.x, dy = waypoint.y - P.y, d = Math.hypot(dx, dy);
+  if (d < 50) { waypoint = null; sfx('click'); return; }
+  // Marcador en el mundo
+  const bob = Math.sin(now * 4) * 4;
+  ctx.fillStyle = '#ffb627'; ctx.beginPath(); ctx.moveTo(waypoint.x, waypoint.y - 10 + bob); ctx.lineTo(waypoint.x - 9, waypoint.y - 26 + bob); ctx.lineTo(waypoint.x + 9, waypoint.y - 26 + bob); ctx.fill();
+  // Flecha alrededor del jugador
+  const a = Math.atan2(dy, dx), ax = P.x + Math.cos(a) * 40, ay = P.y - 10 + Math.sin(a) * 40;
+  ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+  ctx.fillStyle = '#ffb627'; ctx.strokeStyle = '#1b1300'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -8); ctx.lineTo(-2, 0); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  ctx.font = '800 11px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,15,25,.8)';
+  const m = Math.round(d / T * 5) + ' m'; ctx.strokeText(m, ax, ay + 20); ctx.fillStyle = '#ffe2a6'; ctx.fillText(m, ax, ay + 20);
+  void cx; void cy;
+}
+
+// ---------- Minimapa ----------
+const mm = document.getElementById('minimap'), mmc = mm.getContext('2d');
+const mapBase = document.createElement('canvas');
+function buildMapBase() {
+  mapBase.width = W * 2; mapBase.height = H * 2; const c = mapBase.getContext('2d');
+  const col = { [TL.ROAD]: '#4a5263', [TL.WALK]: '#8f8a80', [TL.GRASS]: '#5c9a48', [TL.LOT]: '#6e6656', [TL.SAND]: '#d9c38a', [TL.WATER]: '#2b78b0', [TL.PLAZA]: '#b6a88c' };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { c.fillStyle = col[tiles[y * W + x]]; c.fillRect(x * 2, y * 2, 2, 2); }
+  for (const l of lots) if (l.kind === 'deco') { c.fillStyle = '#9aa3b5'; c.fillRect(l.tx * 2 + 1, l.ty * 2 + 1, 6, 6); }
+}
+function drawMiniMap() {
+  const s = 224 / 60; // muestra ~60 tiles alrededor
+  mmc.setTransform(1, 0, 0, 1, 0, 0); mmc.fillStyle = '#0f1a2e'; mmc.fillRect(0, 0, 224, 224);
+  const ptx = P.x / T, pty = P.y / T;
+  mmc.setTransform(s / 2, 0, 0, s / 2, 112 - ptx * s, 112 - pty * s);
+  mmc.imageSmoothingEnabled = false; mmc.drawImage(mapBase, 0, 0);
+  mmc.setTransform(1, 0, 0, 1, 0, 0);
+  const toM = (x, y) => [112 + (x / T - ptx) * s, 112 + (y / T - pty) * s];
+  for (const l of lots) {
+    if (l.kind === 'deco') continue;
+    const [mx, my] = toM(l.x + l.w / 2, l.y + l.h / 2); if (mx < -10 || my < -10 || mx > 234 || my > 234) continue;
+    const b = bizAtLot(l.id);
+    mmc.fillStyle = b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
+    mmc.beginPath(); mmc.arc(mx, my, b ? 7 : 5, 0, 7); mmc.fill();
+    if (b && b.cash > 0 && !b.manager) { mmc.fillStyle = '#ffcf3f'; mmc.beginPath(); mmc.arc(mx + 6, my - 6, 4, 0, 7); mmc.fill(); }
+  }
+  if (waypoint) { const [wx, wy] = toM(waypoint.x, waypoint.y); mmc.fillStyle = '#ffb627'; mmc.fillRect(clamp(wx, 6, 218) - 5, clamp(wy, 6, 218) - 5, 10, 10); }
+  mmc.fillStyle = '#fff'; mmc.strokeStyle = '#1b1300'; mmc.lineWidth = 3;
+  mmc.beginPath(); mmc.arc(112, 112, 7, 0, 7); mmc.fill(); mmc.stroke();
+}
+
+// =====================================================================
+//  AUDIO (WebAudio sintetizado, sin archivos)
+// =====================================================================
+let AC = null;
+function audioInit() { if (AC) { if (AC.state === 'suspended') AC.resume(); return; } try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+function tone(f, d, type = 'square', v = 0.06, t0 = 0, slide = 0) {
+  if (!AC || !S || !S.sound) return;
+  const o = AC.createOscillator(), g = AC.createGain(), st = AC.currentTime + t0;
+  o.type = type; o.frequency.setValueAtTime(f, st); if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, st + d);
+  g.gain.setValueAtTime(v, st); g.gain.exponentialRampToValueAtTime(0.0001, st + d);
+  o.connect(g).connect(AC.destination); o.start(st); o.stop(st + d + 0.02);
+}
+let sfxCool = {};
+function sfx(k) {
+  const tnow = performance.now(); if (sfxCool[k] && tnow - sfxCool[k] < 60) return; sfxCool[k] = tnow;
+  if (k === 'coin') { tone(988, .08, 'square', .05); tone(1319, .25, 'square', .05, .07); }
+  else if (k === 'serve') tone(660 + rnd() * 80, .09, 'triangle', .08);
+  else if (k === 'buy') { [523, 659, 784, 1046].forEach((f, i) => tone(f, .14, 'triangle', .07, i * .08)); }
+  else if (k === 'goal') { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .2, 'square', .045, i * .1)); }
+  else if (k === 'click') tone(440, .05, 'triangle', .05);
+  else if (k === 'error') tone(180, .18, 'sawtooth', .05, 0, 0.7);
+  else if (k === 'honk') { tone(330, .12, 'sawtooth', .025); tone(415, .12, 'sawtooth', .02); }
+  else if (k === 'flap') tone(1200, .05, 'triangle', .015, 0, 2);
+  else if (k === 'chirp') { tone(2600, .05, 'sine', .015, 0, 1.3); tone(2900, .05, 'sine', .012, .07, 1.2); }
+}
+function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { } }
+
+// =====================================================================
+//  INTERFAZ (DOM)
+// =====================================================================
+const $ = id => document.getElementById(id);
+const $money = $('money'), $clock = $('clock'), $place = $('place'), $goal = $('goal'), $ui = $('ui');
+const $act = $('btnAct'), $alt = $('btnAlt');
+const textCache = new WeakMap();
+function setText(el, s, html) { if (textCache.get(el) === s) return; textCache.set(el, s); if (html) el.innerHTML = s; else el.textContent = s; }
+function applyStaticText() { document.querySelectorAll('[data-t]').forEach(e => e.textContent = t(e.dataset.t)); document.documentElement.lang = LANG; $('btnMap').setAttribute('aria-label', t('map')); $('btnPhone').setAttribute('aria-label', t('phone')); }
+function toast(msg, kind = '', ms = 3500) {
+  const box = $('toasts'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; box.prepend(el);
+  while (box.children.length > 3) box.lastChild.remove();
+  setTimeout(() => el.remove(), ms);
+}
+let bannerTimer = 0;
+function banner(text, sub) { const b = $('banner'); b.innerHTML = `<small>${esc(sub)}</small>${esc(text)}`; b.classList.add('on'); clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('on'), 2200); }
+function setTicker(text) { const items = [text, ...FLAVOR[LANG].slice().sort(() => rnd() - .5).slice(0, 3)]; $('tickerTrack').textContent = items.join('   •   '); }
+function updateHUD() {
+  setText($money, fmt(S.money)); $money.classList.toggle('neg', S.money < 0);
+  const h = Math.floor(hour()), m = Math.floor(S.min % 60 / 10) * 10;
+  const wIco = { sun: darkness() > .5 ? '🌙' : '☀️', cloud: '☁️', rain: '🌧️' }[S.weather];
+  setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}`);
+  // Botones de acción contextual
+  let main = null, alt = null;
+  if (ctxLot) {
+    const l = ctxLot, b = bizAtLot(l.id);
+    if (l.kind === 'sale') main = { k: 'buy', label: t('buy'), ico: '🏗️' };
+    else if (b) {
+      // En tu negocio el botón grande siempre es Atender: así un toque de más nunca abre el menú
+      main = { k: 'serve', label: `${t('serve')} (${b.queue.length})`, ico: '🛎️', dim: !b.queue.length };
+      alt = { k: 'manage', label: t('manage') };
+    } else if (l.kind === 'rival') main = { k: 'rival', label: t('offer'), ico: '🤝' };
+  }
+  setBtn($act, main); setBtn($alt, alt);
+  $act.classList.toggle('serve', !!main && main.k === 'serve');
+  $act.classList.toggle('dim', !!main && !!main.dim);
+  const full = S.biz.some(b => !b.manager && b.cash >= regCap(b));
+  $('phoneBadge').hidden = !full;
+}
+function setBtn(el, a) {
+  if (!a) { el.hidden = true; el.dataset.k = ''; return; }
+  el.hidden = false; el.dataset.k = a.k;
+  setText(el, a.ico ? `<span><span class="ico">${a.ico}</span>${esc(a.label)}</span>` : esc(a.label), true);
+}
+function doAction(k) {
+  audioInit();
+  if (!ctxLot) return;
+  const l = ctxLot, b = bizAtLot(l.id);
+  if (k === 'buy' && l.kind === 'sale') openBuy(l);
+  else if (k === 'serve' && b) serveOne(b);
+  else if (k === 'manage' && b) openManage(b);
+  else if (k === 'rival' && l.kind === 'rival') openRival(l);
+}
+$act.addEventListener('click', () => doAction($act.dataset.k));
+$alt.addEventListener('click', () => doAction($alt.dataset.k));
+
+// Hoja de menús
+let sheet = null; // { kind, render }
+function openSheet(kind, renderFn) { sheet = { kind, render: renderFn }; drawSheet(); sfx('click'); }
+function closeSheet() { sheet = null; $ui.innerHTML = ''; }
+function drawSheet() {
+  if (!sheet) return;
+  const { title, em, body, tabs } = sheet.render();
+  const scroll = $ui.querySelector('.body')?.scrollTop || 0;
+  $ui.innerHTML = `<div class="scrim" data-close></div><section class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="${LANG === 'es' ? 'Cerrar' : 'Close'}">✕</button></header>
+    ${tabs || ''}<div class="body">${body}</div></section>`;
+  const bd = $ui.querySelector('.body'); if (bd) bd.scrollTop = scroll;
+}
+$ui.addEventListener('click', e => {
+  const el = e.target.closest('[data-close],[data-a]'); if (!el) return;
+  audioInit();
+  if (el.hasAttribute('data-close')) { closeSheet(); return; }
+  const fn = ACTIONS[el.dataset.a]; if (fn) { fn(el.dataset.v, el); }
+});
+let liveTimer = 0, uiPressing = false;
+$ui.addEventListener('pointerdown', () => { uiPressing = true; liveTimer = Math.max(liveTimer, 0.6); });
+window.addEventListener('pointerup', () => { uiPressing = false; });
+window.addEventListener('pointercancel', () => { uiPressing = false; });
+const ACTIONS = {};
+
+// --- Comprar terreno ---
+function openBuy(l) {
+  openSheet('buy', () => {
+    const nw = netWorth();
+    const items = TYPES.map(ty => {
+      const price = priceOf(ty.id, l.district), lock = ty.cost >= 50000 && nw < ty.cost * 0.6;
+      let comp = 0; for (const b of S.biz) if (b.type === ty.id && Math.abs(lotOf(b).x - l.x) + Math.abs(lotOf(b).y - l.y) < 10 * T) comp++;
+      for (const o of lots) if (o.kind === 'rival' && o.rival.type === ty.id && !bizAtLot(o.id) && Math.abs(o.x - l.x) + Math.abs(o.y - l.y) < 10 * T) comp++;
+      return `<button class="item ${lock ? 'locked' : ''}" data-a="buyType" data-v="${ty.id}" ${lock ? 'disabled' : ''}>
+        <span class="em">${ty.em}</span>
+        <span><span class="t">${nm(ty.id)}</span><br><span class="s">${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span> · ${comp ? comp + ' ' + t('rivalsNear') : t('rivalsNear') + ': ' + t('none')}${lock ? '<br>' + t('unlockAt') + ' ' + fmtK(ty.cost * 0.6) : ''}</span></span>
+        <span class="p" style="color:${S.money >= price ? 'var(--cash)' : 'var(--danger)'}">${fmtK(price)}</span></button>`;
+    }).join('');
+    return { title: `${t('lotFor')} · ${t(l.district)}`, em: '🏗️', body: `<p class="note">${t('chooseBiz')}. ${LANG === 'es' ? 'Los puntos indican qué tan bien funciona ese negocio en este distrito.' : 'Dots show how well that business does in this district.'}</p><div class="list">${items}</div>` };
+  });
+  ACTIONS.buyType = id => {
+    const price = priceOf(id, l.district);
+    if (S.money < price) { sfx('error'); toast(t('cantAfford'), 'bad'); return; }
+    S.money -= price;
+    const b = newBiz(l, id, price);
+    l.kind = 'biz'; delete S.lotKinds[l.id]; setLotSolid(l); pushOutOfSolid();
+    recomputeCompetition();
+    sfx('buy'); vibrate(30);
+    toast(`${t('bought')} ${bizName(b)}!`, 'good');
+    for (let i = 0; i < 18; i++) spawnParticle('coin', l.door.x, l.door.y - 20);
+    openManage(b);
+  };
+}
+function newBiz(l, type, paid, extra = {}) {
+  const b = Object.assign({ lot: l.id, type, level: 1, staff: 0, manager: false, price: 1, rep: 50, cash: 0, arr: 0, tok: 0, queue: [], todayRev: 0, todaySales: 0, yRev: 0, yProfit: 0, missed: 0, lostFull: 0, paid }, extra);
+  S.biz.push(b); return b;
+}
+function pushOutOfSolid() { // si el jugador quedó dentro de un edificio nuevo, lo saca a la banqueta
+  if (!hitBox(P.x, P.y, 7)) return;
+  const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y;
+  if (ctxLot) { P.x = ctxLot.door.x; P.y = ctxLot.door.y; }
+}
+// --- Gestionar negocio ---
+let sellArm = false;
+function openManage(b) {
+  sellArm = false;
+  const l = lotOf(b), ty = TYPE[b.type];
+  openSheet('manage', () => {
+    const ms = maxStaff(b), up = b.level < 5 ? upgradeCost(ty, b.level) : 0, here = playerNearDoor(l, 110);
+    const dem = demandOf(b, false), cap = capacityOf(b);
+    const sellV = Math.round(invested(b) * 0.6);
+    const body = `
+      <div class="stats">
+        <div class="stat"><span>${t('register')}</span><b style="color:var(--cash)">${fmt(b.cash)}</b></div>
+        <div class="stat"><span>${t('today')}</span><b>${fmt(b.todayRev)}</b></div>
+        <div class="stat"><span>${t('yesterday')}</span><b style="color:${b.yProfit >= 0 ? 'var(--cash)' : 'var(--danger)'}">${fmt(b.yProfit)}</b></div>
+        <div class="stat"><span>${t('rep')}</span><b>${Math.round(b.rep)}</b><div class="bar"><i style="width:${b.rep}%"></i></div></div>
+      </div>
+      <p class="note">${t('demandNow')}: <b>${dem.toFixed(1)}</b> ${t('perHour')} · ${t('capacity')}: <b>${cap.toFixed(1)}</b> · ${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span> · ${(compCache.get(b.lot) || { n: 0 }).n} ${t('rivalsNear')}</p>
+      ${b.staff === 0 ? `<p class="note" style="color:#ffe2a6">${t('closedNote')}</p>` : ''}
+      ${!b.manager && b.cash >= regCap(b) ? `<p class="note" style="color:var(--danger)">${t('fullNote')}</p>` : ''}
+      ${here && b.cash >= 1 ? `<button class="btn cash" data-a="collect">${t('collect')} ${fmt(b.cash)}</button>` : ''}
+      <div class="lbl">${t('staff')} · ${b.staff}/${ms} · ${fmt(ty.wage)}${t('perDay')} c/u</div>
+      <div class="row"><button class="btn" data-a="fire" ${b.staff ? '' : 'disabled'}>− ${t('fire')}</button><button class="btn primary" data-a="hire" ${b.staff < ms ? '' : 'disabled'}>+ ${t('hire')}</button></div>
+      <div class="lbl">${t('manager')} · ${fmt(mgrWage(b))}${t('perDay')}</div>
+      <p class="note">${t('mgrNote')}</p>
+      <button class="btn ${b.manager ? 'danger' : ''}" data-a="mgr">${b.manager ? t('fireMgr') : t('hireMgr')}</button>
+      <div class="lbl">${t('price')} · ${fmt(ty.ticket * [0.8, 1, 1.3][b.price])}</div>
+      <div class="seg">${['low', 'normal', 'high'].map((k, i) => `<button data-a="price" data-v="${i}" class="${b.price === i ? 'on' : ''}">${t(k)}</button>`).join('')}</div>
+      <div class="lbl">${t('level')} ${b.level}/5</div>
+      ${b.level < 5 ? `<button class="btn primary" data-a="upgrade">${t('upgrade')} ${b.level + 1} · ${fmtK(up)}</button>` : `<p class="note">${t('maxLevel')}</p>`}
+      <button class="btn danger" data-a="sell">${sellArm ? t('sellConfirm') + ' ' + fmt(sellV) : t('sell') + ' (' + fmtK(sellV) + ')'}</button>`;
+    return { title: bizName(b), em: ty.em, body };
+  });
+  ACTIONS.collect = () => { collect(b); drawSheet(); };
+  ACTIONS.hire = () => { if (b.staff < maxStaff(b)) { b.staff++; sfx('click'); drawSheet(); } };
+  ACTIONS.fire = () => { if (b.staff > 0) { b.staff--; sfx('click'); drawSheet(); } };
+  ACTIONS.mgr = () => { b.manager = !b.manager; sfx('click'); drawSheet(); };
+  ACTIONS.price = v => { b.price = +v; sfx('click'); drawSheet(); };
+  ACTIONS.upgrade = () => {
+    const c = upgradeCost(ty, b.level); if (S.money < c) { sfx('error'); toast(t('cantAfford'), 'bad'); return; }
+    S.money -= c; b.level++; sfx('buy'); vibrate(30); for (let i = 0; i < 14; i++) spawnParticle('coin', l.door.x, l.door.y - 20); drawSheet();
+  };
+  ACTIONS.sell = () => {
+    if (!sellArm) { sellArm = true; drawSheet(); return; }
+    const v = Math.round(invested(b) * 0.6);
+    S.money += v + b.cash; S.biz.splice(S.biz.indexOf(b), 1);
+    l.kind = 'sale'; S.lotKinds[l.id] = 'sale'; setLotSolid(l); recomputeCompetition(); closeSheet(); sfx('coin');
+  };
+}
+// --- Comprar a la competencia ---
+function openRival(l) {
+  openSheet('rival', () => {
+    const p = buyoutPrice(l), ty = TYPE[l.rival.type];
+    return { title: rivalName(l), em: ty.em, body: `
+      <p class="note">${t('rivalOf')} · ${t(l.district)} · ${t('level')} ${l.rival.level} · ${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span></p>
+      <p class="note">${t('buyoutNote')}</p>
+      <button class="btn primary" data-a="buyout" ${S.money >= p ? '' : 'disabled'}>${t('buyout')} · ${fmtK(p)}</button>
+      ${S.money < p ? `<p class="note" style="color:var(--danger)">${t('cantAfford')}</p>` : ''}` };
+  });
+  ACTIONS.buyout = () => {
+    const p = buyoutPrice(l); if (S.money < p) { sfx('error'); return; }
+    S.money -= p; S.stats.buyouts++;
+    const ty = TYPE[l.rival.type];
+    const b = newBiz(l, ty.id, p, { level: l.rival.level, rep: 62 });
+    b.staff = maxStaff(b);
+    l.kind = 'biz';
+    recomputeCompetition(); sfx('buy'); vibrate(40);
+    toast(`${t('bought')} ${bizName(b)}!`, 'good'); openManage(b);
+  };
+}
+// --- Teléfono ---
+let phoneTab = 'biz', resetArm = false;
+function openPhone(tab) {
+  if (tab) phoneTab = tab; resetArm = false;
+  openSheet('phone', () => {
+    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
+    let body = '';
+    if (phoneTab === 'biz') {
+      body = `<div class="stats"><div class="stat"><span>${t('cash')}</span><b>${fmtK(S.money)}</b></div><div class="stat"><span>${t('netWorth')}</span><b>${fmtK(netWorth())}</b></div><div class="stat"><span>${t('today')}</span><b>${fmtK(S.biz.reduce((s, b) => s + b.todayRev, 0))}</b></div></div>`;
+      body += S.biz.length ? '<div class="list">' + S.biz.map((b, i) => {
+        const l = lotOf(b), full = !b.manager && b.cash >= regCap(b);
+        return `<div class="item"><span class="em">${TYPE[b.type].em}</span><span><span class="t">${esc(bizName(b))}</span><br><span class="s">${t(l.district)} · ${t('level')} ${b.level} · ${t('staff')} ${b.staff}/${maxStaff(b)}${b.manager ? ' · 👔' : ''}<br>${t('register')}: <b style="color:${full ? 'var(--danger)' : 'var(--cash)'}">${fmt(b.cash)}</b>${full ? ' ⚠️' : ''} · ${t('today')} ${fmt(b.todayRev)}</span></span>
+          <span class="row" style="flex-direction:column;gap:6px"><button class="btn" data-a="go" data-v="${i}" style="min-height:40px;padding:6px 12px">${t('goTo')}</button><button class="btn" data-a="mng" data-v="${i}" style="min-height:40px;padding:6px 12px">⚙️</button></span></div>`;
+      }).join('') + '</div>' : `<p class="note">${t('noBiz')}</p>`;
+    } else if (phoneTab === 'goals') {
+      body = '<div class="list">' + GOALS.map(g => { const d = S.goalsDone.includes(g.id); return `<div class="item ${d ? 'done' : ''}"><span class="em">${d ? '✅' : '🎯'}</span><span class="t">${g[LANG]}</span><span class="p">${g.r ? fmtK(g.r) : '🏆'}</span></div>`; }).join('') + '</div>';
+    } else if (phoneTab === 'bank') {
+      const max = Math.max(0, Math.round(2000 + netWorth() * 0.5 - S.loan));
+      body = `<div class="stats"><div class="stat"><span>${t('loan')}</span><b>${fmt(S.loan)}</b></div><div class="stat"><span>${t('interest')}</span><b>${fmt(S.loan * 0.015)}</b></div></div>
+        <p class="note">${t('loanNote')}</p>
+        <div class="row">${[1000, 5000, 25000].map(v => `<button class="btn" data-a="borrow" data-v="${v}" ${v <= max ? '' : 'disabled'}>${t('borrow')} ${fmtK(v)}</button>`).join('')}</div>
+        <div class="row"><button class="btn primary" data-a="repay" ${S.loan > 0 && S.money > 0 ? '' : 'disabled'}>${t('repay')} ${fmtK(Math.min(S.loan, Math.max(0, S.money)))}</button></div>`;
+    } else if (phoneTab === 'shop') {
+      body = '<div class="list">' + VEHICLES.map(v => { const own = S.vehicles.includes(v.id), cur = S.vehicle === v.id; return `<button class="item" data-a="veh" data-v="${v.id}" ${cur ? 'disabled' : ''}><span class="em">${v.em}</span><span><span class="t">${VNAMES[LANG][v.id]}</span><br><span class="s">${v.speed} km/h·🎮</span></span><span class="p" style="color:${own ? 'var(--gold)' : S.money >= v.cost ? 'var(--cash)' : 'var(--danger)'}">${cur ? '✓' : own ? t('ride') : fmtK(v.cost)}</span></button>`; }).join('') + '</div>';
+    } else {
+      body = `<div class="lbl">${t('lang')}</div><div class="seg"><button data-a="lang" data-v="es" class="${LANG === 'es' ? 'on' : ''}">Español</button><button data-a="lang" data-v="en" class="${LANG === 'en' ? 'on' : ''}">English</button></div>
+        <div class="lbl">${t('sound')}</div><div class="seg"><button data-a="snd" data-v="1" class="${S.sound ? 'on' : ''}">${t('on')}</button><button data-a="snd" data-v="0" class="${!S.sound ? 'on' : ''}">${t('off')}</button></div>
+        <p class="note">${t('keys')}</p>
+        <button class="btn danger" data-a="reset">${resetArm ? t('resetConfirm') : t('reset')}</button>
+        <p class="note">Emprende City · ERAGames</p>`;
+    }
+    return { title: t('phone'), em: '📱', body, tabs };
+  });
+  ACTIONS.tab = v => { phoneTab = v; drawSheet(); sfx('click'); };
+  ACTIONS.go = i => { const b = S.biz[+i]; if (!b) return; const l = lotOf(b); waypoint = { x: l.door.x, y: l.door.y }; closeSheet(); };
+  ACTIONS.mng = i => { const b = S.biz[+i]; if (b) openManage(b); };
+  ACTIONS.borrow = v => { S.loan += +v; S.money += +v; sfx('coin'); drawSheet(); };
+  ACTIONS.repay = () => { const v = Math.min(S.loan, Math.max(0, S.money)); S.loan -= v; S.money -= v; sfx('click'); drawSheet(); };
+  ACTIONS.veh = id => {
+    const v = VEHICLES.find(x => x.id === id);
+    if (!S.vehicles.includes(id)) { if (S.money < v.cost) { sfx('error'); toast(t('cantAfford'), 'bad'); return; } S.money -= v.cost; S.vehicles.push(id); sfx('buy'); }
+    S.vehicle = id; resize(); drawSheet();
+  };
+  ACTIONS.lang = v => { LANG = v; S.lang = v; applyStaticText(); setTicker(EVENTS.find(e => e.id === S.event)[LANG]); lastDistrict = ''; drawSheet(); };
+  ACTIONS.snd = v => { S.sound = v === '1'; drawSheet(); };
+  ACTIONS.reset = () => { if (!resetArm) { resetArm = true; drawSheet(); return; } try { localStorage.removeItem(SAVE_KEY); } catch (e) { } location.reload(); };
+}
+$('btnPhone').addEventListener('click', () => { audioInit(); sheet && sheet.kind === 'phone' ? closeSheet() : openPhone(); });
+
+// --- Mapa grande ---
+function openMap() {
+  closeSheet(); audioInit(); sfx('click');
+  const scale = Math.max(2, Math.floor(Math.min((viewW - 40) / W, (viewH * 0.7) / H) * 2) / 2);
+  $ui.innerHTML = `<div class="mapwrap" data-close><div class="mapcol"><canvas id="bigmap" width="${W * scale * 2}" height="${H * scale * 2}" style="width:${W * scale}px"></canvas>
+    <div class="legend"><span><i style="background:#fff"></i>${t('legendYou')}</span><span><i style="background:#f04e23"></i>${t('legendBiz')}</span><span><i style="background:#2fbf71"></i>${t('legendSale')}</span><span><i style="background:#8b93a7"></i>${t('legendRival')}</span></div>
+    <p class="note" style="text-align:center">${t('mapTap')}</p>
+    <div class="row">${waypoint ? `<button class="btn" data-a="clearWp">${t('clearWp')}</button>` : ''}<button class="btn primary" data-close>OK</button></div></div></div>`;
+  const c = $('bigmap'), g = c.getContext('2d'), s = scale * 2;
+  g.imageSmoothingEnabled = false; g.drawImage(mapBase, 0, 0, W * s, H * s);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const l of lots) {
+    if (l.kind === 'deco') continue;
+    const b = bizAtLot(l.id), x = (l.tx + 2) * s, y = (l.ty + 2) * s;
+    g.fillStyle = b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
+    g.beginPath(); g.arc(x, y, b ? s * 1.9 : s * 1.2, 0, 7); g.fill();
+    if (b || l.kind === 'rival') { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText(TYPE[b ? b.type : l.rival.type].em, x, y + 1); }
+  }
+  g.font = `800 ${Math.round(s * 2.2)}px system-ui`; g.fillStyle = 'rgba(255,255,255,.85)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = s * .6;
+  for (const [d, bx, by] of [['res', 0.5, 0.6], ['centro', 3, 2.5], ['tech', 4, 0.5], ['ind', 1.5, 4.6], ['playa', 6.1, 3.5]]) { const x = bx * BLK * s + BLK * s / 2, y = by * BLK * s + BLK * s / 2; g.strokeText(t(d), x, y); g.fillText(t(d), x, y); }
+  if (waypoint) { g.fillStyle = '#ffb627'; g.fillRect(waypoint.x / T * s - s * 1.5, waypoint.y / T * s - s * 1.5, s * 3, s * 3); }
+  g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = s * .5; g.beginPath(); g.arc(P.x / T * s, P.y / T * s, s * 1.6, 0, 7); g.fill(); g.stroke();
+  c.addEventListener('click', e => {
+    e.stopPropagation();
+    const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W * T, y = (e.clientY - r.top) / r.height * H * T;
+    waypoint = { x, y }; sfx('click'); closeSheet();
+  });
+  ACTIONS.clearWp = () => { waypoint = null; closeSheet(); };
+}
+$('btnMap').addEventListener('click', openMap);
+mm.addEventListener('click', openMap);
+
+// =====================================================================
+//  ENTRADA
+// =====================================================================
+const joy = $('joy'), joyK = joy.firstElementChild;
+let joyId = null, joyO = { x: 0, y: 0 };
+cv.addEventListener('pointerdown', e => {
+  audioInit();
+  if (!S || !running || joyId !== null) return;
+  if (e.clientX > viewW * 0.62 && e.pointerType === 'touch') return;
+  joyId = e.pointerId; joyO = { x: e.clientX, y: e.clientY };
+  joy.style.left = e.clientX + 'px'; joy.style.top = e.clientY + 'px'; joy.hidden = false; joyK.style.transform = '';
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { }
+  if (!S.seenHint) { S.seenHint = true; $('hintMove').hidden = true; }
+});
+cv.addEventListener('pointermove', e => {
+  if (e.pointerId !== joyId) return;
+  let dx = e.clientX - joyO.x, dy = e.clientY - joyO.y; const d = Math.hypot(dx, dy), R = 50;
+  if (d > R) { dx = dx / d * R; dy = dy / d * R; }
+  joyK.style.transform = `translate(${dx}px,${dy}px)`;
+  const m = Math.min(1, d / R); input.jx = d > 6 ? dx / R * (m > .3 ? 1 : m / .3) : 0; input.jy = d > 6 ? dy / R * (m > .3 ? 1 : m / .3) : 0;
+});
+function releaseJoy(e) { if (e && e.pointerId !== joyId) return; joyId = null; input.jx = input.jy = 0; joy.hidden = true; }
+cv.addEventListener('pointerup', releaseJoy); cv.addEventListener('pointercancel', releaseJoy); cv.addEventListener('lostpointercapture', releaseJoy);
+function releaseAll() { input.keys.clear(); releaseJoy(); }
+window.addEventListener('blur', releaseAll);
+window.addEventListener('keydown', e => {
+  if (!S || !running) return;
+  if (e.target && e.target.tagName === 'INPUT') return;
+  audioInit();
+  const c = e.code;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
+  if (c === 'Escape') { closeSheet(); return; }
+  if (c === 'KeyM' && !e.repeat) { $ui.querySelector('.mapwrap') ? closeSheet() : openMap(); return; }
+  if ((c === 'KeyP' || c === 'Tab') && !e.repeat) { e.preventDefault(); sheet && sheet.kind === 'phone' ? closeSheet() : openPhone(); return; }
+  if (sheet || $ui.firstChild) return;
+  if (c === 'Space' || c === 'Enter') { if (ctxLot && (bizAtLot(ctxLot.id) || !e.repeat)) doAction($act.dataset.k); return; }
+  if (c === 'KeyE' && !e.repeat) { if (ctxLot) { const b = bizAtLot(ctxLot.id); doAction(b ? 'manage' : $act.dataset.k); } return; }
+  input.keys.add(c);
+  if (!S.seenHint) { S.seenHint = true; $('hintMove').hidden = true; }
+});
+window.addEventListener('keyup', e => input.keys.delete(e.code));
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// =====================================================================
+//  GUARDADO
+// =====================================================================
+function serialize() {
+  S.savedAt = Date.now();
+  return JSON.stringify({ ...S, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0 })) });
+}
+function save(quiet = true) { try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast(t('save')); } catch (e) { } }
+function loadSaved() { try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const d = JSON.parse(raw); return d && d.v === SAVE_VER ? d : null; } catch (e) { return null; } }
+function hydrate(d) {
+  S = Object.assign(newState(d.brand), d);
+  S.stats = Object.assign({ served: 0, collected: 0, buyouts: 0, earned: 0 }, d.stats || {});
+  LANG = S.lang === 'en' ? 'en' : 'es';
+  S.lotKinds = d.lotKinds || {};
+  for (const id in S.lotKinds) { lots[id].kind = S.lotKinds[id]; setLotSolid(lots[id]); }
+  for (const b of S.biz) { b.queue = []; b.arr = 0; b.tok = 0; lots[b.lot].kind = 'biz'; setLotSolid(lots[b.lot]); }
+  // Ganancias mientras no estabas (solo negocios con gerente y personal), máximo 1 hora real
+  const away = Math.min(3600, Math.max(0, (Date.now() - (d.savedAt || Date.now())) / 1000));
+  if (away > 60) {
+    let gain = 0;
+    for (const b of S.biz) if (b.manager && b.staff > 0) gain += Math.max(0, b.yProfit) * (away / (1440 / MIN_PER_SEC)) * 0.5;
+    if (gain >= 1) { S.money += gain; setTimeout(() => toast(`${t('offline')} ${fmt(gain)}`, 'good', 6000), 600); }
+  }
+}
+
+// =====================================================================
+//  BUCLE PRINCIPAL
+// =====================================================================
+let running = false, last = 0, acc = 0, hudT = 0, ctxT = 0, saveT = 0, minimapT = 0;
+const STEP = 1 / 30;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  let dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
+  if (!running) return;
+  now += dt;
+  acc += dt;
+  while (acc >= STEP) { tick(STEP); acc -= STEP; }
+  // Cámara suave que mira un poco hacia donde caminas
+  const z = cam.z, tx = P.x + P.vx * 0.25 - viewW / z / 2, ty = P.y + P.vy * 0.25 - viewH / z / 2;
+  cam.x = lerp(cam.x, clamp(tx, -T, W * T - viewW / z + T), Math.min(1, dt * 5));
+  cam.y = lerp(cam.y, clamp(ty, -T, H * T - viewH / z + T), Math.min(1, dt * 5));
+  render();
+  hudT -= dt; if (hudT <= 0) { hudT = 0.12; updateHUD(); }
+  minimapT -= dt; if (minimapT <= 0) { minimapT = 0.2; drawMiniMap(); }
+}
+function tick(dt) {
+  const prevH = hour(), prevMin = S.min;
+  S.min += dt * MIN_PER_SEC;
+  const dtMin = dt * MIN_PER_SEC;
+  if (Math.floor(S.min / 1440) > Math.floor(prevMin / 1440)) endOfDay();
+  const h = hour();
+  if (prevH < 7 && h >= 7) morningNews();
+  updatePlayer(dt);
+  simEconomy(dtMin, dt);
+  updatePeds(dt); rivalLife(dt); updateCars(dt); updateBirds(dt); updateParticles(dt);
+  rainK = lerp(rainK, S.weather === 'rain' ? 1 : 0, dt * 0.3);
+  cloudK = lerp(cloudK, S.weather === 'sun' ? 0 : 1, dt * 0.3);
+  if (rainK > 0.4 && rnd() < rainK * 0.6) spawnParticle('splash', cam.x + rnd() * viewW / cam.z, cam.y + rnd() * viewH / cam.z);
+  if (rnd() < dt * 0.4 && rainK < 0.2) { const tr = pick(trees); if (inRect(tr.x, tr.y, liveRect(0))) spawnParticle('leaf', tr.x, tr.y - 12); }
+  if (darkness() < 0.3 && rainK < 0.3 && rnd() < dt * 0.05) { const tr = trees.find(tr => dist2(tr.x, tr.y, P.x, P.y) < 250 * 250); if (tr) sfx('chirp'); }
+  // Cobro automático al pasar por la puerta
+  for (const b of S.biz) if (!b.manager && b.cash >= 1 && playerNearDoor(lotOf(b), 46)) collect(b);
+  ctxT -= dt; if (ctxT <= 0) { ctxT = 0.1; findContext(); districtCheck(); checkGoals(); }
+  saveT -= dt; if (saveT <= 0) { saveT = 20; save(); }
+  liveTimer -= dt; if (liveTimer <= 0) { liveTimer = 1; if (sheet && !uiPressing && (sheet.kind === 'manage' || (sheet.kind === 'phone' && phoneTab === 'biz'))) drawSheet(); }
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); releaseAll(); if (AC) AC.suspend(); } else if (AC && S && S.sound) AC.resume(); });
+window.addEventListener('pagehide', () => S && save());
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+
+// ---------- Inicio ----------
+function startGame(state) {
+  S = state; LANG = S.lang === 'en' ? 'en' : 'es';
+  P.x = S.player.x; P.y = S.player.y;
+  if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
+  resize();
+  cam.x = P.x - viewW / cam.z / 2; cam.y = P.y - viewH / cam.z / 2;
+  recomputeCompetition();
+  applyStaticText();
+  ['hud', 'topright', 'actions', 'ticker'].forEach(id => $(id).hidden = false);
+  $ui.innerHTML = '';
+  peds.length = 0; cars.length = 0;
+  setTicker(EVENTS.find(e => e.id === S.event)?.[LANG] || FLAVOR[LANG][0]);
+  for (let i = 0; i < 26; i++) { const k = spawnPlace(700); if (k >= 0) { const p = newPed(k); peds.push(p); } }
+  // Algunos peatones ya visibles al empezar para que la calle no esté vacía
+  const view = liveRect(0);
+  for (let i = 0, n = 0; i < nodes.length && n < 8; i++) if (inRect(nodes[i].x, nodes[i].y, view)) { peds.push(newPed(i)); n++; }
+  for (let i = 0; i < 8; i++) { const c = newCar(); if (c) cars.push(c); }
+  if (!S.seenHint) { const hm = $('hintMove'); hm.textContent = matchMedia('(pointer:coarse)').matches ? t('moveHint') : t('moveHintKb'); hm.hidden = false; }
+  lastDistrict = ''; running = true;
+  if (S.day === 1 && S.min < 7 * 60 + 5 && !S.biz.length) toast(t('welcome') + ' · ' + t('tagline'), 'good', 7000);
+  checkGoals();
+}
+function titleScreen() {
+  const saved = loadSaved();
+  if (saved) LANG = saved.lang === 'en' ? 'en' : 'es';
+  else LANG = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
+  const draw = () => {
+    $ui.innerHTML = `<div class="title"><div class="card">
+      <h1>Emprende<span>City</span></h1>
+      <p>${t('tagline')}</p>
+      ${saved ? `<button class="btn primary" id="tContinue">${t('cont')} · ${t('day')} ${saved.day} · ${fmtK(saved.money)}</button>` : ''}
+      <label class="lbl" for="tBrand" style="margin:0">${t('brandAsk')}</label>
+      <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : 'Emprende')}" autocomplete="off" aria-label="${t('brandAsk')}">
+      <button class="btn ${saved ? '' : 'primary'}" id="tNew">${saved ? t('newGame') : t('play')}</button>
+      <div class="seg"><button id="tEs" class="${LANG === 'es' ? 'on' : ''}">Español</button><button id="tEn" class="${LANG === 'en' ? 'on' : ''}">English</button></div>
+      <p class="keys">${t('keys')}</p></div></div>`;
+    $('tEs').onclick = () => { LANG = 'es'; draw(); };
+    $('tEn').onclick = () => { LANG = 'en'; draw(); };
+    $('tNew').onclick = () => { audioInit(); const st = newState(($('tBrand').value || 'Emprende').trim().slice(0, 16)); st.lang = LANG; startGame(st); save(); };
+    if (saved) $('tContinue').onclick = () => { audioInit(); hydrate(saved); startGame(S); };
+  };
+  draw();
+  // Fondo animado: la ciudad de noche detrás del título
+  S = newState(''); S.min = 20 * 60; P.x = (3 * BLK + 1) * T; P.y = (3 * BLK + 1) * T; resize();
+  cam.x = P.x - viewW / cam.z / 2; cam.y = P.y - viewH / cam.z / 2; recomputeCompetition();
+  for (let i = 0; i < 30; i++) { const k = (rnd() * nodes.length) | 0; peds.push(newPed(k)); }
+  const demo = ts => {
+    if (running) return;
+    requestAnimationFrame(demo);
+    const dt = 1 / 60; now += dt; S.min += dt * 6;
+    cam.x += 14 * dt;
+    if (cam.x > W * T - viewW / cam.z - 200) cam.x = 100;
+    P.x = -999; P.y = -999;
+    updatePeds(dt); updateCars(dt); updateParticles(dt);
+    render();
+  };
+  requestAnimationFrame(demo);
+}
+// Recarga en caliente del visor de artifacts: conserva la partida
+window.claude?.hot?.snapshot?.(() => (S && running ? serialize() : null));
+
+buildWorld(); buildNodes(); buildMapBase(); initBirds();
+const hotData = window.claude?.hot?.data;
+if (typeof hotData === 'string') { try { const d = JSON.parse(hotData); hydrate(d); startGame(S); } catch (e) { titleScreen(); } }
+else titleScreen();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
