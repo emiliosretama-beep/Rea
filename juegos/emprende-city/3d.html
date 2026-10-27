@@ -38,6 +38,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 .money.neg { color: var(--danger); }
 .chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(15,26,46,.82); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; width: max-content; max-width: 100%; font-variant-numeric: tabular-nums; }
 .goal { background: rgba(15,26,46,.88); border-color: rgba(255,182,39,.7); color: #ffe2a6; white-space: normal; border-radius: 12px; line-height: 1.25; }
+.mission { border-color: rgba(70,217,138,.8); color: #d9ffe9; font-size: 14px; }
+.mission.bad { border-color: var(--danger); color: #ffd9d4; animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.04); } }
 .goal b { color: var(--gold); text-transform: uppercase; font-size: 10.5px; letter-spacing: .08em; }
 
 .topright { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: grid; gap: 8px; justify-items: end; }
@@ -147,6 +150,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   <div class="chip" id="clock"></div>
   <div class="chip" id="place"></div>
   <div class="chip goal" id="goal"></div>
+  <div class="chip mission" id="mission" hidden></div>
 </div>
 
 <div class="topright" id="topright" hidden>
@@ -304,12 +308,15 @@ const GOALS = [
   { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', test: () => S.biz.some(b => b.staff > 0) },
   { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', test: () => S.stats.collected >= 1000 },
   { id: 'sleep', r: 150, es: 'Duerme una noche en tu departamento', test: () => (S.stats.nights || 0) >= 1 },
+  { id: 'mission', r: 300, es: 'Haz un encargo para alguien con “!”', test: () => (S.stats.missions || 0) >= 1 },
   { id: 'three', r: 500, es: 'Ten 3 negocios', test: () => S.biz.length >= 3 },
   { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', test: () => S.vehicles.includes('bike') },
   { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', test: () => S.biz.some(b => b.level >= 3) },
   { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', test: () => netWorth() >= 25000 },
   { id: 'mgr', r: 2000, es: 'Contrata a un gerente', test: () => S.biz.some(b => b.manager) },
   { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
+  { id: 'thief', r: 1500, es: 'Atrapa a un ladrón', test: () => (S.stats.caught || 0) >= 1 },
+  { id: 'streak', r: 4000, es: 'Haz una racha de 5 encargos', test: () => (S.streak || 0) >= 5 },
   { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', test: () => S.stats.buyouts >= 1 },
   { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', test: () => netWorth() >= 100000 },
   { id: 'eight', r: 15000, es: 'Ten 8 negocios', test: () => S.biz.length >= 8 },
@@ -699,6 +706,8 @@ function updatePeds(dt) {
         if (p.mode === 'toDoor') { p.mode = 'inside'; p.t = 1.5 + rnd() * 2.5; }
         else p.mode = 'walk';
       } else { p.x += dx / d * p.sp * 1.3 * dt; p.y += dy / d * p.sp * 1.3 * dt; }
+    } else if (p.mode === 'giver' || p.mode === 'follow' || p.mode === 'thief') {
+      updateStreetPed(p, dt);
     } else if (p.mode === 'inside') {
       p.t -= dt;
       if (p.t <= 0) {
@@ -1748,6 +1757,9 @@ function drawOverlay() {
   }
   // Paciencia de la fila adentro
   if (inside) { const b = bizAtLot(inside.id), g = inside.geo; if (b) b.queue.forEach((q, i) => { const qs = toScreen(g.toX(0.28), g.toY(0.54 - i * 0.075), 1.0); if (!qs) return; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16, 4); ctx.fillStyle = q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16 * (q.p / PATIENCE), 4); }); }
+  // Marcadores: quien pide un favor, el VIP y el ladrón
+  const mark = (p, txt, bg) => { if (!p || !inRect(p.x, p.y, view)) return; const sc = toScreen(p.x, p.y, 2.05); if (!sc) return; const bob = Math.sin(now * 5) * 3; ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(sc[0], sc[1] - 6 + bob, 12, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.font = '800 14px system-ui, "Apple Color Emoji"'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(txt, sc[0], sc[1] - 1 + bob); };
+  if (running) { mark(giver, '!', '#e09a00'); mark(follower, '★', '#9b5de5'); mark(thief, '$', '#e5383b'); }
   // Globos de diálogo
   for (const p of peds) if (p.bub && p.mode !== 'inside' && inRect(p.x, p.y, view)) { const s = toScreen(p.x, p.y, 0.95); if (s) drawBubble(s[0], s[1], p.bub); }
   // Textos flotantes (+$)
@@ -1848,6 +1860,8 @@ function sfx(k) {
   else if (k === 'buy') { [523, 659, 784, 1046].forEach((f, i) => tone(f, .14, 'triangle', .07, i * .08)); }
   else if (k === 'goal') { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .2, 'square', .045, i * .1)); }
   else if (k === 'click') tone(440, .05, 'triangle', .05);
+  else if (k === 'siren') { for (let i = 0; i < 4; i++) { tone(760, .22, 'sawtooth', .03, i * .44, 1.25); tone(950, .22, 'sawtooth', .03, i * .44 + .22, 0.8); } }
+  else if (k === 'mission') { [659, 880, 1046, 1318].forEach((f, i) => tone(f, .15, 'square', .045, i * .07)); }
   else if (k === 'lullaby') { [659, 587, 523, 440, 392].forEach((f, i) => tone(f, .5, 'sine', .05, i * .28)); }
   else if (k === 'wake') { [523, 659, 784, 1046].forEach((f, i) => tone(f, .18, 'triangle', .06, i * .09)); tone(2600, .05, 'sine', .02, .5, 1.3); tone(2900, .05, 'sine', .02, .6, 1.2); }
   else if (k === 'door') { tone(520, .07, 'triangle', .05); tone(780, .12, 'triangle', .045, .07); }
@@ -1882,7 +1896,8 @@ function updateHUD() {
   setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}`);
   // Botones de acción contextual
   let main = null, alt = null;
-  if (ctxLot) {
+  if (nearGiver && giver && !S.mission) main = { k: 'talk', label: 'Hablar', ico: '💬' };
+  else if (ctxLot) {
     const l = ctxLot, b = bizAtLot(l.id);
     if (l.kind === 'sale') main = { k: 'buy', label: t('buy'), ico: '🏗️' };
     else if (l === HOME) { if (inside) main = { k: 'sleep', label: canSleep() ? 'Dormir' : 'Dormir (8 p.m.)', ico: '😴', dim: !canSleep() }; }
@@ -1900,6 +1915,10 @@ function updateHUD() {
   $act.classList.toggle('dim', !!main && !!main.dim);
   const full = S.biz.some(b => !b.manager && b.cash >= regCap(b));
   $('phoneBadge').hidden = !full;
+  const $m = $('mission');
+  if (thief) { $m.hidden = false; $m.className = 'chip mission bad'; setText($m, `🚨 ¡Atrapa al ladrón! · ${fmt(thief.loot)}`); }
+  else if (S.mission) { const m = S.mission, l = lots[m.lot]; $m.hidden = false; $m.className = 'chip mission' + (m.tLeft < 15 ? ' bad' : ''); setText($m, `${m.kind === 'vip' ? '🕴️ VIP a' : '📦'} ${lotLabel(l)} · ${fmtTime(m.tLeft)}`); }
+  else $m.hidden = true;
 }
 function setBtn(el, a) {
   if (!a) { el.hidden = true; el.dataset.k = ''; return; }
@@ -1908,9 +1927,10 @@ function setBtn(el, a) {
 }
 function doAction(k) {
   audioInit();
+  if (sleeping) return;
+  if (k === 'talk') { talkToGiver(); return; }
   if (!ctxLot) return;
   const l = ctxLot, b = bizAtLot(l.id);
-  if (sleeping) return;
   if (k === 'sleep' && l === HOME) goSleep();
   else if (k === 'buy' && l.kind === 'sale') openBuy(l);
   else if (k === 'serve' && b) serveOne(b);
@@ -2187,6 +2207,7 @@ window.addEventListener('keydown', e => {
   if (c === 'KeyM' && !e.repeat) { $ui.querySelector('.mapwrap') ? closeSheet() : openMap(); return; }
   if ((c === 'KeyP' || c === 'Tab') && !e.repeat) { e.preventDefault(); sheet && sheet.kind === 'phone' ? closeSheet() : openPhone(); return; }
   if (sheet || $ui.firstChild) return;
+  if ((c === 'Space' || c === 'Enter') && nearGiver && !S.mission) { if (!e.repeat) doAction('talk'); return; }
   if (c === 'Space' || c === 'Enter') { if (ctxLot && (bizAtLot(ctxLot.id) || !e.repeat)) doAction($act.dataset.k); return; }
   if (c === 'KeyE' && !e.repeat) { if (ctxLot) { const b = bizAtLot(ctxLot.id); doAction(b ? 'manage' : $act.dataset.k); } return; }
   input.keys.add(c);
@@ -2257,6 +2278,7 @@ function tick(dt) {
   if (rnd() < dt * 0.6 && rainK < 0.2) { const tr = pick(trees); if (inRect(tr.x, tr.y, liveRect(0))) spawnParticle('leaf', tr.x, tr.y, 45); }
   ambientParticles(dt);
   interiorTick(dt);
+  streetTick(dt, dtMin);
   if (darkness() < 0.3 && rainK < 0.3 && rnd() < dt * 0.05) { const tr = trees.find(tr => dist2(tr.x, tr.y, P.x, P.y) < 250 * 250); if (tr) sfx('chirp'); }
   // Cobro automático al pasar por la puerta
   // (como máximo cada 2.5 s: con muchas ventas no se llena la pantalla de monedas)
@@ -2275,6 +2297,158 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { sav
 window.addEventListener('pagehide', () => S && save());
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+
+// =====================================================================
+//  ACCIÓN EN LA CALLE: encargos de la gente, clientes VIP y ladrones
+// =====================================================================
+let giver = null, thief = null, follower = null, nearGiver = false, giverT = 20;
+const roundR = v => Math.max(5, Math.round(v / 5) * 5);
+const fmtTime = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function missionScale() { return clamp(Math.sqrt(Math.max(1, netWorth()) / 5000), 1, 15); }  // los encargos crecen con tu imperio
+function lotLabel(l) { const b = bizAtLot(l.id); return b ? bizName(b) : l.kind === 'rival' ? rivalName(l) : `el terreno en venta (${t(l.district)})`; }
+function removePed(p) { const i = peds.indexOf(p); if (i >= 0) peds.splice(i, 1); }
+function spawnGiver() {
+  const view = liveRect(-40), cand = [];
+  for (let i = 0; i < nodes.length; i++) { const n = nodes[i], d = Math.hypot(n.x - P.x, n.y - P.y); if (d > 140 && d < 420 && inRect(n.x, n.y, view)) cand.push(i); }
+  if (!cand.length) return;
+  const p = newPed(pick(cand));
+  p.mode = 'giver'; p.shirt = '#ffb627'; p.dog = false; p.wait = 0;
+  if (S.biz.length && rnd() < 0.35) {
+    const b = pick(S.biz), l = lotOf(b), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
+    p.offer = { kind: 'vip', lot: l.id, reward: roundR((TYPE[b.type].ticket * 10 + 60) * missionScale()), time: Math.round(d / 70 + 35) };
+  } else {
+    const opts = lots.filter(l => l.kind !== 'deco' && l !== HOME).filter(l => { const d = Math.hypot(l.door.x - p.x, l.door.y - p.y); return d > 650 && d < 2300; });
+    if (!opts.length) return;
+    const l = pick(opts), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
+    p.offer = { kind: 'deliver', lot: l.id, reward: roundR((40 + d * 0.12) * missionScale()), time: Math.round(d / 95 + 20) };
+  }
+  peds.push(p); giver = p;
+  say(p, '¡Oye! ¿Me ayudas?');
+}
+function talkToGiver() {
+  if (!giver || S.mission) return;
+  const o = giver.offer, l = lots[o.lot], vip = o.kind === 'vip';
+  const meters = Math.round(Math.hypot(l.door.x - P.x, l.door.y - P.y) / T * 5);
+  const bonus = Math.min(5, S.streak || 0) * 10;
+  openSheet('mission', () => ({
+    title: vip ? 'Cliente VIP' : 'Encargo', em: vip ? '🕴️' : '📦', body: `
+    <p class="note" style="font-size:15px;color:var(--paper)">${vip ? `“Me hablaron muy bien de <b>${esc(lotLabel(l))}</b>. ¿Me llevas? Yo te sigo.”` : `“¿Me llevas este paquete a <b>${esc(lotLabel(l))}</b>? Es urgente.”`}</p>
+    <div class="stats"><div class="stat"><span>Pago</span><b style="color:var(--cash)">${fmt(o.reward)}</b></div><div class="stat"><span>Tiempo</span><b>${fmtTime(o.time)}</b></div><div class="stat"><span>Distancia</span><b>${meters} m</b></div></div>
+    ${bonus ? `<p class="note">🔥 Racha de ${S.streak} encargos: +${bonus} % de bono si lo cumples.</p>` : `<p class="note">Encargos seguidos sin fallar dan bono de racha.</p>`}
+    <div class="row"><button class="btn" data-close>No, gracias</button><button class="btn primary" data-a="accept">Aceptar</button></div>`,
+  }));
+  ACTIONS.accept = () => {
+    if (!giver) { closeSheet(); return; }
+    S.mission = { kind: o.kind, lot: o.lot, reward: o.reward, tLeft: o.time, total: o.time };
+    if (vip) { giver.mode = 'follow'; follower = giver; say(giver, '¡Vamos!'); }
+    else { giver.mode = 'walk'; say(giver, '¡Gracias!'); }
+    giver = null; nearGiver = false;
+    waypoint = { x: l.door.x, y: l.door.y };
+    closeSheet(); sfx('click');
+  };
+}
+function completeMission() {
+  const m = S.mission, l = lots[m.lot], bonus = 1 + Math.min(5, S.streak || 0) * 0.1, amt = Math.round(m.reward * bonus);
+  S.money += amt; S.streak = (S.streak || 0) + 1; S.stats.missions = (S.stats.missions || 0) + 1;
+  if (m.kind === 'vip') {
+    const b = bizAtLot(m.lot); if (b) b.rep = Math.min(100, b.rep + 5);
+    if (follower) { follower.mode = 'toDoor'; follower.tx = l.door.x; follower.ty = l.door.y; follower.after = '¡Excelente lugar!'; }
+  }
+  follower = null; S.mission = null; waypoint = null;
+  floatText(P.x, P.y, '+' + fmt(amt), '#ffb627', 1.5);
+  for (let i = 0; i < 12; i++) spawnParticle('coin', P.x, P.y);
+  toast(`✅ ${m.kind === 'vip' ? 'Llevaste al VIP' : 'Entrega completada'}: +${fmt(amt)}${S.streak > 1 ? ' · 🔥 racha de ' + S.streak : ''}`, 'good', 4500);
+  sfx('mission'); vibrate(30);
+}
+function failMission(reason) {
+  if (follower) { follower.mode = 'walk'; say(follower, 'Mejor me voy solo…'); }
+  follower = null; S.mission = null; S.streak = 0; waypoint = null;
+  toast(`❌ ${reason}. Perdiste tu racha.`, 'bad', 4500); sfx('error');
+}
+// Robos: solo a negocios sin gerente, con buena caja y cerca de ti (siempre se puede perseguir)
+function robberyCheck(dtMin) {
+  if (thief || inside || sleeping) return;
+  if (S.min - (S.lastRob ?? -9999) < 180) return;
+  const p10 = darkness() > 0.5 ? 0.05 : 0.012;
+  for (const b of S.biz) {
+    if (b.manager || b.cash < Math.max(60, regCap(b) * 0.3)) continue;
+    const l = lotOf(b), d = Math.hypot(l.door.x - P.x, l.door.y - P.y);
+    if (d > 900 || d < 120) continue;
+    if (rnd() < p10 * dtMin / 10) { startRobbery(b); return; }
+  }
+}
+function startRobbery(b) {
+  const l = lotOf(b), loot = Math.round(b.cash * 0.7), k = nearestNode(l.door.x, l.door.y), p = newPed(k);
+  b.cash -= loot; S.lastRob = S.min;
+  Object.assign(p, { x: l.door.x, y: l.door.y, mode: 'thief', shirt: '#151515', pants: '#151515', hair: '#151515', sp: 118, loot, biz: b.lot, t: 0, dog: false, umb: null, to: k });
+  peds.push(p); thief = p;
+  toast(`🚨 ¡Asaltaron ${bizName(b)}! Se llevó ${fmt(loot)}. ¡Atrápalo!`, 'bad', 5000);
+  say(p, '¡Jajaja!'); sfx('siren'); vibrate(80);
+}
+function updateStreetPed(p, dt) {
+  if (p.mode === 'giver') return;                 // espera parado a que le hables
+  if (p.mode === 'follow') {                      // el VIP te sigue (y se sube contigo si vas en vehículo)
+    const tx = P.x - Math.cos(P.ang || 0) * 26, ty = P.y - Math.sin(P.ang || 0) * 26, dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+    if (d > 240) { p.x = tx; p.y = ty; }
+    else if (d > 6) { const sp = Math.min(d * 3, 170); p.x += dx / d * sp * dt; p.y += dy / d * sp * dt; }
+    return;
+  }
+  if (p.mode === 'thief') {                       // corre alejándose de ti; se cansa después de 14 s
+    p.t += dt;
+    const n = nodes[p.to], dx = n.x - p.x, dy = n.y - p.y, d = Math.hypot(dx, dy), sp = p.t < 14 ? 118 : 82;
+    p.ph += dt * sp * 0.3;
+    if (d < 4) {
+      let best = p.to, bd = -1;
+      for (const k of nodes[p.to].n) { const q = nodes[k], dd = Math.hypot(q.x - P.x, q.y - P.y) + rnd() * 60; if (dd > bd) { bd = dd; best = k; } }
+      p.from = p.to; p.to = best;
+    } else { p.x += dx / d * sp * dt; p.y += dy / d * sp * dt; }
+  }
+}
+function streetTick(dt, dtMin) {
+  if (sleeping) return;
+  // Personas que piden favores
+  if (giver) {
+    giver.wait += dt;
+    const d = Math.hypot(giver.x - P.x, giver.y - P.y);
+    nearGiver = d < 46 && !inside;
+    if (d > 1300 || giver.wait > 90) { removePed(giver); giver = null; nearGiver = false; }
+    else if (!giver.bub && rnd() < dt * 0.15) say(giver, pick(['¡Oye! ¿Me ayudas?', '¡Por aquí!', 'Necesito un favor']));
+  } else {
+    nearGiver = false;
+    if (!S.mission && !thief && !inside) { giverT -= dt; if (giverT <= 0) { giverT = 40 + rnd() * 40; spawnGiver(); } }
+  }
+  // Encargo en curso
+  const m = S.mission;
+  if (m) {
+    m.tLeft -= dt;
+    const l = lots[m.lot], d = Math.hypot(l.door.x - P.x, l.door.y - P.y);
+    if (m.kind === 'vip' && !follower) failMission('El cliente VIP se perdió');
+    else if (d < 50 && (m.kind === 'deliver' || Math.hypot(follower.x - l.door.x, follower.y - l.door.y) < 200)) completeMission();
+    else if (m.tLeft <= 0) failMission('Se acabó el tiempo');
+  }
+  // Ladrón
+  if (thief) {
+    const d = Math.hypot(thief.x - P.x, thief.y - P.y);
+    waypoint = { x: thief.x, y: thief.y };
+    if (d < 26) {
+      const bonus = roundR(thief.loot * 0.25 + 40 * missionScale()), b = bizAtLot(thief.biz);
+      S.money += thief.loot + bonus; S.stats.caught = (S.stats.caught || 0) + 1; if (b) b.rep = Math.min(100, b.rep + 3);
+      floatText(P.x, P.y, '+' + fmt(thief.loot + bonus), '#46d98a', 1.5);
+      for (let i = 0; i < 14; i++) spawnParticle('coin', P.x, P.y);
+      toast(`👮 ¡Atrapaste al ladrón! Recuperaste ${fmt(thief.loot)} y la policía te dio ${fmt(bonus)} de recompensa.`, 'good', 5000);
+      sfx('goal'); vibrate(40); endThief();
+    } else if (d > 1000 || thief.t > 45) { toast(`💨 El ladrón escapó con ${fmt(thief.loot)}. Un gerente evita los robos.`, 'bad', 5000); endThief(); }
+  } else robberyCheck(dtMin);
+}
+function endThief() {
+  removePed(thief); thief = null; waypoint = null;
+  if (S.mission) { const l = lots[S.mission.lot]; waypoint = { x: l.door.x, y: l.door.y }; }
+}
+function clearStreet() { // al dormir o al cargar
+  if (giver) removePed(giver); if (thief) removePed(thief); if (follower) removePed(follower);
+  giver = thief = follower = null; nearGiver = false; giverT = 20;
+  if (S.mission && S.mission.kind === 'vip') S.mission = null;
+}
 
 // ---------- Dormir: de noche, en tu departamento, pasas a las 7:00 ----------
 let sleeping = false;
@@ -2306,6 +2480,8 @@ function fastForwardToMorning() {
     if (prevH < 7 && hour() >= 7) morningNews();
     simEconomy(d, d / MIN_PER_SEC);
   }
+  if (S.mission) { S.mission = null; S.streak = 0; toast('El encargo se canceló porque te fuiste a dormir.', '', 4000); }
+  clearStreet(); waypoint = null;
   peds.length = 0; cars.length = 0; parts.length = 0; floats.length = 0;
   for (const b of S.biz) b.queue.length = 0;
   rainK = S.weather === 'rain' ? 1 : 0; cloudK = S.weather === 'sun' ? 0 : 1;
@@ -2328,6 +2504,8 @@ function startGame(state) {
   ['hud', 'topright', 'actions', 'ticker'].forEach(id => $(id).hidden = false);
   $ui.innerHTML = '';
   peds.length = 0; cars.length = 0;
+  clearStreet();
+  if (S.mission) { const l = lots[S.mission.lot]; waypoint = { x: l.door.x, y: l.door.y }; }
   setTicker(EVENTS.find(e => e.id === S.event)?.[LANG] || FLAVOR[LANG][0]);
   for (let i = 0; i < 26; i++) { const k = spawnPlace(700); if (k >= 0) { const p = newPed(k); peds.push(p); } }
   // Algunos peatones ya visibles al empezar para que la calle no esté vacía
