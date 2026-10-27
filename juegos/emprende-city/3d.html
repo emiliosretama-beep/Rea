@@ -445,10 +445,18 @@ function buildWorld() {
     setLotSolid(l);
   }
   // Tu departamento: el edificio junto a donde empiezas
-  HOME = lots.find(l => l.bx === 1 && l.by === 2 && l.lx === 1 && l.ly === 0);
-  HOME.kind = 'home'; setLotSolid(HOME);
+  // Cada nivel de casa está en un barrio distinto (se eligen entre edificios decorativos: no quitan terrenos ni negocios)
+  const spot = f => lots.filter(l => l.kind === 'deco' && f(l)).sort((a, b) => a.id - b.id)[0];
+  HOME_SPOTS = [
+    lots.find(l => l.bx === 1 && l.by === 2 && l.lx === 1 && l.ly === 0),            // Departamento: Residencial, junto al inicio
+    spot(l => l.district === 'tech' && l.by === 1) || spot(l => l.district === 'tech'), // Loft: Distrito Tech
+    spot(l => l.district === 'res' && l.by >= 4),                                     // Casa con alberca: Residencial sur, junto al parque
+    spot(l => l.district === 'playa' && l.lx === 1 && l.by >= 2 && l.by <= 3) || spot(l => l.district === 'playa' && l.lx === 1) || spot(l => l.district === 'playa'), // Mansión: frente al mar
+  ];
+  for (const l of HOME_SPOTS) { l.kind = 'home'; setLotSolid(l); }
+  HOME = HOME_SPOTS[0];
 }
-let HOME = null;
+let HOME = null, HOME_SPOTS = [];
 // Niveles de casa: cambian el edificio, el interior y el bono de ventas al despertar
 const HOMES = [
   { name: 'Departamento', cost: 0, h: 2.3, wall: '#e8d5b5', roof: '#2a9d8f', em: '🏠', mult: 1.05, floor: '#b98a5a', rug: '#9b5de5' },
@@ -457,6 +465,7 @@ const HOMES = [
   { name: 'Mansión', cost: 600000, h: 2.9, wall: '#f7f3ea', roof: '#c9a15a', em: '🏰', mult: 1.25, floor: '#ece8df', rug: '#c9a15a' },
 ];
 const homeLv = () => (S && S.homeLv) || 0;
+function setHomeFromLevel() { HOME = HOME_SPOTS[homeLv()]; }
 function setLotSolid(l) {
   const v = l.kind === 'sale' ? 0 : 1;
   for (let y = l.ty; y < l.ty + 4; y++) for (let x = l.tx; x < l.tx + 4; x++) solid[y * W + x] = v;
@@ -943,7 +952,7 @@ function updatePlayer(dt) {
   const ny = P.y + P.vy * dt;
   if (!hit(P.x, ny, r)) P.y = ny; else P.vy = 0;
   // Entrar caminando: empujar hacia la puerta de un local
-  if (!inside && ctxLot && (ctxLot.kind === 'rival' || ctxLot.kind === 'home' || bizAtLot(ctxLot.id)) && dist2(P.x, P.y, ctxLot.door.x, ctxLot.door.y) < 22 * 22) {
+  if (!inside && ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id)) && dist2(P.x, P.y, ctxLot.door.x, ctxLot.door.y) < 22 * 22) {
     const push = ctxLot.door.side === 'n' ? iy : -iy;
     if (push > 0.6 && Math.abs(P.x - ctxLot.door.x) < 16) enterLot(ctxLot);
   }
@@ -1076,6 +1085,16 @@ function saleSignMats(district) {
   });
   const face = new THREE.MeshLambertMaterial({ map: tex }), side = lam('#2fbf71');
   return (signMats[district] = [side, side, side, side, face, face]);
+}
+const homeSignCache = {};
+function homeSignMats(lv) {
+  if (homeSignCache[lv]) return homeSignCache[lv];
+  const HM = HOMES[lv], tex = canvasTex(256, 128, (g) => {
+    g.fillStyle = '#3a86ff'; rr(g, 4, 4, 248, 120, 18); g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.stroke();
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = '800 30px system-ui, sans-serif'; g.fillText('EN VENTA', 128, 42);
+    g.font = '700 26px system-ui, sans-serif'; g.fillText(HM.name, 128, 76); g.font = '800 30px system-ui, sans-serif'; g.fillStyle = '#ffd166'; g.fillText(fmtK(HM.cost), 128, 110);
+  });
+  return (homeSignCache[lv] = new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
 }
 function glowTexture() {
   return canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,150,1)'); gr.addColorStop(0.4, 'rgba(255,200,120,.45)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
@@ -1269,7 +1288,7 @@ function buildLotObj(l) {
     const board = new THREE.Mesh(BOX, saleSignMats(l.district)); board.scale.set(2.1, 1.05, 0.08); board.position.set(cx, 1.65, cz); board.castShadow = true; g.add(board);
     add(lam('#9c835e'), 0.5, 0.18, 0.4, cx + 0.9, 0.09, cz + 0.5); add(lam('#93795a'), 0.35, 0.12, 0.3, cx - 1, 0.06, cz - 0.6);
   } else if (l.kind === 'home') {
-    const lv = homeLv(), HM = HOMES[lv], sgn = l.door.side === 'n' ? -1 : 1, LW = U(l.w), LD = U(l.h);
+    const lv = HOME_SPOTS.indexOf(l), HM = HOMES[lv], sgn = l.door.side === 'n' ? -1 : 1, LW = U(l.w), LD = U(l.h);
     add(lam(lv >= 2 ? '#86bf68' : '#cfc6b4'), LW, 0.04, LD, cx, 0.02, cz, false);
     // Desde la casa con alberca, el edificio va al fondo y el frente es jardín
     const w = LW - 0.45, d = lv >= 2 ? LD * 0.55 : LD - 0.45, bz = lv >= 2 ? cz - sgn * (LD / 2 - d / 2 - 0.15) : cz, h = HM.h;
@@ -1294,7 +1313,10 @@ function buildLotObj(l) {
       add(lam(HM.roof), 1.9, 0.14, 0.7, cx, h + 0.02, fz + sgn * 0.33);
       for (const k of [-1, 1]) { add(lam('#8a6b4a'), 0.12, 1.5, 0.12, cx + k * 1.45, 0.75, cz + sgn * (LD / 2 - 0.35)); add(lam('#3f8a3a'), 0.9, 0.1, 0.9, cx + k * 1.45, 1.5, cz + sgn * (LD / 2 - 0.35)); }
     } else for (const k of [-1, 1]) { add(lam('#8a5a3c'), 0.25, 0.28, 0.25, cx + k * 0.75, 0.14, fz + sgn * 0.35); add(lam('#3f8a3a'), 0.36, 0.3, 0.36, cx + k * 0.75, 0.42, fz + sgn * 0.35, false); }
-    const sp = new THREE.Sprite(emojiMat(HM.em)); sp.position.set(cx, h + 0.95, bz); sp.scale.set(1.2, 1.2, 1); g.add(sp);
+    if (l === HOME) { const sp = new THREE.Sprite(emojiMat(HM.em)); sp.position.set(cx, h + 0.95, bz); sp.scale.set(1.2, 1.2, 1); g.add(sp); }
+    else if (lv > homeLv()) { // todavía no es tuya: letrero de venta con nombre y precio
+      const sp = new THREE.Sprite(homeSignMats(lv)); sp.position.set(cx, h + 1.25, bz); sp.scale.set(2.3, 1.15, 1); g.add(sp); // flota sobre el techo: se lee desde cualquier ángulo
+    }
     g.userData.fadeMats = fadeMats; g.userData.fade = 1; g.userData.h = h;
   } else {
     const b = bizAtLot(l.id), ty = TYPE[b ? b.type : l.rival.type], lvl = b ? b.level : l.rival.level;
@@ -1800,7 +1822,8 @@ function drawOverlay() {
   // Etiqueta del lugar cercano
   if (ctxLot && running && !inside) {
     const l = ctxLot, b = bizAtLot(l.id);
-    const label = l === HOME ? `Tu ${HOMES[homeLv()].name}` : l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
+    const hs = HOME_SPOTS.indexOf(l);
+    const label = l === HOME ? `Tu ${HOMES[homeLv()].name}` : hs >= 0 ? (hs > homeLv() ? `${HOMES[hs].name} en venta · ${fmtK(HOMES[hs].cost)}` : `Tu antiguo ${HOMES[hs].name}`) : l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
     const s = toScreen(l.door.x, l.door.y, 0.1);
     if (s) pill(s[0], s[1] + 34, label, 'rgba(15,26,46,.9)', '#f3efe4', '700 12px system-ui, sans-serif');
   }
@@ -1880,7 +1903,7 @@ function drawMiniMap() {
     if (l.kind === 'deco') continue;
     const [mx, my] = toM(l.x + l.w / 2, l.y + l.h / 2); if (mx < -10 || my < -10 || mx > 234 || my > 234) continue;
     const b = bizAtLot(l.id);
-    mmc.fillStyle = l === HOME ? '#3a86ff' : b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
+    mmc.fillStyle = l === HOME ? '#3a86ff' : l.kind === 'home' ? '#9bb7e0' : b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
     mmc.beginPath(); mmc.arc(mx, my, b ? 7 : 5, 0, 7); mmc.fill();
     if (b && b.cash > 0 && !b.manager) { mmc.fillStyle = '#ffcf3f'; mmc.beginPath(); mmc.arc(mx + 6, my - 6, 4, 0, 7); mmc.fill(); }
   }
@@ -1970,6 +1993,7 @@ function updateHUD() {
     const l = ctxLot, b = bizAtLot(l.id);
     if (l.kind === 'sale') main = { k: 'buy', label: t('buy'), ico: '🏗️' };
     else if (l === HOME) { if (inside) main = { k: 'sleep', label: canSleep() ? 'Dormir' : 'Dormir (8 p.m.)', ico: '😴', dim: !canSleep() }; }
+    else if (l.kind === 'home' && HOME_SPOTS.indexOf(l) > homeLv()) main = { k: 'homeView', label: 'Ver casa', ico: HOMES[HOME_SPOTS.indexOf(l)].em };
     else if (b) {
       // En tu negocio el botón grande siempre es Atender: así un toque de más nunca abre el menú
       main = { k: 'serve', label: `${t('serve')} (${b.queue.length})`, ico: '🛎️', dim: !b.queue.length };
@@ -1978,7 +2002,7 @@ function updateHUD() {
   }
   let enter = null;
   if (inside) enter = { k: 'exit', label: '🚪 Salir' };
-  else if (ctxLot && (ctxLot.kind === 'rival' || ctxLot.kind === 'home' || bizAtLot(ctxLot.id)) && playerNearDoor(ctxLot, 64)) enter = { k: 'enter', label: '🚪 Entrar' };
+  else if (ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id)) && playerNearDoor(ctxLot, 64)) enter = { k: 'enter', label: '🚪 Entrar' };
   setBtn($act, main); setBtn($alt, alt); setBtn($('btnEnter'), enter);
   $act.classList.toggle('serve', !!main && main.k === 'serve');
   $act.classList.toggle('dim', !!main && !!main.dim);
@@ -2001,6 +2025,7 @@ function doAction(k) {
   if (!ctxLot) return;
   const l = ctxLot, b = bizAtLot(l.id);
   if (k === 'sleep' && l === HOME) goSleep();
+  else if (k === 'homeView') openPhone('home');
   else if (k === 'buy' && l.kind === 'sale') openBuy(l);
   else if (k === 'serve' && b) serveOne(b);
   else if (k === 'manage' && b) openManage(b);
@@ -2008,7 +2033,7 @@ function doAction(k) {
 }
 $act.addEventListener('click', () => doAction($act.dataset.k));
 $('btnEnter').addEventListener('click', () => { audioInit(); toggleInside(); });
-function toggleInside() { if (sleeping) return; if (inside) exitLot(); else if (ctxLot && (ctxLot.kind === 'rival' || ctxLot.kind === 'home' || bizAtLot(ctxLot.id))) enterLot(ctxLot); }
+function toggleInside() { if (sleeping) return; if (inside) exitLot(); else if (ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id))) enterLot(ctxLot); }
 $alt.addEventListener('click', () => doAction($alt.dataset.k));
 
 // Hoja de menús
@@ -2167,7 +2192,8 @@ function openPhone(tab) {
       body = `<div class="item"><span class="em">${cur.em}</span><span><span class="t">${cur.name}</span><br><span class="s">Vives aquí. Al despertar: +${pct(cur)} % de ventas hasta las 7 p.m.</span></span><span class="p">✓</span></div>`;
       body += nx ? `<div class="lbl">Siguiente</div><div class="item"><span class="em">${nx.em}</span><span><span class="t">${nx.name}</span><br><span class="s">Al despertar: +${pct(nx)} % de ventas. Casa nueva por fuera y por dentro.</span></span><span class="p" style="color:${S.money >= nx.cost ? 'var(--cash)' : 'var(--danger)'}">${fmtK(nx.cost)}</span></div>
         <button class="btn primary" data-a="homeUp" ${S.money >= nx.cost ? '' : 'disabled'}>Mudarme · ${fmtK(nx.cost)}</button>` : '<p class="note">Ya vives en la mejor casa de la ciudad.</p>';
-      body += `<p class="note">Tu casa cuenta en tu patrimonio (60 % de lo que pagaste).</p><button class="btn" data-a="home">🏠 Ir a casa</button>`;
+      body += nx ? `<p class="note">📍 Está en ${t(HOME_SPOTS[lv + 1].district)}. <button class="btn" data-a="seeHome" style="min-height:36px;padding:4px 12px;margin-top:6px">Marcar en el mapa</button></p>` : '';
+      body += `<p class="note">Tu casa actual está en ${t(HOME.district)} y cuenta en tu patrimonio (60 % de lo que pagaste).</p><button class="btn" data-a="home">🏠 Ir a casa</button>`;
     } else if (phoneTab === 'goals') {
       body = '<div class="list">' + GOALS.map(g => { const d = S.goalsDone.includes(g.id); return `<div class="item ${d ? 'done' : ''}"><span class="em">${d ? '✅' : '🎯'}</span><span class="t">${g[LANG]}</span><span class="p">${g.r ? fmtK(g.r) : '🏆'}</span></div>`; }).join('') + '</div>';
     } else if (phoneTab === 'bank') {
@@ -2191,10 +2217,15 @@ function openPhone(tab) {
   ACTIONS.tab = v => { phoneTab = v; drawSheet(); sfx('click'); };
   ACTIONS.homeUp = () => {
     const nx = HOMES[homeLv() + 1]; if (!nx || S.money < nx.cost) { sfx('error'); return; }
-    S.money -= nx.cost; S.homeLv = homeLv() + 1; onLotChanged(HOME);
+    const old = HOME;
+    if (inside && inside.l === old) exitLot();
+    S.money -= nx.cost; S.homeLv = homeLv() + 1; setHomeFromLevel();
+    onLotChanged(old); onLotChanged(HOME);
     for (let i = 0; i < 18; i++) spawnParticle('coin', HOME.door.x, HOME.door.y);
-    toast(`${nx.em} ¡Te mudaste a tu ${nx.name}!`, 'good', 5000); sfx('buy'); vibrate(40); drawSheet();
+    waypoint = { x: HOME.door.x, y: HOME.door.y };
+    toast(`${nx.em} ¡Compraste tu ${nx.name} en ${t(HOME.district)}! Te marqué la ruta para llegar.`, 'good', 6000); sfx('buy'); vibrate(40); drawSheet();
   };
+  ACTIONS.seeHome = () => { const l = HOME_SPOTS[homeLv() + 1]; if (l) { waypoint = { x: l.door.x, y: l.door.y }; closeSheet(); } };
   ACTIONS.home = () => { waypoint = { x: HOME.door.x, y: HOME.door.y }; closeSheet(); };
   ACTIONS.go = i => { const b = S.biz[+i]; if (!b) return; const l = lotOf(b); waypoint = { x: l.door.x, y: l.door.y }; closeSheet(); };
   ACTIONS.mng = i => { const b = S.biz[+i]; if (b) openManage(b); };
@@ -2226,9 +2257,10 @@ function openMap() {
   for (const l of lots) {
     if (l.kind === 'deco') continue;
     const b = bizAtLot(l.id), x = (l.tx + 2) * s, y = (l.ty + 2) * s;
-    g.fillStyle = l === HOME ? '#3a86ff' : b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
-    g.beginPath(); g.arc(x, y, b || l === HOME ? s * 1.9 : s * 1.2, 0, 7); g.fill();
-    if (l === HOME) { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText('🏠', x, y + 1); }
+    const hs = HOME_SPOTS.indexOf(l);
+    g.fillStyle = l === HOME ? '#3a86ff' : hs >= 0 ? '#9bb7e0' : b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
+    g.beginPath(); g.arc(x, y, b || hs >= 0 ? s * 1.9 : s * 1.2, 0, 7); g.fill();
+    if (hs >= 0) { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText(HOMES[hs].em, x, y + 1); }
     else if (b || l.kind === 'rival') { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText(TYPE[b ? b.type : l.rival.type].em, x, y + 1); }
   }
   g.font = `800 ${Math.round(s * 2.2)}px system-ui`; g.fillStyle = 'rgba(255,255,255,.85)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = s * .6;
@@ -2402,7 +2434,7 @@ function spawnGiver() {
     const b = pick(S.biz), l = lotOf(b), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
     p.offer = { kind: 'vip', lot: l.id, reward: roundR((TYPE[b.type].ticket * 10 + 60) * missionScale()), time: Math.round(d / 70 + 35) };
   } else {
-    const opts = lots.filter(l => l.kind !== 'deco' && l !== HOME).filter(l => { const d = Math.hypot(l.door.x - p.x, l.door.y - p.y); return d > 650 && d < 2300; });
+    const opts = lots.filter(l => l.kind !== 'deco' && l.kind !== 'home').filter(l => { const d = Math.hypot(l.door.x - p.x, l.door.y - p.y); return d > 650 && d < 2300; });
     if (!opts.length) return;
     const l = pick(opts), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
     p.offer = { kind: 'deliver', lot: l.id, reward: roundR((40 + d * 0.12) * missionScale()), time: Math.round(d / 95 + 20) };
@@ -2577,6 +2609,7 @@ function fastForwardToMorning() {
 // ---------- Inicio ----------
 function startGame(state) {
   S = state;
+  setHomeFromLevel();
   cam.zoom = 1;
   P.x = S.player.x; P.y = S.player.y;
   if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
