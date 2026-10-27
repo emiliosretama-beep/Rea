@@ -195,13 +195,14 @@ if (!window.THREE) document.getElementById('ui').innerHTML = '<div class="title"
    ===================================================================== */
 
 // ---------- Constantes del mundo ----------
-const T = 32, BLK = 12, NB = 6, CITY = NB * BLK + 2;      // 74 tiles de ciudad
+// La ciudad original (6×6 manzanas) se generó primero; los barrios nuevos se agregan al oeste (OX columnas) y al sur
+const T = 32, BLK = 12, NB = 8, OLD_NB = 6, OX = 2, CITY = NB * BLK + 2;      // 98 tiles de ciudad
 const SAND0 = CITY, WATER0 = CITY + 6, W = CITY + 18, H = CITY;
 const TL = { ROAD: 0, WALK: 1, GRASS: 2, LOT: 3, SAND: 4, WATER: 5, PLAZA: 6 };
 const MIN_PER_SEC = 2;                                      // 1 s real = 2 min de juego → día de 12 min
-const SAVE_KEY = 'emprende-city:save:v1', SAVE_VER = 1;
-const DISTRICTS = ['res', 'centro', 'tech', 'ind', 'playa'];
-const LAND = { res: 1, centro: 1.35, tech: 1.25, ind: 0.85, playa: 1.2 };
+const SAVE_KEY = 'emprende-city:save:v1', SAVE_VER = 2;   // v2: ciudad más grande (las partidas v1 se migran)
+const DISTRICTS = ['res', 'centro', 'tech', 'ind', 'playa', 'uni', 'puerto'];
+const LAND = { res: 1, centro: 1.35, tech: 1.25, ind: 0.85, playa: 1.2, uni: 1.05, puerto: 1.1 };
 
 // ---------- Tipos de negocio ----------
 // fit: qué tan bien funciona en cada distrito · tags: outdoor/heat (sufren con lluvia), rainy (ganan con lluvia), leisure (fin de semana)
@@ -227,6 +228,9 @@ const TYPES = [
   { id: 'startup', em: '🚀', cost: 400000, ticket: 900, staff: 6, prof: 'day',       roof: '#1f8ef1', fit: { res: .6, centro: 1, tech: 1.8, ind: .7, playa: .8 }, tags: ['volatile'] },
 ];
 const TYPE = Object.fromEntries(TYPES.map(t => [t.id, t]));
+// Encaje en los barrios nuevos: [Ciudad Universitaria, Puerto]
+const FIT_NEW = { lemon: [1.1, .9], tacos: [1.5, 1.4], ice: [1.1, 1.0], bakery: [1.0, .9], cafe: [1.5, 1.0], laundry: [1.3, .9], flowers: [.8, .7], books: [1.7, .6], surf: [.6, 1.2], gym: [1.2, .8], rest: [1.0, 1.5], garage: [.7, 1.4], pharma: [1.0, .9], bar: [1.4, 1.3], club: [1.3, 1.1], cinema: [1.3, .7], gamedev: [1.3, .8], hotel: [.7, 1.3], startup: [1.3, .9] };
+for (const t of TYPES) { t.fit.uni = FIT_NEW[t.id][0]; t.fit.puerto = FIT_NEW[t.id][1]; }
 
 // Curvas de demanda por hora del día: [centro, ancho, amplitud]
 const PROF = {
@@ -271,7 +275,7 @@ const I18N = {
     brandAsk: 'Nombre de tu marca', tagline: 'Empiezas con $800 y un sueño. Abre negocios, contrata gente y conquista la ciudad.',
     keys: 'Teclado: WASD o flechas para moverte · E comprar o gestionar · Espacio atender · F entrar o salir · Q/R girar cámara · Z zoom · M mapa · P móvil',
     moveHint: 'Desliza aquí para caminar', moveHintKb: 'Muévete con WASD o las flechas',
-    res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', district: 'Distrito',
+    res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', uni: 'Ciudad Universitaria', puerto: 'Puerto', district: 'Distrito',
     days: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], day: 'Día',
     sun: 'Soleado', cloud: 'Nublado', rain: 'Lluvia',
     buy: 'Comprar', manage: 'Gestionar', serve: 'Atender', offer: 'Ofertar', collect: 'Cobrar',
@@ -373,15 +377,22 @@ function wpick(list) { let s = 0; for (const e of list) s += e.w; let r = rnd() 
 // =====================================================================
 const tiles = new Uint8Array(W * H), solid = new Uint8Array(W * H);
 const lots = [], trees = [], lamps = [], benches = [];
-const PARKS = new Set(['1,1', '4,4']), PLAZA_B = '3,3';
+const PARKS = new Set(['3,1', '6,4', '1,4']), PLAZA_B = '5,3';
+// Lugares emblemáticos (manzanas completas, sin terrenos)
+const LANDMARKS = { '0,2': 'uni', '1,6': 'hospital', '3,7': 'stadium', '7,7': 'port' };
+let LAKE = null, FERRIS = null, LIGHTHOUSE = null;
 let FOUNTAIN = { x: 0, y: 0 };
 const isRoadI = i => i < CITY && (i % BLK === 0 || i % BLK === 1);
 function districtOf(bx, by) {
-  if (bx === 5) return 'playa';
-  if (by >= 4 && bx <= 2) return 'ind';
-  if (bx >= 3 && by <= 1) return 'tech';
-  if (bx >= 2 && bx <= 4 && by >= 2 && by <= 3) return 'centro';
-  return 'res';
+  if (bx >= OX && by < OLD_NB) { // la ciudad original, con sus distritos de siempre
+    const ox = bx - OX;
+    if (ox === 5) return 'playa';
+    if (by >= 4 && ox <= 2) return 'ind';
+    if (ox >= 3 && by <= 1) return 'tech';
+    if (ox >= 2 && ox <= 4 && by >= 2 && by <= 3) return 'centro';
+    return 'res';
+  }
+  return by >= OLD_NB && bx >= 5 ? 'puerto' : 'uni';
 }
 function districtAt(px, py) {
   const tx = px / T | 0, ty = py / T | 0;
@@ -389,61 +400,71 @@ function districtAt(px, py) {
   return districtOf(clamp(tx / BLK | 0, 0, NB - 1), clamp(ty / BLK | 0, 0, NB - 1));
 }
 function buildWorld() {
-  const R = mulberry(1977);
+  const R = mulberry(1977), R2 = mulberry(4242);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let k;
     if (x >= WATER0) k = TL.WATER;
     else if (x >= SAND0) k = TL.SAND;
     else if (isRoadI(x) || isRoadI(y)) k = TL.ROAD;
     else {
-      const lx = x % BLK, ly = y % BLK, key = (x / BLK | 0) + ',' + (y / BLK | 0);
+      const lx = x % BLK, ly = y % BLK, key = (x / BLK | 0) + ',' + (y / BLK | 0), lm = LANDMARKS[key];
       if (lx === 2 || lx === 11 || ly === 2 || ly === 11) k = TL.WALK;
-      else k = PARKS.has(key) ? TL.GRASS : key === PLAZA_B ? TL.PLAZA : TL.LOT;
+      else k = PARKS.has(key) || lm === 'uni' ? TL.GRASS : key === PLAZA_B || lm ? TL.PLAZA : TL.LOT;
+      if (lm) solid[y * W + x] = 1;   // los edificios emblemáticos ocupan la manzana
     }
     tiles[y * W + x] = k;
     if (k === TL.WATER) solid[y * W + x] = 1;
   }
-  // Farolas en las esquinas de cada manzana
-  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+  const block = (bx, by, RR, ext) => {
     const x0 = bx * BLK + 2, y0 = by * BLK + 2;
     for (const [cx, cy] of [[x0, y0], [x0 + 9, y0], [x0, y0 + 9], [x0 + 9, y0 + 9]]) lamps.push({ x: cx * T + 16, y: cy * T + 16 });
     const key = bx + ',' + by;
+    if (LANDMARKS[key]) return;
     if (PARKS.has(key)) {
-      for (let i = 0; i < 16; i++) trees.push({ x: (x0 + 1.5 + R() * 7) * T, y: (y0 + 1.5 + R() * 7) * T, r: 13 + R() * 9, s: R() * 6 });
+      const lake = key === '1,4';
+      for (let i = 0; i < 16; i++) { const tx = x0 + 1.5 + RR() * 7, ty = y0 + 1.5 + RR() * 7, r = 13 + RR() * 9, sd = RR() * 6; if (!lake || Math.hypot(tx - x0 - 5, ty - y0 - 5) > 2.6) trees.push({ x: tx * T, y: ty * T, r, s: sd }); }
       benches.push({ x: (x0 + 5) * T, y: (y0 + 2.3) * T }, { x: (x0 + 5) * T, y: (y0 + 7.8) * T });
-      continue;
+      if (lake) { LAKE = { x: (x0 + 5) * T, y: (y0 + 5) * T }; for (let yy = y0 + 4; yy <= y0 + 6; yy++) for (let xx = x0 + 4; xx <= x0 + 6; xx++) solid[yy * W + xx] = 1; }
+      return;
     }
     if (key === PLAZA_B) {
       FOUNTAIN = { x: (x0 + 5) * T, y: (y0 + 5) * T };
-      for (const [a, b] of [[2, 2], [8, 2], [2, 8], [8, 8]]) trees.push({ x: (x0 + a) * T, y: (y0 + b) * T, r: 15, s: R() * 6 });
+      for (const [a, b] of [[2, 2], [8, 2], [2, 8], [8, 8]]) trees.push({ x: (x0 + a) * T, y: (y0 + b) * T, r: 15, s: RR() * 6 });
       benches.push({ x: (x0 + 3.2) * T, y: (y0 + 5) * T }, { x: (x0 + 6.8) * T, y: (y0 + 5) * T });
       const fx = FOUNTAIN.x / T | 0, fy = FOUNTAIN.y / T | 0;
       for (let yy = fy - 1; yy <= fy; yy++) for (let xx = fx - 1; xx <= fx; xx++) solid[yy * W + xx] = 1;
-      continue;
+      return;
     }
     for (let ly = 0; ly < 2; ly++) for (let lx = 0; lx < 2; lx++) {
       const tx = bx * BLK + 3 + lx * 4, ty = by * BLK + 3 + ly * 4;
-      const lot = {
-        id: lots.length, bx, by, lx, ly, tx, ty, district: districtOf(bx, by),
+      lots.push({
+        id: lots.length, bx, by, lx, ly, tx, ty, district: districtOf(bx, by), ext,
         x: tx * T + 4, y: ty * T + 4, w: 4 * T - 8, h: 4 * T - 8,
         door: { x: tx * T + 2 * T, y: ly === 0 ? ty * T - 16 : (ty + 4) * T + 16, side: ly === 0 ? 'n' : 's' },
-        kind: 'deco', seed: R(), rival: null,
-      };
-      lots.push(lot);
+        kind: 'deco', seed: RR(), rival: null,
+      });
     }
-  }
+  };
+  for (let by = 0; by < OLD_NB; by++) for (let bx = 0; bx < OLD_NB; bx++) block(bx + OX, by, R, false);
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) if (!(bx >= OX && by < OLD_NB)) block(bx, by, R2, true);
+  // Muelle de la playa (se puede caminar) con la rueda de la fortuna, y el faro al sur
+  FERRIS = { x: (WATER0 + 5) * T, y: (6 * BLK + 6) * T };
+  for (let yy = 6 * BLK + 5; yy <= 6 * BLK + 7; yy++) for (let xx = WATER0; xx <= WATER0 + 6; xx++) { tiles[yy * W + xx] = TL.SAND; solid[yy * W + xx] = 0; }
+  for (let yy = 6 * BLK + 5; yy <= 6 * BLK + 7; yy++) for (let xx = WATER0 + 4; xx <= WATER0 + 6; xx++) solid[yy * W + xx] = 1;
+  LIGHTHOUSE = { x: (SAND0 + 4) * T, y: (NB * BLK - 3) * T };
+  solid[(NB * BLK - 3) * W + SAND0 + 4] = 1;
   // Asigna terrenos: en venta, competencia o decorado
-  const start = new Set(['1,2']);
+  const start = new Set([(1 + OX) + ',2']);
   for (const l of lots) {
-    const r = R(), key = l.bx + ',' + l.by;
+    const RR = l.ext ? R2 : R, r = RR(), key = l.bx + ',' + l.by;
     if (start.has(key)) l.kind = l.lx === 0 ? 'sale' : (l.ly === 0 ? 'deco' : 'sale');
     else if (r < 0.46) l.kind = 'sale';
     else if (r < 0.6) l.kind = 'rival';
     else l.kind = 'deco';
     if (l.kind === 'rival') {
       const opts = TYPES.filter(ty => ty.cost <= 75000 && ty.fit[l.district] >= 1);
-      const ty = opts[(R() * opts.length) | 0];
-      l.rival = { type: ty.id, owner: RIVAL_OWNERS[(R() * RIVAL_OWNERS.length) | 0], level: 1 + (R() * 3 | 0) };
+      const ty = opts[(RR() * opts.length) | 0];
+      l.rival = { type: ty.id, owner: RIVAL_OWNERS[(RR() * RIVAL_OWNERS.length) | 0], level: 1 + (RR() * 3 | 0) };
     }
     setLotSolid(l);
   }
@@ -451,7 +472,7 @@ function buildWorld() {
   // Cada nivel de casa está en un barrio distinto (se eligen entre edificios decorativos: no quitan terrenos ni negocios)
   const spot = f => lots.filter(l => l.kind === 'deco' && f(l)).sort((a, b) => a.id - b.id)[0];
   HOME_SPOTS = [
-    lots.find(l => l.bx === 1 && l.by === 2 && l.lx === 1 && l.ly === 0),            // Departamento: Residencial, junto al inicio
+    lots.find(l => l.bx === 1 + OX && l.by === 2 && l.lx === 1 && l.ly === 0),       // Departamento: Residencial, junto al inicio
     spot(l => l.district === 'tech' && l.by === 1) || spot(l => l.district === 'tech'), // Loft: Distrito Tech
     spot(l => l.district === 'res' && l.by >= 4),                                     // Casa con alberca: Residencial sur, junto al parque
     spot(l => l.district === 'playa' && l.lx === 1 && l.by >= 2 && l.by <= 3) || spot(l => l.district === 'playa' && l.lx === 1) || spot(l => l.district === 'playa'), // Mansión: frente al mar
@@ -497,7 +518,7 @@ function buildNodes() {
   let prev = null;
   for (let by = 0; by < NB; by++) for (const dy of [2, 11]) {
     const ty = by * BLK + dy, b = add(SAND0 + 2, ty);
-    link(idx[(5 * BLK + 11) + ',' + ty], b);
+    link(idx[((NB - 1) * BLK + 11) + ',' + ty], b);
     if (prev != null) link(prev, b);
     prev = b;
   }
@@ -511,7 +532,7 @@ function newState(brand) {
   return {
     v: SAVE_VER, brand: brand || 'Emprende', money: 800, loan: 0,
     min: 6 * 60 + 56, day: 1,
-    player: { x: (1 * BLK + 5) * T, y: (2 * BLK + 2) * T + 16 },
+    player: { x: ((1 + OX) * BLK + 5) * T, y: (2 * BLK + 2) * T + 16 },
     vehicle: 'walk', vehicles: ['walk'],
     biz: [], lotKinds: {}, rivals: {}, homeLv: 0, // lotKinds: lotId → 'sale' para locales vendidos (sobrescribe la generación)
     goalsDone: [], stats: { served: 0, collected: 0, buyouts: 0, earned: 0 },
@@ -823,7 +844,7 @@ function newCar() {
     else { x = laneCoord(dir, r); y = near.y0 + rnd() * (near.y1 - near.y0); }
     x = clamp(x, T, (CITY - 1) * T); y = clamp(y, T, (CITY - 1) * T);
     if (inRect(x, y, view)) continue;
-    return { x, y, dir, sp: 0, max: 80 + rnd() * 50, col: pick(CAR_COLORS), lastI: -1, kind: rnd() < 0.08 ? 'bus' : rnd() < 0.1 ? 'taxi' : 'car', blink: 0 };
+    return { x, y, dir, sp: 0, max: 80 + rnd() * 50, col: pick(CAR_COLORS), lastI: -1, kind: rnd() < 0.08 ? 'bus' : rnd() < 0.08 ? 'truck' : rnd() < 0.1 ? 'taxi' : 'car', blink: 0 };
   }
   return null;
 }
@@ -1009,7 +1030,7 @@ function shade(hex, k) {
 function decoOf(l) {
   if (l._deco) return l._deco;
   const R = mulberry(l.id * 977 + 3), r = R();
-  const st = { res: r < .65 ? 'house' : 'apt', centro: r < .6 ? 'office' : 'apt', tech: r < .7 ? 'glass' : 'office', ind: r < .55 ? 'factory' : 'warehouse', playa: r < .6 ? 'beachhouse' : 'apt' }[l.district];
+  const st = { res: r < .65 ? 'house' : 'apt', centro: r < .6 ? 'office' : 'apt', tech: r < .7 ? 'glass' : 'office', ind: r < .55 ? 'factory' : 'warehouse', playa: r < .6 ? 'beachhouse' : 'apt', uni: r < .5 ? 'apt' : r < .8 ? 'office' : 'house', puerto: r < .6 ? 'warehouse' : 'factory' }[l.district];
   const pal = { house: ['#c65d4b', '#5d7fa3', '#8a6bb0', '#d08b3a', '#4e8f6b'], apt: ['#b9a58f', '#9a8f86', '#c9b79c'], office: ['#7d8ba3', '#94a3b8', '#6b7a90'], glass: ['#5fa8d3', '#4c90c0', '#77b9de'], factory: ['#8a8f99', '#7b7f87'], warehouse: ['#a07d5c', '#8f8070'], beachhouse: ['#f2c6a0', '#9fd8cb', '#f7d6e0', '#fff1c1'] }[st];
   l._deco = { st, col: pal[(R() * pal.length) | 0], tree: st === 'house' || st === 'beachhouse', seed: R() };
   if (l._deco.tree && !l._treeAdded) { l._treeAdded = true; trees.push({ x: l.x + (l.lx ? 14 : l.w - 14), y: l.y + (l.ly ? l.h - 14 : 14), r: 11, s: R() * 6 }); }
@@ -1164,6 +1185,132 @@ function buildGroundTexture() {
     for (const l of lots) if (l.kind === 'deco') { const dc = decoOf(l); if (dc.tree) { g.fillStyle = dc.st === 'house' ? '#86bf68' : '#f0dcae'; g.fillRect(l.x * k, l.y * k, l.w * k, l.h * k); } }
   });
 }
+// ---------- Lugares emblemáticos y detalles de la calle ----------
+const LM = { ferris: null, gondolas: [], ringMat: null, beam: null, beamMat: null, ships: [], stadiumGlow: null };
+const ADS = [['ERAGames', '#f04e23', '#ffffff'], ['Born to Rally', '#1d3557', '#ffd166'], ['Topple-Town', '#2a9d8f', '#ffffff'], ['Born to Skate', '#9b5de5', '#ffffff'], ['Emprende City', '#ffb627', '#1b1300']];
+const adMats = ADS.map(([txt, bg, fg]) => null);
+function adMat(i) {
+  if (adMats[i]) return adMats[i];
+  const [txt, bg, fg] = ADS[i], tex = canvasTex(256, 96, (g) => {
+    g.fillStyle = bg; g.fillRect(0, 0, 256, 96); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '800 34px system-ui, sans-serif'; g.fillText(txt, 128, 44); g.font = '600 15px system-ui, sans-serif'; g.fillText(i === 4 ? 'Tu ciudad, tu imperio' : 'Juégalo en itch.io', 128, 76);
+  });
+  const face = new THREE.MeshLambertMaterial({ map: tex, emissive: '#000000' }), side = lam('#3b4250');
+  return (adMats[i] = [side, side, side, side, face, face]);
+}
+function buildLandmarks() {
+  const G = new Geo(), win = new Geo();
+  const at = key => { const [bx, by] = key.split(',').map(Number); return { x0: bx * BLK + 3, y0: by * BLK + 3 }; };
+  for (const key in LANDMARKS) {
+    const kind = LANDMARKS[key], { x0, y0 } = at(key), cx = x0 + 4, cz = y0 + 4;
+    let em = '';
+    if (kind === 'uni') { // edificio de ladrillo en U con torre del reloj
+      G.box(x0 + 0.4, 0, y0 + 4.6, x0 + 7.6, 2.6, y0 + 7.2, '#b5654a'); G.box(x0 + 0.3, 2.6, y0 + 4.5, x0 + 7.7, 2.75, y0 + 7.3, '#7a3b2e');
+      for (const [a, b] of [[0.4, 2.0], [6.0, 7.6]]) { G.box(x0 + a, 0, y0 + 1.2, x0 + b, 2.2, y0 + 4.6, '#b5654a'); G.box(x0 + a - 0.1, 2.2, y0 + 1.1, x0 + b + 0.1, 2.35, y0 + 4.6, '#7a3b2e'); win.windows(x0 + a, y0 + 1.2, x0 + b, y0 + 4.6, 2.2, 0.3, '#3a2a2a', win); }
+      win.windows(x0 + 0.4, y0 + 4.6, x0 + 7.6, y0 + 7.2, 2.6, 0.6, '#3a2a2a', win);
+      G.box(cx - 0.6, 0, y0 + 4.0, cx + 0.6, 5.2, y0 + 5.2, '#c47a5c'); G.gable(cx - 0.7, y0 + 3.9, cx + 0.7, y0 + 5.3, 5.2, 1.0, '#5b2a1e');
+      G.box(cx - 0.35, 4.2, y0 + 3.97, cx + 0.35, 4.9, y0 + 4.0, '#f4f1de'); G.box(cx - 0.03, 4.4, y0 + 3.95, cx + 0.03, 4.75, y0 + 3.97, '#1b1b1b');
+      G.box(cx - 0.9, 0, y0 + 1.0, cx + 0.9, 0.05, y0 + 4.0, '#d9ccb2'); // camino
+      for (const [a, b] of [[2.6, 2.2], [5.4, 2.2], [2.6, 3.6], [5.4, 3.6]]) trees.push({ x: (x0 + a) * T, y: (y0 + b) * T, r: 13, s: a + b });
+      em = '🎓';
+    } else if (kind === 'hospital') {
+      G.box(x0 + 1, 0, y0 + 2, x0 + 7, 3.4, y0 + 6.6, '#f4f6f8'); G.box(x0 + 0.9, 3.4, y0 + 1.9, x0 + 7.1, 3.55, y0 + 6.7, '#cfd6e0');
+      win.windows(x0 + 1, y0 + 2, x0 + 7, y0 + 6.6, 3.4, 0.2, '#5f8fb0', win);
+      G.box(cx - 0.9, 3.55, cz - 0.25, cx + 0.9, 3.6, cz + 0.25, '#e63946'); G.box(cx - 0.25, 3.55, cz - 0.9, cx + 0.25, 3.6, cz + 0.9, '#e63946');
+      G.box(x0 + 0.7, 0, y0 + 0.4, x0 + 2.7, 0.06, y0 + 1.6, '#2b2d42'); G.box(x0 + 1.55, 0.06, y0 + 0.65, x0 + 1.85, 0.07, y0 + 1.35, '#ffffff'); // helipuerto H
+      G.box(x0 + 1.25, 0.06, y0 + 0.65, x0 + 1.4, 0.07, y0 + 1.35, '#ffffff'); G.box(x0 + 2.0, 0.06, y0 + 0.65, x0 + 2.15, 0.07, y0 + 1.35, '#ffffff');
+      G.box(x0 + 4.6, 0, y0 + 0.5, x0 + 6.4, 0.75, y0 + 1.3, '#ffffff'); G.box(x0 + 4.6, 0.3, y0 + 0.49, x0 + 6.4, 0.42, y0 + 1.31, '#e63946'); // ambulancia
+      em = '🏥';
+    } else if (kind === 'stadium') {
+      const pts = [[2.4, 0], [2.4, 0.25], [2.8, 0.25], [2.8, 0.65], [3.2, 0.65], [3.2, 1.05], [3.6, 1.05], [3.6, 1.45], [3.85, 1.45], [3.85, 0]].map(([r, y]) => new THREE.Vector2(r, y));
+      const st = new THREE.Mesh(new THREE.LatheGeometry(pts, 32), new THREE.MeshLambertMaterial({ color: '#c9ced8', side: THREE.DoubleSide }));
+      st.scale.set(1.0, 1, 0.92); st.position.set(cx, 0, cz); st.castShadow = true; st.receiveShadow = true; scene.add(st);
+      const field = new THREE.Mesh(new THREE.CircleGeometry(2.4, 32).rotateX(-Math.PI / 2), lam('#3f9a45')); field.scale.set(1, 1, 0.92); field.position.set(cx, 0.03, cz); scene.add(field);
+      G.box(cx - 0.02, 0.035, cz - 2.0, cx + 0.02, 0.04, cz + 2.0, '#ffffff'); G.box(cx - 1.6, 0.035, cz - 0.02, cx + 1.6, 0.04, cz + 0.02, '#ffffff');
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { G.box(cx + a * 3.5 - 0.08, 0, cz + b * 3.2 - 0.08, cx + a * 3.5 + 0.08, 3.2, cz + b * 3.2 + 0.08, '#6c757d'); G.box(cx + a * 3.5 - 0.35, 3.2, cz + b * 3.2 - 0.2, cx + a * 3.5 + 0.35, 3.6, cz + b * 3.2 + 0.2, '#e9ecef'); }
+      LM.stadiumGlow = new THREE.Mesh(new THREE.CircleGeometry(3.0, 24).rotateX(-Math.PI / 2), matGlow); LM.stadiumGlow.position.set(cx, 0.06, cz); scene.add(LM.stadiumGlow);
+      em = '🏟️';
+    } else if (kind === 'port') {
+      const cols = ['#e63946', '#3a86ff', '#2a9d8f', '#ffb627', '#6c757d', '#f15bb5'];
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) for (let h = 0; h < 1 + ((i + j) % 3); h++) G.box(x0 + 0.5 + i * 1.3, h * 0.55, y0 + 0.6 + j * 0.8, x0 + 1.7 + i * 1.3, h * 0.55 + 0.52, y0 + 1.25 + j * 0.8, cols[(i * 3 + j + h) % cols.length]);
+      G.box(x0 + 0.4, 0, y0 + 3.6, x0 + 4.5, 1.8, y0 + 7.4, '#8f8070'); G.box(x0 + 0.3, 1.8, y0 + 3.5, x0 + 4.6, 1.95, y0 + 7.5, '#6b5f52');
+      for (const gx of [5.6, 7.0]) { // grúas
+        for (const [a, b] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) G.box(x0 + gx + a - 0.06, 0, y0 + 5 + b - 0.06, x0 + gx + a + 0.06, 3.6, y0 + 5 + b + 0.06, '#ffb627');
+        G.box(x0 + gx - 0.5, 3.6, y0 + 4.5, x0 + gx + 0.5, 3.9, y0 + 5.5, '#ffb627'); G.box(x0 + gx - 0.15, 3.65, y0 + 2.4, x0 + gx + 0.15, 3.85, y0 + 5.5, '#e09a00');
+        G.box(x0 + gx - 0.02, 2.4, y0 + 2.6, x0 + gx + 0.02, 3.65, y0 + 2.64, '#333');
+      }
+      em = '⚓';
+    }
+    if (em) { const sp = new THREE.Sprite(emojiMat(em)); sp.position.set(cx, kind === 'uni' ? 6.8 : kind === 'stadium' ? 4.6 : 4.8, cz); sp.scale.set(1.4, 1.4, 1); scene.add(sp); }
+  }
+  // Parque con lago
+  if (LAKE) { const lake = new THREE.Mesh(new THREE.CircleGeometry(1.7, 28).rotateX(-Math.PI / 2), matPool); lake.position.set(U(LAKE.x), 0.04, U(LAKE.y)); scene.add(lake); G.box(U(LAKE.x) - 0.15, 0.04, U(LAKE.y) + 0.2, U(LAKE.x) + 0.15, 0.2, U(LAKE.y) + 0.45, '#f4f1de'); }
+  // Muelle con rueda de la fortuna
+  const fx = U(FERRIS.x), fz = U(FERRIS.y);
+  G.box(WATER0 - 0.2, 0.02, fz - 1.4, WATER0 + 7.2, 0.28, fz + 1.4, '#8a6b4a');
+  for (let x = WATER0; x <= WATER0 + 7; x += 1.2) for (const z of [-1.35, 1.35]) G.box(x - 0.08, -0.4, fz + z - 0.08, x + 0.08, 0.6, fz + z + 0.08, '#6b4a2b');
+  for (const s of [-1, 1]) for (const k of [-1, 1]) { // patas en A
+    const leg = new THREE.Mesh(BOX, lam('#adb5bd')), len = Math.hypot(1.5, 2.75);
+    leg.scale.set(0.12, len, 0.12); leg.position.set(fx + k * 0.75, 0.28 + 1.37, fz + s * 0.45); leg.rotation.z = -k * Math.atan2(1.5, 2.75); leg.castShadow = true; scene.add(leg);
+  }
+  LM.ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  const wheel = new THREE.Group(); wheel.position.set(fx, 3.0, fz);
+  wheel.add(new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.07, 6, 40), LM.ringMat));
+  for (let i = 0; i < 8; i++) { const sp = new THREE.Mesh(BOX, lam('#dee2e6')); sp.scale.set(4.6, 0.05, 0.05); sp.rotation.z = i * Math.PI / 8; wheel.add(sp); }
+  scene.add(wheel); LM.ferris = wheel;
+  const gcols = ['#e63946', '#ffd166', '#3a86ff', '#06d6a0', '#f15bb5', '#ff924c', '#9b5de5', '#2a9d8f'];
+  for (let i = 0; i < 8; i++) { const gd = new THREE.Mesh(BOX, lam(gcols[i])); gd.scale.set(0.45, 0.4, 0.45); gd.castShadow = true; scene.add(gd); LM.gondolas.push(gd); }
+  // Faro
+  const lh = U(LIGHTHOUSE.x), lz = U(LIGHTHOUSE.y);
+  for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.5 - i * 0.04, 0.54 - i * 0.04, 1.0, 14), lam(i % 2 ? '#e63946' : '#f4f6f8')); c.position.set(lh, 0.5 + i, lz); c.castShadow = true; scene.add(c); }
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.5, 10), matLampHead); lamp.position.set(lh, 4.25, lz); scene.add(lamp);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.5, 10), lam('#2b2d42')); cap.position.set(lh, 4.75, lz); scene.add(cap);
+  LM.beamMat = new THREE.MeshBasicMaterial({ color: '#fff3c4', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  LM.beam = new THREE.Mesh(new THREE.ConeGeometry(1.4, 9, 16, 1, true).rotateZ(Math.PI / 2).translate(4.5, 0, 0), LM.beamMat); LM.beam.position.set(lh, 4.25, lz); scene.add(LM.beam);
+  // Barcos de carga frente al puerto
+  for (const [dx, dz] of [[4, 7 * BLK + 4], [9, 7 * BLK + 8]]) {
+    const g = new THREE.Group(); g.position.set(WATER0 + dx, 0, dz);
+    const hull = new THREE.Mesh(BOX, lam('#2b2d42')); hull.scale.set(1.6, 0.6, 5.0); hull.position.y = 0.2; g.add(hull);
+    const br = new THREE.Mesh(BOX, lam('#f4f6f8')); br.scale.set(1.2, 0.9, 0.9); br.position.set(0, 0.95, 1.8); g.add(br);
+    for (let k = 0; k < 6; k++) { const c = new THREE.Mesh(BOX, lam(['#e63946', '#3a86ff', '#ffb627', '#2a9d8f'][k % 4])); c.scale.set(0.6, 0.45, 0.8); c.position.set(k % 2 ? 0.32 : -0.32, 0.73, -1.6 + Math.floor(k / 2) * 0.95); g.add(c); }
+    scene.add(g); LM.ships.push(g);
+  }
+  // Detalles de la calle: botes de basura, hidrantes y paradas de autobús
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    G.box(x0 + 3.25, 0, y0 + 0.1, x0 + 3.55, 0.45, y0 + 0.4, '#2d6a4f'); G.box(x0 + 9.6, 0, y0 + 6.3, x0 + 9.85, 0.4, y0 + 6.55, '#d62828');
+    if ((bx + by) % 3 === 0) { // parada de autobús en la banqueta sur
+      const sx = x0 + 6, sz = y0 + 9.9;
+      G.box(sx - 0.9, 1.15, sz - 0.05, sx + 0.9, 1.22, sz + 0.55, '#3a86ff'); G.box(sx - 0.9, 0, sz + 0.5, sx + 0.9, 1.15, sz + 0.55, '#bfe6f2');
+      G.box(sx - 0.7, 0.3, sz + 0.2, sx + 0.7, 0.38, sz + 0.45, '#5b3e26'); G.box(sx + 1.0, 0, sz + 0.05, sx + 1.06, 1.5, sz + 0.11, '#6c757d'); G.box(sx + 0.9, 1.3, sz + 0.02, sx + 1.16, 1.55, sz + 0.14, '#3a86ff');
+    }
+  }
+  const m = G.build(matStatic); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  if (win.p.length) scene.add(win.build(matWinLit));
+  // Espectaculares en algunos edificios altos
+  let ad = 0;
+  for (const l of lots) {
+    if (l.kind !== 'deco') continue;
+    const dc = decoOf(l); if (!(dc.st === 'apt' || dc.st === 'office' || dc.st === 'glass') || dc.seed < 0.72) continue;
+    const hgt = { apt: 2.3, office: 3.4, glass: 3.1 }[dc.st] + dc.seed * 1.6, cx = U(l.x + l.w / 2), cz = U(l.y + l.h / 2);
+    for (const s of [-0.9, 0.9]) { const post = new THREE.Mesh(BOX, lam('#3b4250')); post.scale.set(0.08, 1.0, 0.08); post.position.set(cx + s, hgt + 0.6, cz); scene.add(post); }
+    const board = new THREE.Mesh(BOX, adMat(ad++ % ADS.length)); board.scale.set(2.4, 0.9, 0.08); board.position.set(cx, hgt + 1.4, cz); board.castShadow = true; scene.add(board);
+  }
+}
+function updateLandmarks(dt) {
+  const dark = darkness();
+  if (LM.ferris) {
+    LM.ferris.rotation.z += dt * 0.12;
+    const a0 = LM.ferris.rotation.z, p = LM.ferris.position;
+    LM.gondolas.forEach((g, i) => { const a = a0 + i * Math.PI / 4; g.position.set(p.x + Math.cos(a) * 2.3, p.y + Math.sin(a) * 2.3 - 0.3, p.z); });
+    LM.ringMat.color.setHSL(dark > 0.3 ? (now * 0.1) % 1 : 0, dark > 0.3 ? 0.9 : 0, dark > 0.3 ? 0.6 : 0.9);
+  }
+  if (LM.beam) { LM.beam.rotation.y += dt * 0.9; LM.beamMat.opacity = dark * 0.22; }
+  if (LM.stadiumGlow) LM.stadiumGlow.material.opacity = matGlow.opacity;
+  LM.ships.forEach((s, i) => { s.position.y = Math.sin(now * 0.8 + i) * 0.05; s.rotation.z = Math.sin(now * 0.6 + i) * 0.02; });
+  for (const m of adMats) if (m) m[4].emissive.setRGB(dark * 0.55, dark * 0.55, dark * 0.55);
+}
+
 function buildStatic() {
   for (const l of lots) if (l.kind === 'deco') decoOf(l);
   // Suelo de la ciudad (una sola textura) y campo alrededor
@@ -1216,6 +1363,7 @@ function buildStatic() {
   const fw = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 0.05, 20), new THREE.MeshPhongMaterial({ color: '#4aa8d8', shininess: 100 })); fw.position.set(fx, 0.33, fz); scene.add(fw);
   const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.9, 10), lam('#c9bc9f')); pil.position.set(fx, 0.7, fz); pil.castShadow = true; scene.add(pil);
   const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.2, 0.15, 14), lam('#c9bc9f')); bowl.position.set(fx, 1.1, fz); scene.add(bowl);
+  buildLandmarks();
   // Árboles (instanciados)
   treeTrunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 0.7, 6).translate(0, 0.35, 0), lam('#6b4a2b'), trees.length);
   treeCanopies = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: '#ffffff' }), trees.length);
@@ -1475,7 +1623,15 @@ function updateDynamic(dt) {
   const night = darkness() > 0.15;
   for (const c of cars) {
     if (!inRect(c.x, c.y, view) || nc >= CAR_MAX) continue;
-    const a = { E: 0, W: Math.PI, S: -Math.PI / 2, N: Math.PI / 2 }[c.dir], bus = c.kind === 'bus';
+    const a = { E: 0, W: Math.PI, S: -Math.PI / 2, N: Math.PI / 2 }[c.dir], bus = c.kind === 'bus', truck = c.kind === 'truck';
+    if (truck) { // camión de reparto: caja grande blanca y cabina al frente
+      const L = U(40), Wd = U(17), X = U(c.x), Z = U(c.y), ca = Math.cos(a), sa = Math.sin(a);
+      carBase.setMatrixAt(nc, compose(X, 0.1, Z, a, L * 0.95, 0.16, Wd)); carBase.setColorAt(nc, _c.set('#16181d'));
+      carBody.setMatrixAt(nc, compose(X - ca * L * 0.12, 0.42, Z + sa * L * 0.12, a, L * 0.72, 0.62, Wd)); carBody.setColorAt(nc, _c.set('#f4f1de'));
+      carCab.setMatrixAt(nc, compose(X + ca * L * 0.36, 0.34, Z - sa * L * 0.36, a, L * 0.26, 0.46, Wd * 0.95)); carCab.setColorAt(nc, _c.set(c.col));
+      if (night) carGlow.setMatrixAt(nc, compose(X + ca * (L * 0.5 + 1.1), 0.05, Z - sa * (L * 0.5 + 1.1), a, 2.4, 1, 1.5));
+      nc++; continue;
+    }
     const L = U(bus ? 46 : 28), Wd = U(bus ? 17 : 15), X = U(c.x), Z = U(c.y), ca = Math.cos(a), sa = Math.sin(a);
     carBase.setMatrixAt(nc, compose(X, 0.1, Z, a, L * 0.92, 0.16, Wd * 1.04)); carBase.setColorAt(nc, _c.set('#16181d'));
     carBody.setMatrixAt(nc, compose(X, 0.27, Z, a, L, bus ? 0.4 : 0.22, Wd)); carBody.setColorAt(nc, _c.set(c.kind === 'taxi' ? '#ffcc00' : bus ? '#2a9d8f' : c.col));
@@ -1504,6 +1660,7 @@ function updateDynamic(dt) {
     if (!tr._t) { tr._t = 1; treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, 0.8 + r * 0.4, 1)); treeTrunks.instanceMatrix.needsUpdate = true; }
   });
   treeCanopies.instanceMatrix.needsUpdate = true;
+  updateLandmarks(dt);
   // Barcos
   boats.forEach((s, i) => { boatObjs[i].position.set(U(s.x), Math.sin(now * 1.5 + i) * 0.04, U(s.y)); boatObjs[i].rotation.y = s.d > 0 ? 0 : Math.PI; boatObjs[i].rotation.z = Math.sin(now * 1.2 + i) * 0.05; });
   // Partículas
@@ -2325,7 +2482,7 @@ function openMap() {
     else if (b || l.kind === 'rival') { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText(TYPE[b ? b.type : l.rival.type].em, x, y + 1); }
   }
   g.font = `800 ${Math.round(s * 2.2)}px system-ui`; g.fillStyle = 'rgba(255,255,255,.85)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = s * .6;
-  for (const [d, bx, by] of [['res', 0.5, 0.6], ['centro', 3, 2.5], ['tech', 4, 0.5], ['ind', 1.5, 4.6], ['playa', 6.1, 3.5]]) { const x = bx * BLK * s + BLK * s / 2, y = by * BLK * s + BLK * s / 2; g.strokeText(t(d), x, y); g.fillText(t(d), x, y); }
+  for (const [d, bx, by] of [['res', 2.5, 0.6], ['centro', 5, 2.5], ['tech', 6, 0.5], ['ind', 3.5, 4.6], ['playa', 8.1, 3.5], ['uni', 0.5, 3.4], ['puerto', 6, 6.6]]) { const x = bx * BLK * s + BLK * s / 2, y = by * BLK * s + BLK * s / 2; g.strokeText(t(d), x, y); g.fillText(t(d), x, y); }
   if (waypoint) { g.fillStyle = '#ffb627'; g.fillRect(waypoint.x / T * s - s * 1.5, waypoint.y / T * s - s * 1.5, s * 3, s * 3); }
   g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = s * .5; g.beginPath(); g.arc(P.x / T * s, P.y / T * s, s * 1.6, 0, 7); g.fill(); g.stroke();
   c.addEventListener('click', e => {
@@ -2401,7 +2558,14 @@ function serialize() {
   return JSON.stringify({ ...S, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0, colT: undefined })) });
 }
 function save(quiet = true) { try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast(t('save')); } catch (e) { } }
-function loadSaved() { try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const d = JSON.parse(raw); return d && d.v === SAVE_VER ? d : null; } catch (e) { return null; } }
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null;
+    const d = JSON.parse(raw); if (!d) return null;
+    if (d.v === 1) { d.player.x += OX * BLK * T; d.v = 2; }  // ciudad más grande: la parte original se movió al este
+    return d.v === SAVE_VER ? d : null;
+  } catch (e) { return null; }
+}
 function hydrate(d) {
   S = Object.assign(newState(d.brand), d);
   S.stats = Object.assign({ served: 0, collected: 0, buyouts: 0, earned: 0 }, d.stats || {});
@@ -2559,6 +2723,7 @@ function startRobbery(b) {
   const l = lotOf(b), loot = Math.round(b.cash * 0.7), k = nearestNode(l.door.x, l.door.y), p = newPed(k);
   b.cash -= loot; S.lastRob = S.min;
   Object.assign(p, { x: l.door.x, y: l.door.y, mode: 'thief', shirt: '#151515', pants: '#151515', hair: '#151515', sp: 118, loot, biz: b.lot, t: 0, dog: false, umb: null, to: k });
+  p.d0 = Math.hypot(l.door.x - P.x, l.door.y - P.y);   // escapa si se aleja mucho desde donde empezó
   peds.push(p); thief = p;
   toast(`🚨 ¡Asaltaron ${bizName(b)}! Se llevó ${fmt(loot)}. ¡Atrápalo!`, 'bad', 5000);
   say(p, '¡Jajaja!'); sfx('siren'); vibrate(80);
@@ -2616,7 +2781,7 @@ function streetTick(dt, dtMin) {
       for (let i = 0; i < 14; i++) spawnParticle('coin', P.x, P.y);
       toast(`👮 ¡Atrapaste al ladrón! Recuperaste ${fmt(thief.loot)} y la policía te dio ${fmt(bonus)} de recompensa.`, 'good', 5000);
       sfx('goal'); vibrate(40); endThief();
-    } else if (d > 1000 || thief.t > 45) { toast(`💨 El ladrón escapó con ${fmt(thief.loot)}. Un gerente evita los robos.`, 'bad', 5000); endThief(); }
+    } else if (d > Math.max(1000, thief.d0 + 500) || thief.t > 45) { toast(`💨 El ladrón escapó con ${fmt(thief.loot)}. Un gerente evita los robos.`, 'bad', 5000); endThief(); }
   } else robberyCheck(dtMin);
 }
 function endThief() {
