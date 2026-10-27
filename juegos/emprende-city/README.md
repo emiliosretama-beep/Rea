@@ -28,4 +28,4 @@ Es un solo archivo (`index.html`), con Canvas 2D y sin librerías. Funciona sin 
 - Simulación con paso fijo de 1/30 s. Un segundo real equivale a 2 minutos de juego, así que un día dura 12 minutos.
 - Peatones y autos solo existen alrededor de la cámara, así que el costo no crece con el tamaño del mapa.
 - Guardado en `localStorage` (`emprende-city:save:v1`, con versión) cada 20 s y al salir; si no se puede guardar, el juego sigue funcionando.
-- Bilingüe español e inglés: todos los textos están en las tablas `I18N`, `NAMES`, `CHAT` y `GOALS`.
+- Solo en español (es un juego personal): los textos están en las tablas `I18N`, `NAMES`, `CHAT`, `EVENTS` y `GOALS`.

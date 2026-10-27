@@ -260,7 +260,7 @@ const I18N = {
     noBiz: 'Todavía no tienes negocios. Busca un terreno con el letrero verde de “Se vende”.',
     netWorth: 'Patrimonio', cash: 'Efectivo', loan: 'Préstamo', borrow: 'Pedir', repay: 'Pagar', interest: 'Interés diario',
     loanNote: 'El préstamo cobra 1.5 % diario a medianoche. Úsalo para crecer más rápido, no para tapar pérdidas.',
-    owned: 'Tuyo', ride: 'Usar', lang: 'Idioma', sound: 'Sonido', on: 'Sí', off: 'No', reset: 'Borrar partida', resetConfirm: 'Toca otra vez para borrar todo',
+    owned: 'Tuyo', ride: 'Usar', sound: 'Sonido', on: 'Sí', off: 'No', reset: 'Borrar partida', resetConfirm: 'Toca otra vez para borrar todo',
     rivalOf: 'Negocio de la competencia', buyout: 'Comprar negocio', buyoutNote: 'Compras el local con su clientela, empleados y reputación.',
     cantAfford: 'No te alcanza el dinero', bought: '¡Abriste', welcome: 'Bienvenido a Emprende City',
     goal: 'Meta', allGoals: '¡Eres el magnate de la ciudad! Sigue creciendo.', reward: 'Premio',
@@ -271,91 +271,55 @@ const I18N = {
     unlockAt: 'Requiere patrimonio de', thanks: '¡Gracias!', save: 'Guardado',
     perHour: 'clientes/h', capacity: 'capacidad', demandNow: 'demanda ahora',
     lostQueue: 'Un cliente se cansó de esperar',
-  },
-  en: {
-    map: 'Map', phone: 'Phone', news: 'News', play: 'Play', cont: 'Continue', newGame: 'New game',
-    brandAsk: 'Your brand name', tagline: 'You start with $800 and a dream. Open shops, hire people and take over the city.',
-    keys: 'Keyboard: WASD or arrows to move · E buy or manage · Space serve · M map · P phone',
-    moveHint: 'Drag here to walk', moveHintKb: 'Move with WASD or the arrow keys',
-    res: 'Residential', centro: 'Downtown', tech: 'Tech District', ind: 'Industrial Zone', playa: 'Beach', district: 'District',
-    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], day: 'Day',
-    sun: 'Sunny', cloud: 'Cloudy', rain: 'Rain',
-    buy: 'Buy', manage: 'Manage', serve: 'Serve', offer: 'Make offer', collect: 'Collect',
-    forSale: 'For sale', lotFor: 'Lot for sale', chooseBiz: 'Pick a business to open here',
-    fitHere: 'Fit here', rivalsNear: 'rivals nearby', none: 'none', open: 'Open',
-    level: 'Level', staff: 'Staff', rep: 'Reputation', register: 'In register', today: 'Today', yesterday: 'Yesterday (net)',
-    hire: 'Hire', fire: 'Fire', perDay: '/day', manager: 'Manager', hireMgr: 'Hire manager', fireMgr: 'Fire manager',
-    mgrNote: 'A manager collects the register for you and it never fills up.',
-    price: 'Price', low: 'Cheap', normal: 'Normal', high: 'Pricey',
-    upgrade: 'Upgrade to level', maxLevel: 'Max level', sell: 'Sell business', sellConfirm: 'Tap again to sell for',
-    closedNote: 'With no staff it only sells while you are here serving.', fullNote: 'The register is full! Come collect or hire a manager.',
-    goTo: 'Go', businesses: 'Businesses', goals: 'Goals', bank: 'Bank', shop: 'Vehicles', settings: 'Settings',
-    noBiz: 'No businesses yet. Look for a lot with the green “For sale” sign.',
-    netWorth: 'Net worth', cash: 'Cash', loan: 'Loan', borrow: 'Borrow', repay: 'Repay', interest: 'Daily interest',
-    loanNote: 'The loan charges 1.5% daily at midnight. Use it to grow faster, not to cover losses.',
-    owned: 'Owned', ride: 'Use', lang: 'Language', sound: 'Sound', on: 'On', off: 'Off', reset: 'Delete save', resetConfirm: 'Tap again to delete everything',
-    rivalOf: 'Rival business', buyout: 'Buy business', buyoutNote: 'You get the place with its customers, staff and reputation.',
-    cantAfford: 'Not enough money', bought: 'You opened', welcome: 'Welcome to Emprende City',
-    goal: 'Goal', allGoals: 'You are the city tycoon! Keep growing.', reward: 'Reward',
-    queue: 'in line', closed: 'CLOSED', fullReg: 'FULL',
-    dailyReport: 'End of day', profit: 'Profit', wages: 'Wages',
-    offline: 'While you were away, your managers earned', mapTap: 'Tap the map to set a destination', clearWp: 'Clear destination',
-    legendYou: 'You', legendBiz: 'Your businesses', legendSale: 'For sale', legendRival: 'Rivals',
-    unlockAt: 'Requires net worth of', thanks: 'Thanks!', save: 'Saved',
-    perHour: 'customers/h', capacity: 'capacity', demandNow: 'demand now',
-    lostQueue: 'A customer got tired of waiting',
-  },
+  }
 };
 const NAMES = {
   es: { lemon: 'Limonada', tacos: 'Tacos', ice: 'Heladería', bakery: 'Panadería', cafe: 'Café', laundry: 'Lavandería', flowers: 'Florería', books: 'Librería', surf: 'Surf Shop', gym: 'Gimnasio', rest: 'Restaurante', garage: 'Taller', pharma: 'Farmacia', bar: 'Bar', cinema: 'Cine', gamedev: 'Estudio de Juegos', hotel: 'Hotel', startup: 'Startup' },
-  en: { lemon: 'Lemonade', tacos: 'Tacos', ice: 'Ice Cream', bakery: 'Bakery', cafe: 'Café', laundry: 'Laundromat', flowers: 'Flower Shop', books: 'Bookstore', surf: 'Surf Shop', gym: 'Gym', rest: 'Restaurant', garage: 'Garage', pharma: 'Pharmacy', bar: 'Bar', cinema: 'Cinema', gamedev: 'Game Studio', hotel: 'Hotel', startup: 'Startup' },
 };
-const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' }, en: { walk: 'On foot', bike: 'Bicycle', scooter: 'Scooter', car: 'Car' } };
+const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' } };
 const RIVAL_OWNERS = ['Doña Lupe', 'Don Toño', 'La Esquina', 'El Güero', 'Los Primos', 'Mar Azul', 'Tía Chela', 'El Rey', 'Luna', 'Pepe', 'Sol', 'Nova'];
 const GOALS = [
-  { id: 'first', r: 150, es: 'Abre tu primer negocio', en: 'Open your first business', test: () => S.biz.length >= 1 },
-  { id: 'serve', r: 120, es: 'Atiende a 10 clientes tú mismo', en: 'Serve 10 customers yourself', test: () => S.stats.served >= 10 },
-  { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', en: 'Hire your first employee', test: () => S.biz.some(b => b.staff > 0) },
-  { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', en: 'Collect $1,000 from registers', test: () => S.stats.collected >= 1000 },
-  { id: 'three', r: 500, es: 'Ten 3 negocios', en: 'Own 3 businesses', test: () => S.biz.length >= 3 },
-  { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', en: 'Buy a bicycle (Phone › Vehicles)', test: () => S.vehicles.includes('bike') },
-  { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', en: 'Upgrade a business to level 3', test: () => S.biz.some(b => b.level >= 3) },
-  { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', en: 'Reach $25,000 net worth', test: () => netWorth() >= 25000 },
-  { id: 'mgr', r: 2000, es: 'Contrata a un gerente', en: 'Hire a manager', test: () => S.biz.some(b => b.manager) },
-  { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', en: 'Own businesses in 3 districts', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
-  { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', en: 'Buy out a rival business', test: () => S.stats.buyouts >= 1 },
-  { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', en: 'Reach $100,000 net worth', test: () => netWorth() >= 100000 },
-  { id: 'eight', r: 15000, es: 'Ten 8 negocios', en: 'Own 8 businesses', test: () => S.biz.length >= 8 },
-  { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', en: 'Own businesses in all 5 districts', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
-  { id: 'hotel', r: 50000, es: 'Abre un hotel', en: 'Open a hotel', test: () => S.biz.some(b => b.type === 'hotel') },
-  { id: 'startup', r: 80000, es: 'Funda una startup', en: 'Found a startup', test: () => S.biz.some(b => b.type === 'startup') },
-  { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', en: 'Reach $1,000,000: become a tycoon', test: () => netWorth() >= 1e6 },
+  { id: 'first', r: 150, es: 'Abre tu primer negocio', test: () => S.biz.length >= 1 },
+  { id: 'serve', r: 120, es: 'Atiende a 10 clientes tú mismo', test: () => S.stats.served >= 10 },
+  { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', test: () => S.biz.some(b => b.staff > 0) },
+  { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', test: () => S.stats.collected >= 1000 },
+  { id: 'three', r: 500, es: 'Ten 3 negocios', test: () => S.biz.length >= 3 },
+  { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', test: () => S.vehicles.includes('bike') },
+  { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', test: () => S.biz.some(b => b.level >= 3) },
+  { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', test: () => netWorth() >= 25000 },
+  { id: 'mgr', r: 2000, es: 'Contrata a un gerente', test: () => S.biz.some(b => b.manager) },
+  { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
+  { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', test: () => S.stats.buyouts >= 1 },
+  { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', test: () => netWorth() >= 100000 },
+  { id: 'eight', r: 15000, es: 'Ten 8 negocios', test: () => S.biz.length >= 8 },
+  { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
+  { id: 'hotel', r: 50000, es: 'Abre un hotel', test: () => S.biz.some(b => b.type === 'hotel') },
+  { id: 'startup', r: 80000, es: 'Funda una startup', test: () => S.biz.some(b => b.type === 'startup') },
+  { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', test: () => netWorth() >= 1e6 },
 ];
 // Noticias del día: efectos sobre la demanda
 const EVENTS = [
-  { id: 'heat', w: 3, es: 'Ola de calor: limonadas, helados y surf venden como nunca', en: 'Heat wave: lemonade, ice cream and surf shops are booming', weather: 'sun', mult: b => TYPE[b.type].tags.includes('heat') ? 1.6 : 1 },
-  { id: 'beachfest', w: 2, es: 'Festival de música en la Playa: +40 % de clientes allí', en: 'Music festival at the Beach: +40% customers there', mult: (b, l) => l.district === 'playa' ? 1.4 : 1 },
-  { id: 'techconf', w: 2, es: 'Gran conferencia tech: el Distrito Tech se llena', en: 'Big tech conference: the Tech District is packed', mult: (b, l) => l.district === 'tech' ? 1.35 : 1 },
-  { id: 'fair', w: 2, es: 'Feria en el Centro: más gente que nunca', en: 'Downtown fair: more people than ever', mult: (b, l) => l.district === 'centro' ? 1.3 : 1 },
-  { id: 'rainy', w: 2, es: 'Temporada de lluvias: lavanderías, librerías y cines ganan', en: 'Rainy season: laundromats, bookstores and cinemas win', weather: 'rain', mult: () => 1 },
-  { id: 'strike', w: 1, es: 'Paro de transporte: menos gente en la calle hoy', en: 'Transit strike: fewer people out today', mult: () => .8 },
-  { id: 'match', w: 2, es: 'Final de fútbol esta noche: bares y restaurantes a reventar', en: 'Football final tonight: bars and restaurants packed', mult: b => (b.type === 'bar' ? 1.7 : b.type === 'rest' ? 1.3 : 1) },
-  { id: 'payday', w: 2, es: 'Día de quincena: todos salen a gastar', en: 'Payday: everyone is out spending', mult: () => 1.2 },
-  { id: 'startups', w: 1, es: 'Inversionistas llegan a la ciudad: las startups se disparan', en: 'Investors arrive in town: startups soar', mult: b => b.type === 'startup' || b.type === 'gamedev' ? 1.6 : 1 },
-  { id: 'influencer', w: 2, es: 'Un influencer recomendó uno de tus negocios', en: 'An influencer recommended one of your businesses', special: 'influencer', mult: () => 1 },
-  { id: 'inspect', w: 1, es: 'Inspección sanitaria sorpresa en la ciudad', en: 'Surprise health inspection around town', special: 'inspect', mult: () => 1 },
-  { id: 'calm', w: 3, es: 'Día tranquilo en Emprende City', en: 'A calm day in Emprende City', mult: () => 1 },
+  { id: 'heat', w: 3, es: 'Ola de calor: limonadas, helados y surf venden como nunca', weather: 'sun', mult: b => TYPE[b.type].tags.includes('heat') ? 1.6 : 1 },
+  { id: 'beachfest', w: 2, es: 'Festival de música en la Playa: +40 % de clientes allí', mult: (b, l) => l.district === 'playa' ? 1.4 : 1 },
+  { id: 'techconf', w: 2, es: 'Gran conferencia tech: el Distrito Tech se llena', mult: (b, l) => l.district === 'tech' ? 1.35 : 1 },
+  { id: 'fair', w: 2, es: 'Feria en el Centro: más gente que nunca', mult: (b, l) => l.district === 'centro' ? 1.3 : 1 },
+  { id: 'rainy', w: 2, es: 'Temporada de lluvias: lavanderías, librerías y cines ganan', weather: 'rain', mult: () => 1 },
+  { id: 'strike', w: 1, es: 'Paro de transporte: menos gente en la calle hoy', mult: () => .8 },
+  { id: 'match', w: 2, es: 'Final de fútbol esta noche: bares y restaurantes a reventar', mult: b => (b.type === 'bar' ? 1.7 : b.type === 'rest' ? 1.3 : 1) },
+  { id: 'payday', w: 2, es: 'Día de quincena: todos salen a gastar', mult: () => 1.2 },
+  { id: 'startups', w: 1, es: 'Inversionistas llegan a la ciudad: las startups se disparan', mult: b => b.type === 'startup' || b.type === 'gamedev' ? 1.6 : 1 },
+  { id: 'influencer', w: 2, es: 'Un influencer recomendó uno de tus negocios', special: 'influencer', mult: () => 1 },
+  { id: 'inspect', w: 1, es: 'Inspección sanitaria sorpresa en la ciudad', special: 'inspect', mult: () => 1 },
+  { id: 'calm', w: 3, es: 'Día tranquilo en Emprende City', mult: () => 1 },
 ];
 const FLAVOR = {
   es: ['El alcalde inaugura un nuevo parque', 'Se buscan emprendedores: la ciudad crece', 'Los gatos del Centro ya tienen fans', 'Récord de turistas en la Playa', 'Abre una nueva ciclovía', 'El tráfico mejora esta semana', 'Fábricas de la Zona Industrial contratan', 'Concierto gratis el sábado'],
-  en: ['Mayor opens a new park', 'Entrepreneurs wanted: the city is growing', 'Downtown cats now have fans', 'Record tourism at the Beach', 'A new bike lane opens', 'Traffic is better this week', 'Industrial Zone factories are hiring', 'Free concert on Saturday'],
 };
 const CHAT = {
   es: { gen: ['Qué bonito día', '¿Dónde comeré hoy?', 'Llego tarde…', 'Necesito café', '¡Me encanta esta ciudad!', '¿Viste las noticias?', 'Voy al parque', 'Uff, qué tráfico'], rain: ['¡Olvidé el paraguas!', 'Qué lluvia…', 'Me voy a mojar'], night: ['¿Vamos por algo?', 'Qué noche', 'A casa a dormir'], heat: ['¡Qué calor!', 'Se me antoja un helado'], boss: ['¡Hola, jefe!', 'Tu negocio es mi favorito', '¡Eres famoso!'], good: ['¡Delicioso!', '¡Volveré!', '¡Gran servicio!', '¡Qué rico!'], pricey: ['Un poco caro…', 'Mmm, caro'], cheap: ['¡Qué barato!', '¡Buen precio!'] },
-  en: { gen: ['What a nice day', 'Where should I eat?', 'Running late…', 'I need coffee', 'I love this city!', 'Did you see the news?', 'Off to the park', 'Ugh, traffic'], rain: ['Forgot my umbrella!', 'So much rain…', "I'm getting soaked"], night: ['Grab a drink?', 'What a night', 'Home to sleep'], heat: ['So hot!', 'I want ice cream'], boss: ['Hi, boss!', 'Your shop is my favorite', "You're famous!"], good: ['Delicious!', "I'll be back!", 'Great service!', 'So good!'], pricey: ['A bit pricey…', 'Hmm, expensive'], cheap: ['So cheap!', 'Good price!'] },
 };
-let LANG = 'es';
-const t = k => (I18N[LANG][k] ?? I18N.es[k] ?? k);
+const LANG = 'es';   // juego personal: solo español
+const t = k => (I18N.es[k] ?? k);
 const nm = id => NAMES[LANG][id];
 const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
 const fmtK = n => { const a = Math.abs(n); const s = n < 0 ? '-$' : '$'; return a >= 1e6 ? s + (a / 1e6).toFixed(2) + 'M' : a >= 1e4 ? s + (a / 1e3).toFixed(1) + 'k' : fmt(n); };
@@ -497,7 +461,7 @@ function newState(brand) {
     biz: [], lotKinds: {}, // lotKinds: lotId → 'sale' para locales vendidos (sobrescribe la generación)
     goalsDone: [], stats: { served: 0, collected: 0, buyouts: 0, earned: 0 },
     weather: 'sun', event: 'calm', eventBizLot: -1, startupF: 1,
-    sound: true, lang: LANG, savedAt: Date.now(), seenHint: false,
+    sound: true, savedAt: Date.now(), seenHint: false,
   };
 }
 const lotOf = b => lots[b.lot];
@@ -1379,7 +1343,7 @@ function drawSheet() {
   const { title, em, body, tabs } = sheet.render();
   const scroll = $ui.querySelector('.body')?.scrollTop || 0;
   $ui.innerHTML = `<div class="scrim" data-close></div><section class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-    <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="${LANG === 'es' ? 'Cerrar' : 'Close'}">✕</button></header>
+    <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="Cerrar">✕</button></header>
     ${tabs || ''}<div class="body">${body}</div></section>`;
   const bd = $ui.querySelector('.body'); if (bd) bd.scrollTop = scroll;
 }
@@ -1408,7 +1372,7 @@ function openBuy(l) {
         <span><span class="t">${nm(ty.id)}</span><br><span class="s">${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span> · ${comp ? comp + ' ' + t('rivalsNear') : t('rivalsNear') + ': ' + t('none')}${lock ? '<br>' + t('unlockAt') + ' ' + fmtK(ty.cost * 0.6) : ''}</span></span>
         <span class="p" style="color:${S.money >= price ? 'var(--cash)' : 'var(--danger)'}">${fmtK(price)}</span></button>`;
     }).join('');
-    return { title: `${t('lotFor')} · ${t(l.district)}`, em: '🏗️', body: `<p class="note">${t('chooseBiz')}. ${LANG === 'es' ? 'Los puntos indican qué tan bien funciona ese negocio en este distrito.' : 'Dots show how well that business does in this district.'}</p><div class="list">${items}</div>` };
+    return { title: `${t('lotFor')} · ${t(l.district)}`, em: '🏗️', body: `<p class="note">${t('chooseBiz')}. Los puntos indican qué tan bien funciona ese negocio en este distrito.</p><div class="list">${items}</div>` };
   });
   ACTIONS.buyType = id => {
     const price = priceOf(id, l.district);
@@ -1526,8 +1490,7 @@ function openPhone(tab) {
     } else if (phoneTab === 'shop') {
       body = '<div class="list">' + VEHICLES.map(v => { const own = S.vehicles.includes(v.id), cur = S.vehicle === v.id; return `<button class="item" data-a="veh" data-v="${v.id}" ${cur ? 'disabled' : ''}><span class="em">${v.em}</span><span><span class="t">${VNAMES[LANG][v.id]}</span><br><span class="s">${v.speed} km/h·🎮</span></span><span class="p" style="color:${own ? 'var(--gold)' : S.money >= v.cost ? 'var(--cash)' : 'var(--danger)'}">${cur ? '✓' : own ? t('ride') : fmtK(v.cost)}</span></button>`; }).join('') + '</div>';
     } else {
-      body = `<div class="lbl">${t('lang')}</div><div class="seg"><button data-a="lang" data-v="es" class="${LANG === 'es' ? 'on' : ''}">Español</button><button data-a="lang" data-v="en" class="${LANG === 'en' ? 'on' : ''}">English</button></div>
-        <div class="lbl">${t('sound')}</div><div class="seg"><button data-a="snd" data-v="1" class="${S.sound ? 'on' : ''}">${t('on')}</button><button data-a="snd" data-v="0" class="${!S.sound ? 'on' : ''}">${t('off')}</button></div>
+      body = `<div class="lbl">${t('sound')}</div><div class="seg"><button data-a="snd" data-v="1" class="${S.sound ? 'on' : ''}">${t('on')}</button><button data-a="snd" data-v="0" class="${!S.sound ? 'on' : ''}">${t('off')}</button></div>
         <p class="note">${t('keys')}</p>
         <button class="btn danger" data-a="reset">${resetArm ? t('resetConfirm') : t('reset')}</button>
         <p class="note">Emprende City · ERAGames</p>`;
@@ -1544,7 +1507,6 @@ function openPhone(tab) {
     if (!S.vehicles.includes(id)) { if (S.money < v.cost) { sfx('error'); toast(t('cantAfford'), 'bad'); return; } S.money -= v.cost; S.vehicles.push(id); sfx('buy'); }
     S.vehicle = id; resize(); drawSheet();
   };
-  ACTIONS.lang = v => { LANG = v; S.lang = v; applyStaticText(); setTicker(EVENTS.find(e => e.id === S.event)[LANG]); lastDistrict = ''; drawSheet(); };
   ACTIONS.snd = v => { S.sound = v === '1'; drawSheet(); };
   ACTIONS.reset = () => { if (!resetArm) { resetArm = true; drawSheet(); return; } try { localStorage.removeItem(SAVE_KEY); } catch (e) { } location.reload(); };
 }
@@ -1637,7 +1599,6 @@ function loadSaved() { try { const raw = localStorage.getItem(SAVE_KEY); if (!ra
 function hydrate(d) {
   S = Object.assign(newState(d.brand), d);
   S.stats = Object.assign({ served: 0, collected: 0, buyouts: 0, earned: 0 }, d.stats || {});
-  LANG = S.lang === 'en' ? 'en' : 'es';
   S.lotKinds = d.lotKinds || {};
   for (const id in S.lotKinds) { lots[id].kind = S.lotKinds[id]; setLotSolid(lots[id]); }
   for (const b of S.biz) { b.queue = []; b.arr = 0; b.tok = 0; lots[b.lot].kind = 'biz'; setLotSolid(lots[b.lot]); }
@@ -1698,7 +1659,7 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
 // ---------- Inicio ----------
 function startGame(state) {
-  S = state; LANG = S.lang === 'en' ? 'en' : 'es';
+  S = state;
   P.x = S.player.x; P.y = S.player.y;
   if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
   resize();
@@ -1721,8 +1682,6 @@ function startGame(state) {
 }
 function titleScreen() {
   const saved = loadSaved();
-  if (saved) LANG = saved.lang === 'en' ? 'en' : 'es';
-  else LANG = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
   const draw = () => {
     $ui.innerHTML = `<div class="title"><div class="card">
       <h1>Emprende<span>City</span></h1>
@@ -1731,11 +1690,8 @@ function titleScreen() {
       <label class="lbl" for="tBrand" style="margin:0">${t('brandAsk')}</label>
       <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : 'Emprende')}" autocomplete="off" aria-label="${t('brandAsk')}">
       <button class="btn ${saved ? '' : 'primary'}" id="tNew">${saved ? t('newGame') : t('play')}</button>
-      <div class="seg"><button id="tEs" class="${LANG === 'es' ? 'on' : ''}">Español</button><button id="tEn" class="${LANG === 'en' ? 'on' : ''}">English</button></div>
       <p class="keys">${t('keys')}</p></div></div>`;
-    $('tEs').onclick = () => { LANG = 'es'; draw(); };
-    $('tEn').onclick = () => { LANG = 'en'; draw(); };
-    $('tNew').onclick = () => { audioInit(); const st = newState(($('tBrand').value || 'Emprende').trim().slice(0, 16)); st.lang = LANG; startGame(st); save(); };
+    $('tNew').onclick = () => { audioInit(); const st = newState(($('tBrand').value || 'Emprende').trim().slice(0, 16)); startGame(st); save(); };
     if (saved) $('tContinue').onclick = () => { audioInit(); hydrate(saved); startGame(S); };
   };
   draw();
