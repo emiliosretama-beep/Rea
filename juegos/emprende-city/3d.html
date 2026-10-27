@@ -323,6 +323,8 @@ const GOALS = [
   { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
   { id: 'club', r: 20000, es: 'Abre un antro', test: () => S.biz.some(b => b.type === 'club') },
   { id: 'hotel', r: 50000, es: 'Abre un hotel', test: () => S.biz.some(b => b.type === 'hotel') },
+  { id: 'loft', r: 5000, es: 'Múdate a un loft (Móvil › Casa)', test: () => homeLv() >= 1 },
+  { id: 'mansion', r: 100000, es: 'Múdate a una mansión', test: () => homeLv() >= 3 },
   { id: 'startup', r: 80000, es: 'Funda una startup', test: () => S.biz.some(b => b.type === 'startup') },
   { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', test: () => netWorth() >= 1e6 },
 ];
@@ -447,6 +449,14 @@ function buildWorld() {
   HOME.kind = 'home'; setLotSolid(HOME);
 }
 let HOME = null;
+// Niveles de casa: cambian el edificio, el interior y el bono de ventas al despertar
+const HOMES = [
+  { name: 'Departamento', cost: 0, h: 2.3, wall: '#e8d5b5', roof: '#2a9d8f', em: '🏠', mult: 1.05, floor: '#b98a5a', rug: '#9b5de5' },
+  { name: 'Loft', cost: 25000, h: 3.3, wall: '#9fb8c9', roof: '#2b2d42', em: '🏢', mult: 1.10, floor: '#c9a97c', rug: '#3a86ff' },
+  { name: 'Casa con alberca', cost: 120000, h: 2.2, wall: '#f2e6d0', roof: '#c65d4b', em: '🏡', mult: 1.15, floor: '#d9c7a4', rug: '#2a9d8f' },
+  { name: 'Mansión', cost: 600000, h: 2.9, wall: '#f7f3ea', roof: '#c9a15a', em: '🏰', mult: 1.25, floor: '#ece8df', rug: '#c9a15a' },
+];
+const homeLv = () => (S && S.homeLv) || 0;
 function setLotSolid(l) {
   const v = l.kind === 'sale' ? 0 : 1;
   for (let y = l.ty; y < l.ty + 4; y++) for (let x = l.tx; x < l.tx + 4; x++) solid[y * W + x] = v;
@@ -491,7 +501,7 @@ function newState(brand) {
     min: 6 * 60 + 56, day: 1,
     player: { x: (1 * BLK + 5) * T, y: (2 * BLK + 2) * T + 16 },
     vehicle: 'walk', vehicles: ['walk'],
-    biz: [], lotKinds: {}, // lotKinds: lotId → 'sale' para locales vendidos (sobrescribe la generación)
+    biz: [], lotKinds: {}, rivals: {}, homeLv: 0, // lotKinds: lotId → 'sale' para locales vendidos (sobrescribe la generación)
     goalsDone: [], stats: { served: 0, collected: 0, buyouts: 0, earned: 0 },
     weather: 'sun', event: 'calm', eventBizLot: -1, startupF: 1,
     sound: true, savedAt: Date.now(), seenHint: false,
@@ -502,7 +512,7 @@ const bizAtLot = id => S.biz.find(b => b.lot === id);
 function bizName(b) { return S.brand + ' ' + nm(b.type); }
 function rivalName(l) { return nm(l.rival.type) + ' ' + l.rival.owner; }
 function invested(b) { const ty = TYPE[b.type]; let v = b.paid; for (let L = 1; L < b.level; L++) v += upgradeCost(ty, L); return v; }
-function netWorth() { let v = S.money - S.loan; for (const b of S.biz) v += invested(b) * 0.6; return v; }
+function netWorth() { let v = S.money - S.loan; for (const b of S.biz) v += invested(b) * 0.6; for (let i = 1; i <= ((S && S.homeLv) || 0); i++) v += HOMES[i].cost * 0.6; return v; }
 function priceOf(type, district) { return Math.round(TYPE[type].cost * LAND[district]); }
 function buyoutPrice(l) { return Math.round(priceOf(l.rival.type, l.district) * (1.25 + 0.25 * l.rival.level)); }
 function upgradeCost(ty, level) { return Math.round(ty.cost * 0.55 * level); }
@@ -552,6 +562,7 @@ function demandOf(b, presentBonus) {
   if (weekday() >= 5) d *= ty.tags.includes('leisure') ? 1.25 : 0.95;
   if (ty.tags.includes('volatile')) d *= S.startupF;
   if (b.dj) d *= DJ_MULT[b.dj];
+  if (S.buff && S.min < S.buff.until) d *= S.buff.mult;   // descansaste bien en casa
   if (presentBonus) d *= 1.5;   // el dueño atendiendo atrae clientes
   return d;
 }
@@ -638,8 +649,30 @@ function morningNews() {
     if (ev.special === 'influencer') { b.rep = Math.min(100, b.rep + 15); text += ': ' + bizName(b) + ' (+15 ' + t('rep') + ')'; }
     if (ev.special === 'inspect' && b.level < 3) { b.rep = Math.max(0, b.rep - 8); text += ': ' + bizName(b) + ' (-8 ' + t('rep') + ')'; }
   }
-  setTicker(text);
+  const grow = cityGrows();
+  setTicker([text, ...grow].join('   •   '));
   toast('📰 ' + text, '', 6000);
+  if (grow.length) toast('🏙️ ' + grow[0], '', 6000);
+}
+// Cada mañana la ciudad cambia: la competencia abre locales nuevos y se amplía
+function cityGrows() {
+  const msgs = [], sale = lots.filter(l => l.kind === 'sale');
+  if (sale.length > 30 && rnd() < 0.65) {
+    const far = sale.filter(l => Math.hypot(l.x + l.w / 2 - P.x, l.y + l.h / 2 - P.y) > 220);
+    const l = pick(far.length ? far : sale), opts = TYPES.filter(ty => ty.cost <= Math.min(160000, 60000 + S.day * 4000) && ty.fit[l.district] >= 1);
+    if (opts.length) {
+      l.kind = 'rival'; l.rival = { type: pick(opts).id, owner: pick(RIVAL_OWNERS), level: 1 };
+      S.lotKinds[l.id] = 'rival'; S.rivals[l.id] = l.rival;
+      setLotSolid(l); onLotChanged(l); recomputeCompetition();
+      if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
+      msgs.push(`Nuevo competidor: ${rivalName(l)} abrió en ${t(l.district)}`);
+    }
+  }
+  if (rnd() < 0.35) {
+    const rs = lots.filter(l => l.kind === 'rival' && l.rival.level < 4);
+    if (rs.length) { const l = pick(rs); l.rival.level++; S.rivals[l.id] = l.rival; onLotChanged(l); msgs.push(`${rivalName(l)} se amplió a nivel ${l.rival.level}`); }
+  }
+  return msgs;
 }
 function checkGoals() {
   for (const g of GOALS) if (!S.goalsDone.includes(g.id) && g.test()) {
@@ -1015,7 +1048,7 @@ class Geo {
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 const matCache = new Map();
 function lam(color) { let m = matCache.get(color); if (!m) { m = new THREE.MeshLambertMaterial({ color }); matCache.set(color, m); } return m; }
-let matStatic, matWinLit, matShopGlass, matLampHead, matGlow, matHeadGlow, matWater, matFoam;
+let matPool, matStatic, matWinLit, matShopGlass, matLampHead, matGlow, matHeadGlow, matWater, matFoam;
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
 const emojiTex = new Map();
 function emojiMat(em) {
@@ -1069,6 +1102,7 @@ function initRenderer() {
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
   scene.add(sun, sun.target);
   matStatic = new THREE.MeshLambertMaterial({ vertexColors: true });
+  matPool = new THREE.MeshPhongMaterial({ color: '#36b4e5', shininess: 110, specular: '#ffffff' });
   matWinLit = new THREE.MeshBasicMaterial({ vertexColors: true, color: '#2a3346' });
   matShopGlass = new THREE.MeshLambertMaterial({ color: '#2f3d55', emissive: '#000000' });
   matLampHead = new THREE.MeshBasicMaterial({ color: '#cfd6e0' });
@@ -1235,20 +1269,32 @@ function buildLotObj(l) {
     const board = new THREE.Mesh(BOX, saleSignMats(l.district)); board.scale.set(2.1, 1.05, 0.08); board.position.set(cx, 1.65, cz); board.castShadow = true; g.add(board);
     add(lam('#9c835e'), 0.5, 0.18, 0.4, cx + 0.9, 0.09, cz + 0.5); add(lam('#93795a'), 0.35, 0.12, 0.3, cx - 1, 0.06, cz - 0.6);
   } else if (l.kind === 'home') {
-    const w = U(l.w - 14), d = U(l.h - 14), h = 2.3;
-    add(lam('#cfc6b4'), U(l.w), 0.04, U(l.h), cx, 0.02, cz, false);
-    const fadeMats = [lam('#e8d5b5').clone(), lam('#2a9d8f').clone()];
-    add(fadeMats[0], w, h, d, cx, h / 2, cz);
-    add(fadeMats[1], w + 0.16, 0.18, d + 0.16, cx, h + 0.09, cz);
-    const sgn = l.door.side === 'n' ? -1 : 1, fz = cz + sgn * d / 2;
-    for (const fl of [0.55, 1.6]) for (const k of [-1, 0, 1]) add(matShopGlass, 0.5, 0.42, 0.04, cx + k * w * 0.3, fl, fz + sgn * 0.02, false);
-    for (const fl of [0.55, 1.6]) for (const k of [-1, 1]) add(matShopGlass, 0.5, 0.42, 0.04, cx + k * w * 0.3, fl, cz - sgn * (d / 2 + 0.02), false);
+    const lv = homeLv(), HM = HOMES[lv], sgn = l.door.side === 'n' ? -1 : 1, LW = U(l.w), LD = U(l.h);
+    add(lam(lv >= 2 ? '#86bf68' : '#cfc6b4'), LW, 0.04, LD, cx, 0.02, cz, false);
+    // Desde la casa con alberca, el edificio va al fondo y el frente es jardín
+    const w = LW - 0.45, d = lv >= 2 ? LD * 0.55 : LD - 0.45, bz = lv >= 2 ? cz - sgn * (LD / 2 - d / 2 - 0.15) : cz, h = HM.h;
+    const fadeMats = [lam(HM.wall).clone(), lam(HM.roof).clone()];
+    add(fadeMats[0], w, h, d, cx, h / 2, bz);
+    add(fadeMats[1], w + 0.16, 0.18, d + 0.16, cx, h + 0.09, bz);
+    const fz = bz + sgn * d / 2, floors = Math.max(1, Math.floor(h / 1.05));
+    if (lv === 1) { add(matShopGlass, w * 0.85, h - 0.5, 0.04, cx, h / 2 + 0.15, fz + sgn * 0.02, false); add(lam('#3b4250'), 0.9, 0.3, 0.9, cx - w * 0.25, h + 0.33, bz); }
+    else for (let f = 0; f < floors; f++) for (const k of [-1, 0, 1]) add(matShopGlass, 0.5, 0.42, 0.04, cx + k * w * 0.3, 0.55 + f * 1.05, fz + sgn * 0.02, false);
+    for (let f = 0; f < floors; f++) for (const k of [-1, 1]) add(matShopGlass, 0.5, 0.42, 0.04, cx + k * w * 0.3, 0.55 + f * 1.05, bz - sgn * (d / 2 + 0.02), false);
     add(lam('#3a2a1e'), 0.4, 0.75, 0.05, cx, 0.38, fz + sgn * 0.03, false);
-    add(lam('#2a9d8f'), 0.9, 0.06, 0.45, cx, 0.86, fz + sgn * 0.22);
-    add(lam('#f4f1de'), w * 0.5, 0.06, 0.5, cx + w * 0.22, 1.25, fz + sgn * 0.25); // balcón
-    add(lam('#3b4250'), w * 0.5, 0.28, 0.04, cx + w * 0.22, 1.42, fz + sgn * 0.49, false);
-    for (const k of [-1, 1]) { add(lam('#8a5a3c'), 0.25, 0.28, 0.25, cx + k * 0.75, 0.14, fz + sgn * 0.35); add(lam('#3f8a3a'), 0.36, 0.3, 0.36, cx + k * 0.75, 0.42, fz + sgn * 0.35, false); }
-    const sp = new THREE.Sprite(emojiMat('🏠')); sp.position.set(cx, h + 0.95, cz); sp.scale.set(1.2, 1.2, 1); g.add(sp);
+    add(lam(HM.roof), 0.9, 0.06, 0.45, cx, 0.86, fz + sgn * 0.22);
+    if (lv === 0) { add(lam('#f4f1de'), w * 0.5, 0.06, 0.5, cx + w * 0.22, 1.25, fz + sgn * 0.25); add(lam('#3b4250'), w * 0.5, 0.28, 0.04, cx + w * 0.22, 1.42, fz + sgn * 0.49, false); }
+    if (lv >= 2) { // alberca con borde y camino
+      const pz = cz + sgn * (LD / 2 - 0.85);
+      add(lam('#f4f1de'), 1.75, 0.08, 1.05, cx + 0.95, 0.06, pz, false);
+      const pool = new THREE.Mesh(BOX, matPool); pool.scale.set(1.55, 0.04, 0.85); pool.position.set(cx + 0.95, 0.11, pz); g.add(pool);
+      add(lam('#d9ccb2'), 0.7, 0.03, LD - d - 0.2, cx, 0.05, (fz + cz + sgn * LD / 2) / 2, false);
+    }
+    if (lv === 3) { // columnas, pórtico y palmeras
+      for (const k of [-1.5, -0.5, 0.5, 1.5]) add(lam('#ffffff'), 0.14, h, 0.14, cx + k * 0.42, h / 2, fz + sgn * 0.45);
+      add(lam(HM.roof), 1.9, 0.14, 0.7, cx, h + 0.02, fz + sgn * 0.33);
+      for (const k of [-1, 1]) { add(lam('#8a6b4a'), 0.12, 1.5, 0.12, cx + k * 1.45, 0.75, cz + sgn * (LD / 2 - 0.35)); add(lam('#3f8a3a'), 0.9, 0.1, 0.9, cx + k * 1.45, 1.5, cz + sgn * (LD / 2 - 0.35)); }
+    } else for (const k of [-1, 1]) { add(lam('#8a5a3c'), 0.25, 0.28, 0.25, cx + k * 0.75, 0.14, fz + sgn * 0.35); add(lam('#3f8a3a'), 0.36, 0.3, 0.36, cx + k * 0.75, 0.42, fz + sgn * 0.35, false); }
+    const sp = new THREE.Sprite(emojiMat(HM.em)); sp.position.set(cx, h + 0.95, bz); sp.scale.set(1.2, 1.2, 1); g.add(sp);
     g.userData.fadeMats = fadeMats; g.userData.fade = 1; g.userData.h = h;
   } else {
     const b = bizAtLot(l.id), ty = TYPE[b ? b.type : l.rival.type], lvl = b ? b.level : l.rival.level;
@@ -1539,14 +1585,14 @@ function interiorPlan(type, lvl) {
   return p;
 }
 // Plano del departamento: recámara al fondo, sala, cocineta y escritorio
-function homePlan() {
-  const p = { props: [], seats: [], staff: [] };
+function homePlan(lv) {
+  const p = { props: [], seats: [], staff: [] }, HM = HOMES[lv];
   const prop = (u, v, w, d, h, col, block = true, y0 = 0) => p.props.push({ u, v, w, d, h, col, block, y0 });
   prop(0.8, 0.78, 1.0, 1.4, 0.32, '#f4f1de'); prop(0.8, 0.72, 1.02, 1.0, 0.06, '#3a86ff', false, 0.32); prop(0.8, 0.93, 0.75, 0.25, 0.1, '#ffffff', false, 0.32);
   prop(0.8, 0.995, 1.05, 0.06, 0.6, '#8a5a3c', false);                       // cabecera
   prop(0.56, 0.93, 0.3, 0.3, 0.35, '#8a5a3c'); prop(0.56, 0.93, 0.12, 0.12, 0.22, '#ffd166', false, 0.35); // buró y lámpara
   prop(0.95, 0.35, 0.3, 1.0, 1.1, '#6b4a2b');                                 // ropero
-  prop(0.22, 0.36, 1.45, 1.25, 0.012, '#9b5de5', false);                       // tapete
+  prop(0.22, 0.36, 1.45, 1.25, 0.012, HM.rug, false);                          // tapete
   prop(0.22, 0.52, 1.2, 0.42, 0.34, '#e63946'); prop(0.22, 0.6, 1.2, 0.14, 0.32, '#c1121f', false, 0.34); // sillón
   prop(0.22, 0.18, 0.95, 0.24, 0.35, '#3b4250'); prop(0.22, 0.18, 0.85, 0.04, 0.48, '#1b2333', false, 0.35); // tele
   prop(0.24, 0.95, 1.35, 0.3, 0.55, '#cfd6e0'); prop(0.12, 0.95, 0.35, 0.25, 0.02, '#2b2d42', false, 0.55); // cocineta
@@ -1554,6 +1600,9 @@ function homePlan() {
   prop(0.62, 0.36, 0.7, 0.34, 0.4, '#e9e3d3'); prop(0.62, 0.37, 0.32, 0.2, 0.02, '#adb5bd', false, 0.4); prop(0.62, 0.3, 0.3, 0.02, 0.18, '#46d98a', false, 0.42); // escritorio y laptop
   prop(0.62, 0.22, 0.26, 0.26, 0.26, '#2b2d42', false);                        // silla
   prop(0.06, 0.08, 0.22, 0.22, 0.3, '#8a5a3c'); prop(0.06, 0.08, 0.34, 0.34, 0.35, '#3f8a3a', false, 0.3);
+  if (lv >= 1) { prop(0.42, 0.995, 0.6, 0.03, 0.4, '#ff924c', false, 0.5); prop(0.95, 0.08, 0.3, 0.3, 0.8, '#f04e23'); prop(0.95, 0.12, 0.22, 0.02, 0.2, '#46d98a', false, 0.5); } // cuadro y maquinita de ERAGames
+  if (lv >= 2) { prop(0.03, 0.42, 0.2, 0.55, 1.0, '#6b4a2b'); for (let i = 0; i < 4; i++) prop(0.05, 0.25 + i * 0.1, 0.14, 0.16, 0.18, ['#e63946', '#3a86ff', '#ffd166', '#06d6a0'][i], false, 0.75); } // librero
+  if (lv >= 3) { prop(0.45, 0.7, 0.5, 0.35, 0.45, '#111111'); prop(0.45, 0.62, 0.42, 0.06, 0.05, '#f4f1de', false, 0.45); prop(0.4, 0.4, 0.5, 0.5, 0.12, '#ffd166', false, 1.75); } // piano y candelabro
   return p;
 }
 function enterLot(l) {
@@ -1564,8 +1613,8 @@ function enterLot(l) {
   const g = inside.geo; P.x = l.door.x; P.y = g.toY(0.14);
   sfx('door'); vibrate(10);
   const b = bizAtLot(l.id); if (b) collect(b);
-  setText($place, l === HOME ? '🏠 Tu departamento' : '🚪 ' + (b ? bizName(b) : rivalName(l)));
-  if (l === HOME && !S.stats.nights) toast('Este es tu departamento. De noche (desde las 8 p.m.) toca 😴 Dormir para pasar al día siguiente.', '', 6000);
+  setText($place, l === HOME ? `${HOMES[homeLv()].em} Tu ${HOMES[homeLv()].name}` : '🚪 ' + (b ? bizName(b) : rivalName(l)));
+  if (l === HOME && !S.stats.nights) toast('Esta es tu casa. De noche (desde las 8 p.m.) toca 😴 Dormir para pasar al día siguiente.', '', 6000);
 }
 function exitLot() {
   if (!inside) return;
@@ -1577,18 +1626,18 @@ function exitLot() {
   sfx('door'); lastDistrict = '';
 }
 function buildInterior() {
-  const l = inside.l, home = l === HOME, b = bizAtLot(l.id), type = home ? 'home' : b ? b.type : l.rival.type, lvl = home ? 1 : b ? b.level : l.rival.level, ty = home ? { roof: '#2a9d8f' } : TYPE[type];
+  const l = inside.l, home = l === HOME, b = bizAtLot(l.id), type = home ? 'home' : b ? b.type : l.rival.type, lvl = home ? 1 : b ? b.level : l.rival.level, ty = home ? { roof: HOMES[homeLv()].roof } : TYPE[type];
   if (inside.group) { scene.remove(inside.group); inside.group.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); }); }
   const o = lotObjs.get(l.id); if (o) o.visible = false;
   const rx0 = l.x + 6, rx1 = l.x + l.w - 6, ry0 = l.y + 6, ry1 = l.y + l.h - 6, n = l.door.side === 'n';
   const toX = (u) => rx0 + u * (rx1 - rx0), toY = (v) => n ? ry0 + v * (ry1 - ry0) : ry1 - v * (ry1 - ry0);
   const geo = { rx0, rx1, ry0, ry1, n, toX: (u, v) => toX(u), toY, angBack: n ? 0 : Math.PI };
   inside.geo = geo;
-  const plan = home ? homePlan() : interiorPlan(type, lvl), G = new Geo(), rects = [];
+  const plan = home ? homePlan(homeLv()) : interiorPlan(type, lvl), G = new Geo(), rects = [];
   const wallC = shade(ty.roof, 1.05), wt = 0.12, wh = 0.75;
   const X0 = U(rx0), X1 = U(rx1), Z0 = U(ry0), Z1 = U(ry1);
   // Piso con baldosas y paredes bajas (corte para ver desde arriba)
-  const floorC = home ? '#b98a5a' : FLOOR[type] || '#9a8f86';
+  const floorC = home ? HOMES[homeLv()].floor : FLOOR[type] || '#9a8f86';
   G.box(X0, 0, Z0, X1, 0.05, Z1, floorC);
   const tiles2 = 6, tw = (X1 - X0) / tiles2, td = (Z1 - Z0) / tiles2;
   for (let i = 0; i < tiles2; i++) for (let j = 0; j < tiles2; j++) if ((i + j) % 2) G.box(X0 + i * tw, 0.05, Z0 + j * td, X0 + (i + 1) * tw, 0.052, Z0 + (j + 1) * td, shade(floorC, 0.9));
@@ -1751,7 +1800,7 @@ function drawOverlay() {
   // Etiqueta del lugar cercano
   if (ctxLot && running && !inside) {
     const l = ctxLot, b = bizAtLot(l.id);
-    const label = l === HOME ? 'Tu departamento' : l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
+    const label = l === HOME ? `Tu ${HOMES[homeLv()].name}` : l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
     const s = toScreen(l.door.x, l.door.y, 0.1);
     if (s) pill(s[0], s[1] + 34, label, 'rgba(15,26,46,.9)', '#f3efe4', '700 12px system-ui, sans-serif');
   }
@@ -1870,6 +1919,25 @@ function sfx(k) {
   else if (k === 'flap') tone(1200, .05, 'triangle', .015, 0, 2);
   else if (k === 'chirp') { tone(2600, .05, 'sine', .015, 0, 1.3); tone(2900, .05, 'sine', .012, .07, 1.2); }
 }
+// Música ambiental generada: tranquila de día, lo-fi de noche (sin archivos)
+const MUSIC = { next: 0, step: 0 }, ROOT = 196;
+const PROG_D = [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]], PROG_N = [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]];
+const PENTA_D = [0, 2, 4, 7, 9, 12, 14, 16], PENTA_N = [0, 3, 5, 7, 10, 12, 15];
+const hz = st => ROOT * Math.pow(2, st / 12);
+function musicTick() {
+  if (!AC || AC.state !== 'running' || !S || !S.sound || S.music === false || sleeping || document.hidden || !running) { if (AC) MUSIC.next = 0; return; }
+  if (inside && inside.type === 'club') return;
+  const night = darkness() > 0.5, dur = 60 / (night ? 78 : 96) / 2, now2 = AC.currentTime;
+  if (MUSIC.next < now2) MUSIC.next = now2 + 0.08;
+  while (MUSIC.next < now2 + 0.25) { musicStep(MUSIC.next - now2, MUSIC.step++, night, dur); MUSIC.next += dur; }
+}
+function musicStep(t0, step, night, dur) {
+  const b = step % 8, ch = (night ? PROG_N : PROG_D)[Math.floor(step / 8) % 4], v = 0.016;
+  if (b === 0) { for (const st of ch) tone(hz(st), dur * 7, night ? 'sine' : 'triangle', v * 0.8, t0); tone(hz(ch[0] - 12), dur * 3, 'sine', v * 1.8, t0); }
+  if (b === 4) tone(hz(ch[0] - 12), dur * 3, 'sine', v * 1.5, t0);
+  if (night) { if (b % 4 === 0) tone(62, 0.12, 'sine', 0.045, t0, 0.5); if (b % 2) tone(8000, 0.015, 'square', 0.0025, t0); }
+  if (b && Math.random() < (rainK > 0.5 ? 0.15 : night ? 0.3 : 0.45)) { const sc = night ? PENTA_N : PENTA_D; tone(hz(sc[(Math.random() * sc.length) | 0] + 12), dur * 1.6, 'triangle', v, t0); }
+}
 function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { } }
 
 // =====================================================================
@@ -1893,7 +1961,8 @@ function updateHUD() {
   setText($money, fmt(S.money)); $money.classList.toggle('neg', S.money < 0);
   const h = Math.floor(hour()), m = Math.floor(S.min % 60 / 10) * 10;
   const wIco = { sun: darkness() > .5 ? '🌙' : '☀️', cloud: '☁️', rain: '🌧️' }[S.weather];
-  setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}`);
+  const buff = S.buff && S.min < S.buff.until ? ` · ⚡+${Math.round((S.buff.mult - 1) * 100)}%` : '';
+  setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}${buff}`);
   // Botones de acción contextual
   let main = null, alt = null;
   if (nearGiver && giver && !S.mission) main = { k: 'talk', label: 'Hablar', ico: '💬' };
@@ -2083,7 +2152,7 @@ let phoneTab = 'biz', resetArm = false;
 function openPhone(tab) {
   if (tab) phoneTab = tab; resetArm = false;
   openSheet('phone', () => {
-    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
+    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['home', 'Casa'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
     let body = '';
     if (phoneTab === 'biz') {
       body = `<button class="btn" data-a="home">🏠 Ir a casa</button>`;
@@ -2093,6 +2162,12 @@ function openPhone(tab) {
         return `<div class="item"><span class="em">${TYPE[b.type].em}</span><span><span class="t">${esc(bizName(b))}</span><br><span class="s">${t(l.district)} · ${t('level')} ${b.level} · ${t('staff')} ${b.staff}/${maxStaff(b)}${b.manager ? ' · 👔' : ''}<br>${t('register')}: <b style="color:${full ? 'var(--danger)' : 'var(--cash)'}">${fmt(b.cash)}</b>${full ? ' ⚠️' : ''} · ${t('today')} ${fmt(b.todayRev)}</span></span>
           <span class="row" style="flex-direction:column;gap:6px"><button class="btn" data-a="go" data-v="${i}" style="min-height:40px;padding:6px 12px">${t('goTo')}</button><button class="btn" data-a="mng" data-v="${i}" style="min-height:40px;padding:6px 12px">⚙️</button></span></div>`;
       }).join('') + '</div>' : `<p class="note">${t('noBiz')}</p>`;
+    } else if (phoneTab === 'home') {
+      const lv = homeLv(), cur = HOMES[lv], nx = HOMES[lv + 1], pct = h => Math.round((h.mult - 1) * 100);
+      body = `<div class="item"><span class="em">${cur.em}</span><span><span class="t">${cur.name}</span><br><span class="s">Vives aquí. Al despertar: +${pct(cur)} % de ventas hasta las 7 p.m.</span></span><span class="p">✓</span></div>`;
+      body += nx ? `<div class="lbl">Siguiente</div><div class="item"><span class="em">${nx.em}</span><span><span class="t">${nx.name}</span><br><span class="s">Al despertar: +${pct(nx)} % de ventas. Casa nueva por fuera y por dentro.</span></span><span class="p" style="color:${S.money >= nx.cost ? 'var(--cash)' : 'var(--danger)'}">${fmtK(nx.cost)}</span></div>
+        <button class="btn primary" data-a="homeUp" ${S.money >= nx.cost ? '' : 'disabled'}>Mudarme · ${fmtK(nx.cost)}</button>` : '<p class="note">Ya vives en la mejor casa de la ciudad.</p>';
+      body += `<p class="note">Tu casa cuenta en tu patrimonio (60 % de lo que pagaste).</p><button class="btn" data-a="home">🏠 Ir a casa</button>`;
     } else if (phoneTab === 'goals') {
       body = '<div class="list">' + GOALS.map(g => { const d = S.goalsDone.includes(g.id); return `<div class="item ${d ? 'done' : ''}"><span class="em">${d ? '✅' : '🎯'}</span><span class="t">${g[LANG]}</span><span class="p">${g.r ? fmtK(g.r) : '🏆'}</span></div>`; }).join('') + '</div>';
     } else if (phoneTab === 'bank') {
@@ -2106,6 +2181,7 @@ function openPhone(tab) {
     } else {
       body = `<div class="lbl">Gráficos</div><div class="seg"><button data-a="gfx" data-v="alta" class="${gfxLevel === 'alta' ? 'on' : ''}">Alta (sombras)</button><button data-a="gfx" data-v="baja" class="${gfxLevel === 'baja' ? 'on' : ''}">Baja (más fluido)</button></div>
         <div class="lbl">${t('sound')}</div><div class="seg"><button data-a="snd" data-v="1" class="${S.sound ? 'on' : ''}">${t('on')}</button><button data-a="snd" data-v="0" class="${!S.sound ? 'on' : ''}">${t('off')}</button></div>
+        <div class="lbl">Música</div><div class="seg"><button data-a="mus" data-v="1" class="${S.music !== false ? 'on' : ''}">Sí</button><button data-a="mus" data-v="0" class="${S.music === false ? 'on' : ''}">No</button></div>
         <p class="note">${t('keys')}</p>
         <button class="btn danger" data-a="reset">${resetArm ? t('resetConfirm') : t('reset')}</button>
         <p class="note">Emprende City · ERAGames</p>`;
@@ -2113,6 +2189,12 @@ function openPhone(tab) {
     return { title: t('phone'), em: '📱', body, tabs };
   });
   ACTIONS.tab = v => { phoneTab = v; drawSheet(); sfx('click'); };
+  ACTIONS.homeUp = () => {
+    const nx = HOMES[homeLv() + 1]; if (!nx || S.money < nx.cost) { sfx('error'); return; }
+    S.money -= nx.cost; S.homeLv = homeLv() + 1; onLotChanged(HOME);
+    for (let i = 0; i < 18; i++) spawnParticle('coin', HOME.door.x, HOME.door.y);
+    toast(`${nx.em} ¡Te mudaste a tu ${nx.name}!`, 'good', 5000); sfx('buy'); vibrate(40); drawSheet();
+  };
   ACTIONS.home = () => { waypoint = { x: HOME.door.x, y: HOME.door.y }; closeSheet(); };
   ACTIONS.go = i => { const b = S.biz[+i]; if (!b) return; const l = lotOf(b); waypoint = { x: l.door.x, y: l.door.y }; closeSheet(); };
   ACTIONS.mng = i => { const b = S.biz[+i]; if (b) openManage(b); };
@@ -2124,6 +2206,7 @@ function openPhone(tab) {
     S.vehicle = id; resize(); drawSheet();
   };
   ACTIONS.gfx = v => { setGfx(v, true); drawSheet(); };
+  ACTIONS.mus = v => { S.music = v === '1'; drawSheet(); };
   ACTIONS.snd = v => { S.sound = v === '1'; drawSheet(); };
   ACTIONS.reset = () => { if (!resetArm) { resetArm = true; drawSheet(); return; } try { localStorage.removeItem(SAVE_KEY); } catch (e) { } location.reload(); };
 }
@@ -2229,7 +2312,8 @@ function loadSaved() { try { const raw = localStorage.getItem(SAVE_KEY); if (!ra
 function hydrate(d) {
   S = Object.assign(newState(d.brand), d);
   S.stats = Object.assign({ served: 0, collected: 0, buyouts: 0, earned: 0 }, d.stats || {});
-  S.lotKinds = d.lotKinds || {};
+  S.lotKinds = d.lotKinds || {}; S.rivals = d.rivals || {};
+  for (const id in S.rivals) lots[id].rival = S.rivals[id];
   for (const id in S.lotKinds) { lots[id].kind = S.lotKinds[id]; setLotSolid(lots[id]); }
   for (const b of S.biz) { b.queue = []; b.arr = 0; b.tok = 0; lots[b.lot].kind = 'biz'; setLotSolid(lots[b.lot]); }
   // Ganancias mientras no estabas (solo negocios con gerente y personal), máximo 1 hora real
@@ -2260,6 +2344,7 @@ function frame(ts) {
   updateCamera(dt, cam.fx, cam.fy, false);
   render(dt);
   autoQuality(dt);
+  musicTick();
   hudT -= dt; if (hudT <= 0) { hudT = 0.12; updateHUD(); }
   minimapT -= dt; if (minimapT <= 0) { minimapT = 0.2; drawMiniMap(); }
 }
@@ -2464,7 +2549,7 @@ function goSleep() {
     setTimeout(() => {
       fx.classList.remove('on');
       setTimeout(() => { fx.hidden = true; sleeping = false; }, 800);
-      toast(`☀️ Buenos días. Dormiste hasta las 7:00.${S.biz.length ? ' Tus negocios vendieron ' + fmt(earned) + ' durante la noche.' : ''}`, 'good', 6500);
+      toast(`☀️ Buenos días. Dormiste hasta las 7:00.${S.biz.length ? ' Tus negocios vendieron ' + fmt(earned) + ' durante la noche.' : ''} ⚡ Descansaste: +${Math.round((S.buff.mult - 1) * 100)} % de ventas hasta las 7 p.m.`, 'good', 7000);
       sfx('wake'); save();
     }, 1100);
   }, 1000);
@@ -2486,6 +2571,7 @@ function fastForwardToMorning() {
   for (const b of S.biz) b.queue.length = 0;
   rainK = S.weather === 'rain' ? 1 : 0; cloudK = S.weather === 'sun' ? 0 : 1;
   S.stats.nights = (S.stats.nights || 0) + 1;
+  S.buff = { until: S.min + 12 * 60, mult: HOMES[homeLv()].mult };
   return S.stats.earned - earned0;
 }
 // ---------- Inicio ----------
