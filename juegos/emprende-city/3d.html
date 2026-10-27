@@ -80,6 +80,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 .banner.on { opacity: 1; }
 #sleepFx { position: fixed; inset: 0; background: #050a18; opacity: 0; transition: opacity .8s ease; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: clamp(40px, 12vw, 72px); color: #c9d6ff; }
 #sleepFx.on { opacity: 1; }
+#doorFx { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .28s ease-out; }
+#doorFx.on { opacity: 1; transition: none; }
 #sleepFx span { animation: zz 1.6s ease-in-out infinite; }
 @keyframes zz { 50% { transform: translateY(-8px); opacity: .7; } }
 
@@ -176,6 +178,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="banner" id="banner"></div>
 <div id="sleepFx" hidden><span>Zzz…</span></div>
+<div id="doorFx"></div>
 <div class="ticker" id="ticker" hidden><div class="tag" data-t="news"></div><div class="track" id="tickerTrack"></div></div>
 <div id="ui"></div>
 
@@ -776,7 +779,7 @@ function say(p, text) {
 function onSaleVisual(b, amt, byPlayer) {
   const l = lotOf(b), view = liveRect(60);
   if (inside && inside.id === b.lot) {
-    const g = inside.geo; floatText(g.toX(0.28), g.toY(0.68), '+' + fmt(amt), byPlayer ? '#ffb627' : '#46d98a');
+    const r = interiorRegister(); floatText(r.x, r.y, '+' + fmt(amt), byPlayer ? '#ffb627' : '#46d98a');
     if (!byPlayer) interiorWalker(false);
     return;
   }
@@ -952,7 +955,9 @@ function updatePlayer(dt) {
   const ny = P.y + P.vy * dt;
   if (!hit(P.x, ny, r)) P.y = ny; else P.vy = 0;
   // Entrar caminando: empujar hacia la puerta de un local
-  if (!inside && ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id)) && dist2(P.x, P.y, ctxLot.door.x, ctxLot.door.y) < 22 * 22) {
+  // (después de salir no te vuelve a meter hasta que te alejas un poco de la puerta)
+  if (!autoEnterArmed && (!ctxLot || dist2(P.x, P.y, ctxLot.door.x, ctxLot.door.y) > 34 * 34)) autoEnterArmed = true;
+  if (!inside && autoEnterArmed && ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id)) && dist2(P.x, P.y, ctxLot.door.x, ctxLot.door.y) < 22 * 22) {
     const push = ctxLot.door.side === 'n' ? iy : -iy;
     if (push > 0.6 && Math.abs(P.x - ctxLot.door.x) < 16) enterLot(ctxLot);
   }
@@ -1121,6 +1126,7 @@ function initRenderer() {
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
   scene.add(sun, sun.target);
   matStatic = new THREE.MeshLambertMaterial({ vertexColors: true });
+  matWinInt = new THREE.MeshBasicMaterial({ vertexColors: true, color: '#bfe6ff' });
   matPool = new THREE.MeshPhongMaterial({ color: '#36b4e5', shininess: 110, specular: '#ffffff' });
   matWinLit = new THREE.MeshBasicMaterial({ vertexColors: true, color: '#2a3346' });
   matShopGlass = new THREE.MeshLambertMaterial({ color: '#2f3d55', emissive: '#000000' });
@@ -1130,6 +1136,8 @@ function initRenderer() {
   matHeadGlow = new THREE.MeshBasicMaterial({ map: gt, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, color: '#fff6dc' });
   buildStatic();
   buildDynamicMeshes();
+  const voidPlane = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), lam('#0e1016')); // alrededor de los interiores
+  voidPlane.rotation.x = -Math.PI / 2; voidPlane.position.set(U(POCKET.x), 0.012, U(POCKET.y)); scene.add(voidPlane);
 }
 function buildGroundTexture() {
   const K = 20, k = K / T;
@@ -1357,9 +1365,9 @@ function updateCamera(dt, fx, fy, orbit) {
   if (orbit) cam.yaw += dt * 0.07;
   else { let d = cam.yawT - cam.yaw; cam.yaw += d * Math.min(1, dt * 7); }
   const asp = viewW / Math.max(1, viewH), vfov = asp < 1 ? 55 : 45, th = Math.tan(vfov * Math.PI / 360), hf = th * asp;
-  const dOut = Math.max(6.5 / hf, 5 / th) * cam.zoom * (S && S.vehicle === 'car' && !inside ? 1.15 : 1), dIn = Math.max(2.1 / hf, 2.3 / th) * cam.zoom;
+  const dOut = Math.max(6.5 / hf, 5 / th) * cam.zoom * (S && S.vehicle === 'car' && !inside ? 1.15 : 1), dIn = inside ? Math.max((inside.geo.RW + 1.2) / 2 / hf, (inside.geo.RD + 1.2) / 2 / th * 0.9) * cam.zoom : dOut;
   camD = lerp(dOut, dIn, insideK);
-  const pitch = lerp(0.92, 1.3, insideK), back = camD * Math.cos(pitch), up = camD * Math.sin(pitch);
+  const pitch = lerp(0.92, 1.1, insideK), back = camD * Math.cos(pitch), up = camD * Math.sin(pitch);
   const X = U(fx), Z = U(fy);
   camera.fov = vfov; camera.aspect = asp; camera.far = camD * 4 + 60;
   camera.position.set(X - Math.sin(cam.yaw) * back, up, Z + Math.cos(cam.yaw) * back);
@@ -1401,7 +1409,12 @@ function updateLighting() {
   matWinLit.color.copy(WIN_OFF).lerp(WIN_ON, clamp(dark * 1.4, 0, 1));
   matShopGlass.emissive.setRGB(0.9 * dark, 0.7 * dark, 0.35 * dark);
   matLampHead.color.set(dark > 0.2 ? '#fff1c4' : '#cfd6e0');
-  interiorLight.intensity = inside ? 0.25 + dark * 1.1 : 0;
+  interiorLight.intensity = inside ? 0.9 + dark * 0.5 : 0;
+  matWinInt.color.copy(_c.set('#bfe6ff')).lerp(SKY_NIGHT, dark);
+  if (insideK > 0) {  // adentro: luz interior pareja y fondo oscuro alrededor del local
+    _c.set('#0e1016'); scene.background.lerp(_c, insideK); scene.fog.color.lerp(_c, insideK);
+    hemi.intensity = lerp(hemi.intensity, 0.75, insideK); sun.intensity = lerp(sun.intensity, 0.3, insideK);
+  }
   if (inside && inside.type === 'club') interiorLight.color.setHSL((now * 0.18) % 1, 0.85, 0.6); else interiorLight.color.set('#ffe2b0');
   for (const g of lotObjs.values()) if (g.userData.neon) g.userData.neon.forEach((m, i) => m.color.setHSL((now * 0.12 + i * 0.45) % 1, 0.95, 0.35 + 0.25 * Math.max(dark, 0.15) + (dark > 0.3 && Math.sin(now * 9 + i) > 0.92 ? -0.2 : 0)));
   matGlow.opacity = dark * 0.55; matHeadGlow.opacity = dark * 0.5;
@@ -1536,7 +1549,7 @@ function updatePlayerObj(dt) {
     const d = Math.hypot(waypoint.x - P.x, waypoint.y - P.y);
     if (d < 50) { waypoint = null; sfx('click'); }
   }
-  wpCone.visible = wpArrow.visible = !!waypoint;
+  wpCone.visible = !!waypoint; wpArrow.visible = !!waypoint && !inside;
   if (waypoint) {
     wpCone.position.set(U(waypoint.x), 1.4 + Math.sin(now * 4) * 0.15, U(waypoint.y)); wpCone.rotation.y = now * 2;
     const a = Math.atan2(waypoint.y - P.y, waypoint.x - P.x);
@@ -1545,187 +1558,238 @@ function updatePlayerObj(dt) {
 }
 let waypoint = null;
 
-// ---------- Interiores: entras al local y la cámara lo mira desde arriba ----------
-// Coordenadas del plano: u (0..1 de lado a lado) y v (0 = pared de la puerta, 1 = pared del fondo).
-let inside = null, insideK = 0, interiorLight = null;
+// ---------- Interiores: al entrar pasas a un local amplio, "más grande por dentro", visto desde arriba ----------
+// Se construye fuera de la ciudad (POCKET). Plano en tiles: x de izquierda a derecha (0..RW),
+// z desde la pared de la puerta (0, abajo en pantalla) hasta el fondo (RD).
+let inside = null, insideK = 0, interiorLight = null, matWinInt = null, autoEnterArmed = true;
+const POCKET = { x: -130 * T, y: 50 * T };
 const FLOOR = { lemon: '#e9d8a6', tacos: '#c9733a', ice: '#f7e1ec', bakery: '#c79b6d', cafe: '#a9744f', laundry: '#d9e6ee', flowers: '#cfe3c4', books: '#8a5a3c', surf: '#e6d3a3', gym: '#4b505c', rest: '#9b5b3b', garage: '#7d8088', pharma: '#eef2f2', bar: '#3a2440', club: '#15101f', cinema: '#5b1f2a', gamedev: '#2b3550', hotel: '#d9c7a4', startup: '#e9edf2' };
-function interiorPlan(type, lvl) {
-  const p = { props: [], seats: [], staff: [], counter: true };
-  const prop = (u, v, w, d, h, col, block = true, y0 = 0) => p.props.push({ u, v, w, d, h, col, block, y0 });
-  const table = (u, v, round) => { prop(u, v, 0.5, 0.5, 0.42, round ? '#e9e3d3' : '#7a5434'); p.seats.push({ u: u - 0.17, v, a: 'r' }, { u: u + 0.17, v, a: 'l' }); prop(u - 0.3, v, 0.2, 0.22, 0.24, '#5b3e26', false); prop(u + 0.3, v, 0.2, 0.22, 0.24, '#5b3e26', false); };
-  const shelf = (u, v, w, col) => { prop(u, v, w, 0.32, 0.9, '#8f7a63'); for (let i = 0; i < 4; i++) prop(u - w / 2 + 0.12 + i * (w - 0.24) / 3, v, 0.14, 0.34, 0.16, col[i % col.length], false, 0.9); };
-  const plant = (u, v) => { prop(u, v, 0.22, 0.22, 0.3, '#8a5a3c'); prop(u, v, 0.34, 0.34, 0.32, '#3f8a3a', false, 0.3); };
+const ROOM = { lemon: [7, 6], tacos: [8, 7], ice: [8, 6.5], bakery: [8, 7], cafe: [9, 7.5], laundry: [9, 7], flowers: [8, 6.5], books: [10, 8], surf: [9, 7], gym: [11, 8.5], rest: [11, 8.5], garage: [12, 9], pharma: [10, 7.5], bar: [10, 8], club: [13, 9.5], cinema: [12, 10], gamedev: [11, 8.5], hotel: [13, 9.5], startup: [12, 9] };
+const HOME_ROOM = [[8, 6.5], [10, 7.5], [11, 8.5], [13, 9.5]];
+function roomSize(type, lvl, home) {
+  if (home) return HOME_ROOM[homeLv()];
+  const b = ROOM[type] || [9, 7];
+  return [b[0] + (lvl - 1) * 0.6, b[1] + (lvl - 1) * 0.4]; // el local crece con cada mejora
+}
+// Plano de un negocio: mostrador al fondo, pasillo de fila a la izquierda, clientes a la derecha
+function bizPlan(type, lvl, RW, RD) {
+  const p = { props: [], seats: [], staff: [], desks: null, club: null };
+  const prop = (x, z, w, d, h, col, block = true, y0 = 0) => p.props.push({ x, z, w, d, h, col, block, y0 });
+  const cz = RD - 2.2;                                       // línea del mostrador
+  p.counter = { x0: 0.9, x1: Math.min(RW - 1.2, 1.2 + RW * 0.55), z: cz };
+  p.reg = { x: 2.0, z: cz };
+  p.staffZ = RD - 1.35;
+  const zone = { x0: 3.4, x1: RW - 0.7, z0: 1.0, z1: cz - 1.0 };  // zona de clientes
+  const W = zone.x1 - zone.x0, D = zone.z1 - zone.z0;
+  const grid = (sx, sz, fn) => { const nx = Math.max(1, Math.floor(W / sx)), nz = Math.max(1, Math.floor(D / sz)), ox = zone.x0 + (W - nx * sx) / 2 + sx / 2, oz = zone.z0 + (D - nz * sz) / 2 + sz / 2; for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) fn(ox + i * sx, oz + j * sz, i, j); };
+  const plant = (x, z) => { prop(x, z, 0.35, 0.35, 0.35, '#8a5a3c'); prop(x, z, 0.55, 0.55, 0.5, '#3f8a3a', false, 0.35); };
+  const table = (x, z, round, big) => {
+    prop(x, z, big ? 0.95 : 0.7, 0.7, 0.45, round ? '#e9e3d3' : '#7a5434');
+    for (const s of [-1, 1]) { prop(x + s * (big ? 0.72 : 0.58), z, 0.32, 0.36, 0.28, '#5b3e26', false); p.seats.push({ x: x + s * (big ? 0.72 : 0.58), z, a: s < 0 ? 'r' : 'l' }); }
+  };
+  const shelfRow = (x, z, len, cols) => { prop(x, z, len, 0.42, 1.0, '#8f7a63'); for (let i = 0; i < Math.floor(len / 0.32); i++) prop(x - len / 2 + 0.18 + i * 0.32, z, 0.22, 0.46, 0.16, cols[i % cols.length], false, 0.62 + (i % 2) * 0.2); };
   const food = ['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar'].includes(type);
   if (food) {
-    const n = type === 'lemon' ? 1 : type === 'rest' ? 4 : lvl >= 3 ? 4 : 3;
-    const spots = [[0.66, 0.2], [0.66, 0.44], [0.9, 0.2], [0.9, 0.44]];
-    for (let i = 0; i < n; i++) table(spots[i][0], spots[i][1], type === 'cafe' || type === 'ice');
-    if (type === 'bar') for (let i = 0; i < 4; i++) { const u = 0.5 + i * 0.12; prop(u, 0.56, 0.16, 0.16, 0.3, '#2b2d42', false); p.seats.push({ u, v: 0.56, a: 'b' }); }
-    if (type === 'lemon') { prop(0.85, 0.42, 0.3, 0.3, 0.28, '#c9a15a'); prop(0.85, 0.42, 0.24, 0.24, 0.06, '#f7d84a', false, 0.28); }
-    if (type === 'cafe' || type === 'bakery') plant(0.1, 0.1);
+    grid(type === 'rest' ? 2.1 : 1.9, 1.6, (x, z) => table(x, z, type === 'cafe' || type === 'ice', type === 'rest'));
+    if (type === 'bar') for (let x = 3.0; x < p.counter.x1 - 0.2; x += 0.75) { prop(x, cz - 0.55, 0.28, 0.28, 0.32, '#2b2d42', false); p.seats.push({ x, z: cz - 0.55, a: 'b' }); }
+    if (type === 'bakery' || type === 'cafe' || type === 'ice') prop((p.counter.x0 + p.counter.x1) / 2 + 0.8, cz, 1.6, 0.42, 0.38, '#cfe8f5', false, 0.62); // vitrina
+    plant(0.5, 0.6); plant(RW - 0.5, cz - 0.5);
   } else if (type === 'laundry') {
-    for (let i = 0; i < 4; i++) { prop(0.9, 0.1 + i * 0.13, 0.4, 0.4, 0.55, '#f4f6f8'); prop(0.9 - 0.21, 0.1 + i * 0.13, 0.02, 0.22, 0.22, '#3a6ea5', false, 0.18); }
-    prop(0.58, 0.3, 0.9, 0.35, 0.4, '#b9a58f'); p.seats.push({ u: 0.5, v: 0.12, a: 'b' }, { u: 0.62, v: 0.12, a: 'b' });
+    for (let z = zone.z0 + 0.2; z < zone.z1; z += 0.85) { prop(RW - 0.55, z, 0.75, 0.75, 0.85, '#f4f6f8'); prop(RW - 0.94, z, 0.03, 0.42, 0.42, '#3a6ea5', false, 0.25); }
+    for (let z = zone.z0 + 0.2; z < zone.z1; z += 0.85) { prop(zone.x0 + 0.8, z, 0.75, 0.75, 0.85, '#f4f6f8'); prop(zone.x0 + 1.19, z, 0.03, 0.42, 0.42, '#3a6ea5', false, 0.25); }
+    const mx = (zone.x0 + 0.8 + RW - 0.55) / 2; prop(mx, (zone.z0 + zone.z1) / 2, 1.0, D * 0.6, 0.45, '#b9a58f');
+    for (let z = zone.z0 + 0.5; z < zone.z1; z += 1.2) p.seats.push({ x: mx - 0.75, z, a: 'r' });
   } else if (type === 'flowers') {
-    const cols = ['#e46a8e', '#ffd166', '#f15bb5', '#ff924c', '#9b5de5'];
-    for (let i = 0; i < 5; i++) { prop(0.55 + (i % 3) * 0.17, 0.18 + Math.floor(i / 3) * 0.24, 0.28, 0.28, 0.25, '#5a7d9a'); prop(0.55 + (i % 3) * 0.17, 0.18 + Math.floor(i / 3) * 0.24, 0.3, 0.3, 0.22, cols[i], false, 0.25); }
+    const cols = ['#e46a8e', '#ffd166', '#f15bb5', '#ff924c', '#9b5de5', '#ef476f'];
+    grid(1.1, 1.0, (x, z, i, j) => { prop(x, z, 0.55, 0.55, 0.4, '#5a7d9a'); prop(x, z, 0.62, 0.62, 0.35, cols[(i + j * 3) % cols.length], false, 0.4); });
   } else if (type === 'books' || type === 'pharma') {
-    const col = type === 'books' ? ['#e63946', '#457b9d', '#2a9d8f', '#f1a208'] : ['#ffffff', '#3fae6a', '#00bbf9', '#ef476f'];
-    shelf(0.72, 0.16, 1.1, col); shelf(0.72, 0.4, 1.1, col);
-    if (type === 'books') p.seats.push({ u: 0.12, v: 0.2, a: 'b' });
+    const cols = type === 'books' ? ['#e63946', '#457b9d', '#2a9d8f', '#f1a208', '#6a4c93'] : ['#ffffff', '#3fae6a', '#00bbf9', '#ef476f'];
+    for (let z = zone.z0 + 0.3; z < zone.z1; z += 1.45) shelfRow((zone.x0 + zone.x1) / 2, z, W - 0.6, cols);
+    if (type === 'books') { prop(1.0, 1.3, 0.9, 0.9, 0.4, '#a9744f'); p.seats.push({ x: 0.55, z: 1.3, a: 'r' }); }
   } else if (type === 'surf') {
-    const cols = ['#2fb7b0', '#ff924c', '#f15bb5', '#ffd166', '#3a86ff'];
-    for (let i = 0; i < 5; i++) prop(0.52 + i * 0.1, 0.22, 0.12, 0.5, 0.75, cols[i]);
-    prop(0.75, 0.45, 0.9, 0.3, 0.4, '#c9a15a');
+    const cols = ['#2fb7b0', '#ff924c', '#f15bb5', '#ffd166', '#3a86ff', '#06d6a0'];
+    for (let z = zone.z0 + 0.4; z < zone.z1; z += 1.4) for (let x = zone.x0 + 0.3, i = 0; x < zone.x1; x += 0.36, i++) prop(x, z, 0.16, 0.85, 1.3, cols[i % cols.length]);
   } else if (type === 'gym') {
-    for (let i = 0; i < 3; i++) { prop(0.55 + i * 0.17, 0.15, 0.3, 0.6, 0.12, '#1b1b1b'); prop(0.55 + i * 0.17, 0.05, 0.3, 0.06, 0.55, '#6c757d', false); p.seats.push({ u: 0.55 + i * 0.17, v: 0.17, a: 'f', stand: true }); }
-    prop(0.7, 0.42, 0.7, 0.22, 0.25, '#3a3d46'); prop(0.42, 0.42, 0.12, 0.12, 0.75, '#6c757d', false); prop(0.98, 0.42, 0.12, 0.12, 0.75, '#6c757d', false);
-    p.seats.push({ u: 0.7, v: 0.42, a: 'b' });
+    grid(1.25, 1.7, (x, z, i, j) => { if (j % 2 === 0) { prop(x, z, 0.55, 1.1, 0.16, '#1b1b1b'); prop(x, z - 0.6, 0.55, 0.08, 0.9, '#6c757d', false); p.seats.push({ x, z: z + 0.1, a: 'b', stand: true }); } else { prop(x, z, 0.4, 1.0, 0.3, '#3a3d46'); prop(x - 0.45, z, 0.12, 0.12, 0.9, '#6c757d', false); prop(x + 0.45, z, 0.12, 0.12, 0.9, '#6c757d', false); p.seats.push({ x, z, a: 'f' }); } });
+    prop(RW - 0.08, (zone.z0 + zone.z1) / 2, 0.06, D, 1.6, '#cfe8f5', false, 0.2); // espejo
   } else if (type === 'garage') {
-    prop(0.66, 0.3, 1.25, 0.65, 0.2, '#ffb627'); prop(0.66, 0.3, 1.0, 0.55, 0.32, '#3a86ff', true, 0.2); prop(0.62, 0.3, 0.5, 0.48, 0.22, '#1b2a44', false, 0.52);
-    prop(0.95, 0.1, 0.25, 0.5, 0.8, '#e63946');
+    for (let x = zone.x0 + 1.4, k = 0; x + 1.2 < zone.x1 && k < 3; x += 3.0, k++) {
+      prop(x, (zone.z0 + zone.z1) / 2, 2.1, 3.4, 0.25, '#ffb627'); prop(x, (zone.z0 + zone.z1) / 2, 1.5, 3.0, 0.45, ['#3a86ff', '#e63946', '#2a9d8f'][k], true, 0.25); prop(x, (zone.z0 + zone.z1) / 2 + 0.2, 1.3, 1.4, 0.35, '#1b2a44', false, 0.7);
+    }
+    prop(RW - 0.4, zone.z0 + 0.6, 0.5, 1.2, 1.3, '#e63946'); prop(RW - 0.4, zone.z0 + 2.0, 0.5, 1.2, 1.3, '#e63946');
   } else if (type === 'cinema') {
-    prop(0.99, 0.3, 0.05, 1.5, 0.9, '#f4f6f8', true, 0.2);
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { const u = 0.52 + r * 0.13, v = 0.12 + c * 0.16; prop(u - 0.03, v, 0.18, 0.22, 0.3, '#b3242c', false); p.seats.push({ u, v, a: 'r' }); }
+    prop(RW - 0.12, (zone.z0 + zone.z1) / 2, 0.08, D + 0.6, 1.8, '#f4f6f8', true, 0.5);  // pantalla
+    for (let x = zone.x0 + 0.3; x < zone.x1 - 1.0; x += 0.95) for (let z = zone.z0 + 0.2; z < zone.z1; z += 0.6) { prop(x - 0.1, z, 0.42, 0.48, 0.42, '#b3242c', false); p.seats.push({ x, z, a: 'r' }); }
   } else if (type === 'gamedev' || type === 'startup') {
-    const desk = (u, v) => { prop(u, v, 0.6, 0.38, 0.36, '#e9e3d3'); prop(u, v + 0.05, 0.32, 0.05, 0.22, '#1b2333', false, 0.36); prop(u, v + 0.045, 0.28, 0.02, 0.17, type === 'gamedev' ? '#46d98a' : '#3a86ff', false, 0.39); };
-    desk(0.62, 0.18); desk(0.9, 0.18); desk(0.62, 0.42); desk(0.9, 0.42);
-    p.staffDesks = [{ u: 0.62, v: 0.26 }, { u: 0.9, v: 0.26 }, { u: 0.62, v: 0.5 }, { u: 0.9, v: 0.5 }];
-    plant(0.1, 0.1); if (type === 'startup') prop(0.2, 0.45, 0.3, 0.3, 0.2, '#ff924c', false);
-  } else if (type === 'club') {
-    prop(0.92, 0.3, 0.38, 0.95, 0.5, '#1b1b1b'); prop(0.9, 0.22, 0.2, 0.2, 0.04, '#adb5bd', false, 0.5); prop(0.9, 0.38, 0.2, 0.2, 0.04, '#adb5bd', false, 0.5); // cabina del DJ
-    prop(0.08, 0.2, 0.3, 0.75, 0.3, '#5b2a86'); prop(0.08, 0.48, 0.3, 0.6, 0.3, '#5b2a86'); prop(0.2, 0.32, 0.32, 0.32, 0.36, '#2b2d42'); // zona VIP
-    p.seats.push({ u: 0.1, v: 0.14, a: 'r' }, { u: 0.1, v: 0.26, a: 'r' }, { u: 0.1, v: 0.45, a: 'r' });
-    for (let i = 0; i < 12; i++) p.seats.push({ u: 0.42 + (i % 4) * 0.1, v: 0.14 + Math.floor(i / 4) * 0.12, a: 'dance', stand: true });
-    p.club = true;
+    p.desks = [];
+    grid(1.6, 1.5, (x, z) => { prop(x, z, 1.1, 0.6, 0.45, '#e9e3d3'); prop(x, z + 0.12, 0.6, 0.06, 0.38, '#1b2333', false, 0.45); prop(x, z + 0.1, 0.52, 0.02, 0.3, type === 'gamedev' ? '#46d98a' : '#3a86ff', false, 0.5); p.desks.push({ x, z: z - 0.45 }); });
+    plant(0.5, 0.6); plant(RW - 0.5, 0.6);
+    if (type === 'startup') { prop(1.2, 1.4, 0.6, 0.6, 0.3, '#ff924c', false); prop(1.9, 1.4, 0.6, 0.6, 0.3, '#06d6a0', false); }
   } else if (type === 'hotel') {
-    prop(0.62, 0.3, 0.9, 0.7, 0.02, '#b3242c', false);
-    prop(0.62, 0.14, 0.7, 0.26, 0.32, '#2c3e70'); prop(0.62, 0.46, 0.7, 0.26, 0.32, '#2c3e70');
-    p.seats.push({ u: 0.55, v: 0.14, a: 'b' }, { u: 0.7, v: 0.14, a: 'b' }, { u: 0.55, v: 0.46, a: 'f' });
-    plant(0.95, 0.08); plant(0.95, 0.55); prop(0.85, 0.98, 0.5, 0.05, 0.75, '#c0c6cf', false);
+    prop((zone.x0 + zone.x1) / 2, (zone.z0 + zone.z1) / 2, W * 0.8, D * 0.75, 0.02, '#b3242c', false);
+    grid(2.6, 2.0, (x, z) => { prop(x, z - 0.35, 1.5, 0.45, 0.4, '#2c3e70'); prop(x, z + 0.35, 0.7, 0.5, 0.3, '#e9e3d3'); p.seats.push({ x: x - 0.4, z: z - 0.35, a: 'b' }, { x: x + 0.4, z: z - 0.35, a: 'b' }); });
+    for (const x of [RW - 2.4, RW - 1.0]) prop(x, RD - 0.15, 1.0, 0.1, 1.6, '#c0c6cf', false); // elevadores
+    plant(0.5, 0.6); plant(RW - 0.5, 0.6); plant(zone.x0, cz - 0.4);
+  } else if (type === 'club') {
+    p.club = { x0: zone.x0 + 0.2, x1: zone.x1 - 1.8, z0: zone.z0 + 0.2, z1: zone.z1 };
+    prop(RW - 0.9, (zone.z0 + zone.z1) / 2, 1.0, 2.2, 0.75, '#1b1b1b'); prop(RW - 0.9, (zone.z0 + zone.z1) / 2 - 0.5, 0.45, 0.45, 0.05, '#adb5bd', false, 0.75); prop(RW - 0.9, (zone.z0 + zone.z1) / 2 + 0.5, 0.45, 0.45, 0.05, '#adb5bd', false, 0.75);
+    p.dj = { x: RW - 0.35, z: (zone.z0 + zone.z1) / 2 };
+    prop(1.0, 1.2, 0.9, 1.6, 0.4, '#5b2a86'); p.seats.push({ x: 0.75, z: 0.8, a: 'r' }, { x: 0.75, z: 1.6, a: 'r' });
+    const c = p.club;
+    for (let x = c.x0 + 0.5; x < c.x1; x += 0.85) for (let z = c.z0 + 0.4; z < c.z1; z += 0.85) p.seats.push({ x: x + (Math.random() - .5) * 0.2, z: z + (Math.random() - .5) * 0.2, a: 'dance', stand: true });
   }
+  if (lvl >= 3) plant(RW - 0.5, 0.6);
+  // Empleados detrás del mostrador (o en sus escritorios)
+  for (let x = p.counter.x0 + 0.7; x < p.counter.x1; x += 1.25) p.staff.push({ x, z: p.staffZ });
   return p;
 }
-// Plano del departamento: recámara al fondo, sala, cocineta y escritorio
-function homePlan(lv) {
-  const p = { props: [], seats: [], staff: [] }, HM = HOMES[lv];
-  const prop = (u, v, w, d, h, col, block = true, y0 = 0) => p.props.push({ u, v, w, d, h, col, block, y0 });
-  prop(0.8, 0.78, 1.0, 1.4, 0.32, '#f4f1de'); prop(0.8, 0.72, 1.02, 1.0, 0.06, '#3a86ff', false, 0.32); prop(0.8, 0.93, 0.75, 0.25, 0.1, '#ffffff', false, 0.32);
-  prop(0.8, 0.995, 1.05, 0.06, 0.6, '#8a5a3c', false);                       // cabecera
-  prop(0.56, 0.93, 0.3, 0.3, 0.35, '#8a5a3c'); prop(0.56, 0.93, 0.12, 0.12, 0.22, '#ffd166', false, 0.35); // buró y lámpara
-  prop(0.95, 0.35, 0.3, 1.0, 1.1, '#6b4a2b');                                 // ropero
-  prop(0.22, 0.36, 1.45, 1.25, 0.012, HM.rug, false);                          // tapete
-  prop(0.22, 0.52, 1.2, 0.42, 0.34, '#e63946'); prop(0.22, 0.6, 1.2, 0.14, 0.32, '#c1121f', false, 0.34); // sillón
-  prop(0.22, 0.18, 0.95, 0.24, 0.35, '#3b4250'); prop(0.22, 0.18, 0.85, 0.04, 0.48, '#1b2333', false, 0.35); // tele
-  prop(0.24, 0.95, 1.35, 0.3, 0.55, '#cfd6e0'); prop(0.12, 0.95, 0.35, 0.25, 0.02, '#2b2d42', false, 0.55); // cocineta
-  prop(0.05, 0.72, 0.3, 0.3, 1.0, '#f8f9fa');                                  // refri
-  prop(0.62, 0.36, 0.7, 0.34, 0.4, '#e9e3d3'); prop(0.62, 0.37, 0.32, 0.2, 0.02, '#adb5bd', false, 0.4); prop(0.62, 0.3, 0.3, 0.02, 0.18, '#46d98a', false, 0.42); // escritorio y laptop
-  prop(0.62, 0.22, 0.26, 0.26, 0.26, '#2b2d42', false);                        // silla
-  prop(0.06, 0.08, 0.22, 0.22, 0.3, '#8a5a3c'); prop(0.06, 0.08, 0.34, 0.34, 0.35, '#3f8a3a', false, 0.3);
-  if (lv >= 1) { prop(0.42, 0.995, 0.6, 0.03, 0.4, '#ff924c', false, 0.5); prop(0.95, 0.08, 0.3, 0.3, 0.8, '#f04e23'); prop(0.95, 0.12, 0.22, 0.02, 0.2, '#46d98a', false, 0.5); } // cuadro y maquinita de ERAGames
-  if (lv >= 2) { prop(0.03, 0.42, 0.2, 0.55, 1.0, '#6b4a2b'); for (let i = 0; i < 4; i++) prop(0.05, 0.25 + i * 0.1, 0.14, 0.16, 0.18, ['#e63946', '#3a86ff', '#ffd166', '#06d6a0'][i], false, 0.75); } // librero
-  if (lv >= 3) { prop(0.45, 0.7, 0.5, 0.35, 0.45, '#111111'); prop(0.45, 0.62, 0.42, 0.06, 0.05, '#f4f1de', false, 0.45); prop(0.4, 0.4, 0.5, 0.5, 0.12, '#ffd166', false, 1.75); } // piano y candelabro
+// Plano de tu casa: recámara, cocina, sala y estudio; cada nivel agrega cosas
+function homeRoomPlan(lv, RW, RD) {
+  const p = { props: [], seats: [], staff: [], home: true }, HM = HOMES[lv];
+  const prop = (x, z, w, d, h, col, block = true, y0 = 0) => p.props.push({ x, z, w, d, h, col, block, y0 });
+  // Recámara (fondo derecha)
+  const bx = RW - 1.6, bz = RD - 1.5;
+  prop(bx, bz, 1.6, 2.2, 0.45, '#f4f1de'); prop(bx, bz - 0.25, 1.65, 1.5, 0.08, HM.rug === '#c9a15a' ? '#7a1f2b' : '#3a86ff', false, 0.45); prop(bx, bz + 0.85, 1.1, 0.35, 0.12, '#ffffff', false, 0.45);
+  prop(bx, RD - 0.12, 1.7, 0.1, 0.9, '#8a5a3c', false);
+  for (const s of [-1, 1]) { prop(bx + s * 1.15, RD - 0.45, 0.45, 0.45, 0.45, '#8a5a3c'); prop(bx + s * 1.15, RD - 0.45, 0.18, 0.18, 0.3, '#ffd166', false, 0.45); }
+  prop(RW - 0.3, bz - 2.0, 0.45, 1.6, 1.6, '#6b4a2b');                              // ropero
+  // Cocina (fondo izquierda)
+  prop(1.7, RD - 0.35, 3.0, 0.55, 0.85, '#cfd6e0'); prop(0.9, RD - 0.35, 0.6, 0.45, 0.03, '#2b2d42', false, 0.85); prop(2.2, RD - 0.35, 0.5, 0.4, 0.06, '#8ecae6', false, 0.85);
+  prop(0.35, RD - 1.4, 0.5, 0.6, 1.7, '#f8f9fa');                                   // refri
+  prop(1.9, RD - 2.2, 1.3, 0.85, 0.45, '#a9744f'); for (const s of [-1, 1]) prop(1.9 + s * 0.85, RD - 2.2, 0.35, 0.4, 0.3, '#5b3e26', false); // comedor
+  // Sala (frente izquierda)
+  prop(2.1, 2.0, 3.0, 2.2, 0.015, HM.rug, false);
+  prop(2.1, 2.7, 2.2, 0.6, 0.45, '#e63946'); prop(2.1, 3.0, 2.2, 0.2, 0.42, '#c1121f', false, 0.45);
+  prop(2.1, 1.25, 0.9, 0.5, 0.35, '#8a5a3c', false); prop(2.1, 0.45, 1.6, 0.25, 0.4, '#3b4250'); prop(2.1, 0.45, 1.5, 0.05, 0.75, '#1b2333', false, 0.4); // mesita y tele
+  // Estudio (frente derecha)
+  prop(RW - 1.7, 1.3, 1.4, 0.6, 0.48, '#e9e3d3'); prop(RW - 1.7, 1.38, 0.5, 0.32, 0.03, '#adb5bd', false, 0.48); prop(RW - 1.7, 1.2, 0.46, 0.03, 0.3, '#46d98a', false, 0.5); prop(RW - 1.7, 0.7, 0.45, 0.45, 0.32, '#2b2d42', false);
+  prop(0.4, 0.4, 0.35, 0.35, 0.35, '#8a5a3c'); prop(0.4, 0.4, 0.55, 0.55, 0.5, '#3f8a3a', false, 0.35);
+  if (lv >= 1) { prop(RW / 2, RD - 0.08, 1.2, 0.05, 0.7, '#ff924c', false, 1.0); prop(RW / 2 + 0.2, 0.5, 0.6, 0.6, 1.3, '#f04e23'); prop(RW / 2 + 0.2, 0.84, 0.44, 0.04, 0.35, '#46d98a', false, 0.8); } // cuadro y maquinita de ERAGames
+  if (lv >= 2) { prop(0.25, 3.9, 0.35, 1.8, 1.8, '#6b4a2b'); for (let i = 0; i < 5; i++) prop(0.3, 3.2 + i * 0.35, 0.3, 0.25, 0.22, ['#e63946', '#3a86ff', '#ffd166', '#06d6a0', '#9b5de5'][i], false, 1.2); prop(RW / 2 - 0.8, RD - 0.3, 1.2, 0.4, 0.9, '#48cae4'); } // librero y pecera
+  if (lv >= 3) { prop(RW / 2 + 0.3, RD / 2, 1.3, 0.9, 0.55, '#111111'); prop(RW / 2 + 0.3, RD / 2 - 0.3, 1.2, 0.08, 0.06, '#f4f1de', false, 0.55); prop(RW / 2 - 1.4, RD / 2, 1.6, 0.9, 0.5, '#1f6f43'); prop(RW / 2, RD / 2, 0.9, 0.9, 0.12, '#ffd166', false, 2.6); } // piano, mesa de billar y candelabro
   return p;
 }
 function enterLot(l) {
   if (inside || !lotObjs.has(l.id)) return;
-  inside = { l, id: l.id, walkers: [], seated: 0, seatT: 0, looks: [] };
+  inside = { l, id: l.id, walkers: [], seated: 0, seatT: 0, looks: [], yawBack: cam.yawT };
+  cam.yawT = Math.round(cam.yaw / (Math.PI * 2)) * Math.PI * 2; // la cámara mira de frente al entrar
   buildInterior();
   P.vx = P.vy = 0;
-  const g = inside.geo; P.x = l.door.x; P.y = g.toY(0.14);
+  const g = inside.geo; P.x = g.doorX; P.y = g.toY(0.7);
+  cam.fx = (g.rx0 + g.rx1) / 2; cam.fy = (g.ry0 + g.ry1) / 2; insideK = 1; doorFade(); // corte directo, como al cruzar una puerta
   sfx('door'); vibrate(10);
   const b = bizAtLot(l.id); if (b) collect(b);
   setText($place, l === HOME ? `${HOMES[homeLv()].em} Tu ${HOMES[homeLv()].name}` : '🚪 ' + (b ? bizName(b) : rivalName(l)));
   if (l === HOME && !S.stats.nights) toast('Esta es tu casa. De noche (desde las 8 p.m.) toca 😴 Dormir para pasar al día siguiente.', '', 6000);
+  // La calle se vuelve a llenar al salir (se quedan el VIP, el ladrón y quien te pidió un favor)
+  for (let i = peds.length - 1; i >= 0; i--) if (!['giver', 'follow', 'thief'].includes(peds[i].mode)) peds.splice(i, 1);
+  cars.length = 0;
+}
+function doorFade() { const f = $('doorFx'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 90); }
+function disposeInterior() {
+  if (!inside || !inside.group) return;
+  scene.remove(inside.group);
+  inside.group.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
 }
 function exitLot() {
   if (!inside) return;
   const l = inside.l;
-  scene.remove(inside.group); inside.group.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
-  const o = lotObjs.get(l.id); if (o) o.visible = true;
+  disposeInterior();
+  cam.yawT = inside.yawBack; cam.yaw = cam.yawT;
   inside = null; interiorLight.intensity = 0;
-  P.x = l.door.x; P.y = l.door.y + (l.door.side === 'n' ? -6 : 6); P.vx = P.vy = 0;
+  P.x = l.door.x; P.y = l.door.y + (l.door.side === 'n' ? -8 : 8); P.vx = P.vy = 0; autoEnterArmed = false;
+  cam.fx = P.x; cam.fy = P.y; insideK = 0; doorFade();
   sfx('door'); lastDistrict = '';
+  updateCamera(0, cam.fx, cam.fy, false);
+  for (let i = 0; i < 24; i++) { const k = spawnPlace(500); if (k >= 0) peds.push(newPed(k)); }
+  const view = liveRect(0); for (let i = 0, n = 0; i < nodes.length && n < 8; i++) if (inRect(nodes[i].x, nodes[i].y, view)) { peds.push(newPed(i)); n++; }
 }
 function buildInterior() {
-  const l = inside.l, home = l === HOME, b = bizAtLot(l.id), type = home ? 'home' : b ? b.type : l.rival.type, lvl = home ? 1 : b ? b.level : l.rival.level, ty = home ? { roof: HOMES[homeLv()].roof } : TYPE[type];
-  if (inside.group) { scene.remove(inside.group); inside.group.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); }); }
-  const o = lotObjs.get(l.id); if (o) o.visible = false;
-  const rx0 = l.x + 6, rx1 = l.x + l.w - 6, ry0 = l.y + 6, ry1 = l.y + l.h - 6, n = l.door.side === 'n';
-  const toX = (u) => rx0 + u * (rx1 - rx0), toY = (v) => n ? ry0 + v * (ry1 - ry0) : ry1 - v * (ry1 - ry0);
-  const geo = { rx0, rx1, ry0, ry1, n, toX: (u, v) => toX(u), toY, angBack: n ? 0 : Math.PI };
+  const l = inside.l, home = l === HOME, b = bizAtLot(l.id), type = home ? 'home' : b ? b.type : l.rival.type, lvl = home ? 1 : b ? b.level : l.rival.level;
+  const ty = home ? { roof: HOMES[homeLv()].roof } : TYPE[type];
+  disposeInterior();
+  const [RW, RD] = roomSize(type, lvl, home);
+  const rx0 = POCKET.x - RW * T / 2, rx1 = POCKET.x + RW * T / 2, ry0 = POCKET.y - RD * T / 2, ry1 = POCKET.y + RD * T / 2;
+  const toX = x => rx0 + x * T, toY = z => ry1 - z * T;
+  const geo = { rx0, rx1, ry0, ry1, RW, RD, toX, toY, doorX: POCKET.x, angBack: Math.PI };
   inside.geo = geo;
-  const plan = home ? homePlan(homeLv()) : interiorPlan(type, lvl), G = new Geo(), rects = [];
-  const wallC = shade(ty.roof, 1.05), wt = 0.12, wh = 0.75;
-  const X0 = U(rx0), X1 = U(rx1), Z0 = U(ry0), Z1 = U(ry1);
-  // Piso con baldosas y paredes bajas (corte para ver desde arriba)
-  const floorC = home ? HOMES[homeLv()].floor : FLOOR[type] || '#9a8f86';
-  G.box(X0, 0, Z0, X1, 0.05, Z1, floorC);
-  const tiles2 = 6, tw = (X1 - X0) / tiles2, td = (Z1 - Z0) / tiles2;
-  for (let i = 0; i < tiles2; i++) for (let j = 0; j < tiles2; j++) if ((i + j) % 2) G.box(X0 + i * tw, 0.05, Z0 + j * td, X0 + (i + 1) * tw, 0.052, Z0 + (j + 1) * td, shade(floorC, 0.9));
-  const doorW = 0.9, dcx = U(l.door.x);
-  const zDoor = n ? Z0 : Z1, zBack = n ? Z1 : Z0;
-  G.box(X0, 0, Math.min(zBack, zBack + (n ? -wt : wt)), X1, wh, Math.max(zBack, zBack + (n ? -wt : wt)), wallC);
-  G.box(X0, 0, Z0, X0 + wt, wh, Z1, wallC); G.box(X1 - wt, 0, Z0, X1, wh, Z1, wallC);
-  const zd0 = Math.min(zDoor, zDoor + (n ? wt : -wt)), zd1 = Math.max(zDoor, zDoor + (n ? wt : -wt));
-  G.box(X0, 0, zd0, dcx - doorW / 2, wh, zd1, wallC); G.box(dcx + doorW / 2, 0, zd0, X1, wh, zd1, wallC);
-  G.box(dcx - doorW / 2, 0.051, zd0 - 0.1, dcx + doorW / 2, 0.06, zd1 + 0.1, '#5b3e26'); // tapete de entrada
-  // Paredes como colisiones (con hueco de puerta)
+  const plan = home ? homeRoomPlan(homeLv(), RW, RD) : bizPlan(type, lvl, RW, RD);
+  const G = new Geo(), Wn = new Geo(), rects = [];
   const R = (x0, y0, x1, y1) => rects.push({ x0: Math.min(x0, x1), y0: Math.min(y0, y1), x1: Math.max(x0, x1), y1: Math.max(y0, y1) });
-  const wpx = wt * T, dpx = doorW * T / 2;
-  R(rx0, ry0, rx0 + wpx, ry1); R(rx1 - wpx, ry0, rx1, ry1);
-  R(rx0, toY(1), rx1, toY(1) + (n ? -wpx : wpx));
-  R(rx0, toY(0), l.door.x - dpx, toY(0) + (n ? wpx : -wpx)); R(l.door.x + dpx, toY(0), rx1, toY(0) + (n ? wpx : -wpx));
-  // Mostrador, caja y estantes del fondo
-  const box = (u, v, w, d, h, col, block, y0 = 0) => {
-    const cx = toX(u), cy = toY(v), hw = w * T / 2, hd = d * T / 2;
+  const X0 = U(rx0), X1 = U(rx1), Z0 = U(ry0), Z1 = U(ry1), wt = 0.18, wh = 2.4, fh = 0.55, doorW = 1.3;
+  const floorC = home ? HOMES[homeLv()].floor : FLOOR[type] || '#9a8f86', wallC = shade(ty.roof, 1.08), trim = shade(ty.roof, 0.7);
+  // Piso con baldosas grandes
+  G.box(X0, 0, Z0, X1, 0.05, Z1, floorC);
+  for (let x = 0; x < RW; x += 1) for (let z = 0; z < RD; z += 1) if ((Math.floor(x) + Math.floor(z)) % 2) G.box(X0 + x, 0.05, Z0 + z, Math.min(X1, X0 + x + 1), 0.052, Math.min(Z1, Z0 + z + 1), shade(floorC, 0.92));
+  // Paredes altas al fondo y a los lados; la de la puerta, baja para ver adentro
+  G.box(X0 - wt, 0, Z0 - wt, X1 + wt, wh, Z0, wallC); G.box(X0 - wt, wh, Z0 - wt, X1 + wt, wh + 0.08, Z0 + 0.04, trim);
+  for (const [xa, xb] of [[X0 - wt, X0], [X1, X1 + wt]]) { G.box(xa, 0, Z0, xb, wh, Z1 + wt, wallC); G.box(xa, wh, Z0, xb, wh + 0.08, Z1 + wt, trim); }
+  const dx = U(geo.doorX);
+  G.box(X0 - wt, 0, Z1, dx - doorW / 2, fh, Z1 + wt, wallC); G.box(dx + doorW / 2, 0, Z1, X1 + wt, fh, Z1 + wt, wallC);
+  G.box(dx - doorW / 2, 0.052, Z1 - 0.3, dx + doorW / 2, 0.06, Z1 + wt + 0.2, '#5b3e26');  // tapete de entrada
+  G.box(X0, 0.05, Z0, X1, 0.16, Z0 + 0.04, trim);                                          // zoclo
+  // Ventanas en la pared del fondo (de día claras, de noche oscuras)
+  for (let x = 1.2; x < RW - 0.8; x += 2.4) Wn.box(X0 + x, 1.0, Z0 + 0.005, X0 + x + 1.3, 1.9, Z0 + 0.03, '#ffffff');
+  for (let z = 1.5; z < RD - 1; z += 2.6) for (const xs of [X0 + 0.005, X1 - 0.03]) Wn.box(xs, 1.0, Z0 + z, xs + 0.025, 1.9, Z0 + z + 1.1, '#ffffff');
+  const wpx = 2;
+  R(rx0 - 20, ry0 - 20, rx1 + 20, ry0 + wpx); R(rx0 - 20, ry0, rx0 + wpx, ry1 + 20); R(rx1 - wpx, ry0, rx1 + 20, ry1 + 20);
+  R(rx0, ry1 - wpx, geo.doorX - doorW * T / 2, ry1 + 20); R(geo.doorX + doorW * T / 2, ry1 - wpx, rx1, ry1 + 20);
+  const box = (x, z, w, d, h, col, block, y0 = 0) => {
+    const cx = toX(x), cy = toY(z), hw = w * T / 2, hd = d * T / 2;
     G.box(U(cx - hw), y0, U(cy - hd), U(cx + hw), y0 + h, U(cy + hd), col);
     if (block) R(cx - hw, cy - hd, cx + hw, cy + hd);
   };
-  const cw = 2.2;
   if (!home) {
-  box(0.4, 0.68, cw, 0.36, 0.55, shade(ty.roof, 0.8), true); box(0.4, 0.68, cw + 0.06, 0.4, 0.05, '#e9e3d3', false, 0.55);
-  box(0.28, 0.68, 0.26, 0.2, 0.18, '#2b2d42', false, 0.6); box(0.28, 0.66, 0.2, 0.05, 0.1, '#46d98a', false, 0.7); // caja registradora
-  box(0.55, 0.96, 2.6, 0.22, 0.65, '#8f7a63', false);
-  const goods = [ty.roof, '#ffd166', '#ef476f', '#06d6a0', '#3a86ff'];
-  for (let i = 0; i < 9; i++) box(0.12 + i * 0.1, 0.955, 0.18, 0.16, 0.14, goods[i % goods.length], false, 0.66);
-  if (['lemon', 'tacos', 'cafe', 'rest', 'bar', 'ice', 'bakery'].includes(type)) box(0.55, 0.995, 1.0, 0.03, 0.4, '#1b2333', false, 0.95); // pizarrón del menú
+    const c = plan.counter, cw = c.x1 - c.x0, mx = (c.x0 + c.x1) / 2;
+    box(mx, c.z, cw, 0.6, 0.85, shade(ty.roof, 0.8), true); box(mx, c.z, cw + 0.08, 0.66, 0.06, '#e9e3d3', false, 0.85);
+    box(plan.reg.x, c.z, 0.42, 0.34, 0.26, '#2b2d42', false, 0.91); box(plan.reg.x, c.z - 0.05, 0.32, 0.06, 0.16, '#46d98a', false, 1.05); // caja registradora
+    const goods = [ty.roof, '#ffd166', '#ef476f', '#06d6a0', '#3a86ff'];
+    if (['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar', 'flowers', 'books', 'pharma', 'surf', 'laundry'].includes(type)) { // estantería con producto
+      box(RW / 2, RD - 0.3, RW - 0.6, 0.45, 1.6, '#8f7a63', false);
+      for (let i = 0; i < Math.floor((RW - 1) / 0.36); i++) for (const y of [0.5, 1.05]) box(0.5 + i * 0.36, RD - 0.32, 0.26, 0.36, 0.22, goods[(i + (y > 1 ? 2 : 0)) % goods.length], false, y);
+    } else for (let x = 1.5; x < RW - 1; x += 3) box(x, RD - 0.03, 1.4, 0.04, 0.9, goods[Math.floor(x) % goods.length], false, 1.0); // cuadros en la pared
+    if (['lemon', 'tacos', 'cafe', 'rest', 'bar', 'ice', 'bakery'].includes(type)) box(RW / 2, RD - 0.03, 2.2, 0.04, 0.8, '#1b2333', false, 1.75); // pizarrón del menú
+    box(RW - 0.25, RD - 1.3, 0.1, 1.1, 2.0, '#5b3e26', false);                                            // puerta de bodega
   }
-  for (const pr of plan.props) box(pr.u, pr.v, pr.w, pr.d, pr.h, pr.col, pr.block, pr.y0);
-  if (lvl >= 3) { box(0.06, 0.92, 0.22, 0.22, 0.3, '#8a5a3c', false); box(0.06, 0.92, 0.34, 0.34, 0.32, '#3f8a3a', false, 0.3); }
+  for (const pr of plan.props) box(pr.x, pr.z, pr.w, pr.d, pr.h, pr.col, pr.block, pr.y0);
   const mesh = G.build(matStatic); mesh.receiveShadow = true; mesh.castShadow = true;
-  const group = new THREE.Group(); group.add(mesh); scene.add(group);
+  const group = new THREE.Group(); group.add(mesh, Wn.build(matWinInt)); scene.add(group);
   inside.group = group; inside.rects = rects; inside.plan = plan; inside.type = type; inside.home = home;
+  inside.cat = { x: RW / 2, z: 2, tx: RW / 2, tz: 2, a: 0, t: 0 };
+  inside.looks = plan.seats.map(() => ({ c: pick(SHIRTS), s: pick(SKINS), h: pick(HAIR), p: pick(['#2b2d42', '#3d405b', '#6b4f3a']) }));
   inside.floor = null; inside.ball = null;
   if (plan.club) { // pista con luces y bola disco
-    const fl = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.02, 1), new THREE.MeshBasicMaterial({ color: '#ffffff' }), 20);
-    for (let i = 0; i < 20; i++) { const cx2 = toX(0.4 + (i % 5) * 0.09), cy2 = toY(0.13 + Math.floor(i / 5) * 0.1); fl.setMatrixAt(i, compose(U(cx2), 0.06, U(cy2), 0, 0.29, 1, 0.31)); fl.setColorAt(i, _c.set('#ff3fd2')); }
+    const c = plan.club, tiles2 = [];
+    for (let x = c.x0; x < c.x1 - 0.1; x += 0.8) for (let z = c.z0; z < c.z1 - 0.1; z += 0.8) tiles2.push([x + 0.4, z + 0.4]);
+    const fl = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.02, 1), new THREE.MeshBasicMaterial({ color: '#ffffff' }), tiles2.length);
+    tiles2.forEach(([x, z], i) => { fl.setMatrixAt(i, compose(U(toX(x)), 0.06, U(toY(z)), 0, 0.76, 1, 0.76)); fl.setColorAt(i, _c.set('#ff3fd2')); });
     group.add(fl); inside.floor = fl;
-    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 1), new THREE.MeshPhongMaterial({ color: '#dfe6f0', shininess: 120, specular: '#ffffff', flatShading: true }));
-    ball.position.set(U(toX(0.58)), 1.9, U(toY(0.28))); group.add(ball); inside.ball = ball;
+    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 1), new THREE.MeshPhongMaterial({ color: '#dfe6f0', shininess: 120, specular: '#ffffff', flatShading: true }));
+    ball.position.set(U(toX((c.x0 + c.x1) / 2)), 2.6, U(toY((c.z0 + c.z1) / 2))); group.add(ball); inside.ball = ball;
     inside.beatT = 0;
   }
-  inside.cat = { u: 0.3, v: 0.3, tu: 0.3, tv: 0.3, a: 0, t: 0 };
-  inside.looks = plan.seats.map(() => ({ c: pick(SHIRTS), s: pick(SKINS), h: pick(HAIR), p: pick(['#2b2d42', '#3d405b', '#6b4f3a']) }));
-  interiorLight.position.set(U((rx0 + rx1) / 2), 2.2, U((ry0 + ry1) / 2));
+  interiorLight.position.set(U(POCKET.x), 3.2, U(POCKET.y));
+  interiorLight.distance = Math.max(RW, RD) * 1.4;
+}
+function interiorRegister() { const g = inside.geo, p = inside.plan; return p.reg ? { x: g.toX(p.reg.x), y: g.toY(p.reg.z) } : { x: g.doorX, y: g.toY(2) }; }
+function interiorQueuePos(i) {
+  const g = inside.geo, p = inside.plan, gap = Math.min(0.6, (p.counter.z - 1.6) / 7);
+  return { x: g.toX(p.reg.x), y: g.toY(p.counter.z - 0.75 - i * gap) };
 }
 function hitInterior(x, y, r) {
   const g = inside.geo;
-  if (x - r < g.rx0 || x + r > g.rx1) return true;
-  // Más allá de la pared de la puerta: solo por el hueco (y así sales)
-  const beyond = g.n ? y - r < g.ry0 : y + r > g.ry1, farOut = g.n ? y < g.ry0 - 40 : y > g.ry1 + 40;
-  if (beyond && (Math.abs(x - inside.l.door.x) > 0.45 * T - r || farOut)) return true;
-  if (g.n ? y + r > g.ry1 : y - r < g.ry0) return true;
+  const outDoor = y > g.ry1 - 2 && Math.abs(x - g.doorX) < 0.65 * T - r;
+  if (outDoor) return y > g.ry1 + 40;
   for (const q of inside.rects) if (x + r > q.x0 && x - r < q.x1 && y + r > q.y0 && y - r < q.y1) return true;
   return false;
 }
 function interiorTick(dt) {
   if (!inside) return;
   const g = inside.geo, b = bizAtLot(inside.id);
-  if (g.n ? P.y < g.ry0 - 4 : P.y > g.ry1 + 4) { exitLot(); return; }
+  if (P.y > g.ry1 + 6) { exitLot(); return; }
   if (inside.floor) { // la pista late con la música
-    const night = darkness() > 0.3, beat = Math.pow(Math.max(0, Math.sin(now * Math.PI * 2.1)), 6);
-    for (let i = 0; i < 20; i++) inside.floor.setColorAt(i, _c.setHSL((i * 0.13 + now * 0.35) % 1, 0.9, night ? 0.3 + beat * 0.3 : 0.18));
+    const night = darkness() > 0.3, beat = Math.pow(Math.max(0, Math.sin(now * Math.PI * 2.1)), 6), n = inside.floor.count;
+    for (let i = 0; i < n; i++) inside.floor.setColorAt(i, _c.setHSL((i * 0.13 + now * 0.35) % 1, 0.9, night ? 0.3 + beat * 0.3 : 0.18));
     inside.floor.instanceColor.needsUpdate = true;
     inside.ball.rotation.y += dt * 1.5;
     inside.beatT -= dt;
@@ -1733,9 +1797,9 @@ function interiorTick(dt) {
   }
   if (inside.home) { // el gato se pasea por la casa
     const c = inside.cat; c.t -= dt;
-    if (c.t <= 0) { c.t = 2 + rnd() * 4; c.tu = 0.1 + rnd() * 0.8; c.tv = 0.1 + rnd() * 0.5; }
-    const du = c.tu - c.u, dv = c.tv - c.v, d = Math.hypot(du, dv);
-    if (d > 0.01) { c.u += du / d * 0.12 * dt; c.v += dv / d * 0.12 * dt; c.a = Math.atan2(g.toX(c.tu) - g.toX(c.u), g.toY(c.tv) - g.toY(c.v)); c.mv = true; } else c.mv = false;
+    if (c.t <= 0) { c.t = 2 + rnd() * 4; c.tx = 0.8 + rnd() * (g.RW - 1.6); c.tz = 0.8 + rnd() * (g.RD * 0.5); }
+    const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz);
+    if (d > 0.05) { c.x += dx / d * 0.8 * dt; c.z += dz / d * 0.8 * dt; c.a = Math.atan2(dx, -dz); c.mv = true; } else c.mv = false;
     return;
   }
   // Clientes sentados según la demanda del momento
@@ -1749,41 +1813,38 @@ function interiorTick(dt) {
   for (let i = inside.walkers.length - 1; i >= 0; i--) {
     const w = inside.walkers[i], dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
     w.ph += dt * 9;
-    if (w.st === 'wait') { w.t -= dt; if (w.t <= 0) { w.st = 'out'; w.tx = inside.l.door.x; w.ty = g.toY(-0.05); } continue; }
+    if (w.st === 'wait') { w.t -= dt; if (w.t <= 0) { w.st = 'out'; w.tx = g.doorX; w.ty = g.ry1 + 10; } continue; }
     if (d < 3) { if (w.st === 'in') { w.st = 'wait'; w.t = 1 + rnd(); } else { inside.walkers.splice(i, 1); } continue; }
-    w.x += dx / d * 55 * dt; w.y += dy / d * 55 * dt; w.ang = Math.atan2(dx, dy);
+    w.x += dx / d * 70 * dt; w.y += dy / d * 70 * dt; w.ang = Math.atan2(dx, dy);
   }
-  // Los clientes que no compran adentro (competencia) también entran y salen
-  if (!b && rnd() < dt * 0.4 * curve(TYPE[inside.type].prof, hour())) interiorWalker(false);
+  if (!b && rnd() < dt * 0.5 * curve(TYPE[inside.type].prof, hour())) interiorWalker(false);
 }
 function interiorWalker(leaving, look) {
-  if (!inside || inside.walkers.length > 8) return;
+  if (!inside || inside.home || inside.walkers.length > 10) return;
   const g = inside.geo, c = look || { c: pick(SHIRTS), s: pick(SKINS), h: pick(HAIR), p: pick(['#2b2d42', '#3d405b']) };
-  const counterX = g.toX(0.28 + (rnd() - .5) * 0.2), counterY = g.toY(0.56);
-  if (leaving) inside.walkers.push({ x: counterX, y: counterY, tx: inside.l.door.x, ty: g.toY(-0.05), st: 'out', ph: 0, ang: 0, ...c });
-  else inside.walkers.push({ x: inside.l.door.x, y: g.toY(0.02), tx: counterX, ty: counterY, st: 'in', ph: 0, ang: 0, ...c });
+  const r = interiorRegister(), tx = r.x + (0.6 + rnd() * 1.6) * T, ty = r.y + 0.75 * T;
+  if (leaving) inside.walkers.push({ x: r.x, y: ty, tx: g.doorX, ty: g.ry1 + 10, st: 'out', ph: 0, ang: 0, ...c });
+  else inside.walkers.push({ x: g.doorX, y: g.ry1 - 4, tx, ty, st: 'in', ph: 0, ang: 0, ...c });
 }
 // Gente del interior dentro de los peatones instanciados (sin llamadas de dibujo extra)
 function interiorInstances(n) {
   if (!inside) return n;
-  if (inside.home) { const c = inside.cat, g = inside.geo; pedDog.setMatrixAt(39, compose(U(g.toX(c.u)), 0.1 + (c.mv ? Math.abs(Math.sin(now * 12)) * 0.02 : 0), U(g.toY(c.v)), c.a, 0.12, 0.12, 0.26)); pedDog.setColorAt(39, _c.set('#f4a259')); pedDog.count = 40; return n; }
-  const g = inside.geo, b = bizAtLot(inside.id), ty = TYPE[inside.type], back = g.angBack, front = back + Math.PI;
-  const X = u => U(g.toX(u)), Z = v => U(g.toY(v));
+  const g = inside.geo, b = bizAtLot(inside.id), back = Math.PI, front = 0;
+  const X = x => U(g.toX(x)), Z = z => U(g.toY(z));
+  if (inside.home) { const c = inside.cat; pedDog.setMatrixAt(39, compose(X(c.x), 0.1 + (c.mv ? Math.abs(Math.sin(now * 12)) * 0.02 : 0), Z(c.z), c.a, 0.14, 0.14, 0.32)); pedDog.setColorAt(39, _c.set('#f4a259')); pedDog.count = 40; return n; }
+  const ty = TYPE[inside.type], p = inside.plan;
   const staffN = b ? b.staff : inside.l.rival.level + 1;
-  if (inside.plan.club && b && b.dj) personInstances(n++, X(0.97), Z(0.3), -Math.PI / 2 + Math.sin(now * 3) * 0.3, now * 13, true, b.dj === 2 ? '#ffd166' : '#06d6a0', '#c68642', '#1b1b1b', '#111111');
-  const desks = inside.plan.staffDesks;
+  if (p.dj && b && b.dj) personInstances(n++, X(p.dj.x), Z(p.dj.z), -Math.PI / 2 + Math.sin(now * 3) * 0.3, now * 13, true, b.dj === 2 ? '#ffd166' : '#06d6a0', '#c68642', '#1b1b1b', '#111111');
   for (let i = 0; i < staffN && n < PED_MAX; i++) {
-    if (desks && i < desks.length) personInstances(n++, X(desks[i].u), Z(desks[i].v), back + Math.PI, now * 3 + i, false, ty.roof, SKINS[i % SKINS.length], HAIR[i % HAIR.length], '#2b2d42', null, 1, -0.1);
-    else { const k = desks ? i - desks.length : i, u = 0.2 + (k % 4) * 0.2, sway = Math.sin(now * 2 + i) * 0.02; personInstances(n++, X(u) + sway, Z(0.82), front, now * 4 + i, false, ty.roof, SKINS[(i + 2) % SKINS.length], HAIR[(i + 1) % HAIR.length], '#2b2d42'); }
+    if (p.desks && i < p.desks.length) { const d = p.desks[i]; personInstances(n++, X(d.x), Z(d.z), back, now * 3 + i, false, ty.roof, SKINS[i % SKINS.length], HAIR[i % HAIR.length], '#2b2d42', null, 1, -0.12); }
+    else { const k = p.desks ? i - p.desks.length : i, s = p.staff[k % p.staff.length], sway = Math.sin(now * 2 + i) * 0.03; personInstances(n++, X(s.x) + sway, Z(s.z) + (k >= p.staff.length ? 0.45 : 0), front, now * 4 + i, false, ty.roof, SKINS[(i + 2) % SKINS.length], HAIR[(i + 1) % HAIR.length], '#2b2d42'); }
   }
-  if (b && b.manager && n < PED_MAX) personInstances(n++, X(0.9), Z(0.84), front - 0.6, 0, false, '#1d3557', '#e0ac69', '#1b1b1b', '#1b1b1b');
-  // Fila hasta el mostrador
-  if (b) b.queue.forEach((q, i) => { if (n < PED_MAX) personInstances(n++, X(0.28), Z(0.54 - i * 0.075), back, 0, false, q.c, q.s, '#2b1d14', '#2b2d42'); });
-  // Sentados
-  const seats = inside.plan.seats;
+  if (b && b.manager && n < PED_MAX) personInstances(n++, X(g.RW - 0.8), Z(g.RD - 1.0), front - 0.6, 0, false, '#1d3557', '#e0ac69', '#1b1b1b', '#1b1b1b');
+  if (b) b.queue.forEach((q, i) => { if (n < PED_MAX) { const qp = interiorQueuePos(i); personInstances(n++, U(qp.x), U(qp.y), back, 0, false, q.c, q.s, '#2b1d14', '#2b2d42'); } });
+  const seats = p.seats;
   for (let i = 0; i < Math.min(inside.seated, seats.length) && n < PED_MAX; i++) {
     const s = seats[i], lk = inside.looks[i], ang = s.a === 'dance' ? now * (0.8 + (i % 3) * 0.5) + i : s.a === 'r' ? Math.PI / 2 : s.a === 'l' ? -Math.PI / 2 : s.a === 'b' ? back : front;
-    personInstances(n++, X(s.u), Z(s.v), ang, now * (s.a === 'dance' ? 10 : 5) + i, !!s.stand, lk.c, lk.s, lk.h, lk.p, null, 1, s.stand ? 0 : -0.12);
+    personInstances(n++, X(s.x), Z(s.z), ang, now * (s.a === 'dance' ? 10 : 5) + i, !!s.stand, lk.c, lk.s, lk.h, lk.p, null, 1, s.stand ? 0 : -0.12);
   }
   for (const w of inside.walkers) if (n < PED_MAX) personInstances(n++, U(w.x), U(w.y), w.ang, w.ph, w.st !== 'wait', w.c, w.s, w.h, w.p);
   return n;
@@ -1828,7 +1889,7 @@ function drawOverlay() {
     if (s) pill(s[0], s[1] + 34, label, 'rgba(15,26,46,.9)', '#f3efe4', '700 12px system-ui, sans-serif');
   }
   // Paciencia de la fila adentro
-  if (inside) { const b = bizAtLot(inside.id), g = inside.geo; if (b) b.queue.forEach((q, i) => { const qs = toScreen(g.toX(0.28), g.toY(0.54 - i * 0.075), 1.0); if (!qs) return; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16, 4); ctx.fillStyle = q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16 * (q.p / PATIENCE), 4); }); }
+  if (inside) { const b = bizAtLot(inside.id), g = inside.geo; if (b) b.queue.forEach((q, i) => { const qp = interiorQueuePos(i), qs = toScreen(qp.x, qp.y, 1.0); if (!qs) return; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16, 4); ctx.fillStyle = q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16 * (q.p / PATIENCE), 4); }); }
   // Marcadores: quien pide un favor, el VIP y el ladrón
   const mark = (p, txt, bg) => { if (!p || !inRect(p.x, p.y, view)) return; const sc = toScreen(p.x, p.y, 2.05); if (!sc) return; const bob = Math.sin(now * 5) * 3; ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(sc[0], sc[1] - 6 + bob, 12, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.font = '800 14px system-ui, "Apple Color Emoji"'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(txt, sc[0], sc[1] - 1 + bob); };
   if (running) { mark(giver, '!', '#e09a00'); mark(follower, '★', '#9b5de5'); mark(thief, '$', '#e5383b'); }
@@ -1842,7 +1903,7 @@ function drawOverlay() {
   }
   ctx.globalAlpha = 1;
   // Distancia al destino
-  if (waypoint && running) {
+  if (waypoint && running && !inside) {
     const a = Math.atan2(waypoint.y - P.y, waypoint.x - P.x), s = toScreen(P.x + Math.cos(a) * 1.9 * T, P.y + Math.sin(a) * 1.9 * T, 0.1);
     if (s) { const m = Math.round(Math.hypot(waypoint.x - P.x, waypoint.y - P.y) / T * 5) + ' m'; ctx.font = '800 12px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,15,25,.8)'; ctx.strokeText(m, s[0], s[1]); ctx.fillStyle = '#ffe2a6'; ctx.fillText(m, s[0], s[1]); }
   }
@@ -1894,7 +1955,7 @@ function buildMapBase() {
 function drawMiniMap() {
   const s = 224 / 60; // muestra ~60 tiles alrededor
   mmc.setTransform(1, 0, 0, 1, 0, 0); mmc.fillStyle = '#0f1a2e'; mmc.fillRect(0, 0, 224, 224);
-  const ptx = P.x / T, pty = P.y / T;
+  const ptx = (inside ? inside.l.door.x : P.x) / T, pty = (inside ? inside.l.door.y : P.y) / T;
   mmc.setTransform(s / 2, 0, 0, s / 2, 112 - ptx * s, 112 - pty * s);
   mmc.imageSmoothingEnabled = false; mmc.drawImage(mapBase, 0, 0);
   mmc.setTransform(1, 0, 0, 1, 0, 0);
@@ -2275,7 +2336,7 @@ function openMap() {
   ACTIONS.clearWp = () => { waypoint = null; closeSheet(); };
 }
 $('btnMap').addEventListener('click', openMap);
-function rotateCam(d) { cam.yawT += d * Math.PI / 2; sfx('click'); }
+function rotateCam(d) { if (inside) { toast('Adentro la cámara se queda de frente para ver todo el local.', '', 2500); return; } cam.yawT += d * Math.PI / 2; sfx('click'); }
 const ZOOMS = [1, 0.72, 1.4];
 function cycleZoom() { const i = ZOOMS.indexOf(cam.zoom); cam.zoom = ZOOMS[(i + 1) % ZOOMS.length]; sfx('click'); }
 $('btnRotL').addEventListener('click', () => { audioInit(); rotateCam(-1); });
@@ -2505,6 +2566,7 @@ function startRobbery(b) {
 function updateStreetPed(p, dt) {
   if (p.mode === 'giver') return;                 // espera parado a que le hables
   if (p.mode === 'follow') {                      // el VIP te sigue (y se sube contigo si vas en vehículo)
+    if (inside) return;                           // te espera afuera
     const tx = P.x - Math.cos(P.ang || 0) * 26, ty = P.y - Math.sin(P.ang || 0) * 26, dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
     if (d > 240) { p.x = tx; p.y = ty; }
     else if (d > 6) { const sp = Math.min(d * 3, 170); p.x += dx / d * sp * dt; p.y += dy / d * sp * dt; }
