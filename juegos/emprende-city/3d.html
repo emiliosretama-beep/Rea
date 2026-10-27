@@ -159,6 +159,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 </div>
 
 <div class="actions" id="actions" hidden>
+  <button class="act alt" id="btnEnter" hidden></button>
   <button class="act alt" id="btnAlt" hidden></button>
   <button class="act" id="btnAct" hidden></button>
 </div>
@@ -254,7 +255,7 @@ const I18N = {
   es: {
     map: 'Mapa', phone: 'Móvil', news: 'Noticias', play: 'Jugar', cont: 'Continuar', newGame: 'Partida nueva',
     brandAsk: 'Nombre de tu marca', tagline: 'Empiezas con $800 y un sueño. Abre negocios, contrata gente y conquista la ciudad.',
-    keys: 'Teclado: WASD o flechas para moverte · E comprar o gestionar · Espacio atender · Q/R girar cámara · Z zoom · M mapa · P móvil',
+    keys: 'Teclado: WASD o flechas para moverte · E comprar o gestionar · Espacio atender · F entrar o salir · Q/R girar cámara · Z zoom · M mapa · P móvil',
     moveHint: 'Desliza aquí para caminar', moveHintKb: 'Muévete con WASD o las flechas',
     res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', district: 'Distrito',
     days: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], day: 'Día',
@@ -537,7 +538,7 @@ function capacityOf(b) { return b.staff * TYPE[b.type].perStaff; }
 //  SIMULACIÓN ECONÓMICA (paso fijo)
 // =====================================================================
 const QUEUE_MAX = 7, PATIENCE = 14;
-function playerNearDoor(l, r = 90) { return dist2(P.x, P.y, l.door.x, l.door.y) < r * r; }
+function playerNearDoor(l, r = 90) { return (inside && inside.l === l) || dist2(P.x, P.y, l.door.x, l.door.y) < r * r; }
 function simEconomy(dtMin, dtReal) {
   for (const b of S.biz) {
     const l = lotOf(b), present = playerNearDoor(l);
@@ -577,7 +578,8 @@ function sale(b, byPlayer) {
 }
 function serveOne(b) {
   if (!b.queue.length) return false;
-  b.queue.shift(); sale(b, true); S.stats.served++;
+  const q = b.queue.shift(); sale(b, true); S.stats.served++;
+  if (inside && inside.id === b.lot) interiorWalker(true, { c: q.c, s: q.s, h: '#2b1d14', p: '#2b2d42' });
   sfx('serve'); vibrate(8);
   return true;
 }
@@ -706,6 +708,11 @@ function say(p, text) {
 // Un cliente visible entra al local cuando hay venta cerca de la cámara
 function onSaleVisual(b, amt, byPlayer) {
   const l = lotOf(b), view = liveRect(60);
+  if (inside && inside.id === b.lot) {
+    const g = inside.geo; floatText(g.toX(0.28), g.toY(0.68), '+' + fmt(amt), byPlayer ? '#ffb627' : '#46d98a');
+    if (!byPlayer) interiorWalker(false);
+    return;
+  }
   if (!inRect(l.door.x, l.door.y, view)) return;
   floatText(l.door.x + (rnd() - .5) * 20, l.door.y - 34, '+' + fmt(amt), byPlayer ? '#ffb627' : '#46d98a');
   const C = CHAT[LANG], line = b.price === 2 && rnd() < .5 ? pick(C.pricey) : b.price === 0 && rnd() < .5 ? pick(C.cheap) : rnd() < .5 ? pick(C.good) : null;
@@ -864,18 +871,23 @@ function updatePlayer(dt) {
   if (k.has('ArrowDown') || k.has('KeyS')) iy += 1;
   const m = Math.hypot(ix, iy); if (m > 1) { ix /= m; iy /= m; }
   { const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), wx = ix * cy - iy * sy, wy = ix * sy + iy * cy; ix = wx; iy = wy; } // arriba = hacia donde mira la cámara
-  const sp = VEHICLES.find(v => v.id === S.vehicle).speed;
-  const accel = S.vehicle === 'car' ? 4 : 10;
+  const veh = inside ? 'walk' : S.vehicle, sp = inside ? 105 : VEHICLES.find(v => v.id === veh).speed;
+  const accel = veh === 'car' ? 4 : 10;
   P.vx = lerp(P.vx, ix * sp, Math.min(1, dt * accel)); P.vy = lerp(P.vy, iy * sp, Math.min(1, dt * accel));
   P.moving = Math.hypot(P.vx, P.vy) > 12;
   if (Math.abs(P.vx) > 5) P.face = P.vx > 0 ? 1 : -1;
   if (P.moving) P.ang = Math.atan2(P.vy, P.vx);
-  const r = S.vehicle === 'car' ? 11 : 7;
-  // Colisión separada por ejes contra el mapa de tiles (deslizarse por paredes)
+  const r = veh === 'car' ? 11 : 7, hit = inside ? hitInterior : hitBox;
+  // Colisión separada por ejes (deslizarse por paredes); adentro, contra muros y muebles
   const nx = P.x + P.vx * dt;
-  if (!hitBox(nx, P.y, r)) P.x = nx; else P.vx = 0;
+  if (!hit(nx, P.y, r)) P.x = nx; else P.vx = 0;
   const ny = P.y + P.vy * dt;
-  if (!hitBox(P.x, ny, r)) P.y = ny; else P.vy = 0;
+  if (!hit(P.x, ny, r)) P.y = ny; else P.vy = 0;
+  // Entrar caminando: empujar hacia la puerta de un local
+  if (!inside && ctxLot && (ctxLot.kind === 'rival' || bizAtLot(ctxLot.id)) && dist2(P.x, P.y, ctxLot.door.x, ctxLot.door.y) < 22 * 22) {
+    const push = ctxLot.door.side === 'n' ? iy : -iy;
+    if (push > 0.6 && Math.abs(P.x - ctxLot.door.x) < 16) enterLot(ctxLot);
+  }
   P.anim += dt * Math.hypot(P.vx, P.vy) * 0.08;
   S.player.x = P.x; S.player.y = P.y;
 }
@@ -884,6 +896,7 @@ function hitBox(x, y, r) { return isSolidPx(x - r, y - r) || isSolidPx(x + r, y 
 // Contexto: qué hay frente al jugador
 let ctxLot = null;
 function findContext() {
+  if (inside) { ctxLot = inside.l; return; }
   let best = null, bd = 64 * 64;
   for (const l of lots) {
     if (l.kind === 'deco') continue;
@@ -895,6 +908,7 @@ function findContext() {
 }
 let lastDistrict = '';
 function districtCheck() {
+  if (inside) return;
   const d = districtAt(P.x, P.y);
   if (d !== lastDistrict) { if (lastDistrict) banner(t(d), t('district')); lastDistrict = d; setText($place, '📍 ' + t(d)); }
 }
@@ -1023,6 +1037,7 @@ function initRenderer() {
   scene.fog = new THREE.Fog('#8ccff0', 40, 100);
   camera = new THREE.PerspectiveCamera(50, 1, 0.5, 260);
   hemi = new THREE.HemisphereLight('#ffffff', '#6d7f58', 0.8); scene.add(hemi);
+  interiorLight = new THREE.PointLight('#ffe2b0', 0, 7, 1.5); scene.add(interiorLight);  // siempre en escena: no recompila shaders
   sun = new THREE.DirectionalLight('#fff3df', 0.85);
   sun.castShadow = gfxLevel === 'alta';
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
@@ -1181,7 +1196,7 @@ function buildDynamicMeshes() {
 
 // ---------- Locales que cambian (en venta, tus negocios, competencia) ----------
 const lotObjs = new Map();
-function onLotChanged(l) { buildLotObj(l); }
+function onLotChanged(l) { buildLotObj(l); if (inside && inside.id === l.id) { if (l.kind === 'sale') exitLot(); else buildInterior(); } }
 function syncAllLots() { for (const l of lots) if (l.kind !== 'deco' || lotObjs.has(l.id)) buildLotObj(l); }
 function buildLotObj(l) {
   const old = lotObjs.get(l.id);
@@ -1225,8 +1240,9 @@ function updateCamera(dt, fx, fy, orbit) {
   if (orbit) cam.yaw += dt * 0.07;
   else { let d = cam.yawT - cam.yaw; cam.yaw += d * Math.min(1, dt * 7); }
   const asp = viewW / Math.max(1, viewH), vfov = asp < 1 ? 55 : 45, th = Math.tan(vfov * Math.PI / 360), hf = th * asp;
-  camD = Math.max(6.5 / hf, 5 / th) * cam.zoom * (S && S.vehicle === 'car' ? 1.15 : 1);
-  const pitch = 0.92, back = camD * Math.cos(pitch), up = camD * Math.sin(pitch);
+  const dOut = Math.max(6.5 / hf, 5 / th) * cam.zoom * (S && S.vehicle === 'car' && !inside ? 1.15 : 1), dIn = Math.max(2.1 / hf, 2.3 / th) * cam.zoom;
+  camD = lerp(dOut, dIn, insideK);
+  const pitch = lerp(0.92, 1.3, insideK), back = camD * Math.cos(pitch), up = camD * Math.sin(pitch);
   const X = U(fx), Z = U(fy);
   camera.fov = vfov; camera.aspect = asp; camera.far = camD * 4 + 60;
   camera.position.set(X - Math.sin(cam.yaw) * back, up, Z + Math.cos(cam.yaw) * back);
@@ -1268,18 +1284,19 @@ function updateLighting() {
   matWinLit.color.copy(WIN_OFF).lerp(WIN_ON, clamp(dark * 1.4, 0, 1));
   matShopGlass.emissive.setRGB(0.9 * dark, 0.7 * dark, 0.35 * dark);
   matLampHead.color.set(dark > 0.2 ? '#fff1c4' : '#cfd6e0');
+  interiorLight.intensity = inside ? 0.25 + dark * 1.1 : 0;
   matGlow.opacity = dark * 0.55; matHeadGlow.opacity = dark * 0.5;
   matWater.map.offset.set(now * 0.01, now * 0.02);
   matFoam.opacity = 0.35 + Math.sin(now * 1.4) * 0.2;
 }
 
 // ---------- Objetos que se mueven ----------
-function personInstances(i, x, z, ang, ph, moving, sh, sk, hr, pa, umb, scale = 1) {
-  const S2 = 1.1 * scale, bob = moving ? Math.abs(Math.sin(ph)) * 0.035 : 0, sw = moving ? Math.sin(ph) * 0.55 : 0, ca = Math.cos(ang), sa = Math.sin(ang);
+function personInstances(i, x, z, ang, ph, moving, sh, sk, hr, pa, umb, scale = 1, yo = 0) {
+  const S2 = 1.1 * scale, bob = (moving ? Math.abs(Math.sin(ph)) * 0.035 : 0) + yo, sw = moving ? Math.sin(ph) * 0.55 : 0, ca = Math.cos(ang), sa = Math.sin(ang);
   for (let k = 0; k < 2; k++) {
     const lx = (k ? 0.06 : -0.06) * S2, r = k ? sw : -sw, len = 0.26 * S2, oy = -len / 2 * Math.cos(r), oz = -len / 2 * Math.sin(r);
     const wx = x + lx * ca + oz * sa, wz = z - lx * sa + oz * ca;
-    pedLeg.setMatrixAt(i * 2 + k, compose(wx, 0.26 * S2 + oy + bob, wz, ang, 0.09 * S2, len, 0.09 * S2, r));
+    pedLeg.setMatrixAt(i * 2 + k, compose(wx, 0.26 * S2 + oy + bob, wz, ang, 0.09 * S2, len, 0.09 * S2, yo < 0 ? -1.2 : r));
     pedLeg.setColorAt(i * 2 + k, _c.set(pa));
   }
   pedBody.setMatrixAt(i, compose(x, 0.38 * S2 + bob, z, ang, 0.27 * S2, 0.25 * S2, 0.17 * S2)); pedBody.setColorAt(i, _c.set(sh));
@@ -1302,7 +1319,7 @@ function updateDynamic(dt) {
     if (p.dog && nd < 40) { const ca = Math.cos(a), sa = Math.sin(a); dogInst(nd++, X + ca * 0.35 - sa * 0.1, Z - sa * 0.35 - ca * 0.1, a, p.ph); }
     n++;
   }
-  for (const b of S.biz) if (b.queue.length) {
+  for (const b of S.biz) if (b.queue.length && !(inside && inside.id === b.lot)) {
     const l = lotOf(b);
     for (let i = 0; i < b.queue.length && n < PED_MAX; i++) {
       const q = b.queue[i], qx = l.door.x + 18 + i * 13, qy = l.door.y + (l.door.side === 'n' ? -2 : 4);
@@ -1310,6 +1327,7 @@ function updateDynamic(dt) {
       personInstances(n++, U(qx), U(qy), l.door.side === 'n' ? Math.PI : 0, 0, false, q.c, q.s, '#2b1d14', '#2b2d42');
     }
   }
+  n = interiorInstances(n);
   pedLeg.count = n * 2; pedBody.count = pedHead.count = pedHair.count = n; pedUmb.count = nu; pedDog.count = nd;
   for (const m of [pedLeg, pedBody, pedHead, pedHair, pedUmb, pedDog]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
   // Autos
@@ -1365,7 +1383,7 @@ function updatePlayerObj(dt) {
   playerObj.visible = show; playerMark.visible = show; if (!show) return;
   playerObj.position.set(U(P.x), 0, U(P.y));
   if (P.moving) { const ta = Math.atan2(P.vx, P.vy); let da = ta - (P.rot || 0); da = Math.atan2(Math.sin(da), Math.cos(da)); P.rot = (P.rot || 0) + da * Math.min(1, dt * 12); }
-  const body = playerObj.getObjectByName('body'), v = S.vehicle;
+  const body = playerObj.getObjectByName('body'), v = inside ? 'walk' : S.vehicle;
   for (const k of ['bike', 'scooter', 'car']) playerObj.getObjectByName(k).visible = v === k;
   body.visible = v !== 'car';
   body.position.y = v === 'walk' ? Math.abs(Math.sin(P.anim)) * (P.moving ? 0.04 : 0) : v === 'bike' ? 0.32 : 0.3;
@@ -1377,7 +1395,7 @@ function updatePlayerObj(dt) {
   // Corte tipo Sims: tu local se vuelve transparente si su puerta queda de espaldas a la cámara
   const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw);
   for (const [id, g] of lotObjs) {
-    if (!g.userData.fadeMats) continue;
+    if (!g.userData.fadeMats || !g.visible) continue;
     const l = lots[id], nz = l.door.side === 'n' ? -1 : 1;
     const hidden = ctxLot === l && bizAtLot(id) && (nz * -fz) < 0.2 && playerNearDoor(l, 110);
     const target = hidden ? 0.28 : 1;
@@ -1400,6 +1418,192 @@ function updatePlayerObj(dt) {
 }
 let waypoint = null;
 
+// ---------- Interiores: entras al local y la cámara lo mira desde arriba ----------
+// Coordenadas del plano: u (0..1 de lado a lado) y v (0 = pared de la puerta, 1 = pared del fondo).
+let inside = null, insideK = 0, interiorLight = null;
+const FLOOR = { lemon: '#e9d8a6', tacos: '#c9733a', ice: '#f7e1ec', bakery: '#c79b6d', cafe: '#a9744f', laundry: '#d9e6ee', flowers: '#cfe3c4', books: '#8a5a3c', surf: '#e6d3a3', gym: '#4b505c', rest: '#9b5b3b', garage: '#7d8088', pharma: '#eef2f2', bar: '#3a2440', cinema: '#5b1f2a', gamedev: '#2b3550', hotel: '#d9c7a4', startup: '#e9edf2' };
+function interiorPlan(type, lvl) {
+  const p = { props: [], seats: [], staff: [], counter: true };
+  const prop = (u, v, w, d, h, col, block = true, y0 = 0) => p.props.push({ u, v, w, d, h, col, block, y0 });
+  const table = (u, v, round) => { prop(u, v, 0.5, 0.5, 0.42, round ? '#e9e3d3' : '#7a5434'); p.seats.push({ u: u - 0.17, v, a: 'r' }, { u: u + 0.17, v, a: 'l' }); prop(u - 0.3, v, 0.2, 0.22, 0.24, '#5b3e26', false); prop(u + 0.3, v, 0.2, 0.22, 0.24, '#5b3e26', false); };
+  const shelf = (u, v, w, col) => { prop(u, v, w, 0.32, 0.9, '#8f7a63'); for (let i = 0; i < 4; i++) prop(u - w / 2 + 0.12 + i * (w - 0.24) / 3, v, 0.14, 0.34, 0.16, col[i % col.length], false, 0.9); };
+  const plant = (u, v) => { prop(u, v, 0.22, 0.22, 0.3, '#8a5a3c'); prop(u, v, 0.34, 0.34, 0.32, '#3f8a3a', false, 0.3); };
+  const food = ['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar'].includes(type);
+  if (food) {
+    const n = type === 'lemon' ? 1 : type === 'rest' ? 4 : lvl >= 3 ? 4 : 3;
+    const spots = [[0.66, 0.2], [0.66, 0.44], [0.9, 0.2], [0.9, 0.44]];
+    for (let i = 0; i < n; i++) table(spots[i][0], spots[i][1], type === 'cafe' || type === 'ice');
+    if (type === 'bar') for (let i = 0; i < 4; i++) { const u = 0.5 + i * 0.12; prop(u, 0.56, 0.16, 0.16, 0.3, '#2b2d42', false); p.seats.push({ u, v: 0.56, a: 'b' }); }
+    if (type === 'lemon') { prop(0.85, 0.42, 0.3, 0.3, 0.28, '#c9a15a'); prop(0.85, 0.42, 0.24, 0.24, 0.06, '#f7d84a', false, 0.28); }
+    if (type === 'cafe' || type === 'bakery') plant(0.1, 0.1);
+  } else if (type === 'laundry') {
+    for (let i = 0; i < 4; i++) { prop(0.9, 0.1 + i * 0.13, 0.4, 0.4, 0.55, '#f4f6f8'); prop(0.9 - 0.21, 0.1 + i * 0.13, 0.02, 0.22, 0.22, '#3a6ea5', false, 0.18); }
+    prop(0.58, 0.3, 0.9, 0.35, 0.4, '#b9a58f'); p.seats.push({ u: 0.5, v: 0.12, a: 'b' }, { u: 0.62, v: 0.12, a: 'b' });
+  } else if (type === 'flowers') {
+    const cols = ['#e46a8e', '#ffd166', '#f15bb5', '#ff924c', '#9b5de5'];
+    for (let i = 0; i < 5; i++) { prop(0.55 + (i % 3) * 0.17, 0.18 + Math.floor(i / 3) * 0.24, 0.28, 0.28, 0.25, '#5a7d9a'); prop(0.55 + (i % 3) * 0.17, 0.18 + Math.floor(i / 3) * 0.24, 0.3, 0.3, 0.22, cols[i], false, 0.25); }
+  } else if (type === 'books' || type === 'pharma') {
+    const col = type === 'books' ? ['#e63946', '#457b9d', '#2a9d8f', '#f1a208'] : ['#ffffff', '#3fae6a', '#00bbf9', '#ef476f'];
+    shelf(0.72, 0.16, 1.1, col); shelf(0.72, 0.4, 1.1, col);
+    if (type === 'books') p.seats.push({ u: 0.12, v: 0.2, a: 'b' });
+  } else if (type === 'surf') {
+    const cols = ['#2fb7b0', '#ff924c', '#f15bb5', '#ffd166', '#3a86ff'];
+    for (let i = 0; i < 5; i++) prop(0.52 + i * 0.1, 0.22, 0.12, 0.5, 0.75, cols[i]);
+    prop(0.75, 0.45, 0.9, 0.3, 0.4, '#c9a15a');
+  } else if (type === 'gym') {
+    for (let i = 0; i < 3; i++) { prop(0.55 + i * 0.17, 0.15, 0.3, 0.6, 0.12, '#1b1b1b'); prop(0.55 + i * 0.17, 0.05, 0.3, 0.06, 0.55, '#6c757d', false); p.seats.push({ u: 0.55 + i * 0.17, v: 0.17, a: 'f', stand: true }); }
+    prop(0.7, 0.42, 0.7, 0.22, 0.25, '#3a3d46'); prop(0.42, 0.42, 0.12, 0.12, 0.75, '#6c757d', false); prop(0.98, 0.42, 0.12, 0.12, 0.75, '#6c757d', false);
+    p.seats.push({ u: 0.7, v: 0.42, a: 'b' });
+  } else if (type === 'garage') {
+    prop(0.66, 0.3, 1.25, 0.65, 0.2, '#ffb627'); prop(0.66, 0.3, 1.0, 0.55, 0.32, '#3a86ff', true, 0.2); prop(0.62, 0.3, 0.5, 0.48, 0.22, '#1b2a44', false, 0.52);
+    prop(0.95, 0.1, 0.25, 0.5, 0.8, '#e63946');
+  } else if (type === 'cinema') {
+    prop(0.99, 0.3, 0.05, 1.5, 0.9, '#f4f6f8', true, 0.2);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { const u = 0.52 + r * 0.13, v = 0.12 + c * 0.16; prop(u - 0.03, v, 0.18, 0.22, 0.3, '#b3242c', false); p.seats.push({ u, v, a: 'r' }); }
+  } else if (type === 'gamedev' || type === 'startup') {
+    const desk = (u, v) => { prop(u, v, 0.6, 0.38, 0.36, '#e9e3d3'); prop(u, v + 0.05, 0.32, 0.05, 0.22, '#1b2333', false, 0.36); prop(u, v + 0.045, 0.28, 0.02, 0.17, type === 'gamedev' ? '#46d98a' : '#3a86ff', false, 0.39); };
+    desk(0.62, 0.18); desk(0.9, 0.18); desk(0.62, 0.42); desk(0.9, 0.42);
+    p.staffDesks = [{ u: 0.62, v: 0.26 }, { u: 0.9, v: 0.26 }, { u: 0.62, v: 0.5 }, { u: 0.9, v: 0.5 }];
+    plant(0.1, 0.1); if (type === 'startup') prop(0.2, 0.45, 0.3, 0.3, 0.2, '#ff924c', false);
+  } else if (type === 'hotel') {
+    prop(0.62, 0.3, 0.9, 0.7, 0.02, '#b3242c', false);
+    prop(0.62, 0.14, 0.7, 0.26, 0.32, '#2c3e70'); prop(0.62, 0.46, 0.7, 0.26, 0.32, '#2c3e70');
+    p.seats.push({ u: 0.55, v: 0.14, a: 'b' }, { u: 0.7, v: 0.14, a: 'b' }, { u: 0.55, v: 0.46, a: 'f' });
+    plant(0.95, 0.08); plant(0.95, 0.55); prop(0.85, 0.98, 0.5, 0.05, 0.75, '#c0c6cf', false);
+  }
+  return p;
+}
+function enterLot(l) {
+  if (inside || !lotObjs.has(l.id)) return;
+  inside = { l, id: l.id, walkers: [], seated: 0, seatT: 0, looks: [] };
+  buildInterior();
+  P.vx = P.vy = 0;
+  const g = inside.geo; P.x = l.door.x; P.y = g.toY(0.14);
+  sfx('door'); vibrate(10);
+  const b = bizAtLot(l.id); if (b) collect(b);
+  setText($place, '🚪 ' + (b ? bizName(b) : rivalName(l)));
+}
+function exitLot() {
+  if (!inside) return;
+  const l = inside.l;
+  scene.remove(inside.group); inside.group.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
+  const o = lotObjs.get(l.id); if (o) o.visible = true;
+  inside = null; interiorLight.intensity = 0;
+  P.x = l.door.x; P.y = l.door.y + (l.door.side === 'n' ? -6 : 6); P.vx = P.vy = 0;
+  sfx('door'); lastDistrict = '';
+}
+function buildInterior() {
+  const l = inside.l, b = bizAtLot(l.id), type = b ? b.type : l.rival.type, lvl = b ? b.level : l.rival.level, ty = TYPE[type];
+  if (inside.group) { scene.remove(inside.group); inside.group.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); }); }
+  const o = lotObjs.get(l.id); if (o) o.visible = false;
+  const rx0 = l.x + 6, rx1 = l.x + l.w - 6, ry0 = l.y + 6, ry1 = l.y + l.h - 6, n = l.door.side === 'n';
+  const toX = (u) => rx0 + u * (rx1 - rx0), toY = (v) => n ? ry0 + v * (ry1 - ry0) : ry1 - v * (ry1 - ry0);
+  const geo = { rx0, rx1, ry0, ry1, n, toX: (u, v) => toX(u), toY, angBack: n ? 0 : Math.PI };
+  inside.geo = geo;
+  const plan = interiorPlan(type, lvl), G = new Geo(), rects = [];
+  const wallC = shade(ty.roof, 1.05), wt = 0.12, wh = 0.75;
+  const X0 = U(rx0), X1 = U(rx1), Z0 = U(ry0), Z1 = U(ry1);
+  // Piso con baldosas y paredes bajas (corte para ver desde arriba)
+  G.box(X0, 0, Z0, X1, 0.05, Z1, FLOOR[type]);
+  const tiles2 = 6, tw = (X1 - X0) / tiles2, td = (Z1 - Z0) / tiles2;
+  for (let i = 0; i < tiles2; i++) for (let j = 0; j < tiles2; j++) if ((i + j) % 2) G.box(X0 + i * tw, 0.05, Z0 + j * td, X0 + (i + 1) * tw, 0.052, Z0 + (j + 1) * td, shade(FLOOR[type], 0.9));
+  const doorW = 0.9, dcx = U(l.door.x);
+  const zDoor = n ? Z0 : Z1, zBack = n ? Z1 : Z0;
+  G.box(X0, 0, Math.min(zBack, zBack + (n ? -wt : wt)), X1, wh, Math.max(zBack, zBack + (n ? -wt : wt)), wallC);
+  G.box(X0, 0, Z0, X0 + wt, wh, Z1, wallC); G.box(X1 - wt, 0, Z0, X1, wh, Z1, wallC);
+  const zd0 = Math.min(zDoor, zDoor + (n ? wt : -wt)), zd1 = Math.max(zDoor, zDoor + (n ? wt : -wt));
+  G.box(X0, 0, zd0, dcx - doorW / 2, wh, zd1, wallC); G.box(dcx + doorW / 2, 0, zd0, X1, wh, zd1, wallC);
+  G.box(dcx - doorW / 2, 0.051, zd0 - 0.1, dcx + doorW / 2, 0.06, zd1 + 0.1, '#5b3e26'); // tapete de entrada
+  // Paredes como colisiones (con hueco de puerta)
+  const R = (x0, y0, x1, y1) => rects.push({ x0: Math.min(x0, x1), y0: Math.min(y0, y1), x1: Math.max(x0, x1), y1: Math.max(y0, y1) });
+  const wpx = wt * T, dpx = doorW * T / 2;
+  R(rx0, ry0, rx0 + wpx, ry1); R(rx1 - wpx, ry0, rx1, ry1);
+  R(rx0, toY(1), rx1, toY(1) + (n ? -wpx : wpx));
+  R(rx0, toY(0), l.door.x - dpx, toY(0) + (n ? wpx : -wpx)); R(l.door.x + dpx, toY(0), rx1, toY(0) + (n ? wpx : -wpx));
+  // Mostrador, caja y estantes del fondo
+  const box = (u, v, w, d, h, col, block, y0 = 0) => {
+    const cx = toX(u), cy = toY(v), hw = w * T / 2, hd = d * T / 2;
+    G.box(U(cx - hw), y0, U(cy - hd), U(cx + hw), y0 + h, U(cy + hd), col);
+    if (block) R(cx - hw, cy - hd, cx + hw, cy + hd);
+  };
+  const cw = 2.2;
+  box(0.4, 0.68, cw, 0.36, 0.55, shade(ty.roof, 0.8), true); box(0.4, 0.68, cw + 0.06, 0.4, 0.05, '#e9e3d3', false, 0.55);
+  box(0.28, 0.68, 0.26, 0.2, 0.18, '#2b2d42', false, 0.6); box(0.28, 0.66, 0.2, 0.05, 0.1, '#46d98a', false, 0.7); // caja registradora
+  box(0.55, 0.96, 2.6, 0.22, 0.65, '#8f7a63', false);
+  const goods = [ty.roof, '#ffd166', '#ef476f', '#06d6a0', '#3a86ff'];
+  for (let i = 0; i < 9; i++) box(0.12 + i * 0.1, 0.955, 0.18, 0.16, 0.14, goods[i % goods.length], false, 0.66);
+  if (['lemon', 'tacos', 'cafe', 'rest', 'bar', 'ice', 'bakery'].includes(type)) box(0.55, 0.995, 1.0, 0.03, 0.4, '#1b2333', false, 0.95); // pizarrón del menú
+  for (const pr of plan.props) box(pr.u, pr.v, pr.w, pr.d, pr.h, pr.col, pr.block, pr.y0);
+  if (lvl >= 3) { box(0.06, 0.92, 0.22, 0.22, 0.3, '#8a5a3c', false); box(0.06, 0.92, 0.34, 0.34, 0.32, '#3f8a3a', false, 0.3); }
+  const mesh = G.build(matStatic); mesh.receiveShadow = true; mesh.castShadow = true;
+  const group = new THREE.Group(); group.add(mesh); scene.add(group);
+  inside.group = group; inside.rects = rects; inside.plan = plan; inside.type = type;
+  inside.looks = plan.seats.map(() => ({ c: pick(SHIRTS), s: pick(SKINS), h: pick(HAIR), p: pick(['#2b2d42', '#3d405b', '#6b4f3a']) }));
+  interiorLight.position.set(U((rx0 + rx1) / 2), 2.2, U((ry0 + ry1) / 2));
+}
+function hitInterior(x, y, r) {
+  const g = inside.geo;
+  if (x - r < g.rx0 || x + r > g.rx1) return true;
+  // Más allá de la pared de la puerta: solo por el hueco (y así sales)
+  const beyond = g.n ? y - r < g.ry0 : y + r > g.ry1, farOut = g.n ? y < g.ry0 - 40 : y > g.ry1 + 40;
+  if (beyond && (Math.abs(x - inside.l.door.x) > 0.45 * T - r || farOut)) return true;
+  if (g.n ? y + r > g.ry1 : y - r < g.ry0) return true;
+  for (const q of inside.rects) if (x + r > q.x0 && x - r < q.x1 && y + r > q.y0 && y - r < q.y1) return true;
+  return false;
+}
+function interiorTick(dt) {
+  if (!inside) return;
+  const g = inside.geo, b = bizAtLot(inside.id);
+  if (g.n ? P.y < g.ry0 - 4 : P.y > g.ry1 + 4) { exitLot(); return; }
+  // Clientes sentados según la demanda del momento
+  inside.seatT -= dt;
+  if (inside.seatT <= 0) {
+    inside.seatT = 2.5;
+    const ty = TYPE[inside.type];
+    const k = b ? clamp(demandOf(b, true) / (ty.demand * 1.1), 0, 1) : clamp(curve(ty.prof, hour()) * 0.8, 0, 1);
+    inside.seated = Math.round(inside.plan.seats.length * k);
+  }
+  for (let i = inside.walkers.length - 1; i >= 0; i--) {
+    const w = inside.walkers[i], dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
+    w.ph += dt * 9;
+    if (w.st === 'wait') { w.t -= dt; if (w.t <= 0) { w.st = 'out'; w.tx = inside.l.door.x; w.ty = g.toY(-0.05); } continue; }
+    if (d < 3) { if (w.st === 'in') { w.st = 'wait'; w.t = 1 + rnd(); } else { inside.walkers.splice(i, 1); } continue; }
+    w.x += dx / d * 55 * dt; w.y += dy / d * 55 * dt; w.ang = Math.atan2(dx, dy);
+  }
+  // Los clientes que no compran adentro (competencia) también entran y salen
+  if (!b && rnd() < dt * 0.4 * curve(TYPE[inside.type].prof, hour())) interiorWalker(false);
+}
+function interiorWalker(leaving, look) {
+  if (!inside || inside.walkers.length > 8) return;
+  const g = inside.geo, c = look || { c: pick(SHIRTS), s: pick(SKINS), h: pick(HAIR), p: pick(['#2b2d42', '#3d405b']) };
+  const counterX = g.toX(0.28 + (rnd() - .5) * 0.2), counterY = g.toY(0.56);
+  if (leaving) inside.walkers.push({ x: counterX, y: counterY, tx: inside.l.door.x, ty: g.toY(-0.05), st: 'out', ph: 0, ang: 0, ...c });
+  else inside.walkers.push({ x: inside.l.door.x, y: g.toY(0.02), tx: counterX, ty: counterY, st: 'in', ph: 0, ang: 0, ...c });
+}
+// Gente del interior dentro de los peatones instanciados (sin llamadas de dibujo extra)
+function interiorInstances(n) {
+  if (!inside) return n;
+  const g = inside.geo, b = bizAtLot(inside.id), ty = TYPE[inside.type], back = g.angBack, front = back + Math.PI;
+  const X = u => U(g.toX(u)), Z = v => U(g.toY(v));
+  const staffN = b ? b.staff : inside.l.rival.level + 1;
+  const desks = inside.plan.staffDesks;
+  for (let i = 0; i < staffN && n < PED_MAX; i++) {
+    if (desks && i < desks.length) personInstances(n++, X(desks[i].u), Z(desks[i].v), back + Math.PI, now * 3 + i, false, ty.roof, SKINS[i % SKINS.length], HAIR[i % HAIR.length], '#2b2d42', null, 1, -0.1);
+    else { const k = desks ? i - desks.length : i, u = 0.2 + (k % 4) * 0.2, sway = Math.sin(now * 2 + i) * 0.02; personInstances(n++, X(u) + sway, Z(0.82), front, now * 4 + i, false, ty.roof, SKINS[(i + 2) % SKINS.length], HAIR[(i + 1) % HAIR.length], '#2b2d42'); }
+  }
+  if (b && b.manager && n < PED_MAX) personInstances(n++, X(0.9), Z(0.84), front - 0.6, 0, false, '#1d3557', '#e0ac69', '#1b1b1b', '#1b1b1b');
+  // Fila hasta el mostrador
+  if (b) b.queue.forEach((q, i) => { if (n < PED_MAX) personInstances(n++, X(0.28), Z(0.54 - i * 0.075), back, 0, false, q.c, q.s, '#2b1d14', '#2b2d42'); });
+  // Sentados
+  const seats = inside.plan.seats;
+  for (let i = 0; i < Math.min(inside.seated, seats.length) && n < PED_MAX; i++) {
+    const s = seats[i], lk = inside.looks[i], ang = s.a === 'r' ? Math.PI / 2 : s.a === 'l' ? -Math.PI / 2 : s.a === 'b' ? back : front;
+    personInstances(n++, X(s.u), Z(s.v), ang, now * 5 + i, !!s.stand, lk.c, lk.s, lk.h, lk.p, null, 1, s.stand ? 0 : -0.12);
+  }
+  for (const w of inside.walkers) if (n < PED_MAX) personInstances(n++, U(w.x), U(w.y), w.ang, w.ph, w.st !== 'wait', w.c, w.s, w.h, w.p);
+  return n;
+}
+
 // ---------- Capa 2D encima del 3D: textos, globos, lluvia ----------
 function toScreen(x, y, h) { _v.set(U(x), h, U(y)).project(camera); if (_v.z > 1 || _v.z < -1) return null; return [(_v.x + 1) / 2 * viewW, (1 - _v.y) / 2 * viewH]; }
 function drawBubble(x, y, text) {
@@ -1421,7 +1625,7 @@ function drawOverlay() {
   const view = liveRect(60);
   // Estado de tus negocios
   for (const b of S.biz) {
-    const l = lotOf(b); if (!inRect(l.door.x, l.door.y, view)) continue;
+    const l = lotOf(b); if (!inRect(l.door.x, l.door.y, view) || (inside && inside.id === l.id)) continue;
     const o = lotObjs.get(l.id), h = (o && o.userData.h || 1.5) + 1.75, s = toScreen(l.x + l.w / 2, l.y + l.h / 2, h); if (!s) continue;
     const open = b.staff > 0 || playerNearDoor(l);
     if (!open) pill(s[0], s[1], t('closed'), 'rgba(43,45,66,.92)');
@@ -1431,12 +1635,14 @@ function drawOverlay() {
     b.queue.forEach((q, i) => { const qs = toScreen(l.door.x + 18 + i * 13, l.door.y + (l.door.side === 'n' ? -2 : 4), 1.05); if (!qs) return; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(qs[0] - 7, qs[1] - 2, 14, 4); ctx.fillStyle = q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(qs[0] - 7, qs[1] - 2, 14 * (q.p / PATIENCE), 4); });
   }
   // Etiqueta del lugar cercano
-  if (ctxLot && running) {
+  if (ctxLot && running && !inside) {
     const l = ctxLot, b = bizAtLot(l.id);
     const label = l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
     const s = toScreen(l.door.x, l.door.y, 0.1);
     if (s) pill(s[0], s[1] + 34, label, 'rgba(15,26,46,.9)', '#f3efe4', '700 12px system-ui, sans-serif');
   }
+  // Paciencia de la fila adentro
+  if (inside) { const b = bizAtLot(inside.id), g = inside.geo; if (b) b.queue.forEach((q, i) => { const qs = toScreen(g.toX(0.28), g.toY(0.54 - i * 0.075), 1.0); if (!qs) return; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16, 4); ctx.fillStyle = q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(qs[0] - 8, qs[1] - 2, 16 * (q.p / PATIENCE), 4); }); }
   // Globos de diálogo
   for (const p of peds) if (p.bub && p.mode !== 'inside' && inRect(p.x, p.y, view)) { const s = toScreen(p.x, p.y, 0.95); if (s) drawBubble(s[0], s[1], p.bub); }
   // Textos flotantes (+$)
@@ -1537,6 +1743,7 @@ function sfx(k) {
   else if (k === 'buy') { [523, 659, 784, 1046].forEach((f, i) => tone(f, .14, 'triangle', .07, i * .08)); }
   else if (k === 'goal') { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .2, 'square', .045, i * .1)); }
   else if (k === 'click') tone(440, .05, 'triangle', .05);
+  else if (k === 'door') { tone(520, .07, 'triangle', .05); tone(780, .12, 'triangle', .045, .07); }
   else if (k === 'error') tone(180, .18, 'sawtooth', .05, 0, 0.7);
   else if (k === 'honk') { tone(330, .12, 'sawtooth', .025); tone(415, .12, 'sawtooth', .02); }
   else if (k === 'flap') tone(1200, .05, 'triangle', .015, 0, 2);
@@ -1577,7 +1784,10 @@ function updateHUD() {
       alt = { k: 'manage', label: t('manage') };
     } else if (l.kind === 'rival') main = { k: 'rival', label: t('offer'), ico: '🤝' };
   }
-  setBtn($act, main); setBtn($alt, alt);
+  let enter = null;
+  if (inside) enter = { k: 'exit', label: '🚪 Salir' };
+  else if (ctxLot && (ctxLot.kind === 'rival' || bizAtLot(ctxLot.id)) && playerNearDoor(ctxLot, 64)) enter = { k: 'enter', label: '🚪 Entrar' };
+  setBtn($act, main); setBtn($alt, alt); setBtn($('btnEnter'), enter);
   $act.classList.toggle('serve', !!main && main.k === 'serve');
   $act.classList.toggle('dim', !!main && !!main.dim);
   const full = S.biz.some(b => !b.manager && b.cash >= regCap(b));
@@ -1598,6 +1808,8 @@ function doAction(k) {
   else if (k === 'rival' && l.kind === 'rival') openRival(l);
 }
 $act.addEventListener('click', () => doAction($act.dataset.k));
+$('btnEnter').addEventListener('click', () => { audioInit(); toggleInside(); });
+function toggleInside() { if (inside) exitLot(); else if (ctxLot && (ctxLot.kind === 'rival' || bizAtLot(ctxLot.id))) enterLot(ctxLot); }
 $alt.addEventListener('click', () => doAction($alt.dataset.k));
 
 // Hoja de menús
@@ -1705,6 +1917,7 @@ function openManage(b) {
   };
   ACTIONS.sell = () => {
     if (!sellArm) { sellArm = true; drawSheet(); return; }
+    if (inside && inside.id === l.id) exitLot();
     const v = Math.round(invested(b) * 0.6);
     S.money += v + b.cash; S.biz.splice(S.biz.indexOf(b), 1);
     l.kind = 'sale'; S.lotKinds[l.id] = 'sale'; setLotSolid(l); onLotChanged(l); recomputeCompetition(); closeSheet(); sfx('coin');
@@ -1850,6 +2063,7 @@ window.addEventListener('keydown', e => {
   const c = e.code;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
   if (c === 'Escape') { closeSheet(); return; }
+  if (c === 'KeyF' && !e.repeat) { toggleInside(); return; }
   if (c === 'KeyQ' && !e.repeat) { rotateCam(-1); return; }
   if (c === 'KeyR' && !e.repeat) { rotateCam(1); return; }
   if (c === 'KeyZ' && !e.repeat) { cycleZoom(); return; }
@@ -1869,6 +2083,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 // =====================================================================
 function serialize() {
   S.savedAt = Date.now();
+  if (inside) { S.player.x = inside.l.door.x; S.player.y = inside.l.door.y; }
   return JSON.stringify({ ...S, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0 })) });
 }
 function save(quiet = true) { try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast(t('save')); } catch (e) { } }
@@ -1901,7 +2116,9 @@ function frame(ts) {
   acc += dt;
   while (acc >= STEP) { tick(STEP); acc -= STEP; }
   // Cámara suave que mira un poco hacia donde caminas
-  cam.fx = lerp(cam.fx, P.x + P.vx * 0.3, Math.min(1, dt * 5)); cam.fy = lerp(cam.fy, P.y + P.vy * 0.3, Math.min(1, dt * 5));
+  insideK = lerp(insideK, inside ? 1 : 0, Math.min(1, dt * 4)); if (Math.abs(insideK - (inside ? 1 : 0)) < 0.002) insideK = inside ? 1 : 0;
+  const tfx = inside ? (inside.geo.rx0 + inside.geo.rx1) / 2 : P.x + P.vx * 0.3, tfy = inside ? (inside.geo.ry0 + inside.geo.ry1) / 2 : P.y + P.vy * 0.3;
+  cam.fx = lerp(cam.fx, tfx, Math.min(1, dt * 5)); cam.fy = lerp(cam.fy, tfy, Math.min(1, dt * 5));
   updateCamera(dt, cam.fx, cam.fy, false);
   render(dt);
   autoQuality(dt);
@@ -1922,6 +2139,7 @@ function tick(dt) {
   cloudK = lerp(cloudK, S.weather === 'sun' ? 0 : 1, dt * 0.3);
   if (rnd() < dt * 0.6 && rainK < 0.2) { const tr = pick(trees); if (inRect(tr.x, tr.y, liveRect(0))) spawnParticle('leaf', tr.x, tr.y, 45); }
   ambientParticles(dt);
+  interiorTick(dt);
   if (darkness() < 0.3 && rainK < 0.3 && rnd() < dt * 0.05) { const tr = trees.find(tr => dist2(tr.x, tr.y, P.x, P.y) < 250 * 250); if (tr) sfx('chirp'); }
   // Cobro automático al pasar por la puerta
   for (const b of S.biz) if (!b.manager && b.cash >= 1 && playerNearDoor(lotOf(b), 46)) collect(b);

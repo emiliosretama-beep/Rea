@@ -10,6 +10,7 @@ Hay dos versiones con la misma simulación y el mismo guardado:
 ## Cómo se juega
 
 - **Moverte**: desliza en la mitad izquierda de la pantalla (joystick) o usa WASD o las flechas. En 3D, "arriba" es hacia donde mira la cámara.
+- **Interiores (3D)**: camina hacia la puerta de un negocio (tuyo o de la competencia) o toca **Entrar** (F). La cámara pasa a una vista casi desde arriba, sin techo, y ves el mostrador, a tus empleados, la fila, los clientes sentados y los muebles de cada tipo de negocio. Estar adentro cuenta como atender. Sales caminando por la puerta o con **Salir**.
 - **Cámara (3D)**: ⟲ ⟳ la giran 90° (o Q/R) y la lupa cambia el zoom (o Z). Si la puerta de tu negocio queda de espaldas, el edificio se vuelve transparente para que veas la fila.
 - **Comprar**: acércate a un terreno con el letrero verde **Se vende** y toca **Comprar**. Cada negocio funciona distinto en cada distrito (puntos de encaje).
 - **Atender**: sin empleados, tu negocio solo vende cuando estás ahí. Los clientes hacen fila y tú los atiendes con el botón verde (o Espacio). Si esperan demasiado se van y baja tu reputación.
