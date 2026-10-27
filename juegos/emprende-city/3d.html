@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Emprende City 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: mundo a pantalla completa en canvas; HUD en esquinas, controles en la zona de pulgares, menús como hoja inferior. */
+:root {
+  --ink: #0f1a2e;          /* panel noche */
+  --ink-2: #1a2a45;
+  --line: #2c4166;
+  --paper: #f3efe4;        /* texto claro */
+  --muted: #9fb0cb;
+  --cash: #46d98a;         /* dinero */
+  --gold: #ffb627;         /* acento */
+  --danger: #ff6b5b;
+  --display: "Bricolage Grotesque", "Avenir Next", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Figtree", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; background: #22303f; color: var(--paper); overflow: hidden; }
+body { font-family: var(--body); -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; overscroll-behavior: none; }
+#game, #overlay { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#overlay { pointer-events: none; }
+.iconbtn.sm { width: 44px; height: 44px; border-radius: 14px; font-size: 18px; }
+button { font-family: var(--body); color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* HUD */
+.hud { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); display: grid; gap: 4px; pointer-events: none; max-width: calc(100vw - 150px); }
+.money { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 6vw, 34px); line-height: 1; color: var(--cash); text-shadow: 0 2px 0 #0b1322, 0 0 12px rgba(0,0,0,.35); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.money.neg { color: var(--danger); }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(15,26,46,.82); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; width: max-content; max-width: 100%; font-variant-numeric: tabular-nums; }
+.goal { background: rgba(15,26,46,.88); border-color: rgba(255,182,39,.7); color: #ffe2a6; white-space: normal; border-radius: 12px; line-height: 1.25; }
+.goal b { color: var(--gold); text-transform: uppercase; font-size: 10.5px; letter-spacing: .08em; }
+
+.topright { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); display: grid; gap: 8px; justify-items: end; }
+#minimap { width: 112px; height: 112px; border-radius: 14px; border: 2px solid var(--line); background: #0f1a2e; display: block; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.iconrow { display: flex; gap: 8px; }
+.iconbtn { width: 52px; height: 52px; border-radius: 16px; border: 2px solid var(--line); background: rgba(15,26,46,.9); display: grid; place-items: center; font-size: 11px; font-weight: 700; gap: 0; padding: 4px 0; position: relative; }
+.iconbtn svg { width: 22px; height: 22px; }
+.iconbtn:active { transform: scale(.94); }
+.badge { position: absolute; top: -6px; right: -6px; background: var(--danger); color: #fff; border-radius: 999px; font-size: 11px; min-width: 20px; height: 20px; display: grid; place-items: center; padding: 0 5px; }
+
+.ticker { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px)); height: 26px; background: rgba(10,18,32,.86); border-top: 1px solid var(--line); overflow: hidden; pointer-events: none; display: flex; align-items: center; }
+.ticker .tag { flex: none; background: var(--gold); color: #1b1300; font-weight: 800; font-size: 11px; letter-spacing: .08em; padding: 0 10px; height: 100%; display: grid; place-items: center; text-transform: uppercase; z-index: 1; padding-left: max(10px, env(safe-area-inset-left, 0px)); }
+.ticker .track { white-space: nowrap; font-size: 13px; color: #d6deec; animation: tick 38s linear infinite; padding-left: 100%; }
+@keyframes tick { to { transform: translateX(-100%); } }
+
+/* Controles táctiles */
+.actions { position: fixed; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(40px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; justify-items: end; }
+.act { min-width: 92px; height: 92px; border-radius: 50%; border: 3px solid rgba(255,255,255,.18); background: var(--gold); color: #1b1300; font-family: var(--display); font-weight: 800; font-size: 15px; line-height: 1.05; padding: 8px; box-shadow: 0 6px 0 #9c6a00, 0 10px 20px rgba(0,0,0,.35); display: grid; place-items: center; text-align: center; }
+.act.serve { background: var(--cash); box-shadow: 0 6px 0 #1d8a50, 0 10px 20px rgba(0,0,0,.35); }
+.act.alt { min-width: 0; width: auto; height: 46px; border-radius: 999px; font-size: 14px; padding: 0 16px; background: #e9e3d3; box-shadow: 0 4px 0 #9b9482; }
+.act.dim { opacity: .55; }
+.act:active { transform: translateY(4px); box-shadow: 0 2px 0 #9c6a00; }
+.act .ico { font-size: 22px; display: block; }
+#joy { position: fixed; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(15,26,46,.25); pointer-events: none; transform: translate(-50%,-50%); }
+#joy i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(243,239,228,.75); }
+.hint-move { position: fixed; left: calc(20px + env(safe-area-inset-left, 0px)); bottom: calc(44px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--paper); background: rgba(15,26,46,.75); border-radius: 12px; padding: 8px 12px; pointer-events: none; max-width: 46vw; }
+
+/* Toasts y banners */
+.toasts { position: fixed; top: calc(256px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: grid; gap: 6px; width: min(92vw, 420px); pointer-events: none; }
+.toast { background: rgba(15,26,46,.94); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 12px; padding: 9px 12px; font-size: 14px; animation: tin .25s ease-out; box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+.toast.good { border-left-color: var(--cash); }
+.toast.bad { border-left-color: var(--danger); }
+@media (orientation: landscape) and (max-height: 560px) { .toasts { top: calc(10px + env(safe-area-inset-top, 0px)); width: min(42vw, 420px); } .toast { font-size: 13px; padding: 7px 10px; } }
+@keyframes tin { from { opacity: 0; transform: translateY(-8px); } }
+.banner { position: fixed; top: 38%; left: 0; right: 0; text-align: center; pointer-events: none; font-family: var(--display); font-weight: 800; font-size: clamp(30px, 8vw, 52px); color: var(--paper); text-shadow: 0 3px 0 rgba(0,0,0,.45); opacity: 0; transition: opacity .5s; }
+.banner small { display: block; font-family: var(--body); font-size: 13px; letter-spacing: .25em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.banner.on { opacity: 1; }
+
+/* Hoja de menús */
+.scrim { position: fixed; inset: 0; background: rgba(5,10,20,.45); }
+.sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100vw, 480px); max-height: 82dvh; background: var(--ink); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0,0,0,.45); animation: sup .22s ease-out; -webkit-user-select: text; user-select: text; touch-action: pan-y; }
+@keyframes sup { from { transform: translate(-50%, 30px); opacity: .4; } }
+.sheet header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet header h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 22px; flex: 1; min-width: 0; text-wrap: balance; line-height: 1.1; }
+.sheet header .em { font-size: 30px; }
+.close { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--ink-2); font-size: 20px; flex: none; }
+.sheet .body { grid-auto-rows: max-content; overflow-y: auto; padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.tabs { display: flex; gap: 6px; padding: 10px 16px 0; overflow-x: auto; flex: none; }
+.tab { border: 1px solid var(--line); background: var(--ink-2); border-radius: 999px; padding: 8px 13px; font-size: 14px; font-weight: 700; white-space: nowrap; min-height: 40px; }
+.tab.on { background: var(--gold); color: #1b1300; border-color: var(--gold); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.stat { background: var(--ink-2); border-radius: 12px; padding: 8px 10px; }
+.stat span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; }
+.stat b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.btn { border: 0; border-radius: 12px; min-height: 46px; padding: 10px 14px; font-weight: 700; font-size: 15px; background: var(--ink-2); border: 1px solid var(--line); flex: 1 1 auto; }
+.btn.primary { background: var(--gold); color: #1b1300; border-color: var(--gold); }
+.btn.cash { background: var(--cash); color: #05250f; border-color: var(--cash); }
+.btn.danger { background: transparent; color: var(--danger); border-color: rgba(255,107,91,.5); }
+.btn:disabled { opacity: .4; cursor: default; }
+.list { display: grid; gap: 8px; }
+.item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; background: var(--ink-2); border: 1px solid transparent; border-radius: 14px; padding: 10px; text-align: left; width: 100%; }
+.item .em { font-size: 28px; text-align: center; }
+.item .t { font-weight: 700; font-size: 15px; }
+.item .s { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.item .p { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item.locked { opacity: .45; }
+.item.done .t { text-decoration: line-through; color: var(--muted); }
+.dots { color: var(--gold); letter-spacing: 1px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: var(--ink-2); min-height: 44px; font-weight: 700; font-size: 14px; }
+.seg button.on { background: var(--gold); color: #1b1300; }
+.note { font-size: 13px; color: var(--muted); line-height: 1.45; margin: 0; }
+.lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin: 4px 0 -4px; }
+.bar { height: 8px; background: #0b1322; border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--cash); }
+
+/* Pantalla de título */
+.title { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(120% 80% at 50% 0%, rgba(255,182,39,.25), transparent 60%), rgba(8,14,26,.72); padding: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.title .card { width: min(100%, 420px); display: grid; gap: 14px; text-align: center; }
+.title h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(46px, 14vw, 76px); line-height: .9; letter-spacing: -.03em; color: var(--paper); text-shadow: 0 5px 0 #9c6a00; }
+.title h1 span { color: var(--gold); display: block; }
+.title p { margin: 0; color: #d6deec; line-height: 1.45; }
+.title input { width: 100%; box-sizing: border-box; min-height: 50px; border-radius: 14px; border: 2px solid var(--line); background: var(--ink); color: var(--paper); font: 700 18px var(--body); padding: 0 14px; text-align: center; -webkit-user-select: text; user-select: text; }
+.title .btn { min-height: 54px; font-size: 18px; }
+.keys { font-size: 12.5px; color: var(--muted); }
+
+/* Mapa grande */
+.mapwrap { position: fixed; inset: 0; background: rgba(5,10,20,.88); display: grid; place-items: center; padding: 16px; }
+.mapwrap canvas { max-width: 100%; max-height: 72dvh; border-radius: 16px; border: 2px solid var(--line); touch-action: none; }
+.mapwrap .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; font-size: 13px; margin-top: 10px; color: #d6deec; }
+.mapwrap .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.mapcol { display: grid; justify-items: center; gap: 4px; max-width: 100%; }
+@media (prefers-reduced-motion: reduce) { .ticker .track { animation-duration: 90s; } .sheet, .toast { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Ciudad"></canvas>
+<canvas id="overlay" aria-hidden="true"></canvas>
+
+<div class="hud" id="hud" hidden>
+  <div class="money" id="money">$0</div>
+  <div class="chip" id="clock"></div>
+  <div class="chip" id="place"></div>
+  <div class="chip goal" id="goal"></div>
+</div>
+
+<div class="topright" id="topright" hidden>
+  <canvas id="minimap" width="224" height="224" aria-label="Mapa"></canvas>
+  <div class="iconrow">
+    <button class="iconbtn" id="btnMap" aria-label="Mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span data-t="map"></span></button>
+    <button class="iconbtn" id="btnPhone" aria-label="Teléfono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg><span data-t="phone"></span><b class="badge" id="phoneBadge" hidden>!</b></button>
+  </div>
+  <div class="iconrow">
+    <button class="iconbtn sm" id="btnRotL" aria-label="Girar cámara a la izquierda">⟲</button>
+    <button class="iconbtn sm" id="btnZoom" aria-label="Cambiar zoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M8 10.5h5M10.5 8v5"/></svg></button>
+    <button class="iconbtn sm" id="btnRotR" aria-label="Girar cámara a la derecha">⟳</button>
+  </div>
+</div>
+
+<div class="actions" id="actions" hidden>
+  <button class="act alt" id="btnAlt" hidden></button>
+  <button class="act" id="btnAct" hidden></button>
+</div>
+<div id="joy" hidden><i></i></div>
+<div class="hint-move" id="hintMove" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="banner" id="banner"></div>
+<div class="ticker" id="ticker" hidden><div class="tag" data-t="news"></div><div class="track" id="tickerTrack"></div></div>
+<div id="ui"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+if (!window.THREE) document.getElementById('ui').innerHTML = '<div class="title"><div class="card"><h1>Emprende<span>City</span></h1><p>No se pudo cargar el motor 3D. Revisa tu conexión a internet y vuelve a abrir el juego.</p></div></div>';
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   EMPRENDE CITY — juego de emprendimiento en mundo abierto (ERAGames)
+   Módulos: datos · i18n · mundo · simulación · vida (NPC, autos, clima)
+            · render · entrada · interfaz · guardado
+   ===================================================================== */
+
+// ---------- Constantes del mundo ----------
+const T = 32, BLK = 12, NB = 6, CITY = NB * BLK + 2;      // 74 tiles de ciudad
+const SAND0 = CITY, WATER0 = CITY + 6, W = CITY + 18, H = CITY;
+const TL = { ROAD: 0, WALK: 1, GRASS: 2, LOT: 3, SAND: 4, WATER: 5, PLAZA: 6 };
+const MIN_PER_SEC = 2;                                      // 1 s real = 2 min de juego → día de 12 min
+const SAVE_KEY = 'emprende-city:save:v1', SAVE_VER = 1;
+const DISTRICTS = ['res', 'centro', 'tech', 'ind', 'playa'];
+const LAND = { res: 1, centro: 1.35, tech: 1.25, ind: 0.85, playa: 1.2 };
+
+// ---------- Tipos de negocio ----------
+// fit: qué tan bien funciona en cada distrito · tags: outdoor/heat (sufren con lluvia), rainy (ganan con lluvia), leisure (fin de semana)
+const TYPES = [
+  { id: 'lemon',   em: '🍋', cost: 250,    ticket: 3,   staff: 1, prof: 'day',       roof: '#f7d84a', fit: { res: 1.1, centro: 1.1, tech: .9, ind: .7, playa: 1.45 }, tags: ['outdoor', 'heat'] },
+  { id: 'tacos',   em: '🌮', cost: 1200,   ticket: 6,   staff: 2, prof: 'meal',      roof: '#e8743b', fit: { res: 1, centro: 1.2, tech: 1.1, ind: 1.35, playa: 1.1 }, tags: ['outdoor'] },
+  { id: 'ice',     em: '🍦', cost: 2500,   ticket: 4,   staff: 2, prof: 'afternoon', roof: '#f2a6c8', fit: { res: 1.1, centro: 1.1, tech: .8, ind: .6, playa: 1.55 }, tags: ['heat', 'leisure'] },
+  { id: 'bakery',  em: '🥐', cost: 3200,   ticket: 3,   staff: 2, prof: 'morning',   roof: '#d9a066', fit: { res: 1.4, centro: 1.1, tech: .9, ind: .95, playa: .9 }, tags: [] },
+  { id: 'cafe',    em: '☕', cost: 4500,   ticket: 5,   staff: 3, prof: 'morning',   roof: '#8a5a3c', fit: { res: 1, centro: 1.3, tech: 1.5, ind: .8, playa: .9 }, tags: [] },
+  { id: 'laundry', em: '🧺', cost: 6000,   ticket: 8,   staff: 2, prof: 'day',       roof: '#7fb6e0', fit: { res: 1.4, centro: 1, tech: .8, ind: .9, playa: .9 }, tags: ['rainy'] },
+  { id: 'flowers', em: '💐', cost: 8000,   ticket: 15,  staff: 2, prof: 'day',       roof: '#e46a8e', fit: { res: 1.2, centro: 1.3, tech: 1, ind: .7, playa: 1 }, tags: [] },
+  { id: 'books',   em: '📚', cost: 10000,  ticket: 14,  staff: 2, prof: 'day',       roof: '#4f7a5a', fit: { res: 1, centro: 1.4, tech: 1.2, ind: .7, playa: .9 }, tags: ['rainy'] },
+  { id: 'surf',    em: '🏄', cost: 14000,  ticket: 40,  staff: 2, prof: 'day',       roof: '#2fb7b0', fit: { res: .5, centro: .6, tech: .5, ind: .4, playa: 1.8 }, tags: ['outdoor', 'heat', 'leisure'] },
+  { id: 'gym',     em: '🏋️', cost: 20000,  ticket: 12,  staff: 3, prof: 'fitness',   roof: '#5a5f73', fit: { res: 1.2, centro: 1.2, tech: 1.3, ind: .9, playa: 1.1 }, tags: [] },
+  { id: 'rest',    em: '🍝', cost: 30000,  ticket: 25,  staff: 4, prof: 'meal',      roof: '#c0392b', fit: { res: 1, centro: 1.4, tech: 1.1, ind: .8, playa: 1.3 }, tags: ['leisure'] },
+  { id: 'garage',  em: '🔧', cost: 40000,  ticket: 80,  staff: 3, prof: 'day',       roof: '#6b6f78', fit: { res: 1, centro: .8, tech: .8, ind: 1.6, playa: .7 }, tags: [] },
+  { id: 'pharma',  em: '💊', cost: 55000,  ticket: 18,  staff: 3, prof: 'allday',    roof: '#3fae6a', fit: { res: 1.3, centro: 1.2, tech: 1, ind: .9, playa: 1 }, tags: [] },
+  { id: 'bar',     em: '🍸', cost: 75000,  ticket: 14,  staff: 4, prof: 'night',     roof: '#5b2a86', fit: { res: .8, centro: 1.4, tech: 1.1, ind: .9, playa: 1.5 }, tags: ['leisure'] },
+  { id: 'cinema',  em: '🎬', cost: 110000, ticket: 12,  staff: 4, prof: 'evening',   roof: '#2c3e70', fit: { res: 1.1, centro: 1.5, tech: 1, ind: .7, playa: 1 }, tags: ['leisure', 'rainy'] },
+  { id: 'gamedev', em: '🎮', cost: 160000, ticket: 300, staff: 5, prof: 'day',       roof: '#f04e23', fit: { res: .8, centro: 1.1, tech: 1.7, ind: .9, playa: .8 }, tags: [] },
+  { id: 'hotel',   em: '🏨', cost: 260000, ticket: 120, staff: 6, prof: 'allday',    roof: '#d4b483', fit: { res: .8, centro: 1.3, tech: 1, ind: .6, playa: 1.8 }, tags: ['leisure'] },
+  { id: 'startup', em: '🚀', cost: 400000, ticket: 900, staff: 6, prof: 'day',       roof: '#1f8ef1', fit: { res: .6, centro: 1, tech: 1.8, ind: .7, playa: .8 }, tags: ['volatile'] },
+];
+const TYPE = Object.fromEntries(TYPES.map(t => [t.id, t]));
+
+// Curvas de demanda por hora del día: [centro, ancho, amplitud]
+const PROF = {
+  morning:   [[8.5, 2.2, 1], [13, 2, .45]],
+  meal:      [[14, 1.6, 1], [21, 1.8, .85], [9, 1.5, .25]],
+  day:       [[12, 3.2, .8], [16.5, 2.6, .9]],
+  afternoon: [[15.5, 3, 1], [12, 2, .4]],
+  evening:   [[20.5, 2.4, 1], [16, 2, .35]],
+  night:     [[23.5, 2.6, 1], [20, 1.6, .4]],
+  allday:    [[11, 4, .8], [18, 4, .8]],
+  fitness:   [[7.5, 1.5, 1], [19, 1.8, 1]],
+  crowd:     [[8.5, 2, .9], [13.5, 3, 1], [18.5, 2.5, 1]],
+};
+function curve(p, h) {
+  let v = 0;
+  for (const [c, w, a] of PROF[p]) { let d = Math.abs(h - c); d = Math.min(d, 24 - d); v += a * Math.exp(-((d / w) ** 2)); }
+  return Math.min(1, v);
+}
+function curveSum(p) { let s = 0; for (let i = 0; i < 96; i++) s += curve(p, i / 4); return s / 4; }
+
+// Economía derivada: los negocios baratos recuperan la inversión más rápido; los caros escalan en volumen.
+for (const t of TYPES) {
+  t.wage = Math.round(20 + Math.sqrt(t.cost) * 0.55);
+  t.upkeep = Math.round(t.cost * 0.004) + 3;
+  const roi = Math.max(0.3, 1.9 - 0.12 * Math.log(t.cost));
+  const gross = t.cost * roi + t.wage * t.staff + t.upkeep;
+  t.demand = gross / (t.ticket * curveSum(t.prof));       // clientes/hora en el pico, nivel 1
+  t.perStaff = t.demand * 1.15 / t.staff;                // capacidad por empleado
+}
+const VEHICLES = [
+  { id: 'walk', cost: 0, speed: 125, em: '🚶' },
+  { id: 'bike', cost: 1200, speed: 200, em: '🚲' },
+  { id: 'scooter', cost: 7000, speed: 270, em: '🛵' },
+  { id: 'car', cost: 35000, speed: 350, em: '🚗' },
+];
+
+// ---------- Idiomas ----------
+const I18N = {
+  es: {
+    map: 'Mapa', phone: 'Móvil', news: 'Noticias', play: 'Jugar', cont: 'Continuar', newGame: 'Partida nueva',
+    brandAsk: 'Nombre de tu marca', tagline: 'Empiezas con $800 y un sueño. Abre negocios, contrata gente y conquista la ciudad.',
+    keys: 'Teclado: WASD o flechas para moverte · E comprar o gestionar · Espacio atender · Q/R girar cámara · Z zoom · M mapa · P móvil',
+    moveHint: 'Desliza aquí para caminar', moveHintKb: 'Muévete con WASD o las flechas',
+    res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', district: 'Distrito',
+    days: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], day: 'Día',
+    sun: 'Soleado', cloud: 'Nublado', rain: 'Lluvia',
+    buy: 'Comprar', manage: 'Gestionar', serve: 'Atender', offer: 'Ofertar', collect: 'Cobrar',
+    forSale: 'Se vende', lotFor: 'Terreno en venta', chooseBiz: 'Elige qué negocio abrir aquí',
+    fitHere: 'Encaje aquí', rivalsNear: 'competidores cerca', none: 'ninguno', open: 'Abrir',
+    level: 'Nivel', staff: 'Empleados', rep: 'Reputación', register: 'En caja', today: 'Hoy', yesterday: 'Ayer (neto)',
+    hire: 'Contratar', fire: 'Despedir', perDay: '/día', manager: 'Gerente', hireMgr: 'Contratar gerente', fireMgr: 'Despedir gerente',
+    mgrNote: 'El gerente cobra la caja solo y la caja nunca se llena.',
+    price: 'Precio', low: 'Barato', normal: 'Normal', high: 'Caro',
+    upgrade: 'Mejorar a nivel', maxLevel: 'Nivel máximo', sell: 'Vender negocio', sellConfirm: 'Toca otra vez para vender por',
+    closedNote: 'Sin empleados solo vende cuando tú estás aquí atendiendo.', fullNote: '¡La caja está llena! Ven a cobrar o contrata un gerente.',
+    goTo: 'Ir', businesses: 'Negocios', goals: 'Metas', bank: 'Banco', shop: 'Vehículos', settings: 'Ajustes',
+    noBiz: 'Todavía no tienes negocios. Busca un terreno con el letrero verde de “Se vende”.',
+    netWorth: 'Patrimonio', cash: 'Efectivo', loan: 'Préstamo', borrow: 'Pedir', repay: 'Pagar', interest: 'Interés diario',
+    loanNote: 'El préstamo cobra 1.5 % diario a medianoche. Úsalo para crecer más rápido, no para tapar pérdidas.',
+    owned: 'Tuyo', ride: 'Usar', sound: 'Sonido', on: 'Sí', off: 'No', reset: 'Borrar partida', resetConfirm: 'Toca otra vez para borrar todo',
+    rivalOf: 'Negocio de la competencia', buyout: 'Comprar negocio', buyoutNote: 'Compras el local con su clientela, empleados y reputación.',
+    cantAfford: 'No te alcanza el dinero', bought: '¡Abriste', welcome: 'Bienvenido a Emprende City',
+    goal: 'Meta', allGoals: '¡Eres el magnate de la ciudad! Sigue creciendo.', reward: 'Premio',
+    queue: 'en fila', closed: 'CERRADO', fullReg: 'CAJA LLENA',
+    dailyReport: 'Cierre del día', profit: 'Ganancia', wages: 'Sueldos',
+    offline: 'Mientras no estabas, tus gerentes ganaron', mapTap: 'Toca el mapa para marcar destino', clearWp: 'Quitar destino',
+    legendYou: 'Tú', legendBiz: 'Tus negocios', legendSale: 'En venta', legendRival: 'Competencia',
+    unlockAt: 'Requiere patrimonio de', thanks: '¡Gracias!', save: 'Guardado',
+    perHour: 'clientes/h', capacity: 'capacidad', demandNow: 'demanda ahora',
+    lostQueue: 'Un cliente se cansó de esperar',
+  }
+};
+const NAMES = {
+  es: { lemon: 'Limonada', tacos: 'Tacos', ice: 'Heladería', bakery: 'Panadería', cafe: 'Café', laundry: 'Lavandería', flowers: 'Florería', books: 'Librería', surf: 'Surf Shop', gym: 'Gimnasio', rest: 'Restaurante', garage: 'Taller', pharma: 'Farmacia', bar: 'Bar', cinema: 'Cine', gamedev: 'Estudio de Juegos', hotel: 'Hotel', startup: 'Startup' },
+};
+const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' } };
+const RIVAL_OWNERS = ['Doña Lupe', 'Don Toño', 'La Esquina', 'El Güero', 'Los Primos', 'Mar Azul', 'Tía Chela', 'El Rey', 'Luna', 'Pepe', 'Sol', 'Nova'];
+const GOALS = [
+  { id: 'first', r: 150, es: 'Abre tu primer negocio', test: () => S.biz.length >= 1 },
+  { id: 'serve', r: 120, es: 'Atiende a 10 clientes tú mismo', test: () => S.stats.served >= 10 },
+  { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', test: () => S.biz.some(b => b.staff > 0) },
+  { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', test: () => S.stats.collected >= 1000 },
+  { id: 'three', r: 500, es: 'Ten 3 negocios', test: () => S.biz.length >= 3 },
+  { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', test: () => S.vehicles.includes('bike') },
+  { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', test: () => S.biz.some(b => b.level >= 3) },
+  { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', test: () => netWorth() >= 25000 },
+  { id: 'mgr', r: 2000, es: 'Contrata a un gerente', test: () => S.biz.some(b => b.manager) },
+  { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
+  { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', test: () => S.stats.buyouts >= 1 },
+  { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', test: () => netWorth() >= 100000 },
+  { id: 'eight', r: 15000, es: 'Ten 8 negocios', test: () => S.biz.length >= 8 },
+  { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
+  { id: 'hotel', r: 50000, es: 'Abre un hotel', test: () => S.biz.some(b => b.type === 'hotel') },
+  { id: 'startup', r: 80000, es: 'Funda una startup', test: () => S.biz.some(b => b.type === 'startup') },
+  { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', test: () => netWorth() >= 1e6 },
+];
+// Noticias del día: efectos sobre la demanda
+const EVENTS = [
+  { id: 'heat', w: 3, es: 'Ola de calor: limonadas, helados y surf venden como nunca', weather: 'sun', mult: b => TYPE[b.type].tags.includes('heat') ? 1.6 : 1 },
+  { id: 'beachfest', w: 2, es: 'Festival de música en la Playa: +40 % de clientes allí', mult: (b, l) => l.district === 'playa' ? 1.4 : 1 },
+  { id: 'techconf', w: 2, es: 'Gran conferencia tech: el Distrito Tech se llena', mult: (b, l) => l.district === 'tech' ? 1.35 : 1 },
+  { id: 'fair', w: 2, es: 'Feria en el Centro: más gente que nunca', mult: (b, l) => l.district === 'centro' ? 1.3 : 1 },
+  { id: 'rainy', w: 2, es: 'Temporada de lluvias: lavanderías, librerías y cines ganan', weather: 'rain', mult: () => 1 },
+  { id: 'strike', w: 1, es: 'Paro de transporte: menos gente en la calle hoy', mult: () => .8 },
+  { id: 'match', w: 2, es: 'Final de fútbol esta noche: bares y restaurantes a reventar', mult: b => (b.type === 'bar' ? 1.7 : b.type === 'rest' ? 1.3 : 1) },
+  { id: 'payday', w: 2, es: 'Día de quincena: todos salen a gastar', mult: () => 1.2 },
+  { id: 'startups', w: 1, es: 'Inversionistas llegan a la ciudad: las startups se disparan', mult: b => b.type === 'startup' || b.type === 'gamedev' ? 1.6 : 1 },
+  { id: 'influencer', w: 2, es: 'Un influencer recomendó uno de tus negocios', special: 'influencer', mult: () => 1 },
+  { id: 'inspect', w: 1, es: 'Inspección sanitaria sorpresa en la ciudad', special: 'inspect', mult: () => 1 },
+  { id: 'calm', w: 3, es: 'Día tranquilo en Emprende City', mult: () => 1 },
+];
+const FLAVOR = {
+  es: ['El alcalde inaugura un nuevo parque', 'Se buscan emprendedores: la ciudad crece', 'Los gatos del Centro ya tienen fans', 'Récord de turistas en la Playa', 'Abre una nueva ciclovía', 'El tráfico mejora esta semana', 'Fábricas de la Zona Industrial contratan', 'Concierto gratis el sábado'],
+};
+const CHAT = {
+  es: { gen: ['Qué bonito día', '¿Dónde comeré hoy?', 'Llego tarde…', 'Necesito café', '¡Me encanta esta ciudad!', '¿Viste las noticias?', 'Voy al parque', 'Uff, qué tráfico'], rain: ['¡Olvidé el paraguas!', 'Qué lluvia…', 'Me voy a mojar'], night: ['¿Vamos por algo?', 'Qué noche', 'A casa a dormir'], heat: ['¡Qué calor!', 'Se me antoja un helado'], boss: ['¡Hola, jefe!', 'Tu negocio es mi favorito', '¡Eres famoso!'], good: ['¡Delicioso!', '¡Volveré!', '¡Gran servicio!', '¡Qué rico!'], pricey: ['Un poco caro…', 'Mmm, caro'], cheap: ['¡Qué barato!', '¡Buen precio!'] },
+};
+const LANG = 'es';   // juego personal: solo español
+const t = k => (I18N.es[k] ?? k);
+const nm = id => NAMES[LANG][id];
+const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
+const fmtK = n => { const a = Math.abs(n); const s = n < 0 ? '-$' : '$'; return a >= 1e6 ? s + (a / 1e6).toFixed(2) + 'M' : a >= 1e4 ? s + (a / 1e3).toFixed(1) + 'k' : fmt(n); };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- Utilidades ----------
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let r = Math.imul(a ^ a >>> 15, 1 | a); r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r; return ((r ^ r >>> 14) >>> 0) / 4294967296; }; }
+const rnd = Math.random;
+const pick = a => a[(rnd() * a.length) | 0];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, k) => a + (b - a) * k;
+const dist2 = (ax, ay, bx, by) => (ax - bx) ** 2 + (ay - by) ** 2;
+function wpick(list) { let s = 0; for (const e of list) s += e.w; let r = rnd() * s; for (const e of list) { r -= e.w; if (r <= 0) return e; } return list[0]; }
+
+// =====================================================================
+//  MUNDO (generación determinista: la ciudad es igual en cada partida)
+// =====================================================================
+const tiles = new Uint8Array(W * H), solid = new Uint8Array(W * H);
+const lots = [], trees = [], lamps = [], benches = [];
+const PARKS = new Set(['1,1', '4,4']), PLAZA_B = '3,3';
+let FOUNTAIN = { x: 0, y: 0 };
+const isRoadI = i => i < CITY && (i % BLK === 0 || i % BLK === 1);
+function districtOf(bx, by) {
+  if (bx === 5) return 'playa';
+  if (by >= 4 && bx <= 2) return 'ind';
+  if (bx >= 3 && by <= 1) return 'tech';
+  if (bx >= 2 && bx <= 4 && by >= 2 && by <= 3) return 'centro';
+  return 'res';
+}
+function districtAt(px, py) {
+  const tx = px / T | 0, ty = py / T | 0;
+  if (tx >= SAND0) return 'playa';
+  return districtOf(clamp(tx / BLK | 0, 0, NB - 1), clamp(ty / BLK | 0, 0, NB - 1));
+}
+function buildWorld() {
+  const R = mulberry(1977);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let k;
+    if (x >= WATER0) k = TL.WATER;
+    else if (x >= SAND0) k = TL.SAND;
+    else if (isRoadI(x) || isRoadI(y)) k = TL.ROAD;
+    else {
+      const lx = x % BLK, ly = y % BLK, key = (x / BLK | 0) + ',' + (y / BLK | 0);
+      if (lx === 2 || lx === 11 || ly === 2 || ly === 11) k = TL.WALK;
+      else k = PARKS.has(key) ? TL.GRASS : key === PLAZA_B ? TL.PLAZA : TL.LOT;
+    }
+    tiles[y * W + x] = k;
+    if (k === TL.WATER) solid[y * W + x] = 1;
+  }
+  // Farolas en las esquinas de cada manzana
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    for (const [cx, cy] of [[x0, y0], [x0 + 9, y0], [x0, y0 + 9], [x0 + 9, y0 + 9]]) lamps.push({ x: cx * T + 16, y: cy * T + 16 });
+    const key = bx + ',' + by;
+    if (PARKS.has(key)) {
+      for (let i = 0; i < 16; i++) trees.push({ x: (x0 + 1.5 + R() * 7) * T, y: (y0 + 1.5 + R() * 7) * T, r: 13 + R() * 9, s: R() * 6 });
+      benches.push({ x: (x0 + 5) * T, y: (y0 + 2.3) * T }, { x: (x0 + 5) * T, y: (y0 + 7.8) * T });
+      continue;
+    }
+    if (key === PLAZA_B) {
+      FOUNTAIN = { x: (x0 + 5) * T, y: (y0 + 5) * T };
+      for (const [a, b] of [[2, 2], [8, 2], [2, 8], [8, 8]]) trees.push({ x: (x0 + a) * T, y: (y0 + b) * T, r: 15, s: R() * 6 });
+      benches.push({ x: (x0 + 3.2) * T, y: (y0 + 5) * T }, { x: (x0 + 6.8) * T, y: (y0 + 5) * T });
+      const fx = FOUNTAIN.x / T | 0, fy = FOUNTAIN.y / T | 0;
+      for (let yy = fy - 1; yy <= fy; yy++) for (let xx = fx - 1; xx <= fx; xx++) solid[yy * W + xx] = 1;
+      continue;
+    }
+    for (let ly = 0; ly < 2; ly++) for (let lx = 0; lx < 2; lx++) {
+      const tx = bx * BLK + 3 + lx * 4, ty = by * BLK + 3 + ly * 4;
+      const lot = {
+        id: lots.length, bx, by, lx, ly, tx, ty, district: districtOf(bx, by),
+        x: tx * T + 4, y: ty * T + 4, w: 4 * T - 8, h: 4 * T - 8,
+        door: { x: tx * T + 2 * T, y: ly === 0 ? ty * T - 16 : (ty + 4) * T + 16, side: ly === 0 ? 'n' : 's' },
+        kind: 'deco', seed: R(), rival: null,
+      };
+      lots.push(lot);
+    }
+  }
+  // Asigna terrenos: en venta, competencia o decorado
+  const start = new Set(['1,2']);
+  for (const l of lots) {
+    const r = R(), key = l.bx + ',' + l.by;
+    if (start.has(key)) l.kind = l.lx === 0 ? 'sale' : (l.ly === 0 ? 'deco' : 'sale');
+    else if (r < 0.46) l.kind = 'sale';
+    else if (r < 0.6) l.kind = 'rival';
+    else l.kind = 'deco';
+    if (l.kind === 'rival') {
+      const opts = TYPES.filter(ty => ty.cost <= 75000 && ty.fit[l.district] >= 1);
+      const ty = opts[(R() * opts.length) | 0];
+      l.rival = { type: ty.id, owner: RIVAL_OWNERS[(R() * RIVAL_OWNERS.length) | 0], level: 1 + (R() * 3 | 0) };
+    }
+    setLotSolid(l);
+  }
+}
+function setLotSolid(l) {
+  const v = l.kind === 'sale' ? 0 : 1;
+  for (let y = l.ty; y < l.ty + 4; y++) for (let x = l.tx; x < l.tx + 4; x++) solid[y * W + x] = v;
+}
+function isSolidPx(px, py) {
+  if (px < 0 || py < 0 || px >= W * T || py >= H * T) return true;
+  return solid[(py / T | 0) * W + (px / T | 0)] === 1;
+}
+// Nodos de banqueta para peatones (esquinas de manzana + playa)
+const nodes = [];
+function buildNodes() {
+  const idx = {};
+  const add = (tx, ty) => { const k = tx + ',' + ty; if (idx[k] == null) { idx[k] = nodes.length; nodes.push({ x: tx * T + 16, y: ty * T + 16, n: [] }); } return idx[k]; };
+  const link = (a, b) => { nodes[a].n.push(b); nodes[b].n.push(a); };
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    const a = add(x0, y0), b = add(x0 + 9, y0), c = add(x0, y0 + 9), d = add(x0 + 9, y0 + 9);
+    link(a, b); link(c, d); link(a, c); link(b, d);
+  }
+  for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) {
+    const x0 = bx * BLK + 2, y0 = by * BLK + 2;
+    if (bx < NB - 1) { link(idx[(x0 + 9) + ',' + y0], idx[(x0 + 12) + ',' + y0]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 12) + ',' + (y0 + 9)]); }
+    if (by < NB - 1) { link(idx[x0 + ',' + (y0 + 9)], idx[x0 + ',' + (y0 + 12)]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 9) + ',' + (y0 + 12)]); }
+  }
+  // Playa
+  let prev = null;
+  for (let by = 0; by < NB; by++) for (const dy of [2, 11]) {
+    const ty = by * BLK + dy, b = add(SAND0 + 2, ty);
+    link(idx[(5 * BLK + 11) + ',' + ty], b);
+    if (prev != null) link(prev, b);
+    prev = b;
+  }
+}
+
+// =====================================================================
+//  ESTADO DEL JUEGO
+// =====================================================================
+let S = null;
+function newState(brand) {
+  return {
+    v: SAVE_VER, brand: brand || 'Emprende', money: 800, loan: 0,
+    min: 6 * 60 + 56, day: 1,
+    player: { x: (1 * BLK + 5) * T, y: (2 * BLK + 2) * T + 16 },
+    vehicle: 'walk', vehicles: ['walk'],
+    biz: [], lotKinds: {}, // lotKinds: lotId → 'sale' para locales vendidos (sobrescribe la generación)
+    goalsDone: [], stats: { served: 0, collected: 0, buyouts: 0, earned: 0 },
+    weather: 'sun', event: 'calm', eventBizLot: -1, startupF: 1,
+    sound: true, savedAt: Date.now(), seenHint: false,
+  };
+}
+const lotOf = b => lots[b.lot];
+const bizAtLot = id => S.biz.find(b => b.lot === id);
+function bizName(b) { return S.brand + ' ' + nm(b.type); }
+function rivalName(l) { return nm(l.rival.type) + ' ' + l.rival.owner; }
+function invested(b) { const ty = TYPE[b.type]; let v = b.paid; for (let L = 1; L < b.level; L++) v += upgradeCost(ty, L); return v; }
+function netWorth() { let v = S.money - S.loan; for (const b of S.biz) v += invested(b) * 0.6; return v; }
+function priceOf(type, district) { return Math.round(TYPE[type].cost * LAND[district]); }
+function buyoutPrice(l) { return Math.round(priceOf(l.rival.type, l.district) * (1.25 + 0.25 * l.rival.level)); }
+function upgradeCost(ty, level) { return Math.round(ty.cost * 0.55 * level); }
+function maxStaff(b) { const ty = TYPE[b.type]; return Math.max(ty.staff + b.level - 1, Math.round(ty.staff * (1 + 0.35 * (b.level - 1)))); }
+function mgrWage(b) { return Math.max(60, TYPE[b.type].wage * 3); }
+function regCap(b) { const ty = TYPE[b.type]; return Math.round(ty.ticket * ty.demand * (1 + 0.35 * (b.level - 1)) * 5); }
+function dailyCost(b) { const ty = TYPE[b.type]; return b.staff * ty.wage + (b.manager ? mgrWage(b) : 0) + ty.upkeep * b.level; }
+const hour = () => (S.min % 1440) / 60;
+const weekday = () => (S.day - 1) % 7;
+
+// Competencia: misma categoría a menos de 10 tiles
+const compCache = new Map();
+function recomputeCompetition() {
+  compCache.clear();
+  const all = [];
+  for (const b of S.biz) all.push({ lot: b.lot, type: b.type });
+  for (const l of lots) if (l.kind === 'rival' && !bizAtLot(l.id)) all.push({ lot: l.id, type: l.rival.type });
+  for (const a of all) {
+    const la = lots[a.lot]; let m = 1, n = 0;
+    for (const o of all) if (o !== a && o.type === a.type) {
+      const lo = lots[o.lot];
+      if (Math.abs(lo.x - la.x) + Math.abs(lo.y - la.y) < 10 * T) { m *= 0.72; n++; }
+    }
+    compCache.set(a.lot, { m: Math.max(0.35, m), n });
+  }
+}
+function fitDots(f) { const n = f < .8 ? 1 : f < 1 ? 2 : f < 1.2 ? 3 : f < 1.45 ? 4 : 5; return '●'.repeat(n) + '○'.repeat(5 - n); }
+
+// Demanda actual (clientes por hora de juego)
+function weatherMult(ty) {
+  const w = S.weather;
+  if (w === 'rain') return ty.tags.includes('rainy') ? 1.3 : (ty.tags.includes('outdoor') || ty.tags.includes('heat')) ? 0.5 : 0.85;
+  if (w === 'cloud') return ty.tags.includes('heat') ? 0.8 : 1;
+  return 1;
+}
+function demandOf(b, presentBonus) {
+  const ty = TYPE[b.type], l = lotOf(b), ev = EVENTS.find(e => e.id === S.event);
+  let d = ty.demand * curve(ty.prof, hour()) * ty.fit[l.district];
+  d *= 1 + 0.35 * (b.level - 1);
+  d *= 0.6 + b.rep / 125;
+  d *= [1.25, 1, 0.75][b.price];
+  d *= (compCache.get(b.lot) || { m: 1 }).m;
+  d *= weatherMult(ty);
+  d *= ev ? ev.mult(b, l) : 1;
+  if (weekday() >= 5) d *= ty.tags.includes('leisure') ? 1.25 : 0.95;
+  if (ty.tags.includes('volatile')) d *= S.startupF;
+  if (presentBonus) d *= 1.5;   // el dueño atendiendo atrae clientes
+  return d;
+}
+function capacityOf(b) { return b.staff * TYPE[b.type].perStaff; }
+
+// =====================================================================
+//  SIMULACIÓN ECONÓMICA (paso fijo)
+// =====================================================================
+const QUEUE_MAX = 7, PATIENCE = 14;
+function playerNearDoor(l, r = 90) { return dist2(P.x, P.y, l.door.x, l.door.y) < r * r; }
+function simEconomy(dtMin, dtReal) {
+  for (const b of S.biz) {
+    const l = lotOf(b), present = playerNearDoor(l);
+    const dem = demandOf(b, present);
+    b.arr += dem / 60 * dtMin;
+    const cap = capacityOf(b);
+    b.tok = Math.min(Math.max(1, b.staff), b.tok + cap / 60 * dtMin);
+    while (b.arr >= 1) {
+      b.arr -= 1;
+      const full = !b.manager && b.cash >= regCap(b);
+      if (full) { b.lostFull++; continue; }
+      if (b.tok >= 1) { b.tok -= 1; sale(b, false); }
+      else if (present && b.queue.length < QUEUE_MAX) b.queue.push({ p: PATIENCE, c: pick(SHIRTS), s: pick(SKINS) });
+      else b.missed++;
+    }
+    // Fila: el personal también atiende; la paciencia se agota con el tiempo real
+    for (let i = b.queue.length - 1; i >= 0; i--) {
+      const q = b.queue[i];
+      if (b.tok >= 1) { b.tok -= 1; b.queue.splice(i, 1); sale(b, false); continue; }
+      q.p -= dtReal;
+      if (q.p <= 0) { b.queue.splice(i, 1); b.rep = Math.max(0, b.rep - 1.2); if (present) floatText(l.door.x, l.door.y - 30, '😤', '#ff6b5b'); }
+    }
+    if (!present && b.queue.length && b.staff === 0) b.queue.length = 0;
+    // La reputación tiende a la calidad del negocio
+    const target = clamp(34 + b.level * 9 + [8, 0, -12][b.price] + (b.manager ? 5 : 0) + (b.staff >= maxStaff(b) ? 6 : 0), 5, 98);
+    b.rep += (target - b.rep) * 0.002 * dtMin;
+    if (b.manager && b.cash > 0) { const c = b.cash; b.cash = 0; S.money += c; S.stats.collected += c; }
+  }
+}
+function sale(b, byPlayer) {
+  const ty = TYPE[b.type];
+  const amt = ty.ticket * [0.8, 1, 1.3][b.price] * (byPlayer ? 1.2 : 1) * (0.85 + rnd() * 0.3);
+  if (byPlayer) { S.money += amt; S.stats.collected += amt; } else b.cash += amt;
+  b.todayRev += amt; b.todaySales++; S.stats.earned += amt;
+  b.rep = Math.min(100, b.rep + 0.04);
+  onSaleVisual(b, amt, byPlayer);
+}
+function serveOne(b) {
+  if (!b.queue.length) return false;
+  b.queue.shift(); sale(b, true); S.stats.served++;
+  sfx('serve'); vibrate(8);
+  return true;
+}
+function collect(b) {
+  if (b.cash < 1) return;
+  const l = lotOf(b), c = b.cash;
+  S.money += c; S.stats.collected += c; b.cash = 0;
+  floatText(l.door.x, l.door.y - 40, '+' + fmt(c), '#46d98a', 1.4);
+  for (let i = 0; i < Math.min(14, 4 + c / 50); i++) spawnParticle('coin', l.door.x, l.door.y - 10);
+  sfx('coin'); vibrate(15);
+}
+function endOfDay() {
+  let wages = 0, rev = 0;
+  for (const b of S.biz) {
+    const c = dailyCost(b); wages += c; rev += b.todayRev;
+    b.yRev = b.todayRev; b.yProfit = b.todayRev - c; b.todayRev = 0; b.todaySales = 0; b.missed = 0; b.lostFull = 0;
+  }
+  const interest = Math.round(S.loan * 0.015);
+  S.money -= wages + interest;
+  S.startupF = 0.25 + rnd() * 1.9;
+  if (S.biz.length) toast(`${t('dailyReport')} ${S.day}: ${t('profit')} ${fmt(rev - wages - interest)} · ${t('wages')} ${fmt(wages)}${interest ? ' · ' + t('interest') + ' ' + fmt(interest) : ''}`, rev - wages - interest >= 0 ? 'good' : 'bad', 6000);
+  S.day++;
+  // Clima del nuevo día
+  S.weather = rnd() < 0.55 ? 'sun' : rnd() < 0.55 ? 'cloud' : 'rain';
+}
+function morningNews() {
+  const ev = wpick(EVENTS);
+  S.event = ev.id;
+  if (ev.weather) S.weather = ev.weather;
+  let text = ev[LANG];
+  if (ev.special && S.biz.length) {
+    const b = pick(S.biz);
+    if (ev.special === 'influencer') { b.rep = Math.min(100, b.rep + 15); text += ': ' + bizName(b) + ' (+15 ' + t('rep') + ')'; }
+    if (ev.special === 'inspect' && b.level < 3) { b.rep = Math.max(0, b.rep - 8); text += ': ' + bizName(b) + ' (-8 ' + t('rep') + ')'; }
+  }
+  setTicker(text);
+  toast('📰 ' + text, '', 6000);
+}
+function checkGoals() {
+  for (const g of GOALS) if (!S.goalsDone.includes(g.id) && g.test()) {
+    S.goalsDone.push(g.id); S.money += g.r;
+    toast(`🏆 ${g[LANG]}${g.r ? ' · ' + t('reward') + ' ' + fmt(g.r) : ''}`, 'good', 5000);
+    sfx('goal');
+    if (g.id === 'nw1m') banner(t('allGoals'), '🏆');
+  }
+  const next = GOALS.find(g => !S.goalsDone.includes(g.id));
+  setText($goal, next ? `<b>${t('goal')}</b> ${next[LANG]}` : t('allGoals'), true);
+}
+
+// =====================================================================
+//  VIDA DE LA CIUDAD: peatones, autos, pájaros, partículas
+// =====================================================================
+const SHIRTS = ['#e63946', '#f1a208', '#2a9d8f', '#457b9d', '#9b5de5', '#f15bb5', '#00bbf9', '#06d6a0', '#ef476f', '#ffd166', '#3a86ff', '#8ac926', '#ff924c'];
+const SKINS = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac', '#a0673b'];
+const HAIR = ['#2b1d14', '#5a3825', '#1b1b1b', '#c9a15a', '#8a3b12', '#d9d9d9'];
+const CAR_COLORS = ['#e63946', '#f4f1de', '#3a86ff', '#2b2d42', '#ffbe0b', '#8ecae6', '#06d6a0', '#bc4749', '#6c757d', '#fb8500'];
+const peds = [], cars = [], birds = [], parts = [], floats = [], boats = [];
+const P = { x: 0, y: 0, vx: 0, vy: 0, face: 1, anim: 0, moving: false };
+const cam = { x: 0, y: 0, w: 900, h: 900, yaw: 0, yawT: 0, zoom: 1, fx: 0, fy: 0 };  // caja visible del suelo (px) + cámara 3D
+let viewW = 0, viewH = 0;
+
+function newPed(node) {
+  const n = nodes[node];
+  return {
+    x: n.x + (rnd() - .5) * 8, y: n.y + (rnd() - .5) * 8, from: node, to: pick(n.n), sp: 28 + rnd() * 22,
+    shirt: pick(SHIRTS), skin: pick(SKINS), hair: pick(HAIR), pants: pick(['#2b2d42', '#3d405b', '#6b4f3a', '#1d3557']),
+    mode: 'walk', t: 0, ph: rnd() * 6, bub: null, bubT: 0, dog: rnd() < 0.08, umb: rnd() < 0.7 ? pick(SHIRTS) : null,
+    off: (rnd() - .5) * 12, tx: 0, ty: 0, after: null,
+  };
+}
+function liveRect(m) { return { x0: cam.x - m, y0: cam.y - m, x1: cam.x + cam.w + m, y1: cam.y + cam.h + m }; }
+function inRect(x, y, r) { return x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1; }
+function spawnPlace(margin) {
+  // Nodo cercano a la cámara pero fuera de la vista, para que nadie aparezca de la nada
+  const near = liveRect(margin), view = liveRect(20);
+  for (let i = 0; i < 30; i++) { const k = (rnd() * nodes.length) | 0, n = nodes[k]; if (inRect(n.x, n.y, near) && !inRect(n.x, n.y, view)) return k; }
+  return -1;
+}
+function crowdLevel() { const h = hour(); return (0.15 + 0.85 * curve('crowd', h)) * (S.weather === 'rain' ? 0.6 : 1) * (S.event === 'strike' ? 0.7 : 1); }
+function updatePeds(dt) {
+  const want = Math.round(14 + 34 * crowdLevel() * Math.min(1.4, (cam.w * cam.h) / 520000));
+  const far = liveRect(700);
+  for (let i = peds.length - 1; i >= 0; i--) if (!inRect(peds[i].x, peds[i].y, far) && peds[i].mode === 'walk') peds.splice(i, 1);
+  if (peds.length < want && rnd() < 0.3) { const k = spawnPlace(450); if (k >= 0) peds.push(newPed(k)); }
+  if (peds.length > want + 6) { const view = liveRect(30); const i = peds.findIndex(p => p.mode === 'walk' && !inRect(p.x, p.y, view)); if (i >= 0) peds.splice(i, 1); }
+  for (const p of peds) {
+    p.ph += dt * p.sp * 0.25;
+    if (p.bubT > 0) { p.bubT -= dt; if (p.bubT <= 0) p.bub = null; }
+    if (p.mode === 'walk') {
+      const n = nodes[p.to], ox = p.off, tx = n.x + ox, ty = n.y + ox;
+      const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+      // Evita al jugador
+      const pd = Math.hypot(P.x - p.x, P.y - p.y);
+      const slow = pd < 22 ? 0.2 : 1;
+      if (d < 3) { const prev = p.from; p.from = p.to; const opts = nodes[p.to].n.filter(k => k !== prev); p.to = opts.length ? pick(opts) : prev; }
+      else { p.x += dx / d * p.sp * slow * dt; p.y += dy / d * p.sp * slow * dt; p.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : -1) : p.dir; }
+      if (!p.bub && rnd() < dt * 0.012) say(p, chatLine(p));
+    } else if (p.mode === 'toDoor' || p.mode === 'exit') {
+      const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
+      if (d < 3) {
+        if (p.mode === 'toDoor') { p.mode = 'inside'; p.t = 1.5 + rnd() * 2.5; }
+        else p.mode = 'walk';
+      } else { p.x += dx / d * p.sp * 1.3 * dt; p.y += dy / d * p.sp * 1.3 * dt; }
+    } else if (p.mode === 'inside') {
+      p.t -= dt;
+      if (p.t <= 0) {
+        p.mode = 'exit'; const n = nodes[p.to]; p.tx = n.x + p.off; p.ty = n.y + p.off;
+        if (p.after) { say(p, p.after); p.after = null; }
+      }
+    }
+  }
+}
+function chatLine(p) {
+  const C = CHAT[LANG], h = hour();
+  if (Math.hypot(P.x - p.x, P.y - p.y) < 90 && S.biz.length >= 2 && rnd() < 0.6) return pick(C.boss);
+  if (S.weather === 'rain' && rnd() < 0.6) return pick(C.rain);
+  if ((h > 21 || h < 5) && rnd() < 0.6) return pick(C.night);
+  if (S.event === 'heat' && rnd() < 0.6) return pick(C.heat);
+  return pick(C.gen);
+}
+function say(p, text) {
+  let n = 0; for (const q of peds) if (q.bub) n++;
+  if (n >= 3) return;
+  p.bub = text; p.bubT = 3.2;
+}
+// Un cliente visible entra al local cuando hay venta cerca de la cámara
+function onSaleVisual(b, amt, byPlayer) {
+  const l = lotOf(b), view = liveRect(60);
+  if (!inRect(l.door.x, l.door.y, view)) return;
+  floatText(l.door.x + (rnd() - .5) * 20, l.door.y - 34, '+' + fmt(amt), byPlayer ? '#ffb627' : '#46d98a');
+  const C = CHAT[LANG], line = b.price === 2 && rnd() < .5 ? pick(C.pricey) : b.price === 0 && rnd() < .5 ? pick(C.cheap) : rnd() < .5 ? pick(C.good) : null;
+  if (byPlayer) {
+    // El cliente atendido sale caminando desde la puerta
+    const k = nearestNode(l.door.x, l.door.y), p = newPed(k);
+    p.x = l.door.x; p.y = l.door.y; p.mode = 'exit'; const n = nodes[p.to]; p.tx = n.x; p.ty = n.y;
+    if (line) say(p, line);
+    peds.push(p); return;
+  }
+  let best = null, bd = 260 * 260;
+  for (const p of peds) if (p.mode === 'walk') { const d = dist2(p.x, p.y, l.door.x, l.door.y); if (d < bd && clearLine(p.x, p.y, l.door.x, l.door.y)) { bd = d; best = p; } }
+  if (best) { best.mode = 'toDoor'; best.tx = l.door.x + (rnd() - .5) * 10; best.ty = l.door.y; best.after = line; }
+}
+function nearestNode(x, y) { let k = 0, bd = Infinity; for (let i = 0; i < nodes.length; i++) { const d = dist2(x, y, nodes[i].x, nodes[i].y); if (d < bd) { bd = d; k = i; } } return k; }
+function clearLine(x0, y0, x1, y1) { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 14); for (let i = 1; i < n; i++) if (isSolidPx(lerp(x0, x1, i / n), lerp(y0, y1, i / n))) return false; return true; }
+// Clientes "fantasma" de la competencia: la ciudad entera tiene movimiento
+function rivalLife(dt) {
+  const view = liveRect(40);
+  for (const l of lots) if (l.kind === 'rival' && inRect(l.door.x, l.door.y, view) && rnd() < dt * 0.06 * curve(TYPE[l.rival.type].prof, hour())) {
+    let best = null, bd = 220 * 220;
+    for (const p of peds) if (p.mode === 'walk') { const d = dist2(p.x, p.y, l.door.x, l.door.y); if (d < bd && clearLine(p.x, p.y, l.door.x, l.door.y)) { bd = d; best = p; } }
+    if (best) { best.mode = 'toDoor'; best.tx = l.door.x; best.ty = l.door.y; }
+  }
+}
+
+// ---------- Tráfico ----------
+// Carriles: tráfico por la derecha. Horizontal: este y=+1.5T, oeste y=+0.5T. Vertical: sur x=+0.5T, norte x=+1.5T.
+const DIRS = { E: [1, 0], W: [-1, 0], S: [0, 1], N: [0, -1] };
+const roadsIdx = []; for (let i = 0; i <= NB; i++) roadsIdx.push(i * BLK);
+function laneCoord(dir, r) { return r * T + (dir === 'E' ? 1.5 : dir === 'W' ? 0.5 : dir === 'S' ? 0.5 : 1.5) * T; }
+function newCar() {
+  const view = liveRect(30), near = liveRect(500);
+  for (let tries = 0; tries < 20; tries++) {
+    const dir = pick(['E', 'W', 'S', 'N']), r = pick(roadsIdx);
+    let x, y;
+    if (dir === 'E' || dir === 'W') { y = laneCoord(dir, r); x = near.x0 + rnd() * (near.x1 - near.x0); }
+    else { x = laneCoord(dir, r); y = near.y0 + rnd() * (near.y1 - near.y0); }
+    x = clamp(x, T, (CITY - 1) * T); y = clamp(y, T, (CITY - 1) * T);
+    if (inRect(x, y, view)) continue;
+    return { x, y, dir, sp: 0, max: 80 + rnd() * 50, col: pick(CAR_COLORS), lastI: -1, kind: rnd() < 0.08 ? 'bus' : rnd() < 0.1 ? 'taxi' : 'car', blink: 0 };
+  }
+  return null;
+}
+function turnOptions(dir) { return dir === 'E' || dir === 'W' ? ['N', 'S'] : ['E', 'W']; }
+function updateCars(dt) {
+  const night = darkness() > 0.3;
+  const want = Math.round((6 + 12 * crowdLevel()) * Math.min(1.5, (cam.w * cam.h) / 520000));
+  const far = liveRect(800);
+  for (let i = cars.length - 1; i >= 0; i--) if (!inRect(cars[i].x, cars[i].y, far)) cars.splice(i, 1);
+  if (cars.length < want && rnd() < 0.1) { const c = newCar(); if (c) cars.push(c); }
+  for (const c of cars) {
+    const [dx, dy] = DIRS[c.dir];
+    // Frena si hay un auto delante en el mismo carril, o el jugador
+    let target = c.max;
+    for (const o of cars) if (o !== c && o.dir === c.dir) {
+      const along = (o.x - c.x) * dx + (o.y - c.y) * dy, side = Math.abs((o.x - c.x) * dy - (o.y - c.y) * dx);
+      if (along > 0 && along < 46 && side < 10) target = Math.min(target, (along - 28) * 3);
+    }
+    { const along = (P.x - c.x) * dx + (P.y - c.y) * dy, side = Math.abs((P.x - c.x) * dy - (P.y - c.y) * dx);
+      if (along > 0 && along < 60 && side < 18) { target = 0; if (c.sp > 40 && rnd() < 0.02) sfx('honk'); } }
+    c.sp = lerp(c.sp, Math.max(0, target), Math.min(1, dt * 3));
+    const step = c.sp * dt, ox = c.x, oy = c.y;
+    c.x += dx * step; c.y += dy * step;
+    carTurn(c, ox, oy);
+    c.night = night;
+  }
+}
+// Intersecciones: al cruzar el carril perpendicular decide girar o seguir
+function carTurn(c, ox, oy) {
+    const along = c.dir === 'E' || c.dir === 'W';
+    for (const r of roadsIdx) for (const nd of turnOptions(c.dir)) {
+      const lc = laneCoord(nd, r), a = along ? ox : oy, b = along ? c.x : c.y;
+      if ((a - lc) * (b - lc) <= 0 && a !== b && c.lastI !== r * 10 + nd.charCodeAt(0)) {
+        c.lastI = r * 10 + nd.charCodeAt(0);
+        const ahead = (along ? c.x : c.y) + (c.dir === 'E' || c.dir === 'S' ? 1 : -1) * 2.5 * T;
+        const straightOk = ahead > T && ahead < (CITY - 1) * T;
+        const pos = along ? c.y : c.x;  // coordenada del carril actual
+        const turnOk = nd === 'N' || nd === 'W' ? pos > 2 * T : pos < (CITY - 2) * T;
+        if (turnOk && (!straightOk || rnd() < 0.22)) {
+          if (along) c.x = lc; else c.y = lc;
+          c.dir = nd; c.sp *= 0.6;
+          return;
+        }
+      }
+    }
+}
+// ---------- Pájaros, barcos, partículas ----------
+function initBirds() {
+  for (let i = 0; i < 26; i++) {
+    const inPark = i < 18;
+    const t0 = inPark ? pick(trees) : null;
+    birds.push({ x: inPark ? t0.x + (rnd() - .5) * 120 : (SAND0 + 1 + rnd() * 4) * T, y: inPark ? t0.y + (rnd() - .5) * 120 : rnd() * H * T, vx: 0, vy: 0, st: 'ground', t: rnd() * 5, gull: !inPark, z: 0 });
+  }
+  for (let i = 0; i < 4; i++) boats.push({ x: (WATER0 + 3 + rnd() * 12) * T, y: rnd() * H * T, sp: 10 + rnd() * 14, d: rnd() < .5 ? 1 : -1, c: pick(['#f4f1de', '#e63946', '#ffbe0b']) });
+}
+function updateBirds(dt) {
+  for (const b of birds) {
+    b.t += dt;
+    if (b.st === 'ground') {
+      if (Math.hypot(P.x - b.x, P.y - b.y) < 70 || (P.moving && Math.hypot(P.x - b.x, P.y - b.y) < 110 && rnd() < 0.05)) {
+        b.st = 'fly'; const a = Math.atan2(b.y - P.y, b.x - P.x) + (rnd() - .5); b.vx = Math.cos(a) * 150; b.vy = Math.sin(a) * 150; b.t = 0; if (rnd() < 0.3) sfx('flap');
+      } else if (rnd() < dt * 0.8) { b.x += (rnd() - .5) * 6; b.y += (rnd() - .5) * 6; }
+    } else {
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z = Math.min(30, b.z + dt * 50);
+      if (b.t > 3 + rnd() * 2) {
+        // Aterriza en un árbol/playa lejos del jugador
+        const tt = b.gull ? { x: (SAND0 + 1 + rnd() * 4) * T, y: clamp(b.y + (rnd() - .5) * 600, 50, H * T - 50) } : pick(trees);
+        b.x = tt.x + (rnd() - .5) * 80; b.y = tt.y + (rnd() - .5) * 80; b.st = 'ground'; b.z = 0;
+      }
+    }
+  }
+  for (const s of boats) { s.y += s.sp * s.d * dt; if (s.y < -80) s.y = H * T + 60; if (s.y > H * T + 80) s.y = -60; }
+}
+function spawnParticle(kind, x, y, h = 0) {
+  if (parts.length > 280) return;
+  const a = rnd() * 6.283;
+  if (kind === 'coin') parts.push({ k: kind, x, y, h: h + 20, vx: Math.cos(a) * 45, vy: Math.sin(a) * 45, vh: 150 + rnd() * 90, l: 1.1 });
+  else if (kind === 'smoke') parts.push({ k: kind, x, y, h, vx: 10 + rnd() * 8, vy: -3, vh: 20 + rnd() * 10, l: 3.5 });
+  else if (kind === 'drop') parts.push({ k: kind, x, y, h, vx: Math.cos(a) * 22, vy: Math.sin(a) * 22, vh: 60 + rnd() * 30, l: 1.2 });
+  else if (kind === 'leaf') parts.push({ k: kind, x, y, h, vx: 15 + rnd() * 20, vy: 8 + rnd() * 8, vh: -14, l: 4 });
+}
+function updateParticles(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.l -= dt;
+    if (p.l <= 0 || p.h < -2) { parts.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt;
+    if (p.k === 'coin' || p.k === 'drop') p.vh -= 400 * dt;
+    else if (p.k === 'leaf') p.x += Math.sin(p.l * 3) * 0.6;
+  }
+  for (let i = floats.length - 1; i >= 0; i--) { const f = floats[i]; f.l -= dt; f.h += 30 * dt; if (f.l <= 0) floats.splice(i, 1); }
+}
+function floatText(x, y, s, c, sc = 1) { if (floats.length < 30) floats.push({ x, y, h: 60, s, c, l: 1.3, sc }); }
+
+// ---------- Tiempo y luz ----------
+function darkness() {
+  const h = hour();
+  if (h >= 7.5 && h <= 18.5) return 0;
+  if (h > 18.5 && h < 21) return (h - 18.5) / 2.5;
+  if (h >= 5 && h < 7.5) return 1 - (h - 5) / 2.5;
+  return 1;
+}
+function dusk() { const h = hour(); const a = Math.max(0, 1 - Math.abs(h - 19) / 1.5), b = Math.max(0, 1 - Math.abs(h - 6.5) / 1.2); return Math.max(a, b * 0.7); }
+let rainK = 0, cloudK = 0;
+
+// =====================================================================
+//  JUGADOR
+// =====================================================================
+const input = { x: 0, y: 0, keys: new Set(), jx: 0, jy: 0 };
+function updatePlayer(dt) {
+  let ix = input.jx, iy = input.jy;
+  const k = input.keys;
+  if (k.has('ArrowLeft') || k.has('KeyA')) ix -= 1;
+  if (k.has('ArrowRight') || k.has('KeyD')) ix += 1;
+  if (k.has('ArrowUp') || k.has('KeyW')) iy -= 1;
+  if (k.has('ArrowDown') || k.has('KeyS')) iy += 1;
+  const m = Math.hypot(ix, iy); if (m > 1) { ix /= m; iy /= m; }
+  { const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), wx = ix * cy - iy * sy, wy = ix * sy + iy * cy; ix = wx; iy = wy; } // arriba = hacia donde mira la cámara
+  const sp = VEHICLES.find(v => v.id === S.vehicle).speed;
+  const accel = S.vehicle === 'car' ? 4 : 10;
+  P.vx = lerp(P.vx, ix * sp, Math.min(1, dt * accel)); P.vy = lerp(P.vy, iy * sp, Math.min(1, dt * accel));
+  P.moving = Math.hypot(P.vx, P.vy) > 12;
+  if (Math.abs(P.vx) > 5) P.face = P.vx > 0 ? 1 : -1;
+  if (P.moving) P.ang = Math.atan2(P.vy, P.vx);
+  const r = S.vehicle === 'car' ? 11 : 7;
+  // Colisión separada por ejes contra el mapa de tiles (deslizarse por paredes)
+  const nx = P.x + P.vx * dt;
+  if (!hitBox(nx, P.y, r)) P.x = nx; else P.vx = 0;
+  const ny = P.y + P.vy * dt;
+  if (!hitBox(P.x, ny, r)) P.y = ny; else P.vy = 0;
+  P.anim += dt * Math.hypot(P.vx, P.vy) * 0.08;
+  S.player.x = P.x; S.player.y = P.y;
+}
+function hitBox(x, y, r) { return isSolidPx(x - r, y - r) || isSolidPx(x + r, y - r) || isSolidPx(x - r, y + r) || isSolidPx(x + r, y + r); }
+
+// Contexto: qué hay frente al jugador
+let ctxLot = null;
+function findContext() {
+  let best = null, bd = 64 * 64;
+  for (const l of lots) {
+    if (l.kind === 'deco') continue;
+    const d = dist2(P.x, P.y, l.door.x, l.door.y);
+    if (l.kind === 'sale') { const cx = l.x + l.w / 2, cy = l.y + l.h / 2; const d2 = dist2(P.x, P.y, cx, cy); if (d2 < 80 * 80 && d2 < bd) { bd = d2; best = l; } }
+    if (d < bd) { bd = d; best = l; }
+  }
+  ctxLot = best;
+}
+let lastDistrict = '';
+function districtCheck() {
+  const d = districtAt(P.x, P.y);
+  if (d !== lastDistrict) { if (lastDistrict) banner(t(d), t('district')); lastDistrict = d; setText($place, '📍 ' + t(d)); }
+}
+
+// =====================================================================
+//  RENDER 3D (Three.js). La simulación vive en píxeles 2D (x, y);
+//  en la escena X = x/T, Z = y/T y la altura Y va en tiles.
+// =====================================================================
+const cv = document.getElementById('game');
+const ov = document.getElementById('overlay'), ctx = ov.getContext('2d');
+let DPR = 1, now = 0;
+const U = v => v / T;
+const GFX_KEY = 'emprende-city:gfx';
+let GFX = (() => { try { return localStorage.getItem(GFX_KEY) || 'auto'; } catch (e) { return 'auto'; } })(); // 'auto' | 'alta' | 'baja'
+let gfxLevel = GFX === 'baja' ? 'baja' : 'alta';
+let renderer = null, scene, camera, hemi, sun;
+const _c = new THREE.Color(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3(), _e = new THREE.Euler(), _v = new THREE.Vector3();
+function compose(x, y, z, ry, sx, sy, sz, rx = 0) { _e.set(rx, ry, 0, 'YXZ'); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(sx, sy, sz); return _m.compose(_p, _q, _s); }
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255;
+  r = clamp(Math.round(r * k), 0, 255); g = clamp(Math.round(g * k), 0, 255); b = clamp(Math.round(b * k), 0, 255);
+  return `rgb(${r},${g},${b})`;
+}
+function decoOf(l) {
+  if (l._deco) return l._deco;
+  const R = mulberry(l.id * 977 + 3), r = R();
+  const st = { res: r < .65 ? 'house' : 'apt', centro: r < .6 ? 'office' : 'apt', tech: r < .7 ? 'glass' : 'office', ind: r < .55 ? 'factory' : 'warehouse', playa: r < .6 ? 'beachhouse' : 'apt' }[l.district];
+  const pal = { house: ['#c65d4b', '#5d7fa3', '#8a6bb0', '#d08b3a', '#4e8f6b'], apt: ['#b9a58f', '#9a8f86', '#c9b79c'], office: ['#7d8ba3', '#94a3b8', '#6b7a90'], glass: ['#5fa8d3', '#4c90c0', '#77b9de'], factory: ['#8a8f99', '#7b7f87'], warehouse: ['#a07d5c', '#8f8070'], beachhouse: ['#f2c6a0', '#9fd8cb', '#f7d6e0', '#fff1c1'] }[st];
+  l._deco = { st, col: pal[(R() * pal.length) | 0], tree: st === 'house' || st === 'beachhouse', seed: R() };
+  if (l._deco.tree && !l._treeAdded) { l._treeAdded = true; trees.push({ x: l.x + (l.lx ? 14 : l.w - 14), y: l.y + (l.ly ? l.h - 14 : 14), r: 11, s: R() * 6 }); }
+  return l._deco;
+}
+
+// ---------- Geometría combinada (la ciudad fija cuesta pocas llamadas de dibujo) ----------
+class Geo {
+  constructor() { this.p = []; this.c = []; }
+  tri(a, b, c, col) { this.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); for (let i = 0; i < 3; i++) this.c.push(col.r, col.g, col.b); }
+  quad(a, b, c, d, col) { this.tri(a, b, c, col); this.tri(a, c, d, col); }
+  box(x0, y0, z0, x1, y1, z1, color) {
+    const col = new THREE.Color(color);
+    const A = [x0, y0, z0], B = [x1, y0, z0], C = [x1, y0, z1], D = [x0, y0, z1], E = [x0, y1, z0], F = [x1, y1, z0], G = [x1, y1, z1], Hh = [x0, y1, z1];
+    this.quad(E, Hh, G, F, col); this.quad(D, C, G, Hh, col); this.quad(B, A, E, F, col); this.quad(C, B, F, G, col); this.quad(A, D, Hh, E, col);
+  }
+  gable(x0, z0, x1, z1, y0, rh, color) { // techo de dos aguas con cumbrera en X
+    const col = new THREE.Color(color), zm = (z0 + z1) / 2, yr = y0 + rh;
+    const A = [x0, y0, z0], B = [x1, y0, z0], C = [x1, y0, z1], D = [x0, y0, z1], R1 = [x0, yr, zm], R2 = [x1, yr, zm];
+    this.quad(D, C, R2, R1, col); this.quad(B, A, R1, R2, col);
+    this.tri(C, B, R2, new THREE.Color(color).multiplyScalar(0.85)); this.tri(A, D, R1, new THREE.Color(color).multiplyScalar(0.85));
+  }
+  // Ventanas: quads pegados a las 4 caras
+  windows(x0, z0, x1, z1, h, seed, dark, lit) {
+    const floors = Math.max(1, Math.floor((h - 0.3) / 0.75)), e = 0.012, colD = new THREE.Color(dark), colL = new THREE.Color('#ffffff');
+    const faces = [[x0, x1, z1, 'f'], [x0, x1, z0, 'b'], [z0, z1, x1, 'r'], [z0, z1, x0, 'l']];
+    faces.forEach(([a0, a1, k, f], fi) => {
+      const cols = Math.max(1, Math.floor((a1 - a0 - 0.2) / 0.55)), step = (a1 - a0) / cols;
+      for (let r = 0; r < floors; r++) for (let c = 0; c < cols; c++) {
+        const w0 = a0 + c * step + step * 0.25, w1 = w0 + step * 0.5, y0 = 0.3 + r * 0.75, y1 = y0 + 0.38;
+        const on = ((c * 7 + r * 3 + fi * 5 + (seed * 100 | 0)) % 5) < 3;
+        const g = on ? lit : this, col = on ? colL : colD;
+        if (f === 'f') g.quad([w0, y0, k + e], [w1, y0, k + e], [w1, y1, k + e], [w0, y1, k + e], col);
+        else if (f === 'b') g.quad([w1, y0, k - e], [w0, y0, k - e], [w0, y1, k - e], [w1, y1, k - e], col);
+        else if (f === 'r') g.quad([k + e, y0, w1], [k + e, y0, w0], [k + e, y1, w0], [k + e, y1, w1], col);
+        else g.quad([k - e, y0, w0], [k - e, y0, w1], [k - e, y1, w1], [k - e, y1, w0], col);
+      }
+    });
+  }
+  build(mat) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
+    g.computeVertexNormals(); g.computeBoundingSphere();
+    return new THREE.Mesh(g, mat);
+  }
+}
+
+// ---------- Materiales y texturas compartidas ----------
+const BOX = new THREE.BoxGeometry(1, 1, 1);
+const matCache = new Map();
+function lam(color) { let m = matCache.get(color); if (!m) { m = new THREE.MeshLambertMaterial({ color }); matCache.set(color, m); } return m; }
+let matStatic, matWinLit, matShopGlass, matLampHead, matGlow, matHeadGlow, matWater, matFoam;
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
+const emojiTex = new Map();
+function emojiMat(em) {
+  let m = emojiTex.get(em); if (m) return m;
+  const tex = canvasTex(128, 128, (g) => {
+    g.fillStyle = 'rgba(15,26,46,.88)'; g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 5; g.stroke();
+    g.font = '72px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(em, 64, 70);
+  });
+  m = new THREE.SpriteMaterial({ map: tex, depthWrite: false }); emojiTex.set(em, m); return m;
+}
+const stripeTex = new Map();
+function stripeMat(color) {
+  let m = stripeTex.get(color); if (m) return m;
+  const tex = canvasTex(64, 8, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#ffffff' : color; g.fillRect(i * 8, 0, 8, 8); } });
+  m = new THREE.MeshLambertMaterial({ map: tex }); stripeTex.set(color, m); return m;
+}
+const signMats = {};
+function saleSignMats(district) {
+  if (signMats[district]) return signMats[district];
+  const tex = canvasTex(256, 128, (g) => {
+    g.fillStyle = '#2fbf71'; rr(g, 4, 4, 248, 120, 18); g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.stroke();
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = '800 46px system-ui, sans-serif'; g.fillText(t('forSale').toUpperCase(), 128, 62);
+    g.font = '700 30px system-ui, sans-serif'; g.fillText('×' + LAND[district].toFixed(2), 128, 104);
+  });
+  const face = new THREE.MeshLambertMaterial({ map: tex }), side = lam('#2fbf71');
+  return (signMats[district] = [side, side, side, side, face, face]);
+}
+function glowTexture() {
+  return canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,150,1)'); gr.addColorStop(0.4, 'rgba(255,200,120,.45)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+}
+
+// ---------- Construcción de la ciudad ----------
+const smokePts = [];
+let treeTrunks, treeCanopies, lampGlow, pedLeg, pedBody, pedHead, pedHair, pedUmb, pedDog, carBody, carCab, carBase, carGlow, birdMesh, parts3D, partsGeo;
+let playerObj = null, playerMark = null, wpCone, wpArrow;
+const boatObjs = [];
+const PED_MAX = 240, CAR_MAX = 60;
+function initRenderer() {
+  renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
+  renderer.shadowMap.enabled = gfxLevel === 'alta';
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color('#8ccff0');
+  scene.fog = new THREE.Fog('#8ccff0', 40, 100);
+  camera = new THREE.PerspectiveCamera(50, 1, 0.5, 260);
+  hemi = new THREE.HemisphereLight('#ffffff', '#6d7f58', 0.8); scene.add(hemi);
+  sun = new THREE.DirectionalLight('#fff3df', 0.85);
+  sun.castShadow = gfxLevel === 'alta';
+  sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
+  scene.add(sun, sun.target);
+  matStatic = new THREE.MeshLambertMaterial({ vertexColors: true });
+  matWinLit = new THREE.MeshBasicMaterial({ vertexColors: true, color: '#2a3346' });
+  matShopGlass = new THREE.MeshLambertMaterial({ color: '#2f3d55', emissive: '#000000' });
+  matLampHead = new THREE.MeshBasicMaterial({ color: '#cfd6e0' });
+  const gt = glowTexture();
+  matGlow = new THREE.MeshBasicMaterial({ map: gt, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  matHeadGlow = new THREE.MeshBasicMaterial({ map: gt, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, color: '#fff6dc' });
+  buildStatic();
+  buildDynamicMeshes();
+}
+function buildGroundTexture() {
+  const K = 20, k = K / T;
+  return canvasTex(W * K, H * K, (g) => {
+    const col = { [TL.ROAD]: '#474c57', [TL.WALK]: '#cbc4b6', [TL.GRASS]: '#79b35b', [TL.LOT]: '#ab9470', [TL.SAND]: '#ecd8a2', [TL.WATER]: '#2b88c2', [TL.PLAZA]: '#dccfb5' };
+    for (let ty = 0; ty < H; ty++) for (let tx = 0; tx < W; tx++) {
+      const kk = tiles[ty * W + tx], px = tx * K, py = ty * K;
+      g.fillStyle = col[kk]; g.fillRect(px, py, K, K);
+      if (kk === TL.WALK) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(px, py, K, 1); g.fillRect(px, py, 1, K); }
+      else if (kk === TL.PLAZA) { g.fillStyle = (tx + ty) % 2 ? 'rgba(160,120,80,.14)' : 'rgba(255,255,255,.1)'; g.fillRect(px, py, K, K); }
+      else if (kk === TL.GRASS && (tx * 7 + ty * 13) % 5 === 0) { g.fillStyle = 'rgba(40,90,30,.3)'; g.fillRect(px + 5, py + 7, 2, 3); g.fillRect(px + 12, py + 4, 2, 3); }
+      else if (kk === TL.SAND && (tx * 3 + ty * 5) % 7 === 0) { g.fillStyle = 'rgba(160,120,60,.3)'; g.fillRect(px + 6, py + 9, 2, 2); }
+      else if (kk === TL.ROAD) {
+        const rx = isRoadI(tx), ry = isRoadI(ty);
+        g.fillStyle = '#e8c547';
+        if (ry && !rx && ty % BLK === 0) for (let i = 0; i < 2; i++) g.fillRect(px + (4 + i * 16) * k, py + K - 1, 9 * k, 2);
+        if (rx && !ry && tx % BLK === 0) for (let i = 0; i < 2; i++) g.fillRect(px + K - 1, py + (4 + i * 16) * k, 2, 9 * k);
+        g.fillStyle = 'rgba(240,240,240,.8)';
+        if (ry && !rx && (tx % BLK === 2 || tx % BLK === 11)) for (let i = 0; i < 4; i++) g.fillRect(px + 6 * k, py + (2 + i * 8) * k, 20 * k, 4 * k);
+        if (rx && !ry && (ty % BLK === 2 || ty % BLK === 11)) for (let i = 0; i < 4; i++) g.fillRect(px + (2 + i * 8) * k, py + 6 * k, 4 * k, 20 * k);
+      }
+    }
+    // Jardines de las casas
+    for (const l of lots) if (l.kind === 'deco') { const dc = decoOf(l); if (dc.tree) { g.fillStyle = dc.st === 'house' ? '#86bf68' : '#f0dcae'; g.fillRect(l.x * k, l.y * k, l.w * k, l.h * k); } }
+  });
+}
+function buildStatic() {
+  for (const l of lots) if (l.kind === 'deco') decoOf(l);
+  // Suelo de la ciudad (una sola textura) y campo alrededor
+  const gtex = buildGroundTexture(); gtex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshLambertMaterial({ map: gtex }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(W / 2, 0, H / 2); ground.receiveShadow = true; scene.add(ground);
+  const field = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), lam('#6aa24f'));
+  field.rotation.x = -Math.PI / 2; field.position.set(W / 2, -0.03, H / 2); scene.add(field);
+  // Mar con oleaje animado
+  const wtex = canvasTex(128, 128, (g) => { g.fillStyle = '#ffffff'; for (let i = 0; i < 26; i++) { g.globalAlpha = 0.15 + (i % 3) * 0.08; g.fillRect((i * 53) % 128, (i * 37) % 128, 14 + (i % 4) * 4, 2); } });
+  wtex.wrapS = wtex.wrapT = THREE.RepeatWrapping; wtex.repeat.set(30, 70);
+  matWater = new THREE.MeshPhongMaterial({ color: '#2a86c0', map: wtex, shininess: 90, specular: '#a8d8ff', transparent: true, opacity: 0.94 });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(90, H + 140), matWater);
+  water.rotation.x = -Math.PI / 2; water.position.set(WATER0 + 45, 0.03, H / 2); water.receiveShadow = true; scene.add(water);
+  matFoam = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 });
+  const foam = new THREE.Mesh(new THREE.PlaneGeometry(0.35, H + 140), matFoam); foam.rotation.x = -Math.PI / 2; foam.position.set(WATER0 + 0.1, 0.05, H / 2); scene.add(foam);
+  // Edificios decorativos combinados por manzana
+  const chunks = new Map();
+  const chunk = (l) => { const key = l.bx + ',' + l.by; if (!chunks.has(key)) chunks.set(key, { s: new Geo(), w: new Geo() }); return chunks.get(key); };
+  for (const l of lots) {
+    if (l.kind !== 'deco') continue;
+    const { s, w } = chunk(l), dc = decoOf(l), small = dc.tree;
+    const inset = small ? 26 : 8;
+    const px = l.x + inset / 2 + (small ? (l.lx ? 10 : -10) : 0), py = l.y + inset / 2;
+    const x0 = U(px), z0 = U(py), x1 = U(px + l.w - inset), z1 = U(py + l.h - inset);
+    const hgt = { house: 0.95, apt: 2.3, office: 3.4, glass: 3.1, factory: 1.5, warehouse: 1.25, beachhouse: 0.95 }[dc.st] + dc.seed * (small ? 0.3 : 1.6);
+    const wall = dc.st === 'glass' ? '#6fb2da' : shade(dc.col, small ? 0.95 : 0.85);
+    s.box(x0, 0, z0, x1, hgt, z1, wall);
+    if (small) {
+      s.gable(x0 - 0.1, z0 - 0.1, x1 + 0.1, z1 + 0.1, hgt, 0.75, dc.st === 'house' ? shade(dc.col, 0.75) : '#d47a5a');
+      s.box((x0 + x1) / 2 - 0.15, 0, z1, (x0 + x1) / 2 + 0.15, 0.55, z1 + 0.02, '#5b3e26');
+    } else {
+      s.box(x0 - 0.05, hgt, z0 - 0.05, x1 + 0.05, hgt + 0.12, z1 + 0.05, dc.st === 'glass' ? '#cfe6f2' : shade(dc.col, 1.12));
+      if (dc.st === 'office' || dc.st === 'apt') { s.box(x0 + 0.3, hgt + 0.12, z0 + 0.3, x0 + 0.8, hgt + 0.45, z0 + 0.7, '#9aa1ab'); s.box(x1 - 0.9, hgt + 0.12, z1 - 0.8, x1 - 0.4, hgt + 0.35, z1 - 0.4, '#8a919c'); }
+      if (dc.st === 'factory') { const cx = x1 - 0.6, cz = z0 + 0.6; s.box(cx - 0.18, hgt, cz - 0.18, cx + 0.18, hgt + 1.6, cz + 0.18, '#6a6e76'); smokePts.push({ x: cx * T, y: cz * T, h: (hgt + 1.6) * T }); }
+      if (dc.st === 'warehouse') for (let i = 0; i < 3; i++) s.box(x0 + 0.2 + i * 0.9, hgt + 0.12, z0 + 0.2, x0 + 0.7 + i * 0.9, hgt + 0.3, z1 - 0.2, '#b9b2a6');
+    }
+    s.windows(x0, z0, x1, z1, hgt, dc.seed, dc.st === 'glass' ? '#2e5d80' : '#323a4d', w);
+  }
+  for (const { s, w } of chunks.values()) {
+    const ms = s.build(matStatic); ms.castShadow = true; ms.receiveShadow = true; scene.add(ms);
+    if (w.p.length) scene.add(w.build(matWinLit));
+  }
+  // Bancas y fuente
+  const bg = new Geo();
+  for (const b of benches) { const x = U(b.x), z = U(b.y); bg.box(x - 0.45, 0.18, z - 0.12, x + 0.45, 0.25, z + 0.12, '#7a5434'); bg.box(x - 0.45, 0.25, z - 0.14, x + 0.45, 0.5, z - 0.08, '#5b3e26'); bg.box(x - 0.4, 0, z - 0.1, x - 0.32, 0.18, z + 0.1, '#333'); bg.box(x + 0.32, 0, z - 0.1, x + 0.4, 0.18, z + 0.1, '#333'); }
+  const bm = bg.build(matStatic); bm.castShadow = true; scene.add(bm);
+  const fx = U(FOUNTAIN.x), fz = U(FOUNTAIN.y);
+  const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.15, 0.35, 20), lam('#b8a98d')); basin.position.set(fx, 0.17, fz); basin.castShadow = true; basin.receiveShadow = true; scene.add(basin);
+  const fw = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 0.05, 20), new THREE.MeshPhongMaterial({ color: '#4aa8d8', shininess: 100 })); fw.position.set(fx, 0.33, fz); scene.add(fw);
+  const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.9, 10), lam('#c9bc9f')); pil.position.set(fx, 0.7, fz); pil.castShadow = true; scene.add(pil);
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.2, 0.15, 14), lam('#c9bc9f')); bowl.position.set(fx, 1.1, fz); scene.add(bowl);
+  // Árboles (instanciados)
+  treeTrunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 0.7, 6).translate(0, 0.35, 0), lam('#6b4a2b'), trees.length);
+  treeCanopies = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: '#ffffff' }), trees.length);
+  trees.forEach((tr, i) => {
+    treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, 1, 1));
+    const r = U(tr.r) * 1.25; treeCanopies.setMatrixAt(i, compose(U(tr.x), 0.7 + r * 0.8, U(tr.y), tr.s, r, r * 1.05, r));
+    _c.set(['#3f8a3a', '#4c9a40', '#357a35', '#5aa548'][i % 4]); treeCanopies.setColorAt(i, _c);
+  });
+  treeCanopies.castShadow = true; treeTrunks.castShadow = true;
+  scene.add(treeTrunks, treeCanopies);
+  // Farolas (instanciadas) y sus charcos de luz
+  const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.04, 0.05, 1.5, 6).translate(0, 0.75, 0), lam('#3b4250'), lamps.length);
+  const head = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 0.1, 0.22), matLampHead, lamps.length);
+  lampGlow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), matGlow, lamps.length);
+  lamps.forEach((l, i) => { pole.setMatrixAt(i, compose(U(l.x), 0, U(l.y), 0, 1, 1, 1)); head.setMatrixAt(i, compose(U(l.x), 1.52, U(l.y), 0, 1, 1, 1)); lampGlow.setMatrixAt(i, compose(U(l.x), 0.04, U(l.y), 0, 4.2, 1, 4.2)); });
+  pole.castShadow = true; scene.add(pole, head, lampGlow);
+  // Barcos
+  for (const b of boats) {
+    const g = new THREE.Group();
+    const hull = new THREE.Mesh(BOX, lam(b.c)); hull.scale.set(0.55, 0.25, 1.3); hull.position.y = 0.12; g.add(hull);
+    const cab = new THREE.Mesh(BOX, lam('#f4f1de')); cab.scale.set(0.4, 0.3, 0.45); cab.position.set(0, 0.38, 0.1); g.add(cab);
+    scene.add(g); boatObjs.push(g);
+  }
+}
+function buildDynamicMeshes() {
+  const white = () => new THREE.MeshLambertMaterial({ color: '#ffffff' });
+  const inst = (geo, n) => { const m = new THREE.InstancedMesh(geo, white(), n); m.count = 0; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, _c.set('#ffffff')); scene.add(m); return m; };
+  pedLeg = inst(BOX, PED_MAX * 2); pedBody = inst(BOX, PED_MAX); pedHead = inst(BOX, PED_MAX); pedHair = inst(BOX, PED_MAX);
+  pedUmb = inst(new THREE.ConeGeometry(0.42, 0.18, 8), PED_MAX); pedDog = inst(BOX, 40);
+  pedBody.castShadow = true;
+  carBody = inst(BOX, CAR_MAX); carCab = inst(BOX, CAR_MAX); carBase = inst(BOX, CAR_MAX);
+  carBody.castShadow = true;
+  carGlow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), matHeadGlow, CAR_MAX); carGlow.count = 0; carGlow.frustumCulled = false; scene.add(carGlow);
+  birdMesh = inst(BOX, birds.length);
+  partsGeo = new THREE.BufferGeometry();
+  partsGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(300 * 3), 3));
+  partsGeo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(300 * 3), 3));
+  parts3D = new THREE.Points(partsGeo, new THREE.PointsMaterial({ size: 0.2, vertexColors: true, sizeAttenuation: true }));
+  parts3D.frustumCulled = false; scene.add(parts3D);
+  // Jugador
+  playerObj = new THREE.Group();
+  const pm = (col, sx, sy, sz, x, y, z) => { const m = new THREE.Mesh(BOX, lam(col)); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.castShadow = true; return m; };
+  const body = new THREE.Group(); body.name = 'body';
+  const legL = pm('#1d3557', 0.12, 0.34, 0.12, -0.08, -0.17, 0), legR = pm('#1d3557', 0.12, 0.34, 0.12, 0.08, -0.17, 0);
+  const hipL = new THREE.Group(), hipR = new THREE.Group(); hipL.position.set(0, 0.34, 0); hipR.position.set(0, 0.34, 0); hipL.add(legL); hipR.add(legR);
+  body.add(hipL, hipR, pm('#f04e23', 0.36, 0.32, 0.22, 0, 0.5, 0), pm('#e0ac69', 0.24, 0.24, 0.24, 0, 0.79, 0), pm('#ffb627', 0.27, 0.08, 0.27, 0, 0.94, 0), pm('#ffb627', 0.2, 0.03, 0.14, 0, 0.92, 0.16));
+  body.userData = { hipL, hipR };
+  playerObj.add(body);
+  // El anillo y la flecha se ven a través de los edificios: nunca pierdes a tu personaje
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 28).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffb627', transparent: true, opacity: 0.9, depthWrite: false, depthTest: false })); ring.position.y = 0.03; ring.renderOrder = 10; playerObj.add(ring);
+  playerMark = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.36, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: '#ffb627', transparent: true, opacity: 0.95, depthTest: false, depthWrite: false })); playerMark.renderOrder = 11; scene.add(playerMark);
+  const bike = new THREE.Group(); bike.name = 'bike';
+  bike.add(pm('#1b1b1b', 0.05, 0.36, 0.36, 0, 0.18, 0.36), pm('#1b1b1b', 0.05, 0.36, 0.36, 0, 0.18, -0.36), pm('#2fb7b0', 0.05, 0.06, 0.75, 0, 0.42, 0), pm('#2fb7b0', 0.05, 0.3, 0.05, 0, 0.3, 0.3));
+  const scooter = new THREE.Group(); scooter.name = 'scooter';
+  scooter.add(pm('#1b1b1b', 0.08, 0.3, 0.3, 0, 0.15, 0.4), pm('#1b1b1b', 0.08, 0.3, 0.3, 0, 0.15, -0.4), pm('#e63946', 0.3, 0.22, 0.85, 0, 0.32, 0), pm('#e63946', 0.08, 0.4, 0.08, 0, 0.55, 0.38));
+  const car = new THREE.Group(); car.name = 'car';
+  car.add(pm('#f04e23', 0.62, 0.3, 1.15, 0, 0.25, 0), pm('#1b2a44', 0.54, 0.22, 0.6, 0, 0.5, -0.05), pm('#ffe6a8', 0.5, 0.06, 0.02, 0, 0.3, 0.58), pm('#111', 0.68, 0.12, 0.9, 0, 0.08, 0));
+  playerObj.add(bike, scooter, car);
+  scene.add(playerObj);
+  // Destino
+  wpCone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.8, 14).rotateX(Math.PI), new THREE.MeshLambertMaterial({ color: '#ffb627', emissive: '#7a4a00' })); wpCone.visible = false; scene.add(wpCone);
+  const sh = new THREE.Shape(); sh.moveTo(0.55, 0); sh.lineTo(-0.25, -0.35); sh.lineTo(-0.1, 0); sh.lineTo(-0.25, 0.35); sh.closePath();
+  wpArrow = new THREE.Mesh(new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffb627', depthWrite: false, transparent: true, opacity: 0.95 })); wpArrow.visible = false; scene.add(wpArrow);
+}
+
+// ---------- Locales que cambian (en venta, tus negocios, competencia) ----------
+const lotObjs = new Map();
+function onLotChanged(l) { buildLotObj(l); }
+function syncAllLots() { for (const l of lots) if (l.kind !== 'deco' || lotObjs.has(l.id)) buildLotObj(l); }
+function buildLotObj(l) {
+  const old = lotObjs.get(l.id);
+  if (old) { scene.remove(old); lotObjs.delete(l.id); }
+  if (l.kind === 'deco') return;
+  const g = new THREE.Group(), cx = U(l.x + l.w / 2), cz = U(l.y + l.h / 2);
+  const add = (mat, sx, sy, sz, x, y, z, shadow = true) => { const m = new THREE.Mesh(BOX, mat); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true; g.add(m); return m; };
+  if (l.kind === 'sale') {
+    add(lam('#5b4632'), 0.1, 1.6, 0.1, cx, 0.8, cz);
+    const board = new THREE.Mesh(BOX, saleSignMats(l.district)); board.scale.set(2.1, 1.05, 0.08); board.position.set(cx, 1.65, cz); board.castShadow = true; g.add(board);
+    add(lam('#9c835e'), 0.5, 0.18, 0.4, cx + 0.9, 0.09, cz + 0.5); add(lam('#93795a'), 0.35, 0.12, 0.3, cx - 1, 0.06, cz - 0.6);
+  } else {
+    const b = bizAtLot(l.id), ty = TYPE[b ? b.type : l.rival.type], lvl = b ? b.level : l.rival.level;
+    const w = U(l.w - (lvl < 2 ? 36 : lvl < 4 ? 18 : 4)), d = U(l.h - (lvl < 2 ? 36 : lvl < 4 ? 18 : 4)), h = 0.95 + lvl * 0.45;
+    add(lam('#d3c9b6'), U(l.w), 0.04, U(l.h), cx, 0.02, cz, false);
+    const fadeMats = [lam(shade(ty.roof, 0.86)).clone(), lam(ty.roof).clone()];
+    add(fadeMats[0], w, h, d, cx, h / 2, cz);
+    add(fadeMats[1], w + 0.14, 0.16, d + 0.14, cx, h + 0.08, cz);
+    const sgn = l.door.side === 'n' ? -1 : 1, fz = cz + sgn * d / 2;
+    add(matShopGlass, w * 0.78, 0.5, 0.04, cx, 0.5, fz + sgn * 0.02, false);
+    add(matShopGlass, w * 0.6, 0.42, 0.04, cx, 0.55, cz - sgn * (d / 2 + 0.02), false);
+    add(lam('#3a2a1e'), 0.34, 0.62, 0.05, cx, 0.31, fz + sgn * 0.03, false);
+    const aw = add(stripeMat(b ? '#f04e23' : ty.roof), w * 0.86, 0.05, 0.5, cx, 0.98, fz + sgn * 0.25);
+    aw.rotation.x = sgn * 0.28;
+    if (lvl >= 3) { fadeMats.push(lam(shade(ty.roof, 0.7)).clone()); add(fadeMats[2], w * 0.4, 0.3, d * 0.4, cx - w * 0.2, h + 0.3, cz - d * 0.15); }
+    g.userData.fadeMats = fadeMats; g.userData.fade = 1;
+    const sp = new THREE.Sprite(emojiMat(ty.em)); sp.position.set(cx, h + 0.95, cz); sp.scale.set(1.15, 1.15, 1); g.add(sp);
+    if (b) { // bandera naranja: es tuyo
+      add(lam('#e9e3d3'), 0.05, 1.0, 0.05, cx + w / 2 - 0.15, h + 0.6, cz - d / 2 + 0.15);
+      add(lam('#f04e23'), 0.42, 0.26, 0.03, cx + w / 2 + 0.06, h + 0.95, cz - d / 2 + 0.15, false);
+    }
+    g.userData.h = h;
+  }
+  scene.add(g); lotObjs.set(l.id, g);
+}
+
+// ---------- Cámara ----------
+const _ray = new THREE.Raycaster(), _nd = new THREE.Vector2(), _plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), _hit = new THREE.Vector3();
+let camD = 20;
+function updateCamera(dt, fx, fy, orbit) {
+  if (orbit) cam.yaw += dt * 0.07;
+  else { let d = cam.yawT - cam.yaw; cam.yaw += d * Math.min(1, dt * 7); }
+  const asp = viewW / Math.max(1, viewH), vfov = asp < 1 ? 55 : 45, th = Math.tan(vfov * Math.PI / 360), hf = th * asp;
+  camD = Math.max(6.5 / hf, 5 / th) * cam.zoom * (S && S.vehicle === 'car' ? 1.15 : 1);
+  const pitch = 0.92, back = camD * Math.cos(pitch), up = camD * Math.sin(pitch);
+  const X = U(fx), Z = U(fy);
+  camera.fov = vfov; camera.aspect = asp; camera.far = camD * 4 + 60;
+  camera.position.set(X - Math.sin(cam.yaw) * back, up, Z + Math.cos(cam.yaw) * back);
+  camera.lookAt(X, 0.4, Z);
+  camera.updateProjectionMatrix();
+  scene.fog.near = camD * 1.2; scene.fog.far = camD * 3;
+  // Caja visible del suelo (para que la vida aparezca fuera de cámara)
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const maxD = camD * 2.4;
+  for (const [nx, ny] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    _nd.set(nx, ny); _ray.setFromCamera(_nd, camera);
+    let hx, hz;
+    if (_ray.ray.intersectPlane(_plane, _hit) && _hit.distanceTo(camera.position) < maxD) { hx = _hit.x; hz = _hit.z; }
+    else { const dx = _ray.ray.direction.x, dz = _ray.ray.direction.z, n = Math.hypot(dx, dz) || 1; hx = X + dx / n * camD * 1.6; hz = Z + dz / n * camD * 1.6; }
+    x0 = Math.min(x0, hx); x1 = Math.max(x1, hx); y0 = Math.min(y0, hz); y1 = Math.max(y1, hz);
+  }
+  cam.x = x0 * T; cam.y = y0 * T; cam.w = (x1 - x0) * T; cam.h = (y1 - y0) * T;
+  // Sombras: la cámara de luz sigue al foco
+  const hr = hour(), tt = clamp((hr - 6) / 12, 0, 1), ang = tt * Math.PI;
+  const R = clamp(camD * 0.95, 12, 34);
+  sun.position.set(X + Math.cos(ang) * 22, 14 + 18 * Math.sin(ang), Z + 14);
+  sun.target.position.set(X, 0, Z);
+  const sc = sun.shadow.camera;
+  if (sc.right !== R) { sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.far = 80; sc.updateProjectionMatrix(); }
+}
+
+// ---------- Luz del día, noche y clima ----------
+const SKY_DAY = new THREE.Color('#8ccff0'), SKY_DUSK = new THREE.Color('#f39a6b'), SKY_NIGHT = new THREE.Color('#0c1531'), SKY_RAIN = new THREE.Color('#7d8c9c');
+const WIN_OFF = new THREE.Color('#2a3346'), WIN_ON = new THREE.Color('#ffd47a'), SUN_DAY = new THREE.Color('#fff3df'), SUN_DUSK = new THREE.Color('#ff9a5a');
+const HEMI_DAY = new THREE.Color('#ffffff'), HEMI_NIGHT = new THREE.Color('#5e78c4');
+function updateLighting() {
+  const dark = darkness(), dk = dusk();
+  _c.copy(SKY_DAY).lerp(SKY_DUSK, dk * 0.75).lerp(SKY_NIGHT, dark).lerp(SKY_RAIN, rainK * 0.55 * (1 - dark));
+  scene.background.copy(_c); scene.fog.color.copy(_c);
+  hemi.intensity = lerp(0.62, 0.3, dark) * (1 - 0.2 * cloudK);
+  hemi.color.copy(HEMI_DAY).lerp(HEMI_NIGHT, dark);
+  sun.intensity = lerp(0.8, 0, dark) * (1 - 0.55 * cloudK);
+  sun.color.copy(SUN_DAY).lerp(SUN_DUSK, dk);
+  matWinLit.color.copy(WIN_OFF).lerp(WIN_ON, clamp(dark * 1.4, 0, 1));
+  matShopGlass.emissive.setRGB(0.9 * dark, 0.7 * dark, 0.35 * dark);
+  matLampHead.color.set(dark > 0.2 ? '#fff1c4' : '#cfd6e0');
+  matGlow.opacity = dark * 0.55; matHeadGlow.opacity = dark * 0.5;
+  matWater.map.offset.set(now * 0.01, now * 0.02);
+  matFoam.opacity = 0.35 + Math.sin(now * 1.4) * 0.2;
+}
+
+// ---------- Objetos que se mueven ----------
+function personInstances(i, x, z, ang, ph, moving, sh, sk, hr, pa, umb, scale = 1) {
+  const S2 = 1.1 * scale, bob = moving ? Math.abs(Math.sin(ph)) * 0.035 : 0, sw = moving ? Math.sin(ph) * 0.55 : 0, ca = Math.cos(ang), sa = Math.sin(ang);
+  for (let k = 0; k < 2; k++) {
+    const lx = (k ? 0.06 : -0.06) * S2, r = k ? sw : -sw, len = 0.26 * S2, oy = -len / 2 * Math.cos(r), oz = -len / 2 * Math.sin(r);
+    const wx = x + lx * ca + oz * sa, wz = z - lx * sa + oz * ca;
+    pedLeg.setMatrixAt(i * 2 + k, compose(wx, 0.26 * S2 + oy + bob, wz, ang, 0.09 * S2, len, 0.09 * S2, r));
+    pedLeg.setColorAt(i * 2 + k, _c.set(pa));
+  }
+  pedBody.setMatrixAt(i, compose(x, 0.38 * S2 + bob, z, ang, 0.27 * S2, 0.25 * S2, 0.17 * S2)); pedBody.setColorAt(i, _c.set(sh));
+  pedHead.setMatrixAt(i, compose(x, 0.6 * S2 + bob, z, ang, 0.18 * S2, 0.18 * S2, 0.18 * S2)); pedHead.setColorAt(i, _c.set(sk));
+  pedHair.setMatrixAt(i, compose(x, 0.7 * S2 + bob, z - 0.01 * ca, ang, 0.19 * S2, 0.05 * S2, 0.19 * S2)); pedHair.setColorAt(i, _c.set(hr));
+  return umb;
+}
+function updateDynamic(dt) {
+  const view = liveRect(120);
+  // Peatones y filas de clientes
+  let n = 0, nu = 0, nd = 0;
+  for (const p of peds) {
+    if (p.mode === 'inside' || !inRect(p.x, p.y, view) || n >= PED_MAX) continue;
+    const dx = p.x - (p.lx ?? p.x), dy = p.y - (p.ly ?? p.y); p.lx = p.x; p.ly = p.y;
+    const mv = Math.abs(dx) + Math.abs(dy) > 0.01;
+    if (mv) { const ta = Math.atan2(dx, dy); let da = ta - (p.ang || 0); da = Math.atan2(Math.sin(da), Math.cos(da)); p.ang = (p.ang || 0) + da * Math.min(1, dt * 10); }
+    const X = U(p.x), Z = U(p.y), a = p.ang || 0;
+    personInstances(n, X, Z, a, p.ph, mv, p.shirt, p.skin, p.hair, p.pants);
+    if (p.umb && rainK > 0.35 && nu < PED_MAX) { pedUmb.setMatrixAt(nu, compose(X, 0.98, Z, 0, 1, 1, 1)); pedUmb.setColorAt(nu, _c.set(p.umb)); nu++; }
+    if (p.dog && nd < 40) { const ca = Math.cos(a), sa = Math.sin(a); dogInst(nd++, X + ca * 0.35 - sa * 0.1, Z - sa * 0.35 - ca * 0.1, a, p.ph); }
+    n++;
+  }
+  for (const b of S.biz) if (b.queue.length) {
+    const l = lotOf(b);
+    for (let i = 0; i < b.queue.length && n < PED_MAX; i++) {
+      const q = b.queue[i], qx = l.door.x + 18 + i * 13, qy = l.door.y + (l.door.side === 'n' ? -2 : 4);
+      if (!inRect(qx, qy, view)) continue;
+      personInstances(n++, U(qx), U(qy), l.door.side === 'n' ? Math.PI : 0, 0, false, q.c, q.s, '#2b1d14', '#2b2d42');
+    }
+  }
+  pedLeg.count = n * 2; pedBody.count = pedHead.count = pedHair.count = n; pedUmb.count = nu; pedDog.count = nd;
+  for (const m of [pedLeg, pedBody, pedHead, pedHair, pedUmb, pedDog]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+  // Autos
+  let nc = 0;
+  const night = darkness() > 0.15;
+  for (const c of cars) {
+    if (!inRect(c.x, c.y, view) || nc >= CAR_MAX) continue;
+    const a = { E: 0, W: Math.PI, S: -Math.PI / 2, N: Math.PI / 2 }[c.dir], bus = c.kind === 'bus';
+    const L = U(bus ? 46 : 28), Wd = U(bus ? 17 : 15), X = U(c.x), Z = U(c.y), ca = Math.cos(a), sa = Math.sin(a);
+    carBase.setMatrixAt(nc, compose(X, 0.1, Z, a, L * 0.92, 0.16, Wd * 1.04)); carBase.setColorAt(nc, _c.set('#16181d'));
+    carBody.setMatrixAt(nc, compose(X, 0.27, Z, a, L, bus ? 0.4 : 0.22, Wd)); carBody.setColorAt(nc, _c.set(c.kind === 'taxi' ? '#ffcc00' : bus ? '#2a9d8f' : c.col));
+    const off = bus ? 0 : -L * 0.08;
+    carCab.setMatrixAt(nc, compose(X + ca * off, bus ? 0.58 : 0.46, Z - sa * off, a, bus ? L * 0.92 : L * 0.52, bus ? 0.2 : 0.18, Wd * 0.86)); carCab.setColorAt(nc, _c.set(bus ? '#bfe6f2' : '#22324a'));
+    if (night) carGlow.setMatrixAt(nc, compose(X + ca * (L * 0.5 + 1.1), 0.05, Z - sa * (L * 0.5 + 1.1), a, 2.4, 1, 1.5));
+    nc++;
+  }
+  carBody.count = carCab.count = carBase.count = nc; carGlow.count = night ? nc : 0;
+  for (const m of [carBody, carCab, carBase, carGlow]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+  // Pájaros
+  let nb = 0;
+  for (const b of birds) {
+    if (!inRect(b.x, b.y, view)) continue;
+    const fly = b.st === 'fly', flap = fly ? 0.15 + Math.abs(Math.sin(now * 18 + b.x)) * 0.35 : 0.1;
+    birdMesh.setMatrixAt(nb, compose(U(b.x), 0.08 + U(b.z) * 2.5 + (fly ? 0.6 : 0), U(b.y), fly ? Math.atan2(b.vx, b.vy) : b.t, flap, 0.08, 0.16));
+    birdMesh.setColorAt(nb, _c.set(b.gull ? '#f6f6f6' : '#6c7380')); nb++;
+  }
+  birdMesh.count = nb; birdMesh.instanceMatrix.needsUpdate = true; if (birdMesh.instanceColor) birdMesh.instanceColor.needsUpdate = true;
+  // Árboles: un leve vaivén (más fuerte con lluvia)
+  const amp = rainK > 0.3 ? 0.06 : 0.025;
+  trees.forEach((tr, i) => {
+    if (!inRect(tr.x, tr.y, view)) return;
+    const r = U(tr.r) * 1.25, sw = Math.sin(now * 1.3 + tr.s) * amp;
+    treeCanopies.setMatrixAt(i, compose(U(tr.x) + sw, 0.7 + r * 0.8, U(tr.y), tr.s, r, r * 1.05, r, sw));
+    if (!tr._t) { tr._t = 1; treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, 0.8 + r * 0.4, 1)); treeTrunks.instanceMatrix.needsUpdate = true; }
+  });
+  treeCanopies.instanceMatrix.needsUpdate = true;
+  // Barcos
+  boats.forEach((s, i) => { boatObjs[i].position.set(U(s.x), Math.sin(now * 1.5 + i) * 0.04, U(s.y)); boatObjs[i].rotation.y = s.d > 0 ? 0 : Math.PI; boatObjs[i].rotation.z = Math.sin(now * 1.2 + i) * 0.05; });
+  // Partículas
+  const pos = partsGeo.attributes.position.array, col = partsGeo.attributes.color.array;
+  let np = 0;
+  for (const p of parts) {
+    if (np >= 300) break;
+    pos[np * 3] = U(p.x); pos[np * 3 + 1] = U(p.h); pos[np * 3 + 2] = U(p.y);
+    _c.set(p.k === 'coin' ? '#ffcf3f' : p.k === 'smoke' ? '#c9c9cf' : p.k === 'drop' ? '#cfeeff' : '#7fbf5a');
+    col[np * 3] = _c.r; col[np * 3 + 1] = _c.g; col[np * 3 + 2] = _c.b; np++;
+  }
+  partsGeo.setDrawRange(0, np); partsGeo.attributes.position.needsUpdate = true; partsGeo.attributes.color.needsUpdate = true;
+}
+function dogInst(i, x, z, a, ph) { pedDog.setMatrixAt(i, compose(x, 0.14 + Math.abs(Math.sin(ph * 1.5)) * 0.02, z, a, 0.12, 0.13, 0.3)); pedDog.setColorAt(i, _c.set('#8a5a3c')); }
+function updatePlayerObj(dt) {
+  const show = running;
+  playerObj.visible = show; playerMark.visible = show; if (!show) return;
+  playerObj.position.set(U(P.x), 0, U(P.y));
+  if (P.moving) { const ta = Math.atan2(P.vx, P.vy); let da = ta - (P.rot || 0); da = Math.atan2(Math.sin(da), Math.cos(da)); P.rot = (P.rot || 0) + da * Math.min(1, dt * 12); }
+  const body = playerObj.getObjectByName('body'), v = S.vehicle;
+  for (const k of ['bike', 'scooter', 'car']) playerObj.getObjectByName(k).visible = v === k;
+  body.visible = v !== 'car';
+  body.position.y = v === 'walk' ? Math.abs(Math.sin(P.anim)) * (P.moving ? 0.04 : 0) : v === 'bike' ? 0.32 : 0.3;
+  const sw = v === 'walk' && P.moving ? Math.sin(P.anim) * 0.6 : v === 'bike' ? Math.sin(P.anim * 0.7) * 0.7 : v === 'scooter' ? 0.5 : 0;
+  body.userData.hipL.rotation.x = sw; body.userData.hipR.rotation.x = v === 'scooter' ? 0.5 : -sw;
+  for (const c of playerObj.children) if (c.name) c.rotation.y = P.rot || 0;
+  playerObj.scale.setScalar(1.25);
+  playerMark.position.set(U(P.x), 2.1 + Math.sin(now * 3) * 0.08, U(P.y)); playerMark.rotation.y = now * 1.5;
+  // Corte tipo Sims: tu local se vuelve transparente si su puerta queda de espaldas a la cámara
+  const fx = Math.sin(cam.yaw), fz = -Math.cos(cam.yaw);
+  for (const [id, g] of lotObjs) {
+    if (!g.userData.fadeMats) continue;
+    const l = lots[id], nz = l.door.side === 'n' ? -1 : 1;
+    const hidden = ctxLot === l && bizAtLot(id) && (nz * -fz) < 0.2 && playerNearDoor(l, 110);
+    const target = hidden ? 0.28 : 1;
+    if (Math.abs(g.userData.fade - target) < 0.01 && g.userData.fade === target) continue;
+    g.userData.fade = Math.abs(g.userData.fade - target) < 0.02 ? target : lerp(g.userData.fade, target, Math.min(1, dt * 8));
+    for (const m of g.userData.fadeMats) { const tr = g.userData.fade < 0.999; if (m.transparent !== tr) { m.transparent = tr; m.depthWrite = !tr; m.needsUpdate = true; } m.opacity = g.userData.fade; }
+  }
+  void fx;
+  // Flecha de destino
+  if (waypoint) {
+    const d = Math.hypot(waypoint.x - P.x, waypoint.y - P.y);
+    if (d < 50) { waypoint = null; sfx('click'); }
+  }
+  wpCone.visible = wpArrow.visible = !!waypoint;
+  if (waypoint) {
+    wpCone.position.set(U(waypoint.x), 1.4 + Math.sin(now * 4) * 0.15, U(waypoint.y)); wpCone.rotation.y = now * 2;
+    const a = Math.atan2(waypoint.y - P.y, waypoint.x - P.x);
+    wpArrow.position.set(U(P.x) + Math.cos(a) * 1.1, 0.06, U(P.y) + Math.sin(a) * 1.1); wpArrow.rotation.y = -a;
+  }
+}
+let waypoint = null;
+
+// ---------- Capa 2D encima del 3D: textos, globos, lluvia ----------
+function toScreen(x, y, h) { _v.set(U(x), h, U(y)).project(camera); if (_v.z > 1 || _v.z < -1) return null; return [(_v.x + 1) / 2 * viewW, (1 - _v.y) / 2 * viewH]; }
+function drawBubble(x, y, text) {
+  ctx.font = '600 12px system-ui, sans-serif'; ctx.textAlign = 'center';
+  const w = Math.min(170, ctx.measureText(text).width + 16);
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; rr(ctx, x - w / 2, y - 24, w, 20, 9); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 5, y - 4); ctx.lineTo(x, y + 3); ctx.lineTo(x + 5, y - 4); ctx.fill();
+  ctx.fillStyle = '#1b2333'; ctx.fillText(text, x, y - 10);
+}
+function pill(x, y, text, bg, fg = '#fff', font = '800 11px system-ui, sans-serif') {
+  ctx.font = font; ctx.textAlign = 'center';
+  const w = ctx.measureText(text).width + 14;
+  ctx.fillStyle = bg; rr(ctx, x - w / 2, y - 12, w, 18, 7); ctx.fill();
+  ctx.fillStyle = fg; ctx.fillText(text, x, y + 1);
+}
+function drawOverlay() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, viewW, viewH);
+  const view = liveRect(60);
+  // Estado de tus negocios
+  for (const b of S.biz) {
+    const l = lotOf(b); if (!inRect(l.door.x, l.door.y, view)) continue;
+    const o = lotObjs.get(l.id), h = (o && o.userData.h || 1.5) + 1.75, s = toScreen(l.x + l.w / 2, l.y + l.h / 2, h); if (!s) continue;
+    const open = b.staff > 0 || playerNearDoor(l);
+    if (!open) pill(s[0], s[1], t('closed'), 'rgba(43,45,66,.92)');
+    else if (!b.manager && b.cash >= regCap(b)) pill(s[0], s[1], t('fullReg'), '#ff6b5b');
+    else if (b.cash > 0 && !b.manager) { ctx.font = '20px system-ui, "Apple Color Emoji"'; ctx.textAlign = 'center'; ctx.fillText('💰', s[0], s[1] + Math.sin(now * 4 + l.id) * 3); }
+    // Barras de paciencia de la fila
+    b.queue.forEach((q, i) => { const qs = toScreen(l.door.x + 18 + i * 13, l.door.y + (l.door.side === 'n' ? -2 : 4), 1.05); if (!qs) return; ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(qs[0] - 7, qs[1] - 2, 14, 4); ctx.fillStyle = q.p < 5 ? '#ff6b5b' : '#46d98a'; ctx.fillRect(qs[0] - 7, qs[1] - 2, 14 * (q.p / PATIENCE), 4); });
+  }
+  // Etiqueta del lugar cercano
+  if (ctxLot && running) {
+    const l = ctxLot, b = bizAtLot(l.id);
+    const label = l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
+    const s = toScreen(l.door.x, l.door.y, 0.1);
+    if (s) pill(s[0], s[1] + 34, label, 'rgba(15,26,46,.9)', '#f3efe4', '700 12px system-ui, sans-serif');
+  }
+  // Globos de diálogo
+  for (const p of peds) if (p.bub && p.mode !== 'inside' && inRect(p.x, p.y, view)) { const s = toScreen(p.x, p.y, 0.95); if (s) drawBubble(s[0], s[1], p.bub); }
+  // Textos flotantes (+$)
+  for (const f of floats) {
+    const s = toScreen(f.x, f.y, U(f.h)); if (!s) continue;
+    ctx.globalAlpha = Math.min(1, f.l * 1.5); ctx.font = `800 ${Math.round(14 * f.sc)}px system-ui, sans-serif`; ctx.textAlign = 'center';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,15,25,.75)'; ctx.strokeText(f.s, s[0], s[1]); ctx.fillStyle = f.c; ctx.fillText(f.s, s[0], s[1]);
+  }
+  ctx.globalAlpha = 1;
+  // Distancia al destino
+  if (waypoint && running) {
+    const a = Math.atan2(waypoint.y - P.y, waypoint.x - P.x), s = toScreen(P.x + Math.cos(a) * 1.9 * T, P.y + Math.sin(a) * 1.9 * T, 0.1);
+    if (s) { const m = Math.round(Math.hypot(waypoint.x - P.x, waypoint.y - P.y) / T * 5) + ' m'; ctx.font = '800 12px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,15,25,.8)'; ctx.strokeText(m, s[0], s[1]); ctx.fillStyle = '#ffe2a6'; ctx.fillText(m, s[0], s[1]); }
+  }
+  // Lluvia en pantalla
+  if (rainK > 0.02) {
+    ctx.strokeStyle = 'rgba(210,225,255,.42)'; ctx.lineWidth = 1; ctx.beginPath();
+    const n = Math.round(130 * rainK);
+    for (let i = 0; i < n; i++) { const rx = ((i * 97.3 + now * 260 * (1 + (i % 3) * .2)) % (viewW + 40)) - 20, ry = ((i * 61.7 + now * 900) % (viewH + 40)) - 20; ctx.moveTo(rx, ry); ctx.lineTo(rx - 4, ry + 14); }
+    ctx.stroke();
+  }
+}
+function render(dt = 1 / 60) {
+  updateLighting();
+  updateDynamic(dt);
+  updatePlayerObj(dt);
+  renderer.render(scene, camera);
+  drawOverlay();
+}
+function resize() {
+  viewW = window.innerWidth; viewH = window.innerHeight;
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  if (renderer) { renderer.setPixelRatio(gfxLevel === 'alta' ? DPR : Math.min(1.25, DPR)); renderer.setSize(viewW, viewH, false); }
+  ov.width = Math.round(viewW * DPR); ov.height = Math.round(viewH * DPR);
+}
+function setGfx(level, persist) {
+  gfxLevel = level;
+  if (persist) { GFX = level; try { localStorage.setItem(GFX_KEY, level); } catch (e) { } }
+  renderer.shadowMap.enabled = level === 'alta'; sun.castShadow = level === 'alta';
+  scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); });
+  resize();
+}
+// Calidad automática: si los primeros segundos van lentos, se apagan las sombras
+const perf = { t: 0, n: 0, done: false };
+function autoQuality(dt) {
+  if (perf.done || GFX !== 'auto') return;
+  perf.t += dt; perf.n++;
+  if (perf.t > 5) { perf.done = true; const fps = perf.n / perf.t; if (fps < 40 && gfxLevel === 'alta') { setGfx('baja', false); toast('Bajé los gráficos para que el juego vaya fluido (Ajustes › Gráficos)', '', 5000); } }
+}
+
+// ---------- Minimapa ----------
+const mm = document.getElementById('minimap'), mmc = mm.getContext('2d');
+const mapBase = document.createElement('canvas');
+function buildMapBase() {
+  mapBase.width = W * 2; mapBase.height = H * 2; const c = mapBase.getContext('2d');
+  const col = { [TL.ROAD]: '#4a5263', [TL.WALK]: '#8f8a80', [TL.GRASS]: '#5c9a48', [TL.LOT]: '#6e6656', [TL.SAND]: '#d9c38a', [TL.WATER]: '#2b78b0', [TL.PLAZA]: '#b6a88c' };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { c.fillStyle = col[tiles[y * W + x]]; c.fillRect(x * 2, y * 2, 2, 2); }
+  for (const l of lots) if (l.kind === 'deco') { c.fillStyle = '#9aa3b5'; c.fillRect(l.tx * 2 + 1, l.ty * 2 + 1, 6, 6); }
+}
+function drawMiniMap() {
+  const s = 224 / 60; // muestra ~60 tiles alrededor
+  mmc.setTransform(1, 0, 0, 1, 0, 0); mmc.fillStyle = '#0f1a2e'; mmc.fillRect(0, 0, 224, 224);
+  const ptx = P.x / T, pty = P.y / T;
+  mmc.setTransform(s / 2, 0, 0, s / 2, 112 - ptx * s, 112 - pty * s);
+  mmc.imageSmoothingEnabled = false; mmc.drawImage(mapBase, 0, 0);
+  mmc.setTransform(1, 0, 0, 1, 0, 0);
+  const toM = (x, y) => [112 + (x / T - ptx) * s, 112 + (y / T - pty) * s];
+  for (const l of lots) {
+    if (l.kind === 'deco') continue;
+    const [mx, my] = toM(l.x + l.w / 2, l.y + l.h / 2); if (mx < -10 || my < -10 || mx > 234 || my > 234) continue;
+    const b = bizAtLot(l.id);
+    mmc.fillStyle = b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
+    mmc.beginPath(); mmc.arc(mx, my, b ? 7 : 5, 0, 7); mmc.fill();
+    if (b && b.cash > 0 && !b.manager) { mmc.fillStyle = '#ffcf3f'; mmc.beginPath(); mmc.arc(mx + 6, my - 6, 4, 0, 7); mmc.fill(); }
+  }
+  if (waypoint) { const [wx, wy] = toM(waypoint.x, waypoint.y); mmc.fillStyle = '#ffb627'; mmc.fillRect(clamp(wx, 6, 218) - 5, clamp(wy, 6, 218) - 5, 10, 10); }
+  mmc.fillStyle = '#fff'; mmc.strokeStyle = '#1b1300'; mmc.lineWidth = 3;
+  mmc.beginPath(); mmc.arc(112, 112, 7, 0, 7); mmc.fill(); mmc.stroke();
+}
+
+// =====================================================================
+//  AUDIO (WebAudio sintetizado, sin archivos)
+// =====================================================================
+let AC = null;
+function audioInit() { if (AC) { if (AC.state === 'suspended') AC.resume(); return; } try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+function tone(f, d, type = 'square', v = 0.06, t0 = 0, slide = 0) {
+  if (!AC || !S || !S.sound) return;
+  const o = AC.createOscillator(), g = AC.createGain(), st = AC.currentTime + t0;
+  o.type = type; o.frequency.setValueAtTime(f, st); if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, st + d);
+  g.gain.setValueAtTime(v, st); g.gain.exponentialRampToValueAtTime(0.0001, st + d);
+  o.connect(g).connect(AC.destination); o.start(st); o.stop(st + d + 0.02);
+}
+let sfxCool = {};
+function sfx(k) {
+  const tnow = performance.now(); if (sfxCool[k] && tnow - sfxCool[k] < 60) return; sfxCool[k] = tnow;
+  if (k === 'coin') { tone(988, .08, 'square', .05); tone(1319, .25, 'square', .05, .07); }
+  else if (k === 'serve') tone(660 + rnd() * 80, .09, 'triangle', .08);
+  else if (k === 'buy') { [523, 659, 784, 1046].forEach((f, i) => tone(f, .14, 'triangle', .07, i * .08)); }
+  else if (k === 'goal') { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .2, 'square', .045, i * .1)); }
+  else if (k === 'click') tone(440, .05, 'triangle', .05);
+  else if (k === 'error') tone(180, .18, 'sawtooth', .05, 0, 0.7);
+  else if (k === 'honk') { tone(330, .12, 'sawtooth', .025); tone(415, .12, 'sawtooth', .02); }
+  else if (k === 'flap') tone(1200, .05, 'triangle', .015, 0, 2);
+  else if (k === 'chirp') { tone(2600, .05, 'sine', .015, 0, 1.3); tone(2900, .05, 'sine', .012, .07, 1.2); }
+}
+function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { } }
+
+// =====================================================================
+//  INTERFAZ (DOM)
+// =====================================================================
+const $ = id => document.getElementById(id);
+const $money = $('money'), $clock = $('clock'), $place = $('place'), $goal = $('goal'), $ui = $('ui');
+const $act = $('btnAct'), $alt = $('btnAlt');
+const textCache = new WeakMap();
+function setText(el, s, html) { if (textCache.get(el) === s) return; textCache.set(el, s); if (html) el.innerHTML = s; else el.textContent = s; }
+function applyStaticText() { document.querySelectorAll('[data-t]').forEach(e => e.textContent = t(e.dataset.t)); document.documentElement.lang = LANG; $('btnMap').setAttribute('aria-label', t('map')); $('btnPhone').setAttribute('aria-label', t('phone')); }
+function toast(msg, kind = '', ms = 3500) {
+  const box = $('toasts'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; box.prepend(el);
+  while (box.children.length > 3) box.lastChild.remove();
+  setTimeout(() => el.remove(), ms);
+}
+let bannerTimer = 0;
+function banner(text, sub) { const b = $('banner'); b.innerHTML = `<small>${esc(sub)}</small>${esc(text)}`; b.classList.add('on'); clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('on'), 2200); }
+function setTicker(text) { const items = [text, ...FLAVOR[LANG].slice().sort(() => rnd() - .5).slice(0, 3)]; $('tickerTrack').textContent = items.join('   •   '); }
+function updateHUD() {
+  setText($money, fmt(S.money)); $money.classList.toggle('neg', S.money < 0);
+  const h = Math.floor(hour()), m = Math.floor(S.min % 60 / 10) * 10;
+  const wIco = { sun: darkness() > .5 ? '🌙' : '☀️', cloud: '☁️', rain: '🌧️' }[S.weather];
+  setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}`);
+  // Botones de acción contextual
+  let main = null, alt = null;
+  if (ctxLot) {
+    const l = ctxLot, b = bizAtLot(l.id);
+    if (l.kind === 'sale') main = { k: 'buy', label: t('buy'), ico: '🏗️' };
+    else if (b) {
+      // En tu negocio el botón grande siempre es Atender: así un toque de más nunca abre el menú
+      main = { k: 'serve', label: `${t('serve')} (${b.queue.length})`, ico: '🛎️', dim: !b.queue.length };
+      alt = { k: 'manage', label: t('manage') };
+    } else if (l.kind === 'rival') main = { k: 'rival', label: t('offer'), ico: '🤝' };
+  }
+  setBtn($act, main); setBtn($alt, alt);
+  $act.classList.toggle('serve', !!main && main.k === 'serve');
+  $act.classList.toggle('dim', !!main && !!main.dim);
+  const full = S.biz.some(b => !b.manager && b.cash >= regCap(b));
+  $('phoneBadge').hidden = !full;
+}
+function setBtn(el, a) {
+  if (!a) { el.hidden = true; el.dataset.k = ''; return; }
+  el.hidden = false; el.dataset.k = a.k;
+  setText(el, a.ico ? `<span><span class="ico">${a.ico}</span>${esc(a.label)}</span>` : esc(a.label), true);
+}
+function doAction(k) {
+  audioInit();
+  if (!ctxLot) return;
+  const l = ctxLot, b = bizAtLot(l.id);
+  if (k === 'buy' && l.kind === 'sale') openBuy(l);
+  else if (k === 'serve' && b) serveOne(b);
+  else if (k === 'manage' && b) openManage(b);
+  else if (k === 'rival' && l.kind === 'rival') openRival(l);
+}
+$act.addEventListener('click', () => doAction($act.dataset.k));
+$alt.addEventListener('click', () => doAction($alt.dataset.k));
+
+// Hoja de menús
+let sheet = null; // { kind, render }
+function openSheet(kind, renderFn) { sheet = { kind, render: renderFn }; drawSheet(); sfx('click'); }
+function closeSheet() { sheet = null; $ui.innerHTML = ''; }
+function drawSheet() {
+  if (!sheet) return;
+  const { title, em, body, tabs } = sheet.render();
+  const scroll = $ui.querySelector('.body')?.scrollTop || 0;
+  $ui.innerHTML = `<div class="scrim" data-close></div><section class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="Cerrar">✕</button></header>
+    ${tabs || ''}<div class="body">${body}</div></section>`;
+  const bd = $ui.querySelector('.body'); if (bd) bd.scrollTop = scroll;
+}
+$ui.addEventListener('click', e => {
+  const el = e.target.closest('[data-close],[data-a]'); if (!el) return;
+  audioInit();
+  if (el.hasAttribute('data-close')) { closeSheet(); return; }
+  const fn = ACTIONS[el.dataset.a]; if (fn) { fn(el.dataset.v, el); }
+});
+let liveTimer = 0, uiPressing = false;
+$ui.addEventListener('pointerdown', () => { uiPressing = true; liveTimer = Math.max(liveTimer, 0.6); });
+window.addEventListener('pointerup', () => { uiPressing = false; });
+window.addEventListener('pointercancel', () => { uiPressing = false; });
+const ACTIONS = {};
+
+// --- Comprar terreno ---
+function openBuy(l) {
+  openSheet('buy', () => {
+    const nw = netWorth();
+    const items = TYPES.map(ty => {
+      const price = priceOf(ty.id, l.district), lock = ty.cost >= 50000 && nw < ty.cost * 0.6;
+      let comp = 0; for (const b of S.biz) if (b.type === ty.id && Math.abs(lotOf(b).x - l.x) + Math.abs(lotOf(b).y - l.y) < 10 * T) comp++;
+      for (const o of lots) if (o.kind === 'rival' && o.rival.type === ty.id && !bizAtLot(o.id) && Math.abs(o.x - l.x) + Math.abs(o.y - l.y) < 10 * T) comp++;
+      return `<button class="item ${lock ? 'locked' : ''}" data-a="buyType" data-v="${ty.id}" ${lock ? 'disabled' : ''}>
+        <span class="em">${ty.em}</span>
+        <span><span class="t">${nm(ty.id)}</span><br><span class="s">${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span> · ${comp ? comp + ' ' + t('rivalsNear') : t('rivalsNear') + ': ' + t('none')}${lock ? '<br>' + t('unlockAt') + ' ' + fmtK(ty.cost * 0.6) : ''}</span></span>
+        <span class="p" style="color:${S.money >= price ? 'var(--cash)' : 'var(--danger)'}">${fmtK(price)}</span></button>`;
+    }).join('');
+    return { title: `${t('lotFor')} · ${t(l.district)}`, em: '🏗️', body: `<p class="note">${t('chooseBiz')}. Los puntos indican qué tan bien funciona ese negocio en este distrito.</p><div class="list">${items}</div>` };
+  });
+  ACTIONS.buyType = id => {
+    const price = priceOf(id, l.district);
+    if (S.money < price) { sfx('error'); toast(t('cantAfford'), 'bad'); return; }
+    S.money -= price;
+    const b = newBiz(l, id, price);
+    l.kind = 'biz'; delete S.lotKinds[l.id]; setLotSolid(l); pushOutOfSolid(); onLotChanged(l);
+    recomputeCompetition();
+    sfx('buy'); vibrate(30);
+    toast(`${t('bought')} ${bizName(b)}!`, 'good');
+    for (let i = 0; i < 18; i++) spawnParticle('coin', l.door.x, l.door.y - 20);
+    openManage(b);
+  };
+}
+function newBiz(l, type, paid, extra = {}) {
+  const b = Object.assign({ lot: l.id, type, level: 1, staff: 0, manager: false, price: 1, rep: 50, cash: 0, arr: 0, tok: 0, queue: [], todayRev: 0, todaySales: 0, yRev: 0, yProfit: 0, missed: 0, lostFull: 0, paid }, extra);
+  S.biz.push(b); return b;
+}
+function pushOutOfSolid() { // si el jugador quedó dentro de un edificio nuevo, lo saca a la banqueta
+  if (!hitBox(P.x, P.y, 7)) return;
+  const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y;
+  if (ctxLot) { P.x = ctxLot.door.x; P.y = ctxLot.door.y; }
+}
+// --- Gestionar negocio ---
+let sellArm = false;
+function openManage(b) {
+  sellArm = false;
+  const l = lotOf(b), ty = TYPE[b.type];
+  openSheet('manage', () => {
+    const ms = maxStaff(b), up = b.level < 5 ? upgradeCost(ty, b.level) : 0, here = playerNearDoor(l, 110);
+    const dem = demandOf(b, false), cap = capacityOf(b);
+    const sellV = Math.round(invested(b) * 0.6);
+    const body = `
+      <div class="stats">
+        <div class="stat"><span>${t('register')}</span><b style="color:var(--cash)">${fmt(b.cash)}</b></div>
+        <div class="stat"><span>${t('today')}</span><b>${fmt(b.todayRev)}</b></div>
+        <div class="stat"><span>${t('yesterday')}</span><b style="color:${b.yProfit >= 0 ? 'var(--cash)' : 'var(--danger)'}">${fmt(b.yProfit)}</b></div>
+        <div class="stat"><span>${t('rep')}</span><b>${Math.round(b.rep)}</b><div class="bar"><i style="width:${b.rep}%"></i></div></div>
+      </div>
+      <p class="note">${t('demandNow')}: <b>${dem.toFixed(1)}</b> ${t('perHour')} · ${t('capacity')}: <b>${cap.toFixed(1)}</b> · ${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span> · ${(compCache.get(b.lot) || { n: 0 }).n} ${t('rivalsNear')}</p>
+      ${b.staff === 0 ? `<p class="note" style="color:#ffe2a6">${t('closedNote')}</p>` : ''}
+      ${!b.manager && b.cash >= regCap(b) ? `<p class="note" style="color:var(--danger)">${t('fullNote')}</p>` : ''}
+      ${here && b.cash >= 1 ? `<button class="btn cash" data-a="collect">${t('collect')} ${fmt(b.cash)}</button>` : ''}
+      <div class="lbl">${t('staff')} · ${b.staff}/${ms} · ${fmt(ty.wage)}${t('perDay')} c/u</div>
+      <div class="row"><button class="btn" data-a="fire" ${b.staff ? '' : 'disabled'}>− ${t('fire')}</button><button class="btn primary" data-a="hire" ${b.staff < ms ? '' : 'disabled'}>+ ${t('hire')}</button></div>
+      <div class="lbl">${t('manager')} · ${fmt(mgrWage(b))}${t('perDay')}</div>
+      <p class="note">${t('mgrNote')}</p>
+      <button class="btn ${b.manager ? 'danger' : ''}" data-a="mgr">${b.manager ? t('fireMgr') : t('hireMgr')}</button>
+      <div class="lbl">${t('price')} · ${fmt(ty.ticket * [0.8, 1, 1.3][b.price])}</div>
+      <div class="seg">${['low', 'normal', 'high'].map((k, i) => `<button data-a="price" data-v="${i}" class="${b.price === i ? 'on' : ''}">${t(k)}</button>`).join('')}</div>
+      <div class="lbl">${t('level')} ${b.level}/5</div>
+      ${b.level < 5 ? `<button class="btn primary" data-a="upgrade">${t('upgrade')} ${b.level + 1} · ${fmtK(up)}</button>` : `<p class="note">${t('maxLevel')}</p>`}
+      <button class="btn danger" data-a="sell">${sellArm ? t('sellConfirm') + ' ' + fmt(sellV) : t('sell') + ' (' + fmtK(sellV) + ')'}</button>`;
+    return { title: bizName(b), em: ty.em, body };
+  });
+  ACTIONS.collect = () => { collect(b); drawSheet(); };
+  ACTIONS.hire = () => { if (b.staff < maxStaff(b)) { b.staff++; sfx('click'); drawSheet(); } };
+  ACTIONS.fire = () => { if (b.staff > 0) { b.staff--; sfx('click'); drawSheet(); } };
+  ACTIONS.mgr = () => { b.manager = !b.manager; sfx('click'); drawSheet(); };
+  ACTIONS.price = v => { b.price = +v; sfx('click'); drawSheet(); };
+  ACTIONS.upgrade = () => {
+    const c = upgradeCost(ty, b.level); if (S.money < c) { sfx('error'); toast(t('cantAfford'), 'bad'); return; }
+    S.money -= c; b.level++; onLotChanged(l); sfx('buy'); vibrate(30); for (let i = 0; i < 14; i++) spawnParticle('coin', l.door.x, l.door.y - 20); drawSheet();
+  };
+  ACTIONS.sell = () => {
+    if (!sellArm) { sellArm = true; drawSheet(); return; }
+    const v = Math.round(invested(b) * 0.6);
+    S.money += v + b.cash; S.biz.splice(S.biz.indexOf(b), 1);
+    l.kind = 'sale'; S.lotKinds[l.id] = 'sale'; setLotSolid(l); onLotChanged(l); recomputeCompetition(); closeSheet(); sfx('coin');
+  };
+}
+// --- Comprar a la competencia ---
+function openRival(l) {
+  openSheet('rival', () => {
+    const p = buyoutPrice(l), ty = TYPE[l.rival.type];
+    return { title: rivalName(l), em: ty.em, body: `
+      <p class="note">${t('rivalOf')} · ${t(l.district)} · ${t('level')} ${l.rival.level} · ${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span></p>
+      <p class="note">${t('buyoutNote')}</p>
+      <button class="btn primary" data-a="buyout" ${S.money >= p ? '' : 'disabled'}>${t('buyout')} · ${fmtK(p)}</button>
+      ${S.money < p ? `<p class="note" style="color:var(--danger)">${t('cantAfford')}</p>` : ''}` };
+  });
+  ACTIONS.buyout = () => {
+    const p = buyoutPrice(l); if (S.money < p) { sfx('error'); return; }
+    S.money -= p; S.stats.buyouts++;
+    const ty = TYPE[l.rival.type];
+    const b = newBiz(l, ty.id, p, { level: l.rival.level, rep: 62 });
+    b.staff = maxStaff(b);
+    l.kind = 'biz'; onLotChanged(l);
+    recomputeCompetition(); sfx('buy'); vibrate(40);
+    toast(`${t('bought')} ${bizName(b)}!`, 'good'); openManage(b);
+  };
+}
+// --- Teléfono ---
+let phoneTab = 'biz', resetArm = false;
+function openPhone(tab) {
+  if (tab) phoneTab = tab; resetArm = false;
+  openSheet('phone', () => {
+    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
+    let body = '';
+    if (phoneTab === 'biz') {
+      body = `<div class="stats"><div class="stat"><span>${t('cash')}</span><b>${fmtK(S.money)}</b></div><div class="stat"><span>${t('netWorth')}</span><b>${fmtK(netWorth())}</b></div><div class="stat"><span>${t('today')}</span><b>${fmtK(S.biz.reduce((s, b) => s + b.todayRev, 0))}</b></div></div>`;
+      body += S.biz.length ? '<div class="list">' + S.biz.map((b, i) => {
+        const l = lotOf(b), full = !b.manager && b.cash >= regCap(b);
+        return `<div class="item"><span class="em">${TYPE[b.type].em}</span><span><span class="t">${esc(bizName(b))}</span><br><span class="s">${t(l.district)} · ${t('level')} ${b.level} · ${t('staff')} ${b.staff}/${maxStaff(b)}${b.manager ? ' · 👔' : ''}<br>${t('register')}: <b style="color:${full ? 'var(--danger)' : 'var(--cash)'}">${fmt(b.cash)}</b>${full ? ' ⚠️' : ''} · ${t('today')} ${fmt(b.todayRev)}</span></span>
+          <span class="row" style="flex-direction:column;gap:6px"><button class="btn" data-a="go" data-v="${i}" style="min-height:40px;padding:6px 12px">${t('goTo')}</button><button class="btn" data-a="mng" data-v="${i}" style="min-height:40px;padding:6px 12px">⚙️</button></span></div>`;
+      }).join('') + '</div>' : `<p class="note">${t('noBiz')}</p>`;
+    } else if (phoneTab === 'goals') {
+      body = '<div class="list">' + GOALS.map(g => { const d = S.goalsDone.includes(g.id); return `<div class="item ${d ? 'done' : ''}"><span class="em">${d ? '✅' : '🎯'}</span><span class="t">${g[LANG]}</span><span class="p">${g.r ? fmtK(g.r) : '🏆'}</span></div>`; }).join('') + '</div>';
+    } else if (phoneTab === 'bank') {
+      const max = Math.max(0, Math.round(2000 + netWorth() * 0.5 - S.loan));
+      body = `<div class="stats"><div class="stat"><span>${t('loan')}</span><b>${fmt(S.loan)}</b></div><div class="stat"><span>${t('interest')}</span><b>${fmt(S.loan * 0.015)}</b></div></div>
+        <p class="note">${t('loanNote')}</p>
+        <div class="row">${[1000, 5000, 25000].map(v => `<button class="btn" data-a="borrow" data-v="${v}" ${v <= max ? '' : 'disabled'}>${t('borrow')} ${fmtK(v)}</button>`).join('')}</div>
+        <div class="row"><button class="btn primary" data-a="repay" ${S.loan > 0 && S.money > 0 ? '' : 'disabled'}>${t('repay')} ${fmtK(Math.min(S.loan, Math.max(0, S.money)))}</button></div>`;
+    } else if (phoneTab === 'shop') {
+      body = '<div class="list">' + VEHICLES.map(v => { const own = S.vehicles.includes(v.id), cur = S.vehicle === v.id; return `<button class="item" data-a="veh" data-v="${v.id}" ${cur ? 'disabled' : ''}><span class="em">${v.em}</span><span><span class="t">${VNAMES[LANG][v.id]}</span><br><span class="s">${v.speed} km/h·🎮</span></span><span class="p" style="color:${own ? 'var(--gold)' : S.money >= v.cost ? 'var(--cash)' : 'var(--danger)'}">${cur ? '✓' : own ? t('ride') : fmtK(v.cost)}</span></button>`; }).join('') + '</div>';
+    } else {
+      body = `<div class="lbl">Gráficos</div><div class="seg"><button data-a="gfx" data-v="alta" class="${gfxLevel === 'alta' ? 'on' : ''}">Alta (sombras)</button><button data-a="gfx" data-v="baja" class="${gfxLevel === 'baja' ? 'on' : ''}">Baja (más fluido)</button></div>
+        <div class="lbl">${t('sound')}</div><div class="seg"><button data-a="snd" data-v="1" class="${S.sound ? 'on' : ''}">${t('on')}</button><button data-a="snd" data-v="0" class="${!S.sound ? 'on' : ''}">${t('off')}</button></div>
+        <p class="note">${t('keys')}</p>
+        <button class="btn danger" data-a="reset">${resetArm ? t('resetConfirm') : t('reset')}</button>
+        <p class="note">Emprende City · ERAGames</p>`;
+    }
+    return { title: t('phone'), em: '📱', body, tabs };
+  });
+  ACTIONS.tab = v => { phoneTab = v; drawSheet(); sfx('click'); };
+  ACTIONS.go = i => { const b = S.biz[+i]; if (!b) return; const l = lotOf(b); waypoint = { x: l.door.x, y: l.door.y }; closeSheet(); };
+  ACTIONS.mng = i => { const b = S.biz[+i]; if (b) openManage(b); };
+  ACTIONS.borrow = v => { S.loan += +v; S.money += +v; sfx('coin'); drawSheet(); };
+  ACTIONS.repay = () => { const v = Math.min(S.loan, Math.max(0, S.money)); S.loan -= v; S.money -= v; sfx('click'); drawSheet(); };
+  ACTIONS.veh = id => {
+    const v = VEHICLES.find(x => x.id === id);
+    if (!S.vehicles.includes(id)) { if (S.money < v.cost) { sfx('error'); toast(t('cantAfford'), 'bad'); return; } S.money -= v.cost; S.vehicles.push(id); sfx('buy'); }
+    S.vehicle = id; resize(); drawSheet();
+  };
+  ACTIONS.gfx = v => { setGfx(v, true); drawSheet(); };
+  ACTIONS.snd = v => { S.sound = v === '1'; drawSheet(); };
+  ACTIONS.reset = () => { if (!resetArm) { resetArm = true; drawSheet(); return; } try { localStorage.removeItem(SAVE_KEY); } catch (e) { } location.reload(); };
+}
+$('btnPhone').addEventListener('click', () => { audioInit(); sheet && sheet.kind === 'phone' ? closeSheet() : openPhone(); });
+
+// --- Mapa grande ---
+function openMap() {
+  closeSheet(); audioInit(); sfx('click');
+  const scale = Math.max(2, Math.floor(Math.min((viewW - 40) / W, (viewH * 0.7) / H) * 2) / 2);
+  $ui.innerHTML = `<div class="mapwrap" data-close><div class="mapcol"><canvas id="bigmap" width="${W * scale * 2}" height="${H * scale * 2}" style="width:${W * scale}px"></canvas>
+    <div class="legend"><span><i style="background:#fff"></i>${t('legendYou')}</span><span><i style="background:#f04e23"></i>${t('legendBiz')}</span><span><i style="background:#2fbf71"></i>${t('legendSale')}</span><span><i style="background:#8b93a7"></i>${t('legendRival')}</span></div>
+    <p class="note" style="text-align:center">${t('mapTap')}</p>
+    <div class="row">${waypoint ? `<button class="btn" data-a="clearWp">${t('clearWp')}</button>` : ''}<button class="btn primary" data-close>OK</button></div></div></div>`;
+  const c = $('bigmap'), g = c.getContext('2d'), s = scale * 2;
+  g.imageSmoothingEnabled = false; g.drawImage(mapBase, 0, 0, W * s, H * s);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const l of lots) {
+    if (l.kind === 'deco') continue;
+    const b = bizAtLot(l.id), x = (l.tx + 2) * s, y = (l.ty + 2) * s;
+    g.fillStyle = b ? '#f04e23' : l.kind === 'sale' ? '#2fbf71' : '#8b93a7';
+    g.beginPath(); g.arc(x, y, b ? s * 1.9 : s * 1.2, 0, 7); g.fill();
+    if (b || l.kind === 'rival') { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText(TYPE[b ? b.type : l.rival.type].em, x, y + 1); }
+  }
+  g.font = `800 ${Math.round(s * 2.2)}px system-ui`; g.fillStyle = 'rgba(255,255,255,.85)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = s * .6;
+  for (const [d, bx, by] of [['res', 0.5, 0.6], ['centro', 3, 2.5], ['tech', 4, 0.5], ['ind', 1.5, 4.6], ['playa', 6.1, 3.5]]) { const x = bx * BLK * s + BLK * s / 2, y = by * BLK * s + BLK * s / 2; g.strokeText(t(d), x, y); g.fillText(t(d), x, y); }
+  if (waypoint) { g.fillStyle = '#ffb627'; g.fillRect(waypoint.x / T * s - s * 1.5, waypoint.y / T * s - s * 1.5, s * 3, s * 3); }
+  g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = s * .5; g.beginPath(); g.arc(P.x / T * s, P.y / T * s, s * 1.6, 0, 7); g.fill(); g.stroke();
+  c.addEventListener('click', e => {
+    e.stopPropagation();
+    const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W * T, y = (e.clientY - r.top) / r.height * H * T;
+    waypoint = { x, y }; sfx('click'); closeSheet();
+  });
+  ACTIONS.clearWp = () => { waypoint = null; closeSheet(); };
+}
+$('btnMap').addEventListener('click', openMap);
+function rotateCam(d) { cam.yawT += d * Math.PI / 2; sfx('click'); }
+const ZOOMS = [1, 0.72, 1.4];
+function cycleZoom() { const i = ZOOMS.indexOf(cam.zoom); cam.zoom = ZOOMS[(i + 1) % ZOOMS.length]; sfx('click'); }
+$('btnRotL').addEventListener('click', () => { audioInit(); rotateCam(-1); });
+$('btnRotR').addEventListener('click', () => { audioInit(); rotateCam(1); });
+$('btnZoom').addEventListener('click', () => { audioInit(); cycleZoom(); });
+mm.addEventListener('click', openMap);
+
+// =====================================================================
+//  ENTRADA
+// =====================================================================
+const joy = $('joy'), joyK = joy.firstElementChild;
+let joyId = null, joyO = { x: 0, y: 0 };
+cv.addEventListener('pointerdown', e => {
+  audioInit();
+  if (!S || !running || joyId !== null) return;
+  if (e.clientX > viewW * 0.62 && e.pointerType === 'touch') return;
+  joyId = e.pointerId; joyO = { x: e.clientX, y: e.clientY };
+  joy.style.left = e.clientX + 'px'; joy.style.top = e.clientY + 'px'; joy.hidden = false; joyK.style.transform = '';
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { }
+  if (!S.seenHint) { S.seenHint = true; $('hintMove').hidden = true; }
+});
+cv.addEventListener('pointermove', e => {
+  if (e.pointerId !== joyId) return;
+  let dx = e.clientX - joyO.x, dy = e.clientY - joyO.y; const d = Math.hypot(dx, dy), R = 50;
+  if (d > R) { dx = dx / d * R; dy = dy / d * R; }
+  joyK.style.transform = `translate(${dx}px,${dy}px)`;
+  const m = Math.min(1, d / R); input.jx = d > 6 ? dx / R * (m > .3 ? 1 : m / .3) : 0; input.jy = d > 6 ? dy / R * (m > .3 ? 1 : m / .3) : 0;
+});
+function releaseJoy(e) { if (e && e.pointerId !== joyId) return; joyId = null; input.jx = input.jy = 0; joy.hidden = true; }
+cv.addEventListener('pointerup', releaseJoy); cv.addEventListener('pointercancel', releaseJoy); cv.addEventListener('lostpointercapture', releaseJoy);
+function releaseAll() { input.keys.clear(); releaseJoy(); }
+window.addEventListener('blur', releaseAll);
+window.addEventListener('keydown', e => {
+  if (!S || !running) return;
+  if (e.target && e.target.tagName === 'INPUT') return;
+  audioInit();
+  const c = e.code;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
+  if (c === 'Escape') { closeSheet(); return; }
+  if (c === 'KeyQ' && !e.repeat) { rotateCam(-1); return; }
+  if (c === 'KeyR' && !e.repeat) { rotateCam(1); return; }
+  if (c === 'KeyZ' && !e.repeat) { cycleZoom(); return; }
+  if (c === 'KeyM' && !e.repeat) { $ui.querySelector('.mapwrap') ? closeSheet() : openMap(); return; }
+  if ((c === 'KeyP' || c === 'Tab') && !e.repeat) { e.preventDefault(); sheet && sheet.kind === 'phone' ? closeSheet() : openPhone(); return; }
+  if (sheet || $ui.firstChild) return;
+  if (c === 'Space' || c === 'Enter') { if (ctxLot && (bizAtLot(ctxLot.id) || !e.repeat)) doAction($act.dataset.k); return; }
+  if (c === 'KeyE' && !e.repeat) { if (ctxLot) { const b = bizAtLot(ctxLot.id); doAction(b ? 'manage' : $act.dataset.k); } return; }
+  input.keys.add(c);
+  if (!S.seenHint) { S.seenHint = true; $('hintMove').hidden = true; }
+});
+window.addEventListener('keyup', e => input.keys.delete(e.code));
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// =====================================================================
+//  GUARDADO
+// =====================================================================
+function serialize() {
+  S.savedAt = Date.now();
+  return JSON.stringify({ ...S, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0 })) });
+}
+function save(quiet = true) { try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast(t('save')); } catch (e) { } }
+function loadSaved() { try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const d = JSON.parse(raw); return d && d.v === SAVE_VER ? d : null; } catch (e) { return null; } }
+function hydrate(d) {
+  S = Object.assign(newState(d.brand), d);
+  S.stats = Object.assign({ served: 0, collected: 0, buyouts: 0, earned: 0 }, d.stats || {});
+  S.lotKinds = d.lotKinds || {};
+  for (const id in S.lotKinds) { lots[id].kind = S.lotKinds[id]; setLotSolid(lots[id]); }
+  for (const b of S.biz) { b.queue = []; b.arr = 0; b.tok = 0; lots[b.lot].kind = 'biz'; setLotSolid(lots[b.lot]); }
+  // Ganancias mientras no estabas (solo negocios con gerente y personal), máximo 1 hora real
+  const away = Math.min(3600, Math.max(0, (Date.now() - (d.savedAt || Date.now())) / 1000));
+  if (away > 60) {
+    let gain = 0;
+    for (const b of S.biz) if (b.manager && b.staff > 0) gain += Math.max(0, b.yProfit) * (away / (1440 / MIN_PER_SEC)) * 0.5;
+    if (gain >= 1) { S.money += gain; setTimeout(() => toast(`${t('offline')} ${fmt(gain)}`, 'good', 6000), 600); }
+  }
+}
+
+// =====================================================================
+//  BUCLE PRINCIPAL
+// =====================================================================
+let running = false, last = 0, acc = 0, hudT = 0, ctxT = 0, saveT = 0, minimapT = 0;
+const STEP = 1 / 30;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  let dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
+  if (!running) return;
+  now += dt;
+  acc += dt;
+  while (acc >= STEP) { tick(STEP); acc -= STEP; }
+  // Cámara suave que mira un poco hacia donde caminas
+  cam.fx = lerp(cam.fx, P.x + P.vx * 0.3, Math.min(1, dt * 5)); cam.fy = lerp(cam.fy, P.y + P.vy * 0.3, Math.min(1, dt * 5));
+  updateCamera(dt, cam.fx, cam.fy, false);
+  render(dt);
+  autoQuality(dt);
+  hudT -= dt; if (hudT <= 0) { hudT = 0.12; updateHUD(); }
+  minimapT -= dt; if (minimapT <= 0) { minimapT = 0.2; drawMiniMap(); }
+}
+function tick(dt) {
+  const prevH = hour(), prevMin = S.min;
+  S.min += dt * MIN_PER_SEC;
+  const dtMin = dt * MIN_PER_SEC;
+  if (Math.floor(S.min / 1440) > Math.floor(prevMin / 1440)) endOfDay();
+  const h = hour();
+  if (prevH < 7 && h >= 7) morningNews();
+  updatePlayer(dt);
+  simEconomy(dtMin, dt);
+  updatePeds(dt); rivalLife(dt); updateCars(dt); updateBirds(dt); updateParticles(dt);
+  rainK = lerp(rainK, S.weather === 'rain' ? 1 : 0, dt * 0.3);
+  cloudK = lerp(cloudK, S.weather === 'sun' ? 0 : 1, dt * 0.3);
+  if (rnd() < dt * 0.6 && rainK < 0.2) { const tr = pick(trees); if (inRect(tr.x, tr.y, liveRect(0))) spawnParticle('leaf', tr.x, tr.y, 45); }
+  ambientParticles(dt);
+  if (darkness() < 0.3 && rainK < 0.3 && rnd() < dt * 0.05) { const tr = trees.find(tr => dist2(tr.x, tr.y, P.x, P.y) < 250 * 250); if (tr) sfx('chirp'); }
+  // Cobro automático al pasar por la puerta
+  for (const b of S.biz) if (!b.manager && b.cash >= 1 && playerNearDoor(lotOf(b), 46)) collect(b);
+  ctxT -= dt; if (ctxT <= 0) { ctxT = 0.1; findContext(); districtCheck(); checkGoals(); }
+  saveT -= dt; if (saveT <= 0) { saveT = 20; save(); }
+  liveTimer -= dt; if (liveTimer <= 0) { liveTimer = 1; if (sheet && !uiPressing && (sheet.kind === 'manage' || (sheet.kind === 'phone' && phoneTab === 'biz'))) drawSheet(); }
+}
+function ambientParticles(dt) {
+  const view = liveRect(80);
+  for (const p of smokePts) if (inRect(p.x, p.y, view) && rnd() < dt * 2.5) spawnParticle('smoke', p.x, p.y, p.h);
+  if (inRect(FOUNTAIN.x, FOUNTAIN.y, view)) for (let i = 0; i < 2; i++) if (rnd() < 0.7) spawnParticle('drop', FOUNTAIN.x, FOUNTAIN.y, 38);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); releaseAll(); if (AC) AC.suspend(); } else if (AC && S && S.sound) AC.resume(); });
+window.addEventListener('pagehide', () => S && save());
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+
+// ---------- Inicio ----------
+function startGame(state) {
+  S = state;
+  cam.zoom = 1;
+  P.x = S.player.x; P.y = S.player.y;
+  if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
+  resize();
+  cam.fx = P.x; cam.fy = P.y; cam.yaw = cam.yawT = 0;
+  updateCamera(0, cam.fx, cam.fy, false);
+  recomputeCompetition();
+  syncAllLots();
+  perf.t = 0; perf.n = 0; perf.done = false;
+  applyStaticText();
+  ['hud', 'topright', 'actions', 'ticker'].forEach(id => $(id).hidden = false);
+  $ui.innerHTML = '';
+  peds.length = 0; cars.length = 0;
+  setTicker(EVENTS.find(e => e.id === S.event)?.[LANG] || FLAVOR[LANG][0]);
+  for (let i = 0; i < 26; i++) { const k = spawnPlace(700); if (k >= 0) { const p = newPed(k); peds.push(p); } }
+  // Algunos peatones ya visibles al empezar para que la calle no esté vacía
+  const view = liveRect(0);
+  for (let i = 0, n = 0; i < nodes.length && n < 8; i++) if (inRect(nodes[i].x, nodes[i].y, view)) { peds.push(newPed(i)); n++; }
+  for (let i = 0; i < 8; i++) { const c = newCar(); if (c) cars.push(c); }
+  if (!S.seenHint) { const hm = $('hintMove'); hm.textContent = matchMedia('(pointer:coarse)').matches ? t('moveHint') : t('moveHintKb'); hm.hidden = false; }
+  lastDistrict = ''; running = true;
+  if (S.day === 1 && S.min < 7 * 60 + 5 && !S.biz.length) toast(t('welcome') + ' · ' + t('tagline'), 'good', 7000);
+  checkGoals();
+}
+function titleScreen() {
+  const saved = loadSaved();
+  const draw = () => {
+    $ui.innerHTML = `<div class="title"><div class="card">
+      <h1>Emprende<span>City 3D</span></h1>
+      <p>${t('tagline')}</p>
+      ${saved ? `<button class="btn primary" id="tContinue">${t('cont')} · ${t('day')} ${saved.day} · ${fmtK(saved.money)}</button>` : ''}
+      <label class="lbl" for="tBrand" style="margin:0">${t('brandAsk')}</label>
+      <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : 'Emprende')}" autocomplete="off" aria-label="${t('brandAsk')}">
+      <button class="btn ${saved ? '' : 'primary'}" id="tNew">${saved ? t('newGame') : t('play')}</button>
+      <p class="keys">${t('keys')}</p></div></div>`;
+    $('tNew').onclick = () => { audioInit(); const st = newState(($('tBrand').value || 'Emprende').trim().slice(0, 16)); startGame(st); save(); };
+    if (saved) $('tContinue').onclick = () => { audioInit(); hydrate(saved); startGame(S); };
+  };
+  draw();
+  // Fondo animado: la ciudad de noche detrás del título
+  S = newState(''); S.min = 19.6 * 60; P.x = -9999; P.y = -9999; resize();
+  cam.zoom = 1.25; cam.yaw = 0.6;
+  const fx = FOUNTAIN.x, fy = FOUNTAIN.y;
+  updateCamera(0, fx, fy, true); recomputeCompetition(); syncAllLots();
+  for (let i = 0; i < 40; i++) { const k = spawnPlace(600); if (k >= 0) peds.push(newPed(k)); }
+  const demo = ts => {
+    if (running) return;
+    requestAnimationFrame(demo);
+    const dt = 1 / 60; now += dt; S.min += dt * 4;
+    updateCamera(dt, fx, fy, true);
+    updatePeds(dt); updateCars(dt); updateBirds(dt); ambientParticles(dt); updateParticles(dt);
+    render(dt);
+  };
+  requestAnimationFrame(demo);
+}
+// Recarga en caliente del visor de artifacts: conserva la partida
+window.claude?.hot?.snapshot?.(() => (S && running ? serialize() : null));
+
+buildWorld(); buildNodes(); buildMapBase(); initBirds();
+initRenderer(); resize();
+const hotData = window.claude?.hot?.data;
+if (typeof hotData === 'string') { try { const d = JSON.parse(hotData); hydrate(d); startGame(S); } catch (e) { titleScreen(); } }
+else titleScreen();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

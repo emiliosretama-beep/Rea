@@ -2,11 +2,15 @@
 
 Juego de navegador de ERAGames: eres una persona emprendedora en una ciudad viva de mundo abierto. Empiezas con $800, abres un puesto de limonada y lo atiendes tú mismo, contratas empleados y gerentes, y creces hasta tener hoteles y startups.
 
-Es un solo archivo (`index.html`), con Canvas 2D y sin librerías. Funciona sin conexión salvo las fuentes de Google, y si no cargan usa las del sistema.
+Hay dos versiones con la misma simulación y el mismo guardado:
+
+- **`3d.html`** (DEV): ciudad en 3D con Three.js r149, cargado desde jsDelivr, así que necesita internet. Cámara en tercera persona que gira de 90° en 90° y tiene zoom, sombras, edificios combinados por manzana y peatones, autos, árboles y pájaros con instancias. Los textos van en una capa 2D encima. Si los primeros 5 segundos van a menos de 40 FPS, apaga las sombras sola (Ajustes › Gráficos).
+- **`index.html`** (estable): la versión 2D vista desde arriba, con Canvas 2D y sin librerías. Queda como respaldo.
 
 ## Cómo se juega
 
-- **Moverte**: desliza en la mitad izquierda de la pantalla (joystick) o usa WASD o las flechas.
+- **Moverte**: desliza en la mitad izquierda de la pantalla (joystick) o usa WASD o las flechas. En 3D, "arriba" es hacia donde mira la cámara.
+- **Cámara (3D)**: ⟲ ⟳ la giran 90° (o Q/R) y la lupa cambia el zoom (o Z). Si la puerta de tu negocio queda de espaldas, el edificio se vuelve transparente para que veas la fila.
 - **Comprar**: acércate a un terreno con el letrero verde **Se vende** y toca **Comprar**. Cada negocio funciona distinto en cada distrito (puntos de encaje).
 - **Atender**: sin empleados, tu negocio solo vende cuando estás ahí. Los clientes hacen fila y tú los atiendes con el botón verde (o Espacio). Si esperan demasiado se van y baja tu reputación.
 - **Cobrar**: la caja se cobra sola cuando pasas por la puerta. Si se llena, el negocio deja de vender; un gerente la cobra por ti.
