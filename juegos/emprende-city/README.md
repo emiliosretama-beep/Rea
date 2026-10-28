@@ -44,6 +44,7 @@ Hay dos versiones con la misma simulación y el mismo guardado:
 - Simulación con paso fijo de 1/30 s. Un segundo real equivale a 2 minutos de juego, así que un día dura 12 minutos.
 - Peatones y autos solo existen alrededor de la cámara, así que el costo no crece con el tamaño del mapa.
 - Guardado en `localStorage` (`emprende-city:save:v1`, con versión) cada 20 s y al salir; si no se puede guardar, el juego sigue funcionando.
+- **Entrada (3D)**: al abrir el juego sale "ERAGAMES presenta" mientras carga la ciudad (mínimo 2.3 s; se salta tocando la pantalla). No se repite al cambiar de idioma.
 - **Idiomas (3D)**: español e inglés. El idioma se elige en la pantalla de inicio, en la pausa o en Ajustes, y se guarda aparte (`emprende-city:lang`); la primera vez se toma el del teléfono. Cambiarlo guarda la partida y recarga, porque los letreros 3D se dibujan al cargar. Los textos están en las tablas `I18N`, `NAMES`, `CHAT`, `EVENTS` y `GOALS`, y los sueltos en `L('español', 'english')`. La 2D (`index.html`) sigue solo en español.
 - La carpeta y la clave de guardado siguen llamándose `emprende-city` para no perder partidas.
 
@@ -52,4 +53,4 @@ Hay dos versiones con la misma simulación y el mismo guardado:
 - `itch/build.py` arma `itch/tycoon-city-3d-itch-vX.zip` a partir de `3d.html`: `python3 itch/build.py 1.1`.
 - El zip trae `index.html` en la raíz, Three.js r149 y las fuentes en local (`itch/vendor/`, con sus licencias MIT y OFL), así que no necesita internet.
 - `itch/pagina/` tiene la portada y las capturas en inglés (`en/`) y en español (`es/`), y el texto y los ajustes de la página (`pagina-itch.md`).
-- Cada zip se queda en el repo como respaldo: v1.0 (Emprende City, solo español) y v1.1 (Tycoon City 3D, español e inglés).
+- Cada zip se queda en el repo como respaldo: v1.0 (Emprende City, solo español), v1.1 (Tycoon City 3D, español e inglés) y v1.2 (con la entrada de ERAGames).

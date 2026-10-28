@@ -2,7 +2,7 @@
 
 ## Qué subir
 
-- **Archivo**: `../tycoon-city-3d-itch-v1.1.zip` (index.html en la raíz, 335 KB, funciona sin internet).
+- **Archivo**: `../tycoon-city-3d-itch-v1.2.zip` (index.html en la raíz, 336 KB, funciona sin internet).
 - **Portada**: `en/portada.png` (en inglés, para que la entienda cualquiera que busque en itch). La versión en español está en `es/portada.png`.
 - **Capturas**: las 6 `.jpg` de `en/`. Si prefieres mostrar el juego en español, usa las de `es/`; también puedes mezclar 4 en inglés y 2 en español para que se vea que trae los dos idiomas.
 

@@ -151,6 +151,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 #progressCard{background:#0f1a2ee8;border:1px solid #46d98a55;border-radius:12px;padding:6px 10px;width:min(220px,calc(100vw - 180px));font-size:11px;display:grid;gap:4px}#progressCard strong{display:block;margin:4px 0 8px;font-size:13px}#progressCard small{color:var(--cash)}.guide-step{padding:12px;border-radius:12px;background:var(--ink-2);line-height:1.5}
 @media(max-height:620px){#progressCard{display:none}.hud{gap:3px}.title .card{gap:9px;padding:18px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
+/* Entrada de ERAGames: tapa la carga y se va sola (o al tocar) */
+#splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,#1a2a45 0%,#0b1322 70%);transition:opacity .45s ease;cursor:pointer}
+#splash.off{opacity:0;pointer-events:none}
+#splash .sp{display:grid;justify-items:center;gap:12px;animation:spIn .7s cubic-bezier(.2,.8,.2,1) both}
+#splash .sp-logo{font-family:var(--display);font-weight:800;font-size:clamp(52px,16vw,96px);line-height:1;letter-spacing:-.02em;color:#f3efe4}
+#splash .sp-logo b{color:#f04e23}
+#splash .sp-bar{height:4px;width:min(220px,56vw);border-radius:4px;background:#f04e23;transform-origin:left;animation:spBar .9s .25s cubic-bezier(.6,0,.2,1) both}
+#splash small{font:600 13px var(--body,system-ui);letter-spacing:.32em;text-transform:uppercase;color:#9fb0cb;animation:spIn .6s .55s both}
+@keyframes spIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
+@keyframes spBar{from{transform:scaleX(0)}}
 </style>
 </head>
 <body>
@@ -193,6 +203,23 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 <div id="doorFx"></div>
 <div class="ticker" id="ticker" hidden><div class="tag" data-t="news"></div><div class="track" id="tickerTrack"></div></div>
 <div id="ui"></div>
+<div id="splash" role="img" aria-label="ERAGames"><div class="sp"><div class="sp-logo"><b>ERA</b>GAMES</div><div class="sp-bar"></div><small id="splashSub">presenta</small></div></div>
+<script>
+// La entrada de ERAGames va aparte del juego: se quita aunque el motor 3D tarde o no cargue
+(function () {
+  var sp = document.getElementById('splash'), lang = 'es', skip = false;
+  try { lang = localStorage.getItem('emprende-city:lang') || (/^es/i.test(navigator.language || 'es') ? 'es' : 'en'); skip = sessionStorage.getItem('emprende-city:skip-splash') === '1'; sessionStorage.removeItem('emprende-city:skip-splash'); } catch (e) { }
+  document.getElementById('splashSub').textContent = lang === 'en' ? 'presents' : 'presenta';
+  var gone = false, hide = function () { if (gone) return; gone = true; sp.classList.add('off'); setTimeout(function () { sp.remove(); }, 500); };
+  if (skip) { sp.remove(); return; }              // al cambiar de idioma no se repite
+  sp.addEventListener('pointerdown', hide);
+  window.addEventListener('keydown', hide, { once: true });
+  // Se queda mínimo 2.3 s y, cuando el juego terminó de armar la ciudad, 1.4 s más para que se vea completa
+  var t0 = Date.now(), min = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1200 : 2300;
+  window.addEventListener('era-ready', function () { setTimeout(hide, Math.max(1400, min - (Date.now() - t0))); }, { once: true });
+  setTimeout(hide, 8000);                         // por si el juego no avisa (sin motor 3D, error)
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
 <script>
@@ -2812,6 +2839,7 @@ function save(quiet = true) { if (!S || !running) return false; try { localStora
 function setLang(v) {
   if (v === LANG || (v !== 'es' && v !== 'en')) return;
   try { localStorage.setItem(LANG_KEY, v); } catch (e) { toast(L('No se pudo cambiar el idioma.', "Couldn't change the language."), 'bad'); return; }
+  try { sessionStorage.setItem('emprende-city:skip-splash', '1'); } catch (e) { }
   save(); location.reload();
 }
 function loadSaved() {
@@ -3389,6 +3417,7 @@ const hotData = window.claude?.hot?.data;
 if (typeof hotData === 'string') { try { const d = JSON.parse(hotData); hydrate(d); startGame(S); } catch (e) { titleScreen(); } }
 else titleScreen();
 requestAnimationFrame(frame);
+window.dispatchEvent(new Event('era-ready'));   // quita la entrada de ERAGames
 </script>
 </body>
 </html>
