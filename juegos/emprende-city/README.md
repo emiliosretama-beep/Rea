@@ -1,6 +1,6 @@
-# Emprende City
+# Tycoon City 3D (antes Emprende City)
 
-Juego de navegador de ERAGames: eres una persona emprendedora en una ciudad viva de mundo abierto. Empiezas con $800, abres un puesto de limonada y lo atiendes tú mismo, contratas empleados y gerentes, y creces hasta tener hoteles y startups.
+Juego de navegador de ERAGames, en español e inglés: eres una persona emprendedora en una ciudad viva de mundo abierto. Empiezas con $800, abres un puesto de limonada y lo atiendes tú mismo, contratas empleados y gerentes, y creces hasta tener hoteles y startups.
 
 Hay dos versiones con la misma simulación y el mismo guardado:
 
@@ -44,11 +44,12 @@ Hay dos versiones con la misma simulación y el mismo guardado:
 - Simulación con paso fijo de 1/30 s. Un segundo real equivale a 2 minutos de juego, así que un día dura 12 minutos.
 - Peatones y autos solo existen alrededor de la cámara, así que el costo no crece con el tamaño del mapa.
 - Guardado en `localStorage` (`emprende-city:save:v1`, con versión) cada 20 s y al salir; si no se puede guardar, el juego sigue funcionando.
-- Solo en español (es un juego personal): los textos están en las tablas `I18N`, `NAMES`, `CHAT`, `EVENTS` y `GOALS`.
+- **Idiomas (3D)**: español e inglés. El idioma se elige en la pantalla de inicio, en la pausa o en Ajustes, y se guarda aparte (`emprende-city:lang`); la primera vez se toma el del teléfono. Cambiarlo guarda la partida y recarga, porque los letreros 3D se dibujan al cargar. Los textos están en las tablas `I18N`, `NAMES`, `CHAT`, `EVENTS` y `GOALS`, y los sueltos en `L('español', 'english')`. La 2D (`index.html`) sigue solo en español.
+- La carpeta y la clave de guardado siguen llamándose `emprende-city` para no perder partidas.
 
 ## Versión para itch.io
 
-- `itch/build.py` arma `itch/emprende-city-itch-vX.zip` a partir de `3d.html`: `python3 itch/build.py 1.0`.
+- `itch/build.py` arma `itch/tycoon-city-3d-itch-vX.zip` a partir de `3d.html`: `python3 itch/build.py 1.1`.
 - El zip trae `index.html` en la raíz, Three.js r149 y las fuentes en local (`itch/vendor/`, con sus licencias MIT y OFL), así que no necesita internet.
-- `itch/pagina/` tiene la portada, las capturas y el texto y los ajustes de la página (`pagina-itch.md`).
-- Cada zip publicado se queda en el repo como respaldo: v1.0 es la primera versión en itch.io.
+- `itch/pagina/` tiene la portada y las capturas en inglés (`en/`) y en español (`es/`), y el texto y los ajustes de la página (`pagina-itch.md`).
+- Cada zip se queda en el repo como respaldo: v1.0 (Emprende City, solo español) y v1.1 (Tycoon City 3D, español e inglés).

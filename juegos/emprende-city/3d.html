@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Emprende City 3D</title>
+<title>Tycoon City 3D</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -196,15 +196,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
 <script>
-if (!window.THREE) document.getElementById('ui').innerHTML = '<div class="title"><div class="card"><h1>Emprende<span>City</span></h1><p>No se pudo cargar el motor 3D. Revisa tu conexión a internet y vuelve a abrir el juego.</p></div></div>';
+if (!window.THREE) document.getElementById('ui').innerHTML = '<div class="title"><div class="card"><h1>Tycoon<span>City 3D</span></h1><p>' + (/^en/i.test(localStorage.getItem('emprende-city:lang') || (/^es/i.test(navigator.language) ? 'es' : 'en')) ? "Couldn't load the 3D engine. Check your internet connection and open the game again." : 'No se pudo cargar el motor 3D. Revisa tu conexión a internet y vuelve a abrir el juego.') + '</p></div></div>';
 </script>
 <script>
 'use strict';
 /* =====================================================================
-   EMPRENDE CITY — juego de emprendimiento en mundo abierto (ERAGames)
+   TYCOON CITY 3D (antes Emprende City) — juego de emprendimiento en mundo abierto (ERAGames)
    Módulos: datos · i18n · mundo · simulación · vida (NPC, autos, clima)
             · render · entrada · interfaz · guardado
    ===================================================================== */
+
+// ---------- Idioma (español / inglés) ----------
+// Se elige en el título o en Ajustes; cambiarlo guarda y recarga, porque los letreros 3D se dibujan al cargar.
+const LANG_KEY = 'emprende-city:lang';
+const LANG = (() => { try { const v = localStorage.getItem(LANG_KEY); if (v === 'es' || v === 'en') return v; } catch (e) { } return /^es/i.test(navigator.language || 'es') ? 'es' : 'en'; })();
+const L = (es, en) => LANG === 'en' ? en : es;   // texto suelto en los dos idiomas
+const CDN_ENGINE = true;   // itch/build.py lo cambia a false: ahí el motor 3D va dentro del zip
 
 // ---------- Constantes del mundo ----------
 // La ciudad original (6×6 manzanas) se generó primero; los barrios nuevos se agregan al oeste (OX columnas) y al sur
@@ -316,7 +323,7 @@ const I18N = {
     loanNote: 'El préstamo cobra 1.5 % diario a medianoche. Úsalo para crecer más rápido, no para tapar pérdidas.',
     owned: 'Tuyo', ride: 'Usar', sound: 'Sonido', on: 'Sí', off: 'No', reset: 'Borrar partida', resetConfirm: 'Toca otra vez para borrar todo',
     rivalOf: 'Negocio de la competencia', buyout: 'Comprar negocio', buyoutNote: 'Compras el local con su clientela, empleados y reputación.',
-    cantAfford: 'No te alcanza el dinero', bought: '¡Abriste', welcome: 'Bienvenido a Emprende City',
+    cantAfford: 'No te alcanza el dinero', bought: '¡Abriste', welcome: 'Bienvenido a Tycoon City',
     goal: 'Meta', allGoals: '¡Eres el magnate de la ciudad! Sigue creciendo.', reward: 'Premio',
     queue: 'en fila', closed: 'CERRADO', fullReg: 'CAJA LLENA',
     dailyReport: 'Cierre del día', profit: 'Ganancia', wages: 'Sueldos',
@@ -324,68 +331,103 @@ const I18N = {
     legendYou: 'Tú', legendBiz: 'Tus negocios', legendSale: 'En venta', legendRival: 'Competencia',
     unlockAt: 'Requiere patrimonio de', thanks: '¡Gracias!', save: 'Guardado',
     perHour: 'clientes/h', capacity: 'capacidad', demandNow: 'demanda ahora',
-    lostQueue: 'Un cliente se cansó de esperar',
+    lostQueue: 'Un cliente se cansó de esperar', lang: 'Idioma',
+  },
+  en: {
+    map: 'Map', phone: 'Phone', news: 'News', play: 'Play', cont: 'Continue', newGame: 'New game',
+    brandAsk: 'Your brand name', tagline: 'You start with $800 and a dream. Open shops, hire people and take over the city.',
+    keys: 'Keyboard: WASD or arrows to move · E buy or manage · Space serve · F enter or exit · Q/R rotate camera · Z zoom · M map · P phone',
+    moveHint: 'Drag here to walk', moveHintKb: 'Move with WASD or the arrow keys',
+    res: 'Residential', centro: 'Downtown', tech: 'Tech District', ind: 'Industrial Zone', playa: 'Beach', uni: 'University District', puerto: 'Harbor', isla: 'Coral Island', district: 'District',
+    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], day: 'Day',
+    sun: 'Sunny', cloud: 'Cloudy', rain: 'Rain',
+    buy: 'Buy', manage: 'Manage', serve: 'Serve', offer: 'Make offer', collect: 'Collect',
+    forSale: 'For sale', lotFor: 'Lot for sale', chooseBiz: 'Pick a business to open here',
+    fitHere: 'Fit here', rivalsNear: 'rivals nearby', none: 'none', open: 'Open',
+    level: 'Level', staff: 'Staff', rep: 'Reputation', register: 'In register', today: 'Today', yesterday: 'Yesterday (net)',
+    hire: 'Hire', fire: 'Fire', perDay: '/day', manager: 'Manager', hireMgr: 'Hire manager', fireMgr: 'Fire manager',
+    mgrNote: 'A manager collects the register for you and it never fills up.',
+    price: 'Price', low: 'Cheap', normal: 'Normal', high: 'Pricey',
+    upgrade: 'Upgrade to level', maxLevel: 'Max level', sell: 'Sell business', sellConfirm: 'Tap again to sell for',
+    closedNote: 'With no staff it only sells while you are here serving.', fullNote: 'The register is full! Come collect or hire a manager.',
+    goTo: 'Go', businesses: 'Businesses', goals: 'Goals', bank: 'Bank', shop: 'Vehicles', settings: 'Settings',
+    noBiz: 'No businesses yet. Look for a lot with the green “For sale” sign.',
+    netWorth: 'Net worth', cash: 'Cash', loan: 'Loan', borrow: 'Borrow', repay: 'Repay', interest: 'Daily interest',
+    loanNote: 'The loan charges 1.5% daily at midnight. Use it to grow faster, not to cover losses.',
+    owned: 'Owned', ride: 'Use', lang: 'Language', sound: 'Sound', on: 'On', off: 'Off', reset: 'Delete save', resetConfirm: 'Tap again to delete everything',
+    rivalOf: 'Rival business', buyout: 'Buy business', buyoutNote: 'You get the place with its customers, staff and reputation.',
+    cantAfford: 'Not enough money', bought: 'You opened', welcome: 'Welcome to Tycoon City',
+    goal: 'Goal', allGoals: 'You are the city tycoon! Keep growing.', reward: 'Reward',
+    queue: 'in line', closed: 'CLOSED', fullReg: 'FULL',
+    dailyReport: 'End of day', profit: 'Profit', wages: 'Wages',
+    offline: 'While you were away, your managers earned', mapTap: 'Tap the map to set a destination', clearWp: 'Clear destination',
+    legendYou: 'You', legendBiz: 'Your businesses', legendSale: 'For sale', legendRival: 'Rivals',
+    unlockAt: 'Requires net worth of', thanks: 'Thanks!', save: 'Saved',
+    perHour: 'customers/h', capacity: 'capacity', demandNow: 'demand now',
+    lostQueue: 'A customer got tired of waiting',
   }
 };
 const NAMES = {
   es: { lemon: 'Limonada', tacos: 'Tacos', ice: 'Heladería', bakery: 'Panadería', cafe: 'Café', laundry: 'Lavandería', flowers: 'Florería', books: 'Librería', surf: 'Surf Shop', gym: 'Gimnasio', rest: 'Restaurante', garage: 'Taller', pharma: 'Farmacia', bar: 'Bar', club: 'Antro', cinema: 'Cine', gamedev: 'Estudio de Juegos', hotel: 'Hotel', startup: 'Startup', seafood: 'Mariscos', diving: 'Escuela de Buceo', resort: 'Resort' },
+  en: { lemon: 'Lemonade', tacos: 'Tacos', ice: 'Ice Cream', bakery: 'Bakery', cafe: 'Café', laundry: 'Laundromat', flowers: 'Flower Shop', books: 'Bookstore', surf: 'Surf Shop', gym: 'Gym', rest: 'Restaurant', garage: 'Garage', pharma: 'Pharmacy', bar: 'Bar', club: 'Nightclub', cinema: 'Cinema', gamedev: 'Game Studio', hotel: 'Hotel', startup: 'Startup', seafood: 'Seafood', diving: 'Dive School', resort: 'Resort' },
 };
-const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' } };
+const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' }, en: { walk: 'On foot', bike: 'Bicycle', scooter: 'Scooter', car: 'Car' } };
 const RIVAL_OWNERS = ['Doña Lupe', 'Don Toño', 'La Esquina', 'El Güero', 'Los Primos', 'Mar Azul', 'Tía Chela', 'El Rey', 'Luna', 'Pepe', 'Sol', 'Nova'];
 const GOALS = [
-  { id: 'first', r: 150, es: 'Abre tu primer negocio', test: () => S.biz.length >= 1 },
-  { id: 'serve', r: 120, es: 'Atiende a 10 clientes tú mismo', test: () => S.stats.served >= 10 },
-  { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', test: () => S.biz.some(b => b.staff > 0) },
-  { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', test: () => S.stats.collected >= 1000 },
-  { id: 'sleep', r: 150, es: 'Duerme una noche en tu departamento', test: () => (S.stats.nights || 0) >= 1 },
-  { id: 'mission', r: 300, es: 'Haz un encargo para alguien con “!”', test: () => (S.stats.missions || 0) >= 1 },
-  { id: 'three', r: 500, es: 'Ten 3 negocios', test: () => S.biz.length >= 3 },
-  { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', test: () => S.vehicles.includes('bike') },
-  { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', test: () => S.biz.some(b => b.level >= 3) },
-  { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', test: () => netWorth() >= 25000 },
-  { id: 'mgr', r: 2000, es: 'Contrata a un gerente', test: () => S.biz.some(b => b.manager) },
-  { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
-  { id: 'thief', r: 1500, es: 'Atrapa a un ladrón', test: () => (S.stats.caught || 0) >= 1 },
-  { id: 'streak', r: 4000, es: 'Haz una racha de 5 encargos', test: () => (S.streak || 0) >= 5 },
-  { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', test: () => S.stats.buyouts >= 1 },
-  { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', test: () => netWorth() >= 100000 },
-  { id: 'eight', r: 15000, es: 'Ten 8 negocios', test: () => S.biz.length >= 8 },
-  { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
-  { id: 'club', r: 20000, es: 'Abre un antro', test: () => S.biz.some(b => b.type === 'club') },
-  { id: 'hotel', r: 50000, es: 'Abre un hotel', test: () => S.biz.some(b => b.type === 'hotel') },
-  { id: 'loft', r: 5000, es: 'Múdate a un loft (Móvil › Casa)', test: () => homeLv() >= 1 },
-  { id: 'stock', r: 500, es: 'Compra tus primeras acciones (Móvil › Bolsa)', test: () => Object.keys(S.port || {}).length > 0 },
-  { id: 'trader', r: 10000, es: 'Gana $10,000 vendiendo acciones', test: () => (S.stats.tradePL || 0) >= 10000 },
-  { id: 'mansion', r: 100000, es: 'Múdate a una mansión', test: () => homeLv() >= 3 },
-  { id: 'ferry', r: 1000, es: 'Toma el ferry a Isla Coral (muelle de la playa)', test: () => (S.stats.ferry || 0) >= 1 },
-  { id: 'islabiz', r: 20000, es: 'Abre un negocio en Isla Coral', test: () => S.biz.some(b => lotOf(b).district === 'isla') },
-  { id: 'resort', r: 100000, es: 'Abre un resort', test: () => S.biz.some(b => b.type === 'resort') },
-  { id: 'startup', r: 80000, es: 'Funda una startup', test: () => S.biz.some(b => b.type === 'startup') },
-  { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', test: () => netWorth() >= 1e6 },
+  { id: 'first', r: 150, es: 'Abre tu primer negocio', en: 'Open your first business', test: () => S.biz.length >= 1 },
+  { id: 'serve', r: 120, es: 'Atiende a 10 clientes tú mismo', en: 'Serve 10 customers yourself', test: () => S.stats.served >= 10 },
+  { id: 'hire', r: 200, es: 'Contrata a tu primer empleado', en: 'Hire your first employee', test: () => S.biz.some(b => b.staff > 0) },
+  { id: 'collect', r: 300, es: 'Cobra $1,000 de tus cajas', en: 'Collect $1,000 from registers', test: () => S.stats.collected >= 1000 },
+  { id: 'sleep', r: 150, es: 'Duerme una noche en tu departamento', en: 'Sleep one night in your apartment', test: () => (S.stats.nights || 0) >= 1 },
+  { id: 'mission', r: 300, es: 'Haz un encargo para alguien con “!”', en: 'Do a favor for someone with “!”', test: () => (S.stats.missions || 0) >= 1 },
+  { id: 'three', r: 500, es: 'Ten 3 negocios', en: 'Own 3 businesses', test: () => S.biz.length >= 3 },
+  { id: 'bike', r: 300, es: 'Compra una bicicleta (Móvil › Vehículos)', en: 'Buy a bicycle (Phone › Vehicles)', test: () => S.vehicles.includes('bike') },
+  { id: 'lvl3', r: 1500, es: 'Mejora un negocio a nivel 3', en: 'Upgrade a business to level 3', test: () => S.biz.some(b => b.level >= 3) },
+  { id: 'nw25', r: 2500, es: 'Llega a $25,000 de patrimonio', en: 'Reach $25,000 net worth', test: () => netWorth() >= 25000 },
+  { id: 'mgr', r: 2000, es: 'Contrata a un gerente', en: 'Hire a manager', test: () => S.biz.some(b => b.manager) },
+  { id: 'dist3', r: 4000, es: 'Ten negocios en 3 distritos', en: 'Own businesses in 3 districts', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 3 },
+  { id: 'thief', r: 1500, es: 'Atrapa a un ladrón', en: 'Catch a thief', test: () => (S.stats.caught || 0) >= 1 },
+  { id: 'streak', r: 4000, es: 'Haz una racha de 5 encargos', en: 'Do 5 favors in a row', test: () => (S.streak || 0) >= 5 },
+  { id: 'rival', r: 5000, es: 'Compra un negocio de la competencia', en: 'Buy out a rival business', test: () => S.stats.buyouts >= 1 },
+  { id: 'nw100', r: 10000, es: 'Llega a $100,000 de patrimonio', en: 'Reach $100,000 net worth', test: () => netWorth() >= 100000 },
+  { id: 'eight', r: 15000, es: 'Ten 8 negocios', en: 'Own 8 businesses', test: () => S.biz.length >= 8 },
+  { id: 'dist5', r: 30000, es: 'Ten negocios en los 5 distritos', en: 'Own businesses in 5 districts', test: () => new Set(S.biz.map(b => lotOf(b).district)).size >= 5 },
+  { id: 'club', r: 20000, es: 'Abre un antro', en: 'Open a nightclub', test: () => S.biz.some(b => b.type === 'club') },
+  { id: 'hotel', r: 50000, es: 'Abre un hotel', en: 'Open a hotel', test: () => S.biz.some(b => b.type === 'hotel') },
+  { id: 'loft', r: 5000, es: 'Múdate a un loft (Móvil › Casa)', en: 'Move into a loft (Phone › Home)', test: () => homeLv() >= 1 },
+  { id: 'stock', r: 500, es: 'Compra tus primeras acciones (Móvil › Bolsa)', en: 'Buy your first shares (Phone › Stocks)', test: () => Object.keys(S.port || {}).length > 0 },
+  { id: 'trader', r: 10000, es: 'Gana $10,000 vendiendo acciones', en: 'Make $10,000 selling shares', test: () => (S.stats.tradePL || 0) >= 10000 },
+  { id: 'mansion', r: 100000, es: 'Múdate a una mansión', en: 'Move into a mansion', test: () => homeLv() >= 3 },
+  { id: 'ferry', r: 1000, es: 'Toma el ferry a Isla Coral (muelle de la playa)', en: 'Take the ferry to Coral Island (beach pier)', test: () => (S.stats.ferry || 0) >= 1 },
+  { id: 'islabiz', r: 20000, es: 'Abre un negocio en Isla Coral', en: 'Open a business on Coral Island', test: () => S.biz.some(b => lotOf(b).district === 'isla') },
+  { id: 'resort', r: 100000, es: 'Abre un resort', en: 'Open a resort', test: () => S.biz.some(b => b.type === 'resort') },
+  { id: 'startup', r: 80000, es: 'Funda una startup', en: 'Found a startup', test: () => S.biz.some(b => b.type === 'startup') },
+  { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', en: 'Reach $1,000,000 and become a tycoon', test: () => netWorth() >= 1e6 },
 ];
 // Noticias del día: efectos sobre la demanda
 const EVENTS = [
-  { id: 'heat', w: 3, es: 'Ola de calor: limonadas, helados y surf venden como nunca', weather: 'sun', mult: b => TYPE[b.type].tags.includes('heat') ? 1.6 : 1 },
-  { id: 'beachfest', w: 2, es: 'Festival de música en la Playa: +40 % de clientes allí', mult: (b, l) => l.district === 'playa' ? 1.4 : 1 },
-  { id: 'techconf', w: 2, es: 'Gran conferencia tech: el Distrito Tech se llena', mult: (b, l) => l.district === 'tech' ? 1.35 : 1 },
-  { id: 'fair', w: 2, es: 'Feria en el Centro: más gente que nunca', mult: (b, l) => l.district === 'centro' ? 1.3 : 1 },
-  { id: 'rainy', w: 2, es: 'Temporada de lluvias: lavanderías, librerías y cines ganan', weather: 'rain', mult: () => 1 },
-  { id: 'strike', w: 1, es: 'Paro de transporte: menos gente en la calle hoy', mult: () => .8 },
-  { id: 'match', w: 2, es: 'Final de fútbol esta noche: bares y restaurantes a reventar', mult: b => (b.type === 'bar' ? 1.7 : b.type === 'club' ? 1.5 : b.type === 'rest' ? 1.3 : 1) },
-  { id: 'payday', w: 2, es: 'Día de quincena: todos salen a gastar', mult: () => 1.2 },
-  { id: 'startups', w: 1, es: 'Inversionistas llegan a la ciudad: las startups se disparan', mult: b => b.type === 'startup' || b.type === 'gamedev' ? 1.6 : 1 },
-  { id: 'influencer', w: 2, es: 'Un influencer recomendó uno de tus negocios', special: 'influencer', mult: () => 1 },
-  { id: 'inspect', w: 1, es: 'Inspección sanitaria sorpresa en la ciudad', special: 'inspect', mult: () => 1 },
-  { id: 'calm', w: 3, es: 'Día tranquilo en Emprende City', mult: () => 1 },
+  { id: 'heat', w: 3, es: 'Ola de calor: limonadas, helados y surf venden como nunca', en: 'Heat wave: lemonade, ice cream and surf shops are booming', weather: 'sun', mult: b => TYPE[b.type].tags.includes('heat') ? 1.6 : 1 },
+  { id: 'beachfest', w: 2, es: 'Festival de música en la Playa: +40 % de clientes allí', en: 'Music festival at the Beach: +40% customers there', mult: (b, l) => l.district === 'playa' ? 1.4 : 1 },
+  { id: 'techconf', w: 2, es: 'Gran conferencia tech: el Distrito Tech se llena', en: 'Big tech conference: the Tech District is packed', mult: (b, l) => l.district === 'tech' ? 1.35 : 1 },
+  { id: 'fair', w: 2, es: 'Feria en el Centro: más gente que nunca', en: 'Downtown fair: more people than ever', mult: (b, l) => l.district === 'centro' ? 1.3 : 1 },
+  { id: 'rainy', w: 2, es: 'Temporada de lluvias: lavanderías, librerías y cines ganan', en: 'Rainy season: laundromats, bookstores and cinemas win', weather: 'rain', mult: () => 1 },
+  { id: 'strike', w: 1, es: 'Paro de transporte: menos gente en la calle hoy', en: 'Transit strike: fewer people out today', mult: () => .8 },
+  { id: 'match', w: 2, es: 'Final de fútbol esta noche: bares y restaurantes a reventar', en: 'Football final tonight: bars, clubs and restaurants packed', mult: b => (b.type === 'bar' ? 1.7 : b.type === 'club' ? 1.5 : b.type === 'rest' ? 1.3 : 1) },
+  { id: 'payday', w: 2, es: 'Día de quincena: todos salen a gastar', en: 'Payday: everyone is out spending', mult: () => 1.2 },
+  { id: 'startups', w: 1, es: 'Inversionistas llegan a la ciudad: las startups se disparan', en: 'Investors arrive in town: startups soar', mult: b => b.type === 'startup' || b.type === 'gamedev' ? 1.6 : 1 },
+  { id: 'influencer', w: 2, es: 'Un influencer recomendó uno de tus negocios', en: 'An influencer recommended one of your businesses', special: 'influencer', mult: () => 1 },
+  { id: 'inspect', w: 1, es: 'Inspección sanitaria sorpresa en la ciudad', en: 'Surprise health inspection around town', special: 'inspect', mult: () => 1 },
+  { id: 'calm', w: 3, es: 'Día tranquilo en Tycoon City', en: 'A calm day in Tycoon City', mult: () => 1 },
 ];
 const FLAVOR = {
   es: ['El alcalde inaugura un nuevo parque', 'Se buscan emprendedores: la ciudad crece', 'Los gatos del Centro ya tienen fans', 'Récord de turistas en la Playa', 'Abre una nueva ciclovía', 'El tráfico mejora esta semana', 'Fábricas de la Zona Industrial contratan', 'Concierto gratis el sábado'],
+  en: ['Mayor opens a new park', 'Entrepreneurs wanted: the city is growing', 'Downtown cats now have fans', 'Record tourism at the Beach', 'A new bike lane opens', 'Traffic is better this week', 'Industrial Zone factories are hiring', 'Free concert on Saturday'],
 };
 const CHAT = {
   es: { gen: ['Qué bonito día', '¿Dónde comeré hoy?', 'Llego tarde…', 'Necesito café', '¡Me encanta esta ciudad!', '¿Viste las noticias?', 'Voy al parque', 'Uff, qué tráfico'], rain: ['¡Olvidé el paraguas!', 'Qué lluvia…', 'Me voy a mojar'], night: ['¡Vamos al antro!', '¿Vamos por algo?', 'Qué noche', 'A casa a dormir'], heat: ['¡Qué calor!', 'Se me antoja un helado'], boss: ['¡Hola, jefe!', 'Tu negocio es mi favorito', '¡Eres famoso!'], good: ['¡Delicioso!', '¡Volveré!', '¡Gran servicio!', '¡Qué rico!'], pricey: ['Un poco caro…', 'Mmm, caro'], cheap: ['¡Qué barato!', '¡Buen precio!'] },
+  en: { gen: ['What a nice day', 'Where should I eat?', 'Running late…', 'I need coffee', 'I love this city!', 'Did you see the news?', 'Off to the park', 'Ugh, traffic'], rain: ['Forgot my umbrella!', 'So much rain…', "I'm getting soaked"], night: ['Club time!', 'Grab a drink?', 'What a night', 'Home to sleep'], heat: ['So hot!', 'I want ice cream'], boss: ['Hi, boss!', 'Your shop is my favorite', "You're famous!"], good: ['Delicious!', "I'll be back!", 'Great service!', 'So good!'], pricey: ['A bit pricey…', 'Hmm, expensive'], cheap: ['So cheap!', 'Good price!'] },
 };
-const LANG = 'es';   // juego personal: solo español
-const t = k => (I18N.es[k] ?? k);
+const t = k => (I18N[LANG][k] ?? I18N.es[k] ?? k);
 const nm = id => NAMES[LANG][id];
 const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
 const fmtK = n => { const a = Math.abs(n); const s = n < 0 ? '-$' : '$'; return a >= 1e6 ? s + (a / 1e6).toFixed(2) + 'M' : a >= 1e4 ? s + (a / 1e3).toFixed(1) + 'k' : fmt(n); };
@@ -551,10 +593,10 @@ function buildWorld() {
 let HOME = null, HOME_SPOTS = [];
 // Niveles de casa: cambian el edificio, el interior y el bono de ventas al despertar
 const HOMES = [
-  { name: 'Departamento', cost: 0, h: 2.3, wall: '#e8d5b5', roof: '#2a9d8f', em: '🏠', mult: 1.05, floor: '#b98a5a', rug: '#9b5de5' },
+  { name: L('Departamento', 'Apartment'), cost: 0, h: 2.3, wall: '#e8d5b5', roof: '#2a9d8f', em: '🏠', mult: 1.05, floor: '#b98a5a', rug: '#9b5de5' },
   { name: 'Loft', cost: 25000, h: 3.3, wall: '#9fb8c9', roof: '#2b2d42', em: '🏢', mult: 1.10, floor: '#c9a97c', rug: '#3a86ff' },
-  { name: 'Casa con alberca', cost: 120000, h: 2.2, wall: '#f2e6d0', roof: '#c65d4b', em: '🏡', mult: 1.15, floor: '#d9c7a4', rug: '#2a9d8f' },
-  { name: 'Mansión', cost: 600000, h: 2.9, wall: '#f7f3ea', roof: '#c9a15a', em: '🏰', mult: 1.25, floor: '#ece8df', rug: '#c9a15a' },
+  { name: L('Casa con alberca', 'House with pool'), cost: 120000, h: 2.2, wall: '#f2e6d0', roof: '#c65d4b', em: '🏡', mult: 1.15, floor: '#d9c7a4', rug: '#2a9d8f' },
+  { name: L('Mansión', 'Mansion'), cost: 600000, h: 2.9, wall: '#f7f3ea', roof: '#c9a15a', em: '🏰', mult: 1.25, floor: '#ece8df', rug: '#c9a15a' },
 ];
 const homeLv = () => (S && S.homeLv) || 0;
 function setHomeFromLevel() { HOME = HOME_SPOTS[homeLv()]; }
@@ -609,7 +651,7 @@ function buildNodes() {
 let S = null;
 function newState(brand) {
   return {
-    v: SAVE_VER, brand: brand || 'Emprende', money: 800, loan: 0,
+    v: SAVE_VER, brand: brand || L('Emprende', 'Tycoon'), money: 800, loan: 0,
     min: 6 * 60 + 56, day: 1,
     player: { x: ((1 + OX) * BLK + 5) * T, y: (2 * BLK + 2) * T + 16 },
     vehicle: 'walk', vehicles: ['walk'],
@@ -631,7 +673,7 @@ function upgradeCost(ty, level) { return Math.round(ty.cost * 0.55 * level); }
 function maxStaff(b) { const ty = TYPE[b.type]; return Math.max(ty.staff + b.level - 1, Math.round(ty.staff * (1 + 0.35 * (b.level - 1)))); }
 function mgrWage(b) { return Math.max(60, TYPE[b.type].wage * 3); }
 function regCap(b) { const ty = TYPE[b.type]; return Math.round(ty.ticket * ty.demand * (1 + 0.35 * (b.level - 1)) * 5); }
-const DJ_MULT = [1, 1.3, 1.65], DJ_NAMES = ['Sin DJ', 'DJ local', 'DJ famoso'];
+const DJ_MULT = [1, 1.3, 1.65], DJ_NAMES = L(['Sin DJ', 'DJ local', 'DJ famoso'], ['No DJ', 'Local DJ', 'Famous DJ']);
 function djCost(b) { return [0, TYPE[b.type].wage * 4, TYPE[b.type].wage * 12][b.dj || 0]; }
 function dailyCost(b) { const ty = TYPE[b.type]; return b.staff * ty.wage + (b.manager ? mgrWage(b) : 0) + ty.upkeep * b.level + djCost(b); }
 const hour = () => (S.min % 1440) / 60;
@@ -746,7 +788,7 @@ function endOfDay() {
   const interest = Math.round(S.loan * 0.015);
   S.money -= wages + interest;
   const dv = S.mkt ? payDividends() : 0;
-  if (dv >= 1) toast(`💵 Dividendos de tus acciones: +${fmt(dv)}`, 'good', 5000);
+  if (dv >= 1) toast(L(`💵 Dividendos de tus acciones: +${fmt(dv)}`, `💵 Stock dividends: +${fmt(dv)}`), 'good', 5000);
   S.startupF = 0.25 + rnd() * 1.9;
   if (S.biz.length) toast(`${t('dailyReport')} ${S.day}: ${t('profit')} ${fmt(rev - wages - interest)} · ${t('wages')} ${fmt(wages)}${interest ? ' · ' + t('interest') + ' ' + fmt(interest) : ''}`, rev - wages - interest >= 0 ? 'good' : 'bad', 6000);
   S.day++;
@@ -780,12 +822,12 @@ function cityGrows() {
       S.lotKinds[l.id] = 'rival'; S.rivals[l.id] = l.rival;
       setLotSolid(l); onLotChanged(l); recomputeCompetition();
       if (!inside && hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; } // adentro de un local no te mueve
-      msgs.push(`Nuevo competidor: ${rivalName(l)} abrió en ${t(l.district)}`); if (S.mkt) bump('CON', 2);
+      msgs.push(L(`Nuevo competidor: ${rivalName(l)} abrió en ${t(l.district)}`, `New rival: ${rivalName(l)} opened in ${t(l.district)}`)); if (S.mkt) bump('CON', 2);
     }
   }
   if (rnd() < 0.35) {
     const rs = lots.filter(l => l.kind === 'rival' && l.rival.level < 4);
-    if (rs.length) { const l = pick(rs); l.rival.level++; S.rivals[l.id] = l.rival; onLotChanged(l); msgs.push(`${rivalName(l)} se amplió a nivel ${l.rival.level}`); }
+    if (rs.length) { const l = pick(rs); l.rival.level++; S.rivals[l.id] = l.rival; onLotChanged(l); msgs.push(L(`${rivalName(l)} se amplió a nivel ${l.rival.level}`, `${rivalName(l)} expanded to level ${l.rival.level}`)); }
   }
   return msgs;
 }
@@ -1200,7 +1242,7 @@ function homeSignMats(lv) {
   if (homeSignCache[lv]) return homeSignCache[lv];
   const HM = HOMES[lv], tex = canvasTex(256, 128, (g) => {
     g.fillStyle = '#3a86ff'; rr(g, 4, 4, 248, 120, 18); g.fill(); g.strokeStyle = '#ffffff'; g.lineWidth = 6; g.stroke();
-    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = '800 30px system-ui, sans-serif'; g.fillText('EN VENTA', 128, 42);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = '800 30px system-ui, sans-serif'; g.fillText(L('EN VENTA', 'FOR SALE'), 128, 42);
     g.font = '700 26px system-ui, sans-serif'; g.fillText(HM.name, 128, 76); g.font = '800 30px system-ui, sans-serif'; g.fillStyle = '#ffd166'; g.fillText(fmtK(HM.cost), 128, 110);
   });
   return (homeSignCache[lv] = new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
@@ -1270,13 +1312,13 @@ function buildGroundTexture() {
 }
 // ---------- Lugares emblemáticos y detalles de la calle ----------
 const LM = { ferris: null, gondolas: [], ringMat: null, beam: null, beamMat: null, ships: [], stadiumGlow: null };
-const ADS = [['ERAGames', '#f04e23', '#ffffff'], ['Born to Rally', '#1d3557', '#ffd166'], ['Topple-Town', '#2a9d8f', '#ffffff'], ['Born to Skate', '#9b5de5', '#ffffff'], ['Emprende City', '#ffb627', '#1b1300']];
+const ADS = [['ERAGames', '#f04e23', '#ffffff'], ['Born to Rally', '#1d3557', '#ffd166'], ['Topple-Town', '#2a9d8f', '#ffffff'], ['Born to Skate', '#9b5de5', '#ffffff'], ['Tycoon City', '#ffb627', '#1b1300']];
 const adMats = ADS.map(([txt, bg, fg]) => null);
 function adMat(i) {
   if (adMats[i]) return adMats[i];
   const [txt, bg, fg] = ADS[i], tex = canvasTex(256, 96, (g) => {
     g.fillStyle = bg; g.fillRect(0, 0, 256, 96); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = '800 34px system-ui, sans-serif'; g.fillText(txt, 128, 44); g.font = '600 15px system-ui, sans-serif'; g.fillText(i === 4 ? 'Tu ciudad, tu imperio' : 'Juégalo en itch.io', 128, 76);
+    g.font = '800 34px system-ui, sans-serif'; g.fillText(txt, 128, 44); g.font = '600 15px system-ui, sans-serif'; g.fillText(i === 4 ? L('Tu ciudad, tu imperio', 'Your city, your empire') : L('Juégalo en itch.io', 'Play it on itch.io'), 128, 76);
   });
   const face = new THREE.MeshLambertMaterial({ map: tex, emissive: '#000000' }), side = lam('#3b4250');
   return (adMats[i] = [side, side, side, side, face, face]);
@@ -1463,10 +1505,10 @@ let nearFerry = null;
 const regionOf = x => x >= (ISX0 - 8) * T ? 'isla' : 'ciudad';
 function takeFerry() {
   if (sleeping || !nearFerry) return;
-  if (S.money < 15) { sfx('error'); toast('El ferry cuesta $15.', 'bad'); return; }
+  if (S.money < 15) { sfx('error'); toast(L('El ferry cuesta $15.', 'The ferry costs $15.'), 'bad'); return; }
   const toIsland = nearFerry === 'A';
   S.money -= 15; S.stats.ferry = (S.stats.ferry || 0) + 1; sleeping = true; releaseAll();
-  const fx = $('sleepFx'); fx.querySelector('span').textContent = toIsland ? '⛴️ Rumbo a Isla Coral…' : '⛴️ De regreso a la ciudad…';
+  const fx = $('sleepFx'); fx.querySelector('span').textContent = toIsland ? L('⛴️ Rumbo a Isla Coral…', '⛴️ Sailing to Coral Island…') : L('⛴️ De regreso a la ciudad…', '⛴️ Back to the city…');
   fx.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => fx.classList.add('on')));
   tone(110, 0.6, 'sawtooth', 0.05); tone(98, 0.6, 'sawtooth', 0.04, 0.05);
   setTimeout(() => {
@@ -2023,8 +2065,8 @@ function enterLot(l) {
   cam.fx = (g.rx0 + g.rx1) / 2; cam.fy = (g.ry0 + g.ry1) / 2; insideK = 1; doorFade(); // corte directo, como al cruzar una puerta
   sfx('door'); vibrate(10);
   const b = bizAtLot(l.id); if (b) collect(b);
-  setText($place, l === HOME ? `${HOMES[homeLv()].em} Tu ${HOMES[homeLv()].name}` : '🚪 ' + (b ? bizName(b) : rivalName(l)));
-  if (l === HOME && !S.stats.nights) toast('Esta es tu casa. De noche (desde las 8 p.m.) toca 😴 Dormir para pasar al día siguiente.', '', 6000);
+  setText($place, l === HOME ? `${HOMES[homeLv()].em} ${L('Tu', 'Your')} ${HOMES[homeLv()].name}` : '🚪 ' + (b ? bizName(b) : rivalName(l)));
+  if (l === HOME && !S.stats.nights) toast(L('Esta es tu casa. De noche (desde las 8 p.m.) toca 😴 Dormir para pasar al día siguiente.', 'This is your home. At night (from 8 p.m.) tap 😴 Sleep to skip to the next day.'), '', 6000);
   // La calle se vuelve a llenar al salir (se quedan el VIP, el ladrón y quien te pidió un favor)
   for (let i = peds.length - 1; i >= 0; i--) if (!['giver', 'follow', 'thief'].includes(peds[i].mode)) peds.splice(i, 1);
   cars.length = 0;
@@ -2233,7 +2275,7 @@ function drawOverlay() {
   if (ctxLot && running && !inside) {
     const l = ctxLot, b = bizAtLot(l.id);
     const hs = HOME_SPOTS.indexOf(l);
-    const label = l === HOME ? `Tu ${HOMES[homeLv()].name}` : hs >= 0 ? (hs > homeLv() ? `${HOMES[hs].name} en venta · ${fmtK(HOMES[hs].cost)}` : `Tu antiguo ${HOMES[hs].name}`) : l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
+    const label = l === HOME ? `${L('Tu', 'Your')} ${HOMES[homeLv()].name}` : hs >= 0 ? (hs > homeLv() ? `${HOMES[hs].name} ${L('en venta', 'for sale')} · ${fmtK(HOMES[hs].cost)}` : L(`Tu antiguo ${HOMES[hs].name}`, `Your old ${HOMES[hs].name}`)) : l.kind === 'sale' ? `${t('lotFor')} · ${t(l.district)}` : b ? `${bizName(b)} · ${t('level')} ${b.level}` : rivalName(l);
     const s = toScreen(l.door.x, l.door.y, 0.1);
     if (s) pill(s[0], s[1] + 34, label, 'rgba(15,26,46,.9)', '#f3efe4', '700 12px system-ui, sans-serif');
   }
@@ -2289,7 +2331,7 @@ const perf = { t: 0, n: 0, done: false };
 function autoQuality(dt) {
   if (perf.done || GFX !== 'auto') return;
   perf.t += dt; perf.n++;
-  if (perf.t > 5) { perf.done = true; const fps = perf.n / perf.t; if (fps < 40 && gfxLevel === 'alta') { setGfx('baja', false); toast('Bajé los gráficos para que el juego vaya fluido (Ajustes › Gráficos)', '', 5000); } }
+  if (perf.t > 5) { perf.done = true; const fps = perf.n / perf.t; if (fps < 40 && gfxLevel === 'alta') { setGfx('baja', false); toast(L('Bajé los gráficos para que el juego vaya fluido (Ajustes › Gráficos)', 'Graphics lowered so the game runs smoothly (Settings › Graphics)'), '', 5000); } }
 }
 
 // ---------- Minimapa ----------
@@ -2381,7 +2423,12 @@ const $money = $('money'), $clock = $('clock'), $place = $('place'), $goal = $('
 const $act = $('btnAct'), $alt = $('btnAlt');
 const textCache = new WeakMap();
 function setText(el, s, html) { if (textCache.get(el) === s) return; textCache.set(el, s); if (html) el.innerHTML = s; else el.textContent = s; }
-function applyStaticText() { document.querySelectorAll('[data-t]').forEach(e => e.textContent = t(e.dataset.t)); document.documentElement.lang = LANG; $('btnMap').setAttribute('aria-label', t('map')); $('btnPhone').setAttribute('aria-label', t('phone')); }
+function applyStaticText() {
+  document.querySelectorAll('[data-t]').forEach(e => e.textContent = t(e.dataset.t)); document.documentElement.lang = LANG;
+  const aria = { btnMap: t('map'), btnPhone: t('phone'), minimap: t('map'), game: L('Ciudad', 'City'), btnGuide: L('Guía', 'Guide'), btnPause: L('Pausar', 'Pause'), btnRotL: L('Girar cámara a la izquierda', 'Rotate camera left'), btnRotR: L('Girar cámara a la derecha', 'Rotate camera right'), btnZoom: L('Cambiar zoom', 'Change zoom') };
+  for (const id in aria) $(id).setAttribute('aria-label', aria[id]);
+  $('btnGuide').textContent = L('? Guía', '? Guide');
+}
 function toast(msg, kind = '', ms = 3500) {
   const box = $('toasts'); const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; box.prepend(el);
   while (box.children.length > 3) box.lastChild.remove();
@@ -2399,13 +2446,13 @@ function updateHUD() {
   updateProgress();
   // Botones de acción contextual
   let main = null, alt = null;
-  if (nearFerry) main = { k: 'ferry', label: nearFerry === 'A' ? 'Ferry a Isla Coral · $15' : 'Ferry a la ciudad · $15', ico: '⛴️' };
-  else if (nearGiver && giver && !S.mission) main = { k: 'talk', label: 'Hablar', ico: '💬' };
+  if (nearFerry) main = { k: 'ferry', label: nearFerry === 'A' ? L('Ferry a Isla Coral · $15', 'Ferry to Coral Island · $15') : L('Ferry a la ciudad · $15', 'Ferry to the city · $15'), ico: '⛴️' };
+  else if (nearGiver && giver && !S.mission) main = { k: 'talk', label: L('Hablar', 'Talk'), ico: '💬' };
   else if (ctxLot) {
     const l = ctxLot, b = bizAtLot(l.id);
     if (l.kind === 'sale') main = { k: 'buy', label: t('buy'), ico: '🏗️' };
-    else if (l === HOME) { if (inside) main = { k: 'sleep', label: canSleep() ? 'Dormir' : 'Dormir (8 p.m.)', ico: '😴', dim: !canSleep() }; }
-    else if (l.kind === 'home' && HOME_SPOTS.indexOf(l) > homeLv()) main = { k: 'homeView', label: 'Ver casa', ico: HOMES[HOME_SPOTS.indexOf(l)].em };
+    else if (l === HOME) { if (inside) main = { k: 'sleep', label: canSleep() ? L('Dormir', 'Sleep') : L('Dormir (8 p.m.)', 'Sleep (8 p.m.)'), ico: '😴', dim: !canSleep() }; }
+    else if (l.kind === 'home' && HOME_SPOTS.indexOf(l) > homeLv()) main = { k: 'homeView', label: L('Ver casa', 'View home'), ico: HOMES[HOME_SPOTS.indexOf(l)].em };
     else if (b) {
       // En tu negocio el botón grande siempre es Atender: así un toque de más nunca abre el menú
       main = { k: 'serve', label: `${t('serve')} (${b.queue.length})`, ico: '🛎️', dim: !b.queue.length };
@@ -2413,16 +2460,16 @@ function updateHUD() {
     } else if (l.kind === 'rival') main = { k: 'rival', label: t('offer'), ico: '🤝' };
   }
   let enter = null;
-  if (inside) enter = { k: 'exit', label: '🚪 Salir' };
-  else if (ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id)) && playerNearDoor(ctxLot, 64)) enter = { k: 'enter', label: '🚪 Entrar' };
+  if (inside) enter = { k: 'exit', label: L('🚪 Salir', '🚪 Exit') };
+  else if (ctxLot && (ctxLot.kind === 'rival' || ctxLot === HOME || bizAtLot(ctxLot.id)) && playerNearDoor(ctxLot, 64)) enter = { k: 'enter', label: L('🚪 Entrar', '🚪 Enter') };
   setBtn($act, main); setBtn($alt, alt); setBtn($('btnEnter'), enter);
   $act.classList.toggle('serve', !!main && main.k === 'serve');
   $act.classList.toggle('dim', !!main && !!main.dim);
   const full = S.biz.some(b => !b.manager && b.cash >= regCap(b));
   $('phoneBadge').hidden = !full;
   const $m = $('mission');
-  if (thief) { $m.hidden = false; $m.className = 'chip mission bad'; setText($m, `🚨 ¡Atrapa al ladrón! · ${fmt(thief.loot)}`); }
-  else if (S.mission) { const m = S.mission, l = lots[m.lot]; $m.hidden = false; $m.className = 'chip mission' + (m.tLeft < 15 ? ' bad' : ''); setText($m, `${m.kind === 'vip' ? '🕴️ VIP a' : '📦'} ${lotLabel(l)} · ${fmtTime(m.tLeft)}`); }
+  if (thief) { $m.hidden = false; $m.className = 'chip mission bad'; setText($m, L(`🚨 ¡Atrapa al ladrón! · ${fmt(thief.loot)}`, `🚨 Catch the thief! · ${fmt(thief.loot)}`)); }
+  else if (S.mission) { const m = S.mission, l = lots[m.lot]; $m.hidden = false; $m.className = 'chip mission' + (m.tLeft < 15 ? ' bad' : ''); setText($m, `${m.kind === 'vip' ? L('🕴️ VIP a', '🕴️ VIP to') : '📦'} ${lotLabel(l)} · ${fmtTime(m.tLeft)}`); }
   else $m.hidden = true;
 }
 function setBtn(el, a) {
@@ -2458,7 +2505,7 @@ function drawSheet() {
   const { title, em, body, tabs, after } = sheet.render();
   const scroll = $ui.querySelector('.body')?.scrollTop || 0;
   $ui.innerHTML = `<div class="scrim" data-close></div><section class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-    <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="Cerrar">✕</button></header>
+    <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="${L('Cerrar', 'Close')}">✕</button></header>
     ${tabs || ''}<div class="body">${body}</div></section>`;
   const bd = $ui.querySelector('.body'); if (bd) bd.scrollTop = scroll;
   if (after) after();
@@ -2488,7 +2535,7 @@ function openBuy(l) {
         <span><span class="t">${nm(ty.id)}</span><br><span class="s">${t('fitHere')} <span class="dots">${fitDots(ty.fit[l.district])}</span> · ${comp ? comp + ' ' + t('rivalsNear') : t('rivalsNear') + ': ' + t('none')}${lock ? '<br>' + t('unlockAt') + ' ' + fmtK(ty.cost * 0.6) : ''}</span></span>
         <span class="p" style="color:${S.money >= price ? 'var(--cash)' : 'var(--danger)'}">${fmtK(price)}</span></button>`;
     }).join('');
-    return { title: `${t('lotFor')} · ${t(l.district)}`, em: '🏗️', body: `<p class="note">${t('chooseBiz')}. Los puntos indican qué tan bien funciona ese negocio en este distrito.</p><div class="list">${items}</div>` };
+    return { title: `${t('lotFor')} · ${t(l.district)}`, em: '🏗️', body: `<p class="note">${t('chooseBiz')}. ${L('Los puntos indican qué tan bien funciona ese negocio en este distrito.', 'The dots show how well that business does in this district.')}</p><div class="list">${items}</div>` };
   });
   ACTIONS.buyType = id => {
     const price = priceOf(id, l.district);
@@ -2532,13 +2579,13 @@ function openManage(b) {
       ${b.staff === 0 ? `<p class="note" style="color:#ffe2a6">${t('closedNote')}</p>` : ''}
       ${!b.manager && b.cash >= regCap(b) ? `<p class="note" style="color:var(--danger)">${t('fullNote')}</p>` : ''}
       ${here && b.cash >= 1 ? `<button class="btn cash" data-a="collect">${t('collect')} ${fmt(b.cash)}</button>` : ''}
-      <div class="lbl">${t('staff')} · ${b.staff}/${ms} · ${fmt(ty.wage)}${t('perDay')} c/u</div>
+      <div class="lbl">${t('staff')} · ${b.staff}/${ms} · ${fmt(ty.wage)}${t('perDay')} ${L('c/u', 'each')}</div>
       <div class="row"><button class="btn" data-a="fire" ${b.staff ? '' : 'disabled'}>− ${t('fire')}</button><button class="btn primary" data-a="hire" ${b.staff < ms ? '' : 'disabled'}>+ ${t('hire')}</button></div>
       <div class="lbl">${t('manager')} · ${fmt(mgrWage(b))}${t('perDay')}</div>
       <p class="note">${t('mgrNote')}</p>
       <button class="btn ${b.manager ? 'danger' : ''}" data-a="mgr">${b.manager ? t('fireMgr') : t('hireMgr')}</button>
-      ${b.type === 'club' ? `<div class="lbl">DJ · ${b.dj ? fmt(djCost(b)) + t('perDay') : 'sin costo'}</div>
-      <p class="note">Un buen DJ llena la pista: el local sube la demanda un 30 % y el famoso un 65 %.</p>
+      ${b.type === 'club' ? `<div class="lbl">DJ · ${b.dj ? fmt(djCost(b)) + t('perDay') : L('sin costo', 'free')}</div>
+      <p class="note">${L('Un buen DJ llena la pista: el local sube la demanda un 30 % y el famoso un 65 %.', 'A good DJ fills the dance floor: a local DJ raises demand 30% and a famous one 65%.')}</p>
       <div class="seg">${DJ_NAMES.map((k, i) => `<button data-a="dj" data-v="${i}" class="${(b.dj || 0) === i ? 'on' : ''}">${k}</button>`).join('')}</div>` : ''}
       <div class="lbl">${t('price')} · ${fmt(ty.ticket * [0.8, 1, 1.3][b.price])}</div>
       <div class="seg">${['low', 'normal', 'high'].map((k, i) => `<button data-a="price" data-v="${i}" class="${b.price === i ? 'on' : ''}">${t(k)}</button>`).join('')}</div>
@@ -2591,10 +2638,10 @@ let phoneTab = 'biz', resetArm = false;
 function openPhone(tab) {
   if (tab) phoneTab = tab; resetArm = false;
   openSheet('phone', () => {
-    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['mkt', 'Bolsa'], ['home', 'Casa'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
+    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['mkt', L('Bolsa', 'Stocks')], ['home', L('Casa', 'Home')], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
     let body = '';
     if (phoneTab === 'biz') {
-      body = `<button class="btn" data-a="home">🏠 Ir a casa</button>`;
+      body = `<button class="btn" data-a="home">${L('🏠 Ir a casa', '🏠 Go home')}</button>`;
       body += `<div class="stats"><div class="stat"><span>${t('cash')}</span><b>${fmtK(S.money)}</b></div><div class="stat"><span>${t('netWorth')}</span><b>${fmtK(netWorth())}</b></div><div class="stat"><span>${t('today')}</span><b>${fmtK(S.biz.reduce((s, b) => s + b.todayRev, 0))}</b></div></div>`;
       body += S.biz.length ? '<div class="list">' + S.biz.map((b, i) => {
         const l = lotOf(b), full = !b.manager && b.cash >= regCap(b);
@@ -2605,11 +2652,11 @@ function openPhone(tab) {
       body = marketTabHTML();
     } else if (phoneTab === 'home') {
       const lv = homeLv(), cur = HOMES[lv], nx = HOMES[lv + 1], pct = h => Math.round((h.mult - 1) * 100);
-      body = `<div class="item"><span class="em">${cur.em}</span><span><span class="t">${cur.name}</span><br><span class="s">Vives aquí. Al despertar: +${pct(cur)} % de ventas hasta las 7 p.m.</span></span><span class="p">✓</span></div>`;
-      body += nx ? `<div class="lbl">Siguiente</div><div class="item"><span class="em">${nx.em}</span><span><span class="t">${nx.name}</span><br><span class="s">Al despertar: +${pct(nx)} % de ventas. Casa nueva por fuera y por dentro.</span></span><span class="p" style="color:${S.money >= nx.cost ? 'var(--cash)' : 'var(--danger)'}">${fmtK(nx.cost)}</span></div>
-        <button class="btn primary" data-a="homeUp" ${S.money >= nx.cost ? '' : 'disabled'}>Mudarme · ${fmtK(nx.cost)}</button>` : '<p class="note">Ya vives en la mejor casa de la ciudad.</p>';
-      body += nx ? `<p class="note">📍 Está en ${t(HOME_SPOTS[lv + 1].district)}. <button class="btn" data-a="seeHome" style="min-height:36px;padding:4px 12px;margin-top:6px">Marcar en el mapa</button></p>` : '';
-      body += `<p class="note">Tu casa actual está en ${t(HOME.district)} y cuenta en tu patrimonio (60 % de lo que pagaste).</p><button class="btn" data-a="home">🏠 Ir a casa</button>`;
+      body = `<div class="item"><span class="em">${cur.em}</span><span><span class="t">${cur.name}</span><br><span class="s">${L(`Vives aquí. Al despertar: +${pct(cur)} % de ventas hasta las 7 p.m.`, `You live here. When you wake up: +${pct(cur)}% sales until 7 p.m.`)}</span></span><span class="p">✓</span></div>`;
+      body += nx ? `<div class="lbl">${L('Siguiente', 'Next')}</div><div class="item"><span class="em">${nx.em}</span><span><span class="t">${nx.name}</span><br><span class="s">${L(`Al despertar: +${pct(nx)} % de ventas. Casa nueva por fuera y por dentro.`, `When you wake up: +${pct(nx)}% sales. A new home inside and out.`)}</span></span><span class="p" style="color:${S.money >= nx.cost ? 'var(--cash)' : 'var(--danger)'}">${fmtK(nx.cost)}</span></div>
+        <button class="btn primary" data-a="homeUp" ${S.money >= nx.cost ? '' : 'disabled'}>${L('Mudarme', 'Move in')} · ${fmtK(nx.cost)}</button>` : `<p class="note">${L('Ya vives en la mejor casa de la ciudad.', 'You already live in the best home in the city.')}</p>`;
+      body += nx ? `<p class="note">📍 ${L('Está en', 'It is in')} ${t(HOME_SPOTS[lv + 1].district)}. <button class="btn" data-a="seeHome" style="min-height:36px;padding:4px 12px;margin-top:6px">${L('Marcar en el mapa', 'Mark on map')}</button></p>` : '';
+      body += `<p class="note">${L(`Tu casa actual está en ${t(HOME.district)} y cuenta en tu patrimonio (60 % de lo que pagaste).`, `Your current home is in ${t(HOME.district)} and counts toward your net worth (60% of what you paid).`)}</p><button class="btn" data-a="home">${L('🏠 Ir a casa', '🏠 Go home')}</button>`;
     } else if (phoneTab === 'goals') {
       body = '<div class="list">' + GOALS.map(g => { const d = S.goalsDone.includes(g.id); return `<div class="item ${d ? 'done' : ''}"><span class="em">${d ? '✅' : '🎯'}</span><span class="t">${g[LANG]}</span><span class="p">${g.r ? fmtK(g.r) : '🏆'}</span></div>`; }).join('') + '</div>';
     } else if (phoneTab === 'bank') {
@@ -2621,12 +2668,13 @@ function openPhone(tab) {
     } else if (phoneTab === 'shop') {
       body = '<div class="list">' + VEHICLES.map(v => { const own = S.vehicles.includes(v.id), cur = S.vehicle === v.id; return `<button class="item" data-a="veh" data-v="${v.id}" ${cur ? 'disabled' : ''}><span class="em">${v.em}</span><span><span class="t">${VNAMES[LANG][v.id]}</span><br><span class="s">${v.speed} km/h·🎮</span></span><span class="p" style="color:${own ? 'var(--gold)' : S.money >= v.cost ? 'var(--cash)' : 'var(--danger)'}">${cur ? '✓' : own ? t('ride') : fmtK(v.cost)}</span></button>`; }).join('') + '</div>';
     } else {
-      body = `<div class="lbl">Gráficos</div><div class="seg"><button data-a="gfx" data-v="alta" class="${gfxLevel === 'alta' ? 'on' : ''}">Alta (sombras)</button><button data-a="gfx" data-v="baja" class="${gfxLevel === 'baja' ? 'on' : ''}">Baja (más fluido)</button></div>
+      body = `<div class="lbl">${t('lang')}</div><div class="seg"><button data-a="lang" data-v="es" class="${LANG === 'es' ? 'on' : ''}" lang="es">Español</button><button data-a="lang" data-v="en" class="${LANG === 'en' ? 'on' : ''}" lang="en">English</button></div>
+        <div class="lbl">${L('Gráficos', 'Graphics')}</div><div class="seg"><button data-a="gfx" data-v="alta" class="${gfxLevel === 'alta' ? 'on' : ''}">${L('Alta (sombras)', 'High (shadows)')}</button><button data-a="gfx" data-v="baja" class="${gfxLevel === 'baja' ? 'on' : ''}">${L('Baja (más fluido)', 'Low (smoother)')}</button></div>
         <div class="lbl">${t('sound')}</div><div class="seg"><button data-a="snd" data-v="1" class="${S.sound ? 'on' : ''}">${t('on')}</button><button data-a="snd" data-v="0" class="${!S.sound ? 'on' : ''}">${t('off')}</button></div>
-        <div class="lbl">Música</div><div class="seg"><button data-a="mus" data-v="1" class="${S.music !== false ? 'on' : ''}">Sí</button><button data-a="mus" data-v="0" class="${S.music === false ? 'on' : ''}">No</button></div>
+        <div class="lbl">${L('Música', 'Music')}</div><div class="seg"><button data-a="mus" data-v="1" class="${S.music !== false ? 'on' : ''}">${t('on')}</button><button data-a="mus" data-v="0" class="${S.music === false ? 'on' : ''}">${t('off')}</button></div>
         <p class="note">${t('keys')}</p>
         <button class="btn danger" data-a="reset">${resetArm ? t('resetConfirm') : t('reset')}</button>
-        <p class="note">Emprende City · ERAGames</p>`;
+        <p class="note">Tycoon City 3D · ERAGames</p>`;
     }
     return { title: t('phone'), em: '📱', body, tabs };
   });
@@ -2640,7 +2688,7 @@ function openPhone(tab) {
     onLotChanged(old); onLotChanged(HOME);
     for (let i = 0; i < 18; i++) spawnParticle('coin', HOME.door.x, HOME.door.y);
     waypoint = { x: HOME.door.x, y: HOME.door.y };
-    toast(`${nx.em} ¡Compraste tu ${nx.name} en ${t(HOME.district)}! Te marqué la ruta para llegar.`, 'good', 6000); sfx('buy'); vibrate(40); drawSheet();
+    toast(L(`${nx.em} ¡Compraste tu ${nx.name} en ${t(HOME.district)}! Te marqué la ruta para llegar.`, `${nx.em} You bought your ${nx.name} in ${t(HOME.district)}! I marked the way there.`), 'good', 6000); sfx('buy'); vibrate(40); drawSheet();
   };
   ACTIONS.seeHome = () => { const l = HOME_SPOTS[homeLv() + 1]; if (l) { waypoint = { x: l.door.x, y: l.door.y }; closeSheet(); } };
   ACTIONS.home = () => { waypoint = { x: HOME.door.x, y: HOME.door.y }; closeSheet(); };
@@ -2665,7 +2713,7 @@ function openMap() {
   closeSheet(); audioInit(); sfx('click');
   const scale = Math.max(2, Math.floor(Math.min((viewW - 40) / W, (viewH * 0.7) / H) * 2) / 2);
   $ui.innerHTML = `<div class="mapwrap" data-close><div class="mapcol"><canvas id="bigmap" width="${W * scale * 2}" height="${H * scale * 2}" style="width:${W * scale}px"></canvas>
-    <div class="legend"><span><i style="background:#fff"></i>${t('legendYou')}</span><span><i style="background:#f04e23"></i>${t('legendBiz')}</span><span><i style="background:#2fbf71"></i>${t('legendSale')}</span><span><i style="background:#8b93a7"></i>${t('legendRival')}</span><span><i style="background:#3a86ff"></i>Tu casa</span></div>
+    <div class="legend"><span><i style="background:#fff"></i>${t('legendYou')}</span><span><i style="background:#f04e23"></i>${t('legendBiz')}</span><span><i style="background:#2fbf71"></i>${t('legendSale')}</span><span><i style="background:#8b93a7"></i>${t('legendRival')}</span><span><i style="background:#3a86ff"></i>${L('Tu casa', 'Your home')}</span></div>
     <p class="note" style="text-align:center">${t('mapTap')}</p>
     <div class="row">${waypoint ? `<button class="btn" data-a="clearWp">${t('clearWp')}</button>` : ''}<button class="btn primary" data-close>OK</button></div></div></div>`;
   const c = $('bigmap'), g = c.getContext('2d'), s = scale * 2;
@@ -2692,7 +2740,7 @@ function openMap() {
   ACTIONS.clearWp = () => { waypoint = null; closeSheet(); };
 }
 $('btnMap').addEventListener('click', openMap);
-function rotateCam(d) { if (inside) { toast('Adentro la cámara se queda de frente para ver todo el local.', '', 2500); return; } cam.yawT += d * Math.PI / 2; sfx('click'); }
+function rotateCam(d) { if (inside) { toast(L('Adentro la cámara se queda de frente para ver todo el local.', 'Indoors the camera stays facing forward so you can see the whole place.'), '', 2500); return; } cam.yawT += d * Math.PI / 2; sfx('click'); }
 const ZOOMS = [1, 0.72, 1.4];
 function cycleZoom() { const i = ZOOMS.indexOf(cam.zoom); cam.zoom = ZOOMS[(i + 1) % ZOOMS.length]; sfx('click'); }
 $('btnRotL').addEventListener('click', () => { audioInit(); rotateCam(-1); });
@@ -2759,7 +2807,13 @@ function serialize() {
   const player = inside ? { x: inside.l.door.x, y: inside.l.door.y } : { x: P.x, y: P.y };
   return JSON.stringify({ ...S, player, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0, colT: undefined })) });
 }
-function save(quiet = true) { if (!S || !running) return false; try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast('Partida guardada', 'good'); return true; } catch (e) { if (!quiet) toast('No se pudo guardar. Revisa el almacenamiento del navegador.', 'bad'); return false; } }
+function save(quiet = true) { if (!S || !running) return false; try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast(L('Partida guardada', 'Game saved'), 'good'); return true; } catch (e) { if (!quiet) toast(L('No se pudo guardar. Revisa el almacenamiento del navegador.', "Couldn't save. Check your browser storage."), 'bad'); return false; } }
+// Cambiar de idioma: guarda la partida y recarga, así todo (letreros 3D incluidos) sale en el idioma nuevo
+function setLang(v) {
+  if (v === LANG || (v !== 'es' && v !== 'en')) return;
+  try { localStorage.setItem(LANG_KEY, v); } catch (e) { toast(L('No se pudo cambiar el idioma.', "Couldn't change the language."), 'bad'); return; }
+  save(); location.reload();
+}
 function loadSaved() {
   try {
     const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null;
@@ -2830,7 +2884,7 @@ function tick(dt) {
   // Cobro automático al pasar por la puerta
   // (como máximo cada 2.5 s: con muchas ventas no se llena la pantalla de monedas)
   for (const b of S.biz) if (!b.manager && b.cash >= 1 && !(S.min - (b.colT ?? -99) < 5) && playerNearDoor(lotOf(b), 46)) { b.colT = S.min; collect(b); }
-  if (hour() >= 22 && S.hintNight !== S.day && !(inside && inside.home)) { S.hintNight = S.day; toast('🌙 Ya es tarde. Ve a tu departamento a dormir (Móvil › 🏠 Ir a casa).', '', 6000); }
+  if (hour() >= 22 && S.hintNight !== S.day && !(inside && inside.home)) { S.hintNight = S.day; toast(L('🌙 Ya es tarde. Ve a tu casa a dormir (Móvil › 🏠 Ir a casa).', "🌙 It's late. Go home to sleep (Phone › 🏠 Go home)."), '', 6000); }
   ctxT -= dt; if (ctxT <= 0) { ctxT = 0.1; findContext(); districtCheck(); checkGoals(); }
   saveT -= dt; if (saveT <= 0) { saveT = 20; save(); }
   liveTimer -= dt; if (liveTimer <= 0) { liveTimer = 1; if (sheet && !uiPressing && (sheet.kind === 'manage' || sheet.kind === 'stock' || (sheet.kind === 'phone' && phoneTab === 'mkt') || (sheet.kind === 'phone' && phoneTab === 'biz'))) drawSheet(); }
@@ -2852,7 +2906,7 @@ let giver = null, thief = null, follower = null, nearGiver = false, giverT = 20;
 const roundR = v => Math.max(5, Math.round(v / 5) * 5);
 const fmtTime = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 function missionScale() { return clamp(Math.sqrt(Math.max(1, netWorth()) / 5000), 1, 15); }  // los encargos crecen con tu imperio
-function lotLabel(l) { const b = bizAtLot(l.id); return b ? bizName(b) : l.kind === 'rival' ? rivalName(l) : `el terreno en venta (${t(l.district)})`; }
+function lotLabel(l) { const b = bizAtLot(l.id); return b ? bizName(b) : l.kind === 'rival' ? rivalName(l) : L(`el terreno en venta (${t(l.district)})`, `the lot for sale (${t(l.district)})`); }
 function removePed(p) { const i = peds.indexOf(p); if (i >= 0) peds.splice(i, 1); }
 function spawnGiver() {
   const view = liveRect(-40), cand = [];
@@ -2871,7 +2925,7 @@ function spawnGiver() {
     p.offer = { kind: 'deliver', lot: l.id, reward: roundR((40 + d * 0.12) * missionScale()), time: Math.round(d / 95 + 20) };
   }
   peds.push(p); giver = p;
-  say(p, '¡Oye! ¿Me ayudas?');
+  say(p, L('¡Oye! ¿Me ayudas?', 'Hey! Can you help me?'));
 }
 function talkToGiver() {
   if (!giver || S.mission) return;
@@ -2879,17 +2933,17 @@ function talkToGiver() {
   const meters = Math.round(Math.hypot(l.door.x - P.x, l.door.y - P.y) / T * 5);
   const bonus = Math.min(5, S.streak || 0) * 10;
   openSheet('mission', () => ({
-    title: vip ? 'Cliente VIP' : 'Encargo', em: vip ? '🕴️' : '📦', body: `
-    <p class="note" style="font-size:15px;color:var(--paper)">${vip ? `“Me hablaron muy bien de <b>${esc(lotLabel(l))}</b>. ¿Me llevas? Yo te sigo.”` : `“¿Me llevas este paquete a <b>${esc(lotLabel(l))}</b>? Es urgente.”`}</p>
-    <div class="stats"><div class="stat"><span>Pago</span><b style="color:var(--cash)">${fmt(o.reward)}</b></div><div class="stat"><span>Tiempo</span><b>${fmtTime(o.time)}</b></div><div class="stat"><span>Distancia</span><b>${meters} m</b></div></div>
-    ${bonus ? `<p class="note">🔥 Racha de ${S.streak} encargos: +${bonus} % de bono si lo cumples.</p>` : `<p class="note">Encargos seguidos sin fallar dan bono de racha.</p>`}
-    <div class="row"><button class="btn" data-close>No, gracias</button><button class="btn primary" data-a="accept">Aceptar</button></div>`,
+    title: vip ? L('Cliente VIP', 'VIP customer') : L('Encargo', 'Favor'), em: vip ? '🕴️' : '📦', body: `
+    <p class="note" style="font-size:15px;color:var(--paper)">${vip ? L(`“Me hablaron muy bien de <b>${esc(lotLabel(l))}</b>. ¿Me llevas? Yo te sigo.”`, `“I've heard great things about <b>${esc(lotLabel(l))}</b>. Can you take me? I'll follow you.”`) : L(`“¿Me llevas este paquete a <b>${esc(lotLabel(l))}</b>? Es urgente.”`, `“Can you take this package to <b>${esc(lotLabel(l))}</b>? It's urgent.”`)}</p>
+    <div class="stats"><div class="stat"><span>${L('Pago', 'Pay')}</span><b style="color:var(--cash)">${fmt(o.reward)}</b></div><div class="stat"><span>${L('Tiempo', 'Time')}</span><b>${fmtTime(o.time)}</b></div><div class="stat"><span>${L('Distancia', 'Distance')}</span><b>${meters} m</b></div></div>
+    ${bonus ? `<p class="note">${L(`🔥 Racha de ${S.streak} encargos: +${bonus} % de bono si lo cumples.`, `🔥 ${S.streak}-favor streak: +${bonus}% bonus if you make it.`)}</p>` : `<p class="note">${L('Encargos seguidos sin fallar dan bono de racha.', 'Favors in a row without failing give a streak bonus.')}</p>`}
+    <div class="row"><button class="btn" data-close>${L('No, gracias', 'No, thanks')}</button><button class="btn primary" data-a="accept">${L('Aceptar', 'Accept')}</button></div>`,
   }));
   ACTIONS.accept = () => {
     if (!giver) { closeSheet(); return; }
     S.mission = { kind: o.kind, lot: o.lot, reward: o.reward, tLeft: o.time, total: o.time };
-    if (vip) { giver.mode = 'follow'; follower = giver; say(giver, '¡Vamos!'); }
-    else { giver.mode = 'walk'; say(giver, '¡Gracias!'); }
+    if (vip) { giver.mode = 'follow'; follower = giver; say(giver, L('¡Vamos!', "Let's go!")); }
+    else { giver.mode = 'walk'; say(giver, L('¡Gracias!', 'Thanks!')); }
     giver = null; nearGiver = false;
     waypoint = { x: l.door.x, y: l.door.y };
     closeSheet(); sfx('click');
@@ -2900,18 +2954,18 @@ function completeMission() {
   S.money += amt; S.streak = (S.streak || 0) + 1; S.stats.missions = (S.stats.missions || 0) + 1;
   if (m.kind === 'vip') {
     const b = bizAtLot(m.lot); if (b) b.rep = Math.min(100, b.rep + 5);
-    if (follower) { follower.mode = 'toDoor'; follower.tx = l.door.x; follower.ty = l.door.y; follower.after = '¡Excelente lugar!'; }
+    if (follower) { follower.mode = 'toDoor'; follower.tx = l.door.x; follower.ty = l.door.y; follower.after = L('¡Excelente lugar!', 'Great place!'); }
   }
   follower = null; S.mission = null; waypoint = null;
   floatText(P.x, P.y, '+' + fmt(amt), '#ffb627', 1.5);
   for (let i = 0; i < 12; i++) spawnParticle('coin', P.x, P.y);
-  toast(`✅ ${m.kind === 'vip' ? 'Llevaste al VIP' : 'Entrega completada'}: +${fmt(amt)}${S.streak > 1 ? ' · 🔥 racha de ' + S.streak : ''}`, 'good', 4500);
+  toast(`✅ ${m.kind === 'vip' ? L('Llevaste al VIP', 'VIP delivered') : L('Entrega completada', 'Delivery done')}: +${fmt(amt)}${S.streak > 1 ? ' · 🔥 ' + L('racha de ', 'streak ') + S.streak : ''}`, 'good', 4500);
   sfx('mission'); vibrate(30);
 }
 function failMission(reason) {
-  if (follower) { follower.mode = 'walk'; say(follower, 'Mejor me voy solo…'); }
+  if (follower) { follower.mode = 'walk'; say(follower, L('Mejor me voy solo…', "I'll go on my own…")); }
   follower = null; S.mission = null; S.streak = 0; waypoint = null;
-  toast(`❌ ${reason}. Perdiste tu racha.`, 'bad', 4500); sfx('error');
+  toast(`❌ ${reason}. ${L('Perdiste tu racha.', 'You lost your streak.')}`, 'bad', 4500); sfx('error');
 }
 // Robos: solo a negocios sin gerente, con buena caja y cerca de ti (siempre se puede perseguir)
 function robberyCheck(dtMin) {
@@ -2931,8 +2985,8 @@ function startRobbery(b) {
   Object.assign(p, { x: l.door.x, y: l.door.y, mode: 'thief', shirt: '#151515', pants: '#151515', hair: '#151515', sp: 118, loot, biz: b.lot, t: 0, dog: false, umb: null, to: k });
   p.d0 = Math.hypot(l.door.x - P.x, l.door.y - P.y);   // escapa si se aleja mucho desde donde empezó
   peds.push(p); thief = p;
-  toast(`🚨 ¡Asaltaron ${bizName(b)}! Se llevó ${fmt(loot)}. ¡Atrápalo!`, 'bad', 5000);
-  say(p, '¡Jajaja!'); sfx('siren'); vibrate(80);
+  toast(L(`🚨 ¡Asaltaron ${bizName(b)}! Se llevó ${fmt(loot)}. ¡Atrápalo!`, `🚨 ${bizName(b)} got robbed! The thief took ${fmt(loot)}. Catch them!`), 'bad', 5000);
+  say(p, L('¡Jajaja!', 'Hahaha!')); sfx('siren'); vibrate(80);
 }
 function updateStreetPed(p, dt) {
   if (p.mode === 'giver') return;                 // espera parado a que le hables
@@ -2962,7 +3016,7 @@ function streetTick(dt, dtMin) {
     const d = Math.hypot(giver.x - P.x, giver.y - P.y);
     nearGiver = d < 46 && !inside;
     if (d > 1300 || giver.wait > 90) { removePed(giver); giver = null; nearGiver = false; }
-    else if (!giver.bub && rnd() < dt * 0.15) say(giver, pick(['¡Oye! ¿Me ayudas?', '¡Por aquí!', 'Necesito un favor']));
+    else if (!giver.bub && rnd() < dt * 0.15) say(giver, pick(L(['¡Oye! ¿Me ayudas?', '¡Por aquí!', 'Necesito un favor'], ['Hey! Can you help me?', 'Over here!', 'I need a favor'])));
   } else {
     nearGiver = false;
     if (!S.mission && !thief && !inside) { giverT -= dt; if (giverT <= 0) { giverT = 40 + rnd() * 40; spawnGiver(); } }
@@ -2972,9 +3026,9 @@ function streetTick(dt, dtMin) {
   if (m) {
     m.tLeft -= dt;
     const l = lots[m.lot], d = Math.hypot(l.door.x - P.x, l.door.y - P.y);
-    if (m.kind === 'vip' && !follower) failMission('El cliente VIP se perdió');
+    if (m.kind === 'vip' && !follower) failMission(L('El cliente VIP se perdió', 'The VIP customer got lost'));
     else if (d < 50 && (m.kind === 'deliver' || Math.hypot(follower.x - l.door.x, follower.y - l.door.y) < 200)) completeMission();
-    else if (m.tLeft <= 0) failMission('Se acabó el tiempo');
+    else if (m.tLeft <= 0) failMission(L('Se acabó el tiempo', 'Time ran out'));
   }
   // Ladrón
   if (thief) {
@@ -2985,9 +3039,9 @@ function streetTick(dt, dtMin) {
       S.money += thief.loot + bonus; S.stats.caught = (S.stats.caught || 0) + 1; if (b) b.rep = Math.min(100, b.rep + 3);
       floatText(P.x, P.y, '+' + fmt(thief.loot + bonus), '#46d98a', 1.5);
       for (let i = 0; i < 14; i++) spawnParticle('coin', P.x, P.y);
-      toast(`👮 ¡Atrapaste al ladrón! Recuperaste ${fmt(thief.loot)} y la policía te dio ${fmt(bonus)} de recompensa.`, 'good', 5000);
+      toast(L(`👮 ¡Atrapaste al ladrón! Recuperaste ${fmt(thief.loot)} y la policía te dio ${fmt(bonus)} de recompensa.`, `👮 You caught the thief! You got back ${fmt(thief.loot)} and the police gave you a ${fmt(bonus)} reward.`), 'good', 5000);
       sfx('goal'); vibrate(40); endThief();
-    } else if (d > Math.max(1000, thief.d0 + 500) || thief.t > 45) { toast(`💨 El ladrón escapó con ${fmt(thief.loot)}. Un gerente evita los robos.`, 'bad', 5000); endThief(); }
+    } else if (d > Math.max(1000, thief.d0 + 500) || thief.t > 45) { toast(L(`💨 El ladrón escapó con ${fmt(thief.loot)}. Un gerente evita los robos.`, `💨 The thief got away with ${fmt(thief.loot)}. A manager prevents robberies.`), 'bad', 5000); endThief(); }
   } else robberyCheck(dtMin);
 }
 function endThief() {
@@ -3005,15 +3059,15 @@ function clearStreet() { // al dormir o al cargar
 // =====================================================================
 // vol: volatilidad por hora de juego · div: dividendo diario (fracción del precio)
 const STOCKS = [
-  { sym: 'TNV', name: 'TechNova', sector: 'Tecnología', p0: 120, vol: 0.022, div: 0, crypto: false },
-  { sym: 'ERA', name: 'ERAGames', sector: 'Videojuegos', p0: 45, vol: 0.032, div: 0, crypto: false },
-  { sym: 'SOL', name: 'Sol Bebidas', sector: 'Bebidas', p0: 38, vol: 0.012, div: 0.0009, crypto: false },
-  { sym: 'PLY', name: 'Playa Resorts', sector: 'Turismo', p0: 64, vol: 0.016, div: 0.0006, crypto: false },
-  { sym: 'BRG', name: 'Banco Regio', sector: 'Finanzas', p0: 92, vol: 0.011, div: 0.0011, crypto: false },
-  { sym: 'FAR', name: 'FarmaVida', sector: 'Salud', p0: 55, vol: 0.008, div: 0.0010, crypto: false },
-  { sym: 'CON', name: 'Constructora Puerto', sector: 'Construcción', p0: 28, vol: 0.018, div: 0.0004, crypto: false },
-  { sym: 'AUT', name: 'AutoMotriz del Norte', sector: 'Autos', p0: 75, vol: 0.017, div: 0.0005, crypto: false },
-  { sym: 'EMC', name: 'EmprendeCoin', sector: 'Cripto', p0: 1.2, vol: 0.05, div: 0, crypto: true },
+  { sym: 'TNV', name: 'TechNova', sector: L('Tecnología', 'Technology'), p0: 120, vol: 0.022, div: 0, crypto: false },
+  { sym: 'ERA', name: 'ERAGames', sector: L('Videojuegos', 'Video games'), p0: 45, vol: 0.032, div: 0, crypto: false },
+  { sym: 'SOL', name: 'Sol Bebidas', sector: L('Bebidas', 'Beverages'), p0: 38, vol: 0.012, div: 0.0009, crypto: false },
+  { sym: 'PLY', name: 'Playa Resorts', sector: L('Turismo', 'Tourism'), p0: 64, vol: 0.016, div: 0.0006, crypto: false },
+  { sym: 'BRG', name: 'Banco Regio', sector: L('Finanzas', 'Finance'), p0: 92, vol: 0.011, div: 0.0011, crypto: false },
+  { sym: 'FAR', name: 'FarmaVida', sector: L('Salud', 'Health'), p0: 55, vol: 0.008, div: 0.0010, crypto: false },
+  { sym: 'CON', name: 'Constructora Puerto', sector: L('Construcción', 'Construction'), p0: 28, vol: 0.018, div: 0.0004, crypto: false },
+  { sym: 'AUT', name: 'AutoMotriz del Norte', sector: L('Autos', 'Cars'), p0: 75, vol: 0.017, div: 0.0005, crypto: false },
+  { sym: 'EMC', name: 'TycoonCoin', sector: L('Cripto', 'Crypto'), p0: 1.2, vol: 0.05, div: 0, crypto: true },
 ];
 const STOCK = Object.fromEntries(STOCKS.map(s => [s.sym, s]));
 // Cómo mueve cada noticia del día a la bolsa (cambio en %, se aplica como salto)
@@ -3023,15 +3077,15 @@ const NEWS_IMPACT = {
   startups: { TNV: 7, ERA: 6, EMC: 9 }, influencer: {}, inspect: { FAR: -2 }, calm: {},
 };
 const COMPANY_NEWS = [
-  ['TNV', 'TechNova presenta su nuevo teléfono', 8], ['TNV', 'Falla en los servidores de TechNova', -7],
-  ['ERA', 'ERAGames anuncia un juego nuevo', 10], ['ERA', 'Se retrasa el lanzamiento de ERAGames', -9],
-  ['SOL', 'Sol Bebidas lanza un sabor que se agota', 6], ['SOL', 'Sube el precio del azúcar: Sol Bebidas cae', -5],
-  ['PLY', 'Playa Resorts abre un hotel nuevo', 6], ['PLY', 'Cancelaciones en Playa Resorts', -6],
-  ['BRG', 'Banco Regio reporta ganancias récord', 5], ['BRG', 'Multa a Banco Regio', -5],
-  ['FAR', 'FarmaVida aprueba una medicina nueva', 7], ['FAR', 'Retiran un lote de FarmaVida', -6],
-  ['CON', 'Constructora Puerto gana un contrato enorme', 9], ['CON', 'Se cae un andamio de Constructora Puerto', -7],
-  ['AUT', 'AutoMotriz presenta un auto eléctrico', 7], ['AUT', 'Llamado a revisión de AutoMotriz', -7],
-  ['EMC', 'Un famoso compra EmprendeCoin', 18], ['EMC', 'Hackean un exchange de EmprendeCoin', -20],
+  ['TNV', L('TechNova presenta su nuevo teléfono', 'TechNova unveils its new phone'), 8], ['TNV', L('Falla en los servidores de TechNova', 'TechNova servers go down'), -7],
+  ['ERA', L('ERAGames anuncia un juego nuevo', 'ERAGames announces a new game'), 10], ['ERA', L('Se retrasa el lanzamiento de ERAGames', 'ERAGames delays its launch'), -9],
+  ['SOL', L('Sol Bebidas lanza un sabor que se agota', 'Sol Bebidas launches a sold-out flavor'), 6], ['SOL', L('Sube el precio del azúcar: Sol Bebidas cae', 'Sugar prices rise: Sol Bebidas falls'), -5],
+  ['PLY', L('Playa Resorts abre un hotel nuevo', 'Playa Resorts opens a new hotel'), 6], ['PLY', L('Cancelaciones en Playa Resorts', 'Cancellations at Playa Resorts'), -6],
+  ['BRG', L('Banco Regio reporta ganancias récord', 'Banco Regio reports record profits'), 5], ['BRG', L('Multa a Banco Regio', 'Banco Regio gets fined'), -5],
+  ['FAR', L('FarmaVida aprueba una medicina nueva', 'FarmaVida gets a new drug approved'), 7], ['FAR', L('Retiran un lote de FarmaVida', 'FarmaVida recalls a batch'), -6],
+  ['CON', L('Constructora Puerto gana un contrato enorme', 'Constructora Puerto wins a huge contract'), 9], ['CON', L('Se cae un andamio de Constructora Puerto', 'A Constructora Puerto scaffold collapses'), -7],
+  ['AUT', L('AutoMotriz presenta un auto eléctrico', 'AutoMotriz unveils an electric car'), 7], ['AUT', L('Llamado a revisión de AutoMotriz', 'AutoMotriz issues a recall'), -7],
+  ['EMC', L('Un famoso compra EmprendeCoin', 'A celebrity buys TycoonCoin'), 18], ['EMC', L('Hackean un exchange de EmprendeCoin', 'A TycoonCoin exchange gets hacked'), -20],
 ];
 const FEE = 0.0025, HIST_N = 96;   // comisión 0.25 % · historial: 2 días en puntos de 30 min
 function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
@@ -3073,7 +3127,7 @@ function payDividends() {
 }
 function trade(sym, qty) { // qty > 0 compra, < 0 vende
   const s = STOCK[sym], m = S.mkt[sym], pos = S.port[sym] || { q: 0, cost: 0 };
-  if (!marketOpen(s)) { sfx('error'); toast('El mercado está cerrado. Abre de lunes a viernes de 9:00 a 17:00 (la cripto, siempre).', 'bad'); return false; }
+  if (!marketOpen(s)) { sfx('error'); toast(L('El mercado está cerrado. Abre de lunes a viernes de 9:00 a 17:00 (la cripto, siempre).', 'The market is closed. It opens Monday to Friday, 9:00 to 17:00 (crypto, always).'), 'bad'); return false; }
   const gross = Math.abs(qty) * m.p, fee = Math.max(1, gross * FEE);
   if (qty > 0) {
     if (S.money < gross + fee) { sfx('error'); toast(t('cantAfford'), 'bad'); return false; }
@@ -3089,11 +3143,11 @@ function trade(sym, qty) { // qty > 0 compra, < 0 vende
   return true;
 }
 function nextOpenText() {
-  if (marketOpen(STOCKS[0])) return `Abierto · cierra a las 17:00`;
+  if (marketOpen(STOCKS[0])) return L('Abierto · cierra a las 17:00', 'Open · closes at 17:00');
   const wd = weekday(), h = hour();
-  if (wd < 5 && h < 9) return 'Cerrado · abre hoy a las 9:00';
-  if (wd < 4) return 'Cerrado · abre mañana a las 9:00';
-  return 'Cerrado · abre el lunes a las 9:00';
+  if (wd < 5 && h < 9) return L('Cerrado · abre hoy a las 9:00', 'Closed · opens today at 9:00');
+  if (wd < 4) return L('Cerrado · abre mañana a las 9:00', 'Closed · opens tomorrow at 9:00');
+  return L('Cerrado · abre el lunes a las 9:00', 'Closed · opens Monday at 9:00');
 }
 const pctTxt = (a, b) => { const v = (a / b - 1) * 100; return { v, txt: `${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(2)} %`, col: v >= 0 ? 'var(--cash)' : 'var(--danger)' }; };
 const fmtP = p => p >= 10 ? '$' + p.toFixed(2) : '$' + p.toFixed(p >= 1 ? 3 : 4);
@@ -3112,8 +3166,8 @@ function chartSVG(h, w = 440, hh = 180) {
   const area = line + `L${X(h.length - 1).toFixed(1)} ${pad.t + ih}L${pad.l} ${pad.t + ih}Z`;
   const ticks = [y0 + (y1 - y0) * 0.1, (y0 + y1) / 2, y1 - (y1 - y0) * 0.1];
   const grid = ticks.map(v => `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtP(v)}</text>`).join('');
-  const xl = [[0, 'hace 2 días'], [h.length / 2, 'ayer'], [h.length - 1, 'ahora']].map(([i, l], k) => `<text x="${X(Math.min(i, h.length - 1)).toFixed(1)}" y="${hh - 5}" text-anchor="${k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}" font-size="11" fill="var(--muted)">${l}</text>`).join('');
-  return `<svg id="stkChart" viewBox="0 0 ${w} ${hh}" width="100%" style="display:block;touch-action:none" role="img" aria-label="Precio de los últimos 2 días">
+  const xl = [[0, L('hace 2 días', '2 days ago')], [h.length / 2, L('ayer', 'yesterday')], [h.length - 1, L('ahora', 'now')]].map(([i, l], k) => `<text x="${X(Math.min(i, h.length - 1)).toFixed(1)}" y="${hh - 5}" text-anchor="${k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}" font-size="11" fill="var(--muted)">${l}</text>`).join('');
+  return `<svg id="stkChart" viewBox="0 0 ${w} ${hh}" width="100%" style="display:block;touch-action:none" role="img" aria-label="${L('Precio de los últimos 2 días', 'Price over the last 2 days')}">
     ${grid}<path d="${area}" fill="var(--chart)" opacity=".14"/><path d="${line}" fill="none" stroke="var(--chart)" stroke-width="2" stroke-linejoin="round"/>
     <circle cx="${X(h.length - 1).toFixed(1)}" cy="${Y(h[h.length - 1]).toFixed(1)}" r="4" fill="var(--chart)" stroke="var(--ink)" stroke-width="2"/>${xl}
     <g id="stkHover" visibility="hidden"><line id="stkLine" y1="${pad.t}" y2="${pad.t + ih}" stroke="var(--muted)" stroke-width="1"/><circle id="stkDot" r="4.5" fill="var(--chart)" stroke="var(--paper)" stroke-width="2"/>
@@ -3128,7 +3182,7 @@ function bindChart(h) {
   const move = e => {
     const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * w;
     const i = clamp(Math.round((x - pad.l) / iw * (h.length - 1)), 0, h.length - 1), X = pad.l + i / (h.length - 1) * iw;
-    const ago = (h.length - 1 - i) * 30, label = ago === 0 ? 'ahora' : ago < 60 ? `hace ${ago} min` : `hace ${Math.round(ago / 60)} h`;
+    const ago = (h.length - 1 - i) * 30, label = ago === 0 ? L('ahora', 'now') : ago < 60 ? L(`hace ${ago} min`, `${ago} min ago`) : L(`hace ${Math.round(ago / 60)} h`, `${Math.round(ago / 60)} h ago`);
     g.setAttribute('visibility', 'visible');
     svg.querySelector('#stkLine').setAttribute('x1', X); svg.querySelector('#stkLine').setAttribute('x2', X);
     const dot = svg.querySelector('#stkDot'); dot.setAttribute('cx', X); dot.setAttribute('cy', Y(h[i]));
@@ -3148,16 +3202,16 @@ function openStock(sym) {
     const maxBuy = Math.max(0, Math.floor(S.money / (m.p * (1 + FEE)) - 0.0001)), q = qty === 'max' ? maxBuy : qty;
     const pl = pos ? pos.q * m.p - pos.q * pos.cost : 0;
     return { title: `${s.name} (${sym})`, em: s.crypto ? '🪙' : '📈', after: () => bindChart(m.h), body: `
-      <div class="row" style="align-items:baseline;gap:12px"><b style="font-size:30px;font-family:var(--display);font-variant-numeric:tabular-nums">${fmtP(m.p)}</b><b style="color:${ch.col}">${ch.txt} hoy</b></div>
-      <p class="note">${s.sector}${s.div ? ` · dividendo diario ${(s.div * 100).toFixed(2)} %` : ' · sin dividendos'} · ${s.crypto ? 'abierto 24/7' : nextOpenText()}</p>
+      <div class="row" style="align-items:baseline;gap:12px"><b style="font-size:30px;font-family:var(--display);font-variant-numeric:tabular-nums">${fmtP(m.p)}</b><b style="color:${ch.col}">${ch.txt} ${L('hoy', 'today')}</b></div>
+      <p class="note">${s.sector}${s.div ? L(` · dividendo diario ${(s.div * 100).toFixed(2)} %`, ` · daily dividend ${(s.div * 100).toFixed(2)}%`) : L(' · sin dividendos', ' · no dividends')} · ${s.crypto ? L('abierto 24/7', 'open 24/7') : nextOpenText()}</p>
       ${chartSVG(m.h)}
-      <div class="stats"><div class="stat"><span>Tienes</span><b>${pos ? pos.q.toLocaleString('en-US') : 0}</b></div><div class="stat"><span>Costo prom.</span><b>${pos ? fmtP(pos.cost) : '—'}</b></div><div class="stat"><span>Ganancia</span><b style="color:${pl >= 0 ? 'var(--cash)' : 'var(--danger)'}">${pos ? (pl >= 0 ? '▲ ' : '▼ ') + fmt(Math.abs(pl)) : '—'}</b></div></div>
-      <div class="lbl">Cantidad</div>
-      <div class="seg">${[1, 10, 100, 'max'].map(v => `<button data-a="qty" data-v="${v}" class="${qty === v ? 'on' : ''}">${v === 'max' ? 'Máx' : v}</button>`).join('')}</div>
-      <div class="row"><button class="btn cash" data-a="buyStk" ${open && q > 0 && S.money >= q * m.p * (1 + FEE) ? '' : 'disabled'}>Comprar ${q.toLocaleString('en-US')} · ${fmtK(q * m.p)}</button>
-      <button class="btn danger" data-a="sellStk" ${open && pos ? '' : 'disabled'}>Vender ${Math.min(pos ? pos.q : 0, qty === 'max' ? Infinity : qty).toLocaleString('en-US')}</button></div>
-      <p class="note">Comisión 0.25 % por operación (mínimo $1). Las noticias de la mañana mueven los precios.</p>
-      <button class="btn" data-a="tab" data-v="mkt">‹ Volver a la bolsa</button>` };
+      <div class="stats"><div class="stat"><span>${L('Tienes', 'You own')}</span><b>${pos ? pos.q.toLocaleString('en-US') : 0}</b></div><div class="stat"><span>${L('Costo prom.', 'Avg. cost')}</span><b>${pos ? fmtP(pos.cost) : '—'}</b></div><div class="stat"><span>${L('Ganancia', 'Profit')}</span><b style="color:${pl >= 0 ? 'var(--cash)' : 'var(--danger)'}">${pos ? (pl >= 0 ? '▲ ' : '▼ ') + fmt(Math.abs(pl)) : '—'}</b></div></div>
+      <div class="lbl">${L('Cantidad', 'Amount')}</div>
+      <div class="seg">${[1, 10, 100, 'max'].map(v => `<button data-a="qty" data-v="${v}" class="${qty === v ? 'on' : ''}">${v === 'max' ? L('Máx', 'Max') : v}</button>`).join('')}</div>
+      <div class="row"><button class="btn cash" data-a="buyStk" ${open && q > 0 && S.money >= q * m.p * (1 + FEE) ? '' : 'disabled'}>${L('Comprar', 'Buy')} ${q.toLocaleString('en-US')} · ${fmtK(q * m.p)}</button>
+      <button class="btn danger" data-a="sellStk" ${open && pos ? '' : 'disabled'}>${L('Vender', 'Sell')} ${Math.min(pos ? pos.q : 0, qty === 'max' ? Infinity : qty).toLocaleString('en-US')}</button></div>
+      <p class="note">${L('Comisión 0.25 % por operación (mínimo $1). Las noticias de la mañana mueven los precios.', '0.25% fee per trade ($1 minimum). Morning news moves the prices.')}</p>
+      <button class="btn" data-a="tab" data-v="mkt">${L('‹ Volver a la bolsa', '‹ Back to stocks')}</button>` };
   });
   ACTIONS.qty = v => { qty = v === 'max' ? 'max' : +v; drawSheet(); };
   ACTIONS.buyStk = () => { const m = S.mkt[sym], q = qty === 'max' ? Math.max(0, Math.floor(S.money / (m.p * (1 + FEE)) - 0.0001)) : qty; if (q > 0 && trade(sym, q)) drawSheet(); };
@@ -3167,11 +3221,11 @@ function openStock(sym) {
 function marketTabHTML() {
   const pv = portfolioValue(); let cost = 0; for (const sym in S.port) cost += S.port[sym].q * S.port[sym].cost;
   const pl = pv - cost;
-  let h = `<div class="stats"><div class="stat"><span>Portafolio</span><b>${fmtK(pv)}</b></div><div class="stat"><span>Ganancia</span><b style="color:${pl >= 0 ? 'var(--cash)' : 'var(--danger)'}">${cost ? (pl >= 0 ? '▲ ' : '▼ ') + fmtK(Math.abs(pl)) : '—'}</b></div><div class="stat"><span>Mercado</span><b style="font-size:13px">${nextOpenText()}</b></div></div>`;
+  let h = `<div class="stats"><div class="stat"><span>${L('Portafolio', 'Portfolio')}</span><b>${fmtK(pv)}</b></div><div class="stat"><span>${L('Ganancia', 'Profit')}</span><b style="color:${pl >= 0 ? 'var(--cash)' : 'var(--danger)'}">${cost ? (pl >= 0 ? '▲ ' : '▼ ') + fmtK(Math.abs(pl)) : '—'}</b></div><div class="stat"><span>${L('Mercado', 'Market')}</span><b style="font-size:13px">${nextOpenText()}</b></div></div>`;
   h += '<div class="list">' + STOCKS.map(s => {
     const m = S.mkt[s.sym], ch = pctTxt(m.p, m.dayOpen), own = S.port[s.sym];
-    return `<button class="item" data-a="stk" data-v="${s.sym}" style="grid-template-columns:1fr auto auto"><span><span class="t">${s.sym} · ${s.name}</span><br><span class="s">${s.sector}${own ? ` · tienes ${own.q.toLocaleString('en-US')}` : ''}</span></span>${sparkSVG(m.h.slice(-32))}<span style="text-align:right"><span class="p">${fmtP(m.p)}</span><br><b style="font-size:12.5px;color:${ch.col}">${ch.txt}</b></span></button>`;
-  }).join('') + '</div><p class="note">El cambio es contra el precio de apertura del día. Las acciones se negocian de lunes a viernes de 9:00 a 17:00; EmprendeCoin, siempre.</p>';
+    return `<button class="item" data-a="stk" data-v="${s.sym}" style="grid-template-columns:1fr auto auto"><span><span class="t">${s.sym} · ${s.name}</span><br><span class="s">${s.sector}${own ? L(` · tienes ${own.q.toLocaleString('en-US')}`, ` · you own ${own.q.toLocaleString('en-US')}`) : ''}</span></span>${sparkSVG(m.h.slice(-32))}<span style="text-align:right"><span class="p">${fmtP(m.p)}</span><br><b style="font-size:12.5px;color:${ch.col}">${ch.txt}</b></span></button>`;
+  }).join('') + `</div><p class="note">${L('El cambio es contra el precio de apertura del día. Las acciones se negocian de lunes a viernes de 9:00 a 17:00; TycoonCoin, siempre.', "Change is against today's opening price. Stocks trade Monday to Friday, 9:00 to 17:00; TycoonCoin, always.")}</p>`;
   return h;
 }
 
@@ -3180,7 +3234,7 @@ let sleeping = false;
 function canSleep() { const h = hour(); return h >= 20 || h < 5; }
 function goSleep() {
   if (sleeping) return;
-  if (!canSleep()) { sfx('error'); toast('Todavía no tienes sueño. Puedes dormir desde las 8 p.m.', '', 3500); return; }
+  if (!canSleep()) { sfx('error'); toast(L('Todavía no tienes sueño. Puedes dormir desde las 8 p.m.', "You're not sleepy yet. You can sleep from 8 p.m."), '', 3500); return; }
   sleeping = true; releaseAll(); closeSheet();
   const fx = $('sleepFx'); fx.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => fx.classList.add('on')));
   sfx('lullaby');
@@ -3189,7 +3243,9 @@ function goSleep() {
     setTimeout(() => {
       fx.classList.remove('on');
       setTimeout(() => { fx.hidden = true; sleeping = false; }, 800);
-      toast(`☀️ Buenos días. Dormiste hasta las 7:00.${S.biz.length ? ' Tus negocios vendieron ' + fmt(earned) + ' durante la noche.' : ''} ⚡ Descansaste: +${Math.round((S.buff.mult - 1) * 100)} % de ventas hasta las 7 p.m.`, 'good', 7000);
+      const boost = Math.round((S.buff.mult - 1) * 100);
+      toast(L(`☀️ Buenos días. Dormiste hasta las 7:00.${S.biz.length ? ' Tus negocios vendieron ' + fmt(earned) + ' durante la noche.' : ''} ⚡ Descansaste: +${boost} % de ventas hasta las 7 p.m.`,
+        `☀️ Good morning. You slept until 7:00.${S.biz.length ? ' Your businesses sold ' + fmt(earned) + ' overnight.' : ''} ⚡ Well rested: +${boost}% sales until 7 p.m.`), 'good', 7000);
       sfx('wake'); save();
     }, 1100);
   }, 1000);
@@ -3210,7 +3266,7 @@ function fastForwardToMorning() {
   const earned0 = S.stats.earned;
   let left = ((7 * 60 - (S.min % 1440)) + 1440) % 1440; if (left < 1) left = 1440;
   advanceMinutes(left);
-  if (S.mission) { S.mission = null; S.streak = 0; toast('El encargo se canceló porque te fuiste a dormir.', '', 4000); }
+  if (S.mission) { S.mission = null; S.streak = 0; toast(L('El encargo se canceló porque te fuiste a dormir.', 'The favor was canceled because you went to sleep.'), '', 4000); }
   clearStreet(); waypoint = null;
   peds.length = 0; cars.length = 0; parts.length = 0; floats.length = 0;
   for (const b of S.biz) b.queue.length = 0;
@@ -3223,39 +3279,41 @@ function fastForwardToMorning() {
 function updateProgress() {
  const next=GOALS.find(g=>!S.goalsDone.includes(g.id)), fill=(S.goalsDone.length/GOALS.length*100)+'%';
  if ($('progressFill').style.width !== fill) $('progressFill').style.width = fill;
- setText($('progressCount'), 'Tu imperio · '+S.goalsDone.length+' / '+GOALS.length+' metas'+(next && next.r ? ' · Premio: '+fmt(next.r):''));
+ setText($('progressCount'), L('Tu imperio · ', 'Your empire · ')+S.goalsDone.length+' / '+GOALS.length+L(' metas', ' goals')+(next && next.r ? ' · '+t('reward')+': '+fmt(next.r):''));
 }
 function openPause(){
  if(!running || sleeping)return;
- openSheet('pause',()=>({title:'Tu ciudad, a tu ritmo',em:'Ⅱ',body:`
- <p class="note">Juego en pausa. El reloj, los encargos y los gastos están detenidos.</p>
- <div class="stats"><div class="stat"><span>Patrimonio</span><b>${fmtK(netWorth())}</b></div><div class="stat"><span>Negocios</span><b>${S.biz.length}</b></div><div class="stat"><span>Atendidos</span><b>${S.stats.served}</b></div></div>
- <button class="btn primary" data-close>Seguir jugando</button><button class="btn cash" data-a="saveNow">Guardar partida ahora</button><button class="btn" data-a="guide">Guía y próximos pasos</button>
- <p class="note">Esc: pausa · H: guía · Guardado automático cada 20 segundos. Necesitas conexión para cargar el motor 3D.</p>`}));
+ openSheet('pause',()=>({title:L('Tu ciudad, a tu ritmo', 'Your city, your pace'),em:'Ⅱ',body:`
+ <p class="note">${L('Juego en pausa. El reloj, los encargos y los gastos están detenidos.', 'Game paused. The clock, favors and expenses are on hold.')}</p>
+ <div class="stats"><div class="stat"><span>${t('netWorth')}</span><b>${fmtK(netWorth())}</b></div><div class="stat"><span>${t('businesses')}</span><b>${S.biz.length}</b></div><div class="stat"><span>${L('Atendidos', 'Served')}</span><b>${S.stats.served}</b></div></div>
+ <button class="btn primary" data-close>${L('Seguir jugando', 'Keep playing')}</button><button class="btn cash" data-a="saveNow">${L('Guardar partida ahora', 'Save game now')}</button><button class="btn" data-a="guide">${L('Guía y próximos pasos', 'Guide and next steps')}</button>
+ <div class="lbl">${t('lang')}</div><div class="seg"><button data-a="lang" data-v="es" class="${LANG === 'es' ? 'on' : ''}" lang="es">Español</button><button data-a="lang" data-v="en" class="${LANG === 'en' ? 'on' : ''}" lang="en">English</button></div>
+ <p class="note">${L('Esc: pausa · H: guía · Guardado automático cada 20 segundos.', 'Esc: pause · H: guide · Autosaves every 20 seconds.')}${CDN_ENGINE ? L(' Necesitas conexión para cargar el motor 3D.', ' You need an internet connection to load the 3D engine.') : ''}</p>`}));
 }
 function openGuide(){
  if(!running || sleeping)return;
- openSheet('guide',()=>({title:'De tu primera venta a un imperio',em:'✦',body:`
- <p class="note">Juego en pausa mientras consultas esta guía.</p>
- <div class="guide-step"><b>01 · Encuentra tu lugar</b><br>Empiezas con $800. Busca un local en venta y abre un puesto de limonada. El barrio cambia el precio y la demanda.</div>
- <div class="guide-step"><b>02 · Atiende y crece</b><br>Entra, atiende a los clientes y recoge el dinero de la caja acercándote a la puerta. Gestiona tu local para contratar personal y subir de nivel.</div>
- <div class="guide-step"><b>03 · Piensa a largo plazo</b><br>Reserva dinero para gastos diarios. Completa metas para ganar premios. Un gerente cobra por ti; dormir en casa te da un bonus de ventas.</div>
- <button class="btn primary" data-a="starterRoute">📍 Buscar un local asequible</button>
- <p class="note">WASD / flechas: caminar · Espacio: acción · E: gestionar · F: entrar / salir · M: mapa · P: móvil · Q / R: cámara · Z: zoom · Esc: pausa. En móvil, arrastra el lado izquierdo para moverte y utiliza los botones de acción.</p>
- <button class="btn" data-close>¡Vamos a emprender!</button>`}));
+ openSheet('guide',()=>({title:L('De tu primera venta a un imperio', 'From your first sale to an empire'),em:'✦',body:`
+ <p class="note">${L('Juego en pausa mientras consultas esta guía.', 'The game is paused while you read this guide.')}</p>
+ <div class="guide-step">${L('<b>01 · Encuentra tu lugar</b><br>Empiezas con $800. Busca un local en venta y abre un puesto de limonada. El barrio cambia el precio y la demanda.', '<b>01 · Find your spot</b><br>You start with $800. Find a lot for sale and open a lemonade stand. The neighborhood changes the price and the demand.')}</div>
+ <div class="guide-step">${L('<b>02 · Atiende y crece</b><br>Entra, atiende a los clientes y recoge el dinero de la caja acercándote a la puerta. Gestiona tu local para contratar personal y subir de nivel.', '<b>02 · Serve and grow</b><br>Go in, serve customers and collect the register by walking up to the door. Manage your place to hire staff and level up.')}</div>
+ <div class="guide-step">${L('<b>03 · Piensa a largo plazo</b><br>Reserva dinero para gastos diarios. Completa metas para ganar premios. Un gerente cobra por ti; dormir en casa te da un bonus de ventas.', '<b>03 · Think long term</b><br>Keep cash for daily costs. Complete goals to earn rewards. A manager collects for you; sleeping at home gives you a sales bonus.')}</div>
+ <button class="btn primary" data-a="starterRoute">${L('📍 Buscar un local asequible', '📍 Find an affordable lot')}</button>
+ <p class="note">${L('WASD / flechas: caminar · Espacio: acción · E: gestionar · F: entrar / salir · M: mapa · P: móvil · Q / R: cámara · Z: zoom · Esc: pausa. En móvil, arrastra el lado izquierdo para moverte y utiliza los botones de acción.', 'WASD / arrows: walk · Space: action · E: manage · F: enter / exit · M: map · P: phone · Q / R: camera · Z: zoom · Esc: pause. On mobile, drag on the left side to move and use the action buttons.')}</p>
+ <button class="btn" data-close>${L('¡Vamos a emprender!', "Let's build an empire!")}</button>`}));
 }
 ACTIONS.guide=openGuide;
 ACTIONS.saveNow=()=>save(false);
 ACTIONS.starterRoute=()=>{
- if(inside){toast('Sal del edificio para buscar un local.','',3500);return;}
- if(S.mission){toast('Termina el encargo antes de cambiar la ruta.','',3500);return;}
+ if(inside){toast(L('Sal del edificio para buscar un local.', 'Leave the building to look for a lot.'),'',3500);return;}
+ if(S.mission){toast(L('Termina el encargo antes de cambiar la ruta.', 'Finish the favor before changing the route.'),'',3500);return;}
  const options=lots.filter(l=>l.kind==='sale' && regionOf(l.door.x)===regionOf(P.x) && priceOf('lemon',l.district)<=S.money);
  options.sort((a,b)=>dist2(a.door.x,a.door.y,P.x,P.y)-dist2(b.door.x,b.door.y,P.x,P.y));
- const l=options[0];if(!l){toast('No hay locales asequibles en esta zona. Haz encargos para reunir dinero.','',5000);return;}
- closeSheet();const cost='Limonada desde '+fmt(priceOf('lemon',l.district))+' · '+t(l.district);
- if(dist2(l.door.x,l.door.y,P.x,P.y)<60*60){toast('¡Tienes uno aquí mismo! Pulsa Comprar. '+cost,'good',6000);return;} // la ruta se borraría al instante
- waypoint={x:l.door.x,y:l.door.y};toast('Sigue la flecha dorada. '+cost,'good',6000);
+ const l=options[0];if(!l){toast(L('No hay locales asequibles en esta zona. Haz encargos para reunir dinero.', 'No affordable lots in this area. Do favors to raise money.'),'',5000);return;}
+ closeSheet();const cost=L('Limonada desde ', 'Lemonade from ')+fmt(priceOf('lemon',l.district))+' · '+t(l.district);
+ if(dist2(l.door.x,l.door.y,P.x,P.y)<60*60){toast(L('¡Tienes uno aquí mismo! Pulsa Comprar. ', 'There is one right here! Tap Buy. ')+cost,'good',6000);return;} // la ruta se borraría al instante
+ waypoint={x:l.door.x,y:l.door.y};toast(L('Sigue la flecha dorada. ', 'Follow the golden arrow. ')+cost,'good',6000);
 };
+ACTIONS.lang = v => setLang(v);
 $('btnGuide').onclick=openGuide;$('btnPause').onclick=openPause;
 
 // ---------- Inicio ----------
@@ -3290,17 +3348,19 @@ function startGame(state) {
   checkGoals();
 }
 function titleScreen() {
+  applyStaticText();
   const saved = loadSaved();
   const draw = () => {
     $ui.innerHTML = `<div class="title"><div class="card">
-      <h1>Emprende<span>City 3D</span></h1>
+      <h1>Tycoon<span>City 3D</span></h1>
+      <div class="seg" role="group" aria-label="${t('lang')}"><button data-a="lang" data-v="es" class="${LANG === 'es' ? 'on' : ''}" lang="es">Español</button><button data-a="lang" data-v="en" class="${LANG === 'en' ? 'on' : ''}" lang="en">English</button></div>
       <p>${t('tagline')}</p>
       ${saved ? `<button class="btn primary" id="tContinue">${t('cont')} · ${t('day')} ${saved.day} · ${fmtK(saved.money)}</button>` : ''}
       <label class="lbl" for="tBrand" style="margin:0">${t('brandAsk')}</label>
-      <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : 'Emprende')}" autocomplete="off" aria-label="${t('brandAsk')}">
+      <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : L('Emprende', 'Tycoon'))}" autocomplete="off" aria-label="${t('brandAsk')}">
       <button class="btn ${saved ? '' : 'primary'}" id="tNew">${saved ? t('newGame') : t('play')}</button>
       <p class="keys">${t('keys')}</p></div></div>`;
-    $('tNew').onclick = () => { audioInit(); const brand = ($('tBrand').value || 'Emprende').trim().slice(0, 16); const begin = () => { startGame(newState(brand)); save(); openGuide(); }; if (saved) { openSheet('replace', () => ({title:'¿Empezar de nuevo?', em:'↻', body:'<p class=note>La nueva partida sustituirá tu progreso guardado.</p><button class="btn danger" data-a=confirmNew>Crear nueva partida</button><button class="btn primary" data-a=cancelNew>Conservar mi partida</button>'})); ACTIONS.confirmNew = begin; ACTIONS.cancelNew = closeSheet; } else begin(); };
+    $('tNew').onclick = () => { audioInit(); const brand = ($('tBrand').value || L('Emprende', 'Tycoon')).trim().slice(0, 16); const begin = () => { startGame(newState(brand)); save(); openGuide(); }; if (saved) { openSheet('replace', () => ({title:L('¿Empezar de nuevo?', 'Start over?'), em:'↻', body:`<p class=note>${L('La nueva partida sustituirá tu progreso guardado.', 'A new game will replace your saved progress.')}</p><button class="btn danger" data-a=confirmNew>${L('Crear nueva partida', 'Start a new game')}</button><button class="btn primary" data-a=cancelNew>${L('Conservar mi partida', 'Keep my game')}</button>`})); ACTIONS.confirmNew = begin; ACTIONS.cancelNew = closeSheet; } else begin(); };
     if (saved) $('tContinue').onclick = () => { audioInit(); hydrate(saved); startGame(S); };
   };
   draw();
