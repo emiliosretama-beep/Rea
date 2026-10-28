@@ -45,3 +45,10 @@ Hay dos versiones con la misma simulación y el mismo guardado:
 - Peatones y autos solo existen alrededor de la cámara, así que el costo no crece con el tamaño del mapa.
 - Guardado en `localStorage` (`emprende-city:save:v1`, con versión) cada 20 s y al salir; si no se puede guardar, el juego sigue funcionando.
 - Solo en español (es un juego personal): los textos están en las tablas `I18N`, `NAMES`, `CHAT`, `EVENTS` y `GOALS`.
+
+## Versión para itch.io
+
+- `itch/build.py` arma `itch/emprende-city-itch-vX.zip` a partir de `3d.html`: `python3 itch/build.py 1.0`.
+- El zip trae `index.html` en la raíz, Three.js r149 y las fuentes en local (`itch/vendor/`, con sus licencias MIT y OFL), así que no necesita internet.
+- `itch/pagina/` tiene la portada, las capturas y el texto y los ajustes de la página (`pagina-itch.md`).
+- Cada zip publicado se queda en el repo como respaldo: v1.0 es la primera versión en itch.io.
