@@ -768,7 +768,7 @@ function cityGrows() {
       l.kind = 'rival'; l.rival = { type: pick(opts).id, owner: pick(RIVAL_OWNERS), level: 1 };
       S.lotKinds[l.id] = 'rival'; S.rivals[l.id] = l.rival;
       setLotSolid(l); onLotChanged(l); recomputeCompetition();
-      if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
+      if (!inside && hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; } // adentro de un local no te mueve
       msgs.push(`Nuevo competidor: ${rivalName(l)} abrió en ${t(l.district)}`); if (S.mkt) bump('CON', 2);
     }
   }
@@ -2004,11 +2004,11 @@ function homeRoomPlan(lv, RW, RD) {
 }
 function enterLot(l) {
   if (inside || !lotObjs.has(l.id)) return;
-  inside = { l, id: l.id, walkers: [], seated: 0, seatT: 0, looks: [], yawBack: cam.yawT };
+  inside = { l, id: l.id, walkers: [], seated: 0, seatT: 0, looks: [], yawBack: cam.yawT, exitArmed: false }; // la puerta no te saca hasta que sueltes o te alejes
   cam.yawT = Math.round(cam.yaw / (Math.PI * 2)) * Math.PI * 2; // la cámara mira de frente al entrar
   buildInterior();
   P.vx = P.vy = 0;
-  const g = inside.geo; P.x = g.doorX; P.y = g.toY(0.7);
+  const g = inside.geo; P.x = g.doorX; P.y = g.toY(1.1);
   cam.fx = (g.rx0 + g.rx1) / 2; cam.fy = (g.ry0 + g.ry1) / 2; insideK = 1; doorFade(); // corte directo, como al cruzar una puerta
   sfx('door'); vibrate(10);
   const b = bizAtLot(l.id); if (b) collect(b);
@@ -2111,6 +2111,7 @@ function interiorQueuePos(i) {
 }
 function hitInterior(x, y, r) {
   const g = inside.geo;
+  if (!inside.exitArmed && y + r > g.ry1 - 2) return true;   // recién entraste: la puerta todavía no te deja salir
   const outDoor = y > g.ry1 - 2 && Math.abs(x - g.doorX) < 0.65 * T - r;
   if (outDoor) return y > g.ry1 + 40;
   for (const q of inside.rects) if (x + r > q.x0 && x - r < q.x1 && y + r > q.y0 && y - r < q.y1) return true;
@@ -2119,6 +2120,10 @@ function hitInterior(x, y, r) {
 function interiorTick(dt) {
   if (!inside) return;
   const g = inside.geo, b = bizAtLot(inside.id);
+  if (!inside.exitArmed) {   // se arma al soltar el joystick/teclas o al alejarte de la puerta
+    const idle = !input.jx && !input.jy && !['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(k => input.keys.has(k));
+    if (idle || g.ry1 - P.y > 1.9 * T) inside.exitArmed = true;
+  }
   if (P.y > g.ry1 + 6) { exitLot(); return; }
   if (inside.floor) { // la pista late con la música
     const night = darkness() > 0.3, beat = Math.pow(Math.max(0, Math.sin(now * Math.PI * 2.1)), 6), n = inside.floor.count;
@@ -2491,7 +2496,7 @@ function newBiz(l, type, paid, extra = {}) {
   S.biz.push(b); return b;
 }
 function pushOutOfSolid() { // si el jugador quedó dentro de un edificio nuevo, lo saca a la banqueta
-  if (!hitBox(P.x, P.y, 7)) return;
+  if (inside || !hitBox(P.x, P.y, 7)) return;
   const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y;
   if (ctxLot) { P.x = ctxLot.door.x; P.y = ctxLot.door.y; }
 }
