@@ -2121,7 +2121,7 @@ function interiorTick(dt) {
   if (!inside) return;
   const g = inside.geo, b = bizAtLot(inside.id);
   if (!inside.exitArmed) {   // se arma al soltar el joystick/teclas o al alejarte de la puerta
-    const idle = !input.jx && !input.jy && !['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(k => input.keys.has(k));
+    const idle = joyId === null && !input.jx && !input.jy && !['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(k => input.keys.has(k));
     if (idle || g.ry1 - P.y > 1.9 * T) inside.exitArmed = true;
   }
   if (P.y > g.ry1 + 6) { exitLot(); return; }
