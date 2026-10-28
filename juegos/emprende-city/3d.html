@@ -143,6 +143,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 .mapcol { display: grid; justify-items: center; gap: 4px; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { .ticker .track { animation-duration: 90s; } .sheet, .toast { animation: none; } }
 </style>
+<style>
+.hud{gap:7px}.money{letter-spacing:-.04em}.chip,.iconbtn,.hint-move{backdrop-filter:blur(14px)}
+.title{background:radial-gradient(ellipse at 50% 20%,#ffb62728,transparent 60%),#080e1ac9;backdrop-filter:blur(5px);overflow-y:auto;box-sizing:border-box}
+.title .card{padding:26px;border:1px solid #ffffff24;border-radius:28px;background:linear-gradient(145deg,#182940eb,#0b1424eb);box-sizing:border-box;box-shadow:0 30px 100px #0006}.title h1{font-size:clamp(42px,10vw,66px)}
+.session-tools{display:flex;gap:6px}.session-tools button{min-width:44px;min-height:40px;border:1px solid var(--line);border-radius:12px;background:var(--ink);font-weight:700;padding:8px 12px}
+#progressCard{background:#0f1a2ee8;border:1px solid #46d98a55;border-radius:14px;padding:10px 12px;width:min(250px,calc(100vw - 180px));font-size:12px}#progressCard strong{display:block;margin:4px 0 8px;font-size:13px}#progressCard small{color:var(--cash)}.guide-step{padding:12px;border-radius:12px;background:var(--ink-2);line-height:1.5}
+@media(max-height:620px){#progressCard{display:none}.hud{gap:3px}.title .card{gap:9px;padding:18px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
+</style>
 </head>
 <body>
 <canvas id="game" aria-label="Ciudad"></canvas>
@@ -153,10 +162,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   <div class="chip" id="clock"></div>
   <div class="chip" id="place"></div>
   <div class="chip goal" id="goal"></div>
+  <div id="progressCard"><small>TU IMPERIO</small><strong id="progressLabel"></strong><div class="bar"><i id="progressFill"></i></div><small id="progressCount"></small></div>
   <div class="chip mission" id="mission" hidden></div>
 </div>
 
 <div class="topright" id="topright" hidden>
+  <div class="session-tools"><button id="btnGuide" aria-label="Guía">? Guía</button><button id="btnPause" aria-label="Pausar">Ⅱ</button></div>
   <canvas id="minimap" width="224" height="224" aria-label="Mapa"></canvas>
   <div class="iconrow">
     <button class="iconbtn" id="btnMap" aria-label="Mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span data-t="map"></span></button>
@@ -1027,7 +1038,7 @@ const input = { x: 0, y: 0, keys: new Set(), jx: 0, jy: 0 };
 function updatePlayer(dt) {
   let ix = input.jx, iy = input.jy;
   const k = input.keys;
-  if (sleeping) { ix = iy = 0; k.clear(); }
+  if (sleeping || sheet || $ui.firstChild) { ix = iy = 0; k.clear(); }
   if (k.has('ArrowLeft') || k.has('KeyA')) ix -= 1;
   if (k.has('ArrowRight') || k.has('KeyD')) ix += 1;
   if (k.has('ArrowUp') || k.has('KeyW')) iy -= 1;
@@ -2385,6 +2396,7 @@ function updateHUD() {
   const wIco = { sun: darkness() > .5 ? '🌙' : '☀️', cloud: '☁️', rain: '🌧️' }[S.weather];
   const buff = S.buff && S.min < S.buff.until ? ` · ⚡+${Math.round((S.buff.mult - 1) * 100)}%` : '';
   setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}${buff}`);
+  updateProgress();
   // Botones de acción contextual
   let main = null, alt = null;
   if (nearFerry) main = { k: 'ferry', label: nearFerry === 'A' ? 'Ferry a Isla Coral · $15' : 'Ferry a la ciudad · $15', ico: '⛴️' };
@@ -2439,7 +2451,7 @@ $alt.addEventListener('click', () => doAction($alt.dataset.k));
 
 // Hoja de menús
 let sheet = null; // { kind, render }
-function openSheet(kind, renderFn) { sheet = { kind, render: renderFn }; drawSheet(); sfx('click'); }
+function openSheet(kind, renderFn) { releaseAll(); sheet = { kind, render: renderFn }; drawSheet(); sfx('click'); }
 function closeSheet() { sheet = null; $ui.innerHTML = ''; }
 function drawSheet() {
   if (!sheet) return;
@@ -2695,7 +2707,7 @@ const joy = $('joy'), joyK = joy.firstElementChild;
 let joyId = null, joyO = { x: 0, y: 0 };
 cv.addEventListener('pointerdown', e => {
   audioInit();
-  if (!S || !running || joyId !== null) return;
+  if (!S || !running || sheet || $ui.firstChild || joyId !== null) return;
   if (e.clientX > viewW * 0.62 && e.pointerType === 'touch') return;
   joyId = e.pointerId; joyO = { x: e.clientX, y: e.clientY };
   joy.style.left = e.clientX + 'px'; joy.style.top = e.clientY + 'px'; joy.hidden = false; joyK.style.transform = '';
@@ -2719,7 +2731,9 @@ window.addEventListener('keydown', e => {
   audioInit();
   const c = e.code;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(c)) e.preventDefault();
-  if (c === 'Escape') { closeSheet(); return; }
+  if (c === 'Escape') { if (!e.repeat) { sheet || $ui.firstChild ? closeSheet() : openPause(); } return; }
+  if (c === 'KeyH' && !e.repeat) { openGuide(); return; }
+  if (sheet && ['pause','guide','replace'].includes(sheet.kind)) return;
   if (c === 'KeyF' && !e.repeat) { toggleInside(); return; }
   if (c === 'KeyQ' && !e.repeat) { rotateCam(-1); return; }
   if (c === 'KeyR' && !e.repeat) { rotateCam(1); return; }
@@ -2742,10 +2756,10 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 // =====================================================================
 function serialize() {
   S.savedAt = Date.now();
-  if (inside) { S.player.x = inside.l.door.x; S.player.y = inside.l.door.y; }
-  return JSON.stringify({ ...S, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0, colT: undefined })) });
+  const player = inside ? { x: inside.l.door.x, y: inside.l.door.y } : { x: P.x, y: P.y };
+  return JSON.stringify({ ...S, player, biz: S.biz.map(b => ({ ...b, queue: [], arr: 0, tok: 0, colT: undefined })) });
 }
-function save(quiet = true) { try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast(t('save')); } catch (e) { } }
+function save(quiet = true) { if (!S || !running) return false; try { localStorage.setItem(SAVE_KEY, serialize()); if (!quiet) toast('Partida guardada', 'good'); return true; } catch (e) { if (!quiet) toast('No se pudo guardar. Revisa el almacenamiento del navegador.', 'bad'); return false; } }
 function loadSaved() {
   try {
     const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null;
@@ -2778,7 +2792,8 @@ const STEP = 1 / 30;
 function frame(ts) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
-  if (!running) return;
+  if (!running || document.hidden) return;
+  if (sheet && ['pause','guide','replace'].includes(sheet.kind)) { render(0); return; }
   now += dt;
   acc += dt;
   while (acc >= STEP) { tick(STEP); acc -= STEP; }
@@ -3204,6 +3219,44 @@ function fastForwardToMorning() {
   S.buff = { until: S.min + 12 * 60, mult: HOMES[homeLv()].mult };
   return S.stats.earned - earned0;
 }
+
+function updateProgress() {
+ const next=GOALS.find(g=>!S.goalsDone.includes(g.id));
+ $('progressLabel').textContent=next ? next[LANG] || next.es : '¡Imperio completado!';
+ $('progressFill').style.width=(S.goalsDone.length/GOALS.length*100)+'%';
+ $('progressCount').textContent=S.goalsDone.length+' / '+GOALS.length+' metas'+(next && next.r ? ' · Premio: '+fmt(next.r):'');
+}
+function openPause(){
+ if(!running || sleeping)return;
+ openSheet('pause',()=>({title:'Tu ciudad, a tu ritmo',em:'Ⅱ',body:`
+ <p class="note">Juego en pausa. El reloj, los encargos y los gastos están detenidos.</p>
+ <div class="stats"><div class="stat"><span>Patrimonio</span><b>${fmtK(netWorth())}</b></div><div class="stat"><span>Negocios</span><b>${S.biz.length}</b></div><div class="stat"><span>Atendidos</span><b>${S.stats.served}</b></div></div>
+ <button class="btn primary" data-close>Seguir jugando</button><button class="btn cash" data-a="saveNow">Guardar partida ahora</button><button class="btn" data-a="guide">Guía y próximos pasos</button>
+ <p class="note">Esc: pausa · H: guía · Guardado automático cada 20 segundos. Necesitas conexión para cargar el motor 3D.</p>`}));
+}
+function openGuide(){
+ if(!running || sleeping)return;
+ openSheet('guide',()=>({title:'De tu primera venta a un imperio',em:'✦',body:`
+ <p class="note">Juego en pausa mientras consultas esta guía.</p>
+ <div class="guide-step"><b>01 · Encuentra tu lugar</b><br>Empiezas con $800. Busca un local en venta y abre un puesto de limonada. El barrio cambia el precio y la demanda.</div>
+ <div class="guide-step"><b>02 · Atiende y crece</b><br>Entra, atiende a los clientes y recoge el dinero de la caja acercándote a la puerta. Gestiona tu local para contratar personal y subir de nivel.</div>
+ <div class="guide-step"><b>03 · Piensa a largo plazo</b><br>Reserva dinero para gastos diarios. Completa metas para ganar premios. Un gerente cobra por ti; dormir en casa te da un bonus de ventas.</div>
+ <button class="btn primary" data-a="starterRoute">📍 Buscar un local asequible</button>
+ <p class="note">WASD / flechas: caminar · Espacio: acción · E: gestionar · F: entrar / salir · M: mapa · P: móvil · Q / R: cámara · Z: zoom · Esc: pausa. En móvil, arrastra el lado izquierdo para moverte y utiliza los botones de acción.</p>
+ <button class="btn" data-close>¡Vamos a emprender!</button>`}));
+}
+ACTIONS.guide=openGuide;
+ACTIONS.saveNow=()=>save(false);
+ACTIONS.starterRoute=()=>{
+ if(inside){toast('Sal del edificio para buscar un local.','',3500);return;}
+ if(S.mission){toast('Termina el encargo antes de cambiar la ruta.','',3500);return;}
+ const options=lots.filter(l=>l.kind==='sale' && regionOf(l.door.x)===regionOf(P.x) && priceOf('lemon',l.district)<=S.money);
+ options.sort((a,b)=>dist2(a.door.x,a.door.y,P.x,P.y)-dist2(b.door.x,b.door.y,P.x,P.y));
+ const l=options[0];if(!l){toast('No hay locales asequibles en esta zona. Haz encargos para reunir dinero.','',5000);return;}
+ waypoint={x:l.door.x,y:l.door.y};closeSheet();toast('Sigue la flecha dorada. Limonada desde '+fmt(priceOf('lemon',l.district))+' · '+t(l.district),'good',6000);
+};
+$('btnGuide').onclick=openGuide;$('btnPause').onclick=openPause;
+
 // ---------- Inicio ----------
 function startGame(state) {
   S = state;
@@ -3246,7 +3299,7 @@ function titleScreen() {
       <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : 'Emprende')}" autocomplete="off" aria-label="${t('brandAsk')}">
       <button class="btn ${saved ? '' : 'primary'}" id="tNew">${saved ? t('newGame') : t('play')}</button>
       <p class="keys">${t('keys')}</p></div></div>`;
-    $('tNew').onclick = () => { audioInit(); const st = newState(($('tBrand').value || 'Emprende').trim().slice(0, 16)); startGame(st); save(); };
+    $('tNew').onclick = () => { audioInit(); const brand = ($('tBrand').value || 'Emprende').trim().slice(0, 16); const begin = () => { startGame(newState(brand)); save(); openGuide(); }; if (saved) { openSheet('replace', () => ({title:'¿Empezar de nuevo?', em:'↻', body:'<p class=note>La nueva partida sustituirá tu progreso guardado.</p><button class="btn danger" data-a=confirmNew>Crear nueva partida</button><button class="btn primary" data-a=cancelNew>Conservar mi partida</button>'})); ACTIONS.confirmNew = begin; ACTIONS.cancelNew = () => {sheet=null;draw();}; } else begin(); };
     if (saved) $('tContinue').onclick = () => { audioInit(); hydrate(saved); startGame(S); };
   };
   draw();
