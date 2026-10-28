@@ -19,6 +19,7 @@
   --cash: #46d98a;         /* dinero */
   --gold: #ffb627;         /* acento */
   --danger: #ff6b5b;
+  --chart: #3d8bfd;        /* línea de las gráficas de la bolsa (validada sobre el panel oscuro) */
   --display: "Bricolage Grotesque", "Avenir Next", "Trebuchet MS", system-ui, sans-serif;
   --body: "Figtree", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   color-scheme: dark;
@@ -331,6 +332,8 @@ const GOALS = [
   { id: 'club', r: 20000, es: 'Abre un antro', test: () => S.biz.some(b => b.type === 'club') },
   { id: 'hotel', r: 50000, es: 'Abre un hotel', test: () => S.biz.some(b => b.type === 'hotel') },
   { id: 'loft', r: 5000, es: 'Múdate a un loft (Móvil › Casa)', test: () => homeLv() >= 1 },
+  { id: 'stock', r: 500, es: 'Compra tus primeras acciones (Móvil › Bolsa)', test: () => Object.keys(S.port || {}).length > 0 },
+  { id: 'trader', r: 10000, es: 'Gana $10,000 vendiendo acciones', test: () => (S.stats.tradePL || 0) >= 10000 },
   { id: 'mansion', r: 100000, es: 'Múdate a una mansión', test: () => homeLv() >= 3 },
   { id: 'startup', r: 80000, es: 'Funda una startup', test: () => S.biz.some(b => b.type === 'startup') },
   { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', test: () => netWorth() >= 1e6 },
@@ -545,7 +548,7 @@ const bizAtLot = id => S.biz.find(b => b.lot === id);
 function bizName(b) { return S.brand + ' ' + nm(b.type); }
 function rivalName(l) { return nm(l.rival.type) + ' ' + l.rival.owner; }
 function invested(b) { const ty = TYPE[b.type]; let v = b.paid; for (let L = 1; L < b.level; L++) v += upgradeCost(ty, L); return v; }
-function netWorth() { let v = S.money - S.loan; for (const b of S.biz) v += invested(b) * 0.6; for (let i = 1; i <= ((S && S.homeLv) || 0); i++) v += HOMES[i].cost * 0.6; return v; }
+function netWorth() { let v = S.money - S.loan + (S && S.mkt ? portfolioValue() : 0); for (const b of S.biz) v += invested(b) * 0.6; for (let i = 1; i <= ((S && S.homeLv) || 0); i++) v += HOMES[i].cost * 0.6; return v; }
 function priceOf(type, district) { return Math.round(TYPE[type].cost * LAND[district]); }
 function buyoutPrice(l) { return Math.round(priceOf(l.rival.type, l.district) * (1.25 + 0.25 * l.rival.level)); }
 function upgradeCost(ty, level) { return Math.round(ty.cost * 0.55 * level); }
@@ -666,6 +669,8 @@ function endOfDay() {
   }
   const interest = Math.round(S.loan * 0.015);
   S.money -= wages + interest;
+  const dv = S.mkt ? payDividends() : 0;
+  if (dv >= 1) toast(`💵 Dividendos de tus acciones: +${fmt(dv)}`, 'good', 5000);
   S.startupF = 0.25 + rnd() * 1.9;
   if (S.biz.length) toast(`${t('dailyReport')} ${S.day}: ${t('profit')} ${fmt(rev - wages - interest)} · ${t('wages')} ${fmt(wages)}${interest ? ' · ' + t('interest') + ' ' + fmt(interest) : ''}`, rev - wages - interest >= 0 ? 'good' : 'bad', 6000);
   S.day++;
@@ -682,9 +687,10 @@ function morningNews() {
     if (ev.special === 'influencer') { b.rep = Math.min(100, b.rep + 15); text += ': ' + bizName(b) + ' (+15 ' + t('rep') + ')'; }
     if (ev.special === 'inspect' && b.level < 3) { b.rep = Math.max(0, b.rep - 8); text += ': ' + bizName(b) + ' (-8 ' + t('rep') + ')'; }
   }
-  const grow = cityGrows();
-  setTicker([text, ...grow].join('   •   '));
+  const grow = cityGrows(), mk = marketNews(S.event);
+  setTicker([text, ...grow, ...mk].join('   •   '));
   toast('📰 ' + text, '', 6000);
+  if (mk.length) toast(mk[0], '', 6000);
   if (grow.length) toast('🏙️ ' + grow[0], '', 6000);
 }
 // Cada mañana la ciudad cambia: la competencia abre locales nuevos y se amplía
@@ -698,7 +704,7 @@ function cityGrows() {
       S.lotKinds[l.id] = 'rival'; S.rivals[l.id] = l.rival;
       setLotSolid(l); onLotChanged(l); recomputeCompetition();
       if (hitBox(P.x, P.y, 7)) { const k = nearestNode(P.x, P.y); P.x = nodes[k].x; P.y = nodes[k].y; }
-      msgs.push(`Nuevo competidor: ${rivalName(l)} abrió en ${t(l.district)}`);
+      msgs.push(`Nuevo competidor: ${rivalName(l)} abrió en ${t(l.district)}`); if (S.mkt) bump('CON', 2);
     }
   }
   if (rnd() < 0.35) {
@@ -2260,12 +2266,13 @@ function openSheet(kind, renderFn) { sheet = { kind, render: renderFn }; drawShe
 function closeSheet() { sheet = null; $ui.innerHTML = ''; }
 function drawSheet() {
   if (!sheet) return;
-  const { title, em, body, tabs } = sheet.render();
+  const { title, em, body, tabs, after } = sheet.render();
   const scroll = $ui.querySelector('.body')?.scrollTop || 0;
   $ui.innerHTML = `<div class="scrim" data-close></div><section class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <header>${em ? `<span class="em">${em}</span>` : ''}<h2>${esc(title)}</h2><button class="close" data-close aria-label="Cerrar">✕</button></header>
     ${tabs || ''}<div class="body">${body}</div></section>`;
   const bd = $ui.querySelector('.body'); if (bd) bd.scrollTop = scroll;
+  if (after) after();
 }
 $ui.addEventListener('click', e => {
   const el = e.target.closest('[data-close],[data-a]'); if (!el) return;
@@ -2395,7 +2402,7 @@ let phoneTab = 'biz', resetArm = false;
 function openPhone(tab) {
   if (tab) phoneTab = tab; resetArm = false;
   openSheet('phone', () => {
-    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['home', 'Casa'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
+    const tabs = `<div class="tabs" role="tablist">${[['biz', 'businesses'], ['mkt', 'Bolsa'], ['home', 'Casa'], ['goals', 'goals'], ['bank', 'bank'], ['shop', 'shop'], ['set', 'settings']].map(([k, l]) => `<button class="tab ${phoneTab === k ? 'on' : ''}" role="tab" aria-selected="${phoneTab === k}" data-a="tab" data-v="${k}">${t(l)}</button>`).join('')}</div>`;
     let body = '';
     if (phoneTab === 'biz') {
       body = `<button class="btn" data-a="home">🏠 Ir a casa</button>`;
@@ -2405,6 +2412,8 @@ function openPhone(tab) {
         return `<div class="item"><span class="em">${TYPE[b.type].em}</span><span><span class="t">${esc(bizName(b))}</span><br><span class="s">${t(l.district)} · ${t('level')} ${b.level} · ${t('staff')} ${b.staff}/${maxStaff(b)}${b.manager ? ' · 👔' : ''}<br>${t('register')}: <b style="color:${full ? 'var(--danger)' : 'var(--cash)'}">${fmt(b.cash)}</b>${full ? ' ⚠️' : ''} · ${t('today')} ${fmt(b.todayRev)}</span></span>
           <span class="row" style="flex-direction:column;gap:6px"><button class="btn" data-a="go" data-v="${i}" style="min-height:40px;padding:6px 12px">${t('goTo')}</button><button class="btn" data-a="mng" data-v="${i}" style="min-height:40px;padding:6px 12px">⚙️</button></span></div>`;
       }).join('') + '</div>' : `<p class="note">${t('noBiz')}</p>`;
+    } else if (phoneTab === 'mkt') {
+      body = marketTabHTML();
     } else if (phoneTab === 'home') {
       const lv = homeLv(), cur = HOMES[lv], nx = HOMES[lv + 1], pct = h => Math.round((h.mult - 1) * 100);
       body = `<div class="item"><span class="em">${cur.em}</span><span><span class="t">${cur.name}</span><br><span class="s">Vives aquí. Al despertar: +${pct(cur)} % de ventas hasta las 7 p.m.</span></span><span class="p">✓</span></div>`;
@@ -2433,6 +2442,7 @@ function openPhone(tab) {
     return { title: t('phone'), em: '📱', body, tabs };
   });
   ACTIONS.tab = v => { phoneTab = v; drawSheet(); sfx('click'); };
+  ACTIONS.stk = sym => openStock(sym);
   ACTIONS.homeUp = () => {
     const nx = HOMES[homeLv() + 1]; if (!nx || S.money < nx.cost) { sfx('error'); return; }
     const old = HOME;
@@ -2610,6 +2620,8 @@ function tick(dt) {
   S.min += dt * MIN_PER_SEC;
   const dtMin = dt * MIN_PER_SEC;
   if (Math.floor(S.min / 1440) > Math.floor(prevMin / 1440)) endOfDay();
+  if (Math.floor(S.min / 10) > Math.floor(prevMin / 10)) marketStep(10);
+  if (Math.floor(S.min / 30) > Math.floor(prevMin / 30)) marketHistory();
   const h = hour();
   if (prevH < 7 && h >= 7) morningNews();
   updatePlayer(dt);
@@ -2628,7 +2640,7 @@ function tick(dt) {
   if (hour() >= 22 && S.hintNight !== S.day && !(inside && inside.home)) { S.hintNight = S.day; toast('🌙 Ya es tarde. Ve a tu departamento a dormir (Móvil › 🏠 Ir a casa).', '', 6000); }
   ctxT -= dt; if (ctxT <= 0) { ctxT = 0.1; findContext(); districtCheck(); checkGoals(); }
   saveT -= dt; if (saveT <= 0) { saveT = 20; save(); }
-  liveTimer -= dt; if (liveTimer <= 0) { liveTimer = 1; if (sheet && !uiPressing && (sheet.kind === 'manage' || (sheet.kind === 'phone' && phoneTab === 'biz'))) drawSheet(); }
+  liveTimer -= dt; if (liveTimer <= 0) { liveTimer = 1; if (sheet && !uiPressing && (sheet.kind === 'manage' || sheet.kind === 'stock' || (sheet.kind === 'phone' && phoneTab === 'mkt') || (sheet.kind === 'phone' && phoneTab === 'biz'))) drawSheet(); }
 }
 function ambientParticles(dt) {
   const view = liveRect(80);
@@ -2794,6 +2806,181 @@ function clearStreet() { // al dormir o al cargar
   if (S.mission && S.mission.kind === 'vip') S.mission = null;
 }
 
+// =====================================================================
+//  BOLSA DE VALORES: empresas de la ciudad que suben y bajan con las noticias
+// =====================================================================
+// vol: volatilidad por hora de juego · div: dividendo diario (fracción del precio)
+const STOCKS = [
+  { sym: 'TNV', name: 'TechNova', sector: 'Tecnología', p0: 120, vol: 0.022, div: 0, crypto: false },
+  { sym: 'ERA', name: 'ERAGames', sector: 'Videojuegos', p0: 45, vol: 0.032, div: 0, crypto: false },
+  { sym: 'SOL', name: 'Sol Bebidas', sector: 'Bebidas', p0: 38, vol: 0.012, div: 0.0009, crypto: false },
+  { sym: 'PLY', name: 'Playa Resorts', sector: 'Turismo', p0: 64, vol: 0.016, div: 0.0006, crypto: false },
+  { sym: 'BRG', name: 'Banco Regio', sector: 'Finanzas', p0: 92, vol: 0.011, div: 0.0011, crypto: false },
+  { sym: 'FAR', name: 'FarmaVida', sector: 'Salud', p0: 55, vol: 0.008, div: 0.0010, crypto: false },
+  { sym: 'CON', name: 'Constructora Puerto', sector: 'Construcción', p0: 28, vol: 0.018, div: 0.0004, crypto: false },
+  { sym: 'AUT', name: 'AutoMotriz del Norte', sector: 'Autos', p0: 75, vol: 0.017, div: 0.0005, crypto: false },
+  { sym: 'EMC', name: 'EmprendeCoin', sector: 'Cripto', p0: 1.2, vol: 0.05, div: 0, crypto: true },
+];
+const STOCK = Object.fromEntries(STOCKS.map(s => [s.sym, s]));
+// Cómo mueve cada noticia del día a la bolsa (cambio en %, se aplica como salto)
+const NEWS_IMPACT = {
+  heat: { SOL: 5, PLY: 3 }, beachfest: { PLY: 6, SOL: 2 }, techconf: { TNV: 6, ERA: 5, EMC: 4 }, fair: { BRG: 2, SOL: 2 },
+  rainy: { PLY: -5, FAR: 2 }, strike: { ALL: -2, AUT: -4 }, match: { SOL: 5, BRG: 1 }, payday: { BRG: 3, ALL: 1 },
+  startups: { TNV: 7, ERA: 6, EMC: 9 }, influencer: {}, inspect: { FAR: -2 }, calm: {},
+};
+const COMPANY_NEWS = [
+  ['TNV', 'TechNova presenta su nuevo teléfono', 8], ['TNV', 'Falla en los servidores de TechNova', -7],
+  ['ERA', 'ERAGames anuncia un juego nuevo', 10], ['ERA', 'Se retrasa el lanzamiento de ERAGames', -9],
+  ['SOL', 'Sol Bebidas lanza un sabor que se agota', 6], ['SOL', 'Sube el precio del azúcar: Sol Bebidas cae', -5],
+  ['PLY', 'Playa Resorts abre un hotel nuevo', 6], ['PLY', 'Cancelaciones en Playa Resorts', -6],
+  ['BRG', 'Banco Regio reporta ganancias récord', 5], ['BRG', 'Multa a Banco Regio', -5],
+  ['FAR', 'FarmaVida aprueba una medicina nueva', 7], ['FAR', 'Retiran un lote de FarmaVida', -6],
+  ['CON', 'Constructora Puerto gana un contrato enorme', 9], ['CON', 'Se cae un andamio de Constructora Puerto', -7],
+  ['AUT', 'AutoMotriz presenta un auto eléctrico', 7], ['AUT', 'Llamado a revisión de AutoMotriz', -7],
+  ['EMC', 'Un famoso compra EmprendeCoin', 18], ['EMC', 'Hackean un exchange de EmprendeCoin', -20],
+];
+const FEE = 0.0025, HIST_N = 96;   // comisión 0.25 % · historial: 2 días en puntos de 30 min
+function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function initMarket() {
+  S.mkt = S.mkt || {};
+  for (const s of STOCKS) if (!S.mkt[s.sym]) {
+    const hist = []; let p = s.p0;
+    for (let i = 0; i < HIST_N; i++) { p *= Math.exp(gauss() * s.vol * 0.7); hist.push(+p.toFixed(4)); }
+    S.mkt[s.sym] = { p, h: hist, dayOpen: p, pend: 0 };
+  }
+  S.port = S.port || {};
+}
+function marketOpen(s) { if (s.crypto) return true; const h = hour(); return weekday() < 5 && h >= 9 && h < 17; }
+function marketStep(dtMin) {
+  const dtH = dtMin / 60;
+  for (const s of STOCKS) {
+    const m = S.mkt[s.sym];
+    if (!marketOpen(s)) continue;
+    if (m.pend) { m.p *= 1 + m.pend / 100; m.pend = 0; }                       // salto por noticias al abrir
+    m.p *= Math.exp(0.0006 * dtH + gauss() * s.vol * Math.sqrt(dtH));
+    m.p = Math.max(s.crypto ? 0.01 : 1, m.p);
+  }
+}
+function marketHistory() { for (const s of STOCKS) { const m = S.mkt[s.sym]; m.h.push(+m.p.toFixed(4)); if (m.h.length > HIST_N) m.h.shift(); } }
+function marketNews(evId) {
+  const lines = [], imp = NEWS_IMPACT[evId] || {};
+  for (const s of STOCKS) { const v = (imp[s.sym] || 0) + (imp.ALL || 0); if (v) bump(s.sym, v); }
+  if (rnd() < 0.8) { const [sym, txt, v] = pick(COMPANY_NEWS), real = v * (0.6 + rnd() * 0.8); bump(sym, real); lines.push(`📈 ${txt} (${sym} ${real > 0 ? '▲' : '▼'} ${Math.abs(real).toFixed(1)} %)`); }
+  for (const s of STOCKS) S.mkt[s.sym].dayOpen = S.mkt[s.sym].p;
+  return lines;
+}
+function bump(sym, pct) { const m = S.mkt[sym], s = STOCK[sym]; if (marketOpen(s)) m.p *= 1 + pct / 100; else m.pend += pct; }
+function portfolioValue() { let v = 0; for (const sym in (S.port || {})) v += S.port[sym].q * S.mkt[sym].p; return v; }
+function payDividends() {
+  let d = 0;
+  for (const sym in S.port) { const s = STOCK[sym]; if (s.div) d += S.port[sym].q * S.mkt[sym].p * s.div; }
+  if (d >= 1) { S.money += d; S.stats.divs = (S.stats.divs || 0) + d; }
+  return d;
+}
+function trade(sym, qty) { // qty > 0 compra, < 0 vende
+  const s = STOCK[sym], m = S.mkt[sym], pos = S.port[sym] || { q: 0, cost: 0 };
+  if (!marketOpen(s)) { sfx('error'); toast('El mercado está cerrado. Abre de lunes a viernes de 9:00 a 17:00 (la cripto, siempre).', 'bad'); return false; }
+  const gross = Math.abs(qty) * m.p, fee = Math.max(1, gross * FEE);
+  if (qty > 0) {
+    if (S.money < gross + fee) { sfx('error'); toast(t('cantAfford'), 'bad'); return false; }
+    S.money -= gross + fee; pos.cost = (pos.cost * pos.q + gross + fee) / (pos.q + qty); pos.q += qty;
+  } else {
+    const n = Math.min(pos.q, -qty); if (!n) return false;
+    const got = n * m.p, f = Math.max(1, got * FEE);
+    S.money += got - f; S.stats.tradePL = (S.stats.tradePL || 0) + (got - f - n * pos.cost); pos.q -= n;
+  }
+  if (pos.q > 0) S.port[sym] = pos; else delete S.port[sym];
+  S.stats.trades = (S.stats.trades || 0) + 1;
+  sfx(qty > 0 ? 'buy' : 'coin'); vibrate(15);
+  return true;
+}
+function nextOpenText() {
+  if (marketOpen(STOCKS[0])) return `Abierto · cierra a las 17:00`;
+  const wd = weekday(), h = hour();
+  if (wd < 5 && h < 9) return 'Cerrado · abre hoy a las 9:00';
+  if (wd < 4) return 'Cerrado · abre mañana a las 9:00';
+  return 'Cerrado · abre el lunes a las 9:00';
+}
+const pctTxt = (a, b) => { const v = (a / b - 1) * 100; return { v, txt: `${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(2)} %`, col: v >= 0 ? 'var(--cash)' : 'var(--danger)' }; };
+const fmtP = p => p >= 10 ? '$' + p.toFixed(2) : '$' + p.toFixed(p >= 1 ? 3 : 4);
+// Mini gráfica (sparkline): una línea, el punto final resaltado
+function sparkSVG(h, w = 84, hh = 28) {
+  const lo = Math.min(...h), hi = Math.max(...h), sx = w / (h.length - 1), sy = v => hh - 3 - (v - lo) / ((hi - lo) || 1) * (hh - 6);
+  const d = h.map((v, i) => (i ? 'L' : 'M') + (i * sx).toFixed(1) + ' ' + sy(v).toFixed(1)).join('');
+  return `<svg width="${w}" height="${hh}" viewBox="0 0 ${w} ${hh}" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--chart)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${w}" cy="${sy(h[h.length - 1])}" r="2.5" fill="var(--chart)"/></svg>`;
+}
+// Gráfica grande con área, 3 marcas en el eje y retícula tenue; el cursor/dedo muestra el precio
+function chartSVG(h, w = 440, hh = 180) {
+  const pad = { l: 46, r: 10, t: 10, b: 22 }, iw = w - pad.l - pad.r, ih = hh - pad.t - pad.b;
+  const lo = Math.min(...h), hi = Math.max(...h), span = (hi - lo) || hi * 0.01, y0 = lo - span * 0.08, y1 = hi + span * 0.08;
+  const X = i => pad.l + i / (h.length - 1) * iw, Y = v => pad.t + (1 - (v - y0) / (y1 - y0)) * ih;
+  const line = h.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
+  const area = line + `L${X(h.length - 1).toFixed(1)} ${pad.t + ih}L${pad.l} ${pad.t + ih}Z`;
+  const ticks = [y0 + (y1 - y0) * 0.1, (y0 + y1) / 2, y1 - (y1 - y0) * 0.1];
+  const grid = ticks.map(v => `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${pad.l - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtP(v)}</text>`).join('');
+  const xl = [[0, 'hace 2 días'], [h.length / 2, 'ayer'], [h.length - 1, 'ahora']].map(([i, l], k) => `<text x="${X(Math.min(i, h.length - 1)).toFixed(1)}" y="${hh - 5}" text-anchor="${k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}" font-size="11" fill="var(--muted)">${l}</text>`).join('');
+  return `<svg id="stkChart" viewBox="0 0 ${w} ${hh}" width="100%" style="display:block;touch-action:none" role="img" aria-label="Precio de los últimos 2 días">
+    ${grid}<path d="${area}" fill="var(--chart)" opacity=".14"/><path d="${line}" fill="none" stroke="var(--chart)" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${X(h.length - 1).toFixed(1)}" cy="${Y(h[h.length - 1]).toFixed(1)}" r="4" fill="var(--chart)" stroke="var(--ink)" stroke-width="2"/>${xl}
+    <g id="stkHover" visibility="hidden"><line id="stkLine" y1="${pad.t}" y2="${pad.t + ih}" stroke="var(--muted)" stroke-width="1"/><circle id="stkDot" r="4.5" fill="var(--chart)" stroke="var(--paper)" stroke-width="2"/>
+      <rect id="stkBox" y="${pad.t}" width="118" height="38" rx="7" fill="var(--ink-2)" stroke="var(--line)"/><text id="stkT1" font-size="12" font-weight="700" fill="var(--paper)"></text><text id="stkT2" font-size="11" fill="var(--muted)"></text></g>
+    <rect x="${pad.l}" y="${pad.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+}
+function bindChart(h) {
+  const svg = document.getElementById('stkChart'); if (!svg) return;
+  const w = 440, pad = { l: 46, r: 10, t: 10, b: 22 }, iw = w - pad.l - pad.r, ih = 180 - pad.t - pad.b;
+  const lo = Math.min(...h), hi = Math.max(...h), span = (hi - lo) || hi * 0.01, y0 = lo - span * 0.08, y1 = hi + span * 0.08;
+  const Y = v => pad.t + (1 - (v - y0) / (y1 - y0)) * ih, g = svg.querySelector('#stkHover');
+  const move = e => {
+    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * w;
+    const i = clamp(Math.round((x - pad.l) / iw * (h.length - 1)), 0, h.length - 1), X = pad.l + i / (h.length - 1) * iw;
+    const ago = (h.length - 1 - i) * 30, label = ago === 0 ? 'ahora' : ago < 60 ? `hace ${ago} min` : `hace ${Math.round(ago / 60)} h`;
+    g.setAttribute('visibility', 'visible');
+    svg.querySelector('#stkLine').setAttribute('x1', X); svg.querySelector('#stkLine').setAttribute('x2', X);
+    const dot = svg.querySelector('#stkDot'); dot.setAttribute('cx', X); dot.setAttribute('cy', Y(h[i]));
+    const bx = X > w / 2 ? X - 126 : X + 8, box = svg.querySelector('#stkBox'); box.setAttribute('x', bx);
+    const t1 = svg.querySelector('#stkT1'), t2 = svg.querySelector('#stkT2');
+    t1.setAttribute('x', bx + 9); t1.setAttribute('y', pad.t + 16); t1.textContent = fmtP(h[i]);
+    t2.setAttribute('x', bx + 9); t2.setAttribute('y', pad.t + 31); t2.textContent = label;
+    uiPressing = true;
+  };
+  svg.addEventListener('pointermove', move); svg.addEventListener('pointerdown', move);
+  svg.addEventListener('pointerleave', () => { g.setAttribute('visibility', 'hidden'); uiPressing = false; });
+}
+function openStock(sym) {
+  let qty = 10;
+  openSheet('stock', () => {
+    const s = STOCK[sym], m = S.mkt[sym], pos = S.port[sym], ch = pctTxt(m.p, m.dayOpen), open = marketOpen(s);
+    const maxBuy = Math.max(0, Math.floor(S.money / (m.p * (1 + FEE)) - 0.0001)), q = qty === 'max' ? maxBuy : qty;
+    const pl = pos ? pos.q * m.p - pos.q * pos.cost : 0;
+    return { title: `${s.name} (${sym})`, em: s.crypto ? '🪙' : '📈', after: () => bindChart(m.h), body: `
+      <div class="row" style="align-items:baseline;gap:12px"><b style="font-size:30px;font-family:var(--display);font-variant-numeric:tabular-nums">${fmtP(m.p)}</b><b style="color:${ch.col}">${ch.txt} hoy</b></div>
+      <p class="note">${s.sector}${s.div ? ` · dividendo diario ${(s.div * 100).toFixed(2)} %` : ' · sin dividendos'} · ${s.crypto ? 'abierto 24/7' : nextOpenText()}</p>
+      ${chartSVG(m.h)}
+      <div class="stats"><div class="stat"><span>Tienes</span><b>${pos ? pos.q.toLocaleString('en-US') : 0}</b></div><div class="stat"><span>Costo prom.</span><b>${pos ? fmtP(pos.cost) : '—'}</b></div><div class="stat"><span>Ganancia</span><b style="color:${pl >= 0 ? 'var(--cash)' : 'var(--danger)'}">${pos ? (pl >= 0 ? '▲ ' : '▼ ') + fmt(Math.abs(pl)) : '—'}</b></div></div>
+      <div class="lbl">Cantidad</div>
+      <div class="seg">${[1, 10, 100, 'max'].map(v => `<button data-a="qty" data-v="${v}" class="${qty === v ? 'on' : ''}">${v === 'max' ? 'Máx' : v}</button>`).join('')}</div>
+      <div class="row"><button class="btn cash" data-a="buyStk" ${open && q > 0 && S.money >= q * m.p * (1 + FEE) ? '' : 'disabled'}>Comprar ${q.toLocaleString('en-US')} · ${fmtK(q * m.p)}</button>
+      <button class="btn danger" data-a="sellStk" ${open && pos ? '' : 'disabled'}>Vender ${Math.min(pos ? pos.q : 0, qty === 'max' ? Infinity : qty).toLocaleString('en-US')}</button></div>
+      <p class="note">Comisión 0.25 % por operación (mínimo $1). Las noticias de la mañana mueven los precios.</p>
+      <button class="btn" data-a="tab" data-v="mkt">‹ Volver a la bolsa</button>` };
+  });
+  ACTIONS.qty = v => { qty = v === 'max' ? 'max' : +v; drawSheet(); };
+  ACTIONS.buyStk = () => { const m = S.mkt[sym], q = qty === 'max' ? Math.max(0, Math.floor(S.money / (m.p * (1 + FEE)) - 0.0001)) : qty; if (q > 0 && trade(sym, q)) drawSheet(); };
+  ACTIONS.sellStk = () => { const pos = S.port[sym]; if (pos && trade(sym, -(qty === 'max' ? pos.q : Math.min(qty, pos.q)))) drawSheet(); };
+  ACTIONS.tab = v => { openPhone(v); };
+}
+function marketTabHTML() {
+  const pv = portfolioValue(); let cost = 0; for (const sym in S.port) cost += S.port[sym].q * S.port[sym].cost;
+  const pl = pv - cost;
+  let h = `<div class="stats"><div class="stat"><span>Portafolio</span><b>${fmtK(pv)}</b></div><div class="stat"><span>Ganancia</span><b style="color:${pl >= 0 ? 'var(--cash)' : 'var(--danger)'}">${cost ? (pl >= 0 ? '▲ ' : '▼ ') + fmtK(Math.abs(pl)) : '—'}</b></div><div class="stat"><span>Mercado</span><b style="font-size:13px">${nextOpenText()}</b></div></div>`;
+  h += '<div class="list">' + STOCKS.map(s => {
+    const m = S.mkt[s.sym], ch = pctTxt(m.p, m.dayOpen), own = S.port[s.sym];
+    return `<button class="item" data-a="stk" data-v="${s.sym}" style="grid-template-columns:1fr auto auto"><span><span class="t">${s.sym} · ${s.name}</span><br><span class="s">${s.sector}${own ? ` · tienes ${own.q.toLocaleString('en-US')}` : ''}</span></span>${sparkSVG(m.h.slice(-32))}<span style="text-align:right"><span class="p">${fmtP(m.p)}</span><br><b style="font-size:12.5px;color:${ch.col}">${ch.txt}</b></span></button>`;
+  }).join('') + '</div><p class="note">El cambio es contra el precio de apertura del día. Las acciones se negocian de lunes a viernes de 9:00 a 17:00; EmprendeCoin, siempre.</p>';
+  return h;
+}
+
 // ---------- Dormir: de noche, en tu departamento, pasas a las 7:00 ----------
 let sleeping = false;
 function canSleep() { const h = hour(); return h >= 20 || h < 5; }
@@ -2821,6 +3008,8 @@ function fastForwardToMorning() {
     const d = Math.min(5, left), prevMin = S.min, prevH = hour();
     S.min += d; left -= d;
     if (Math.floor(S.min / 1440) > Math.floor(prevMin / 1440)) endOfDay();
+    if (Math.floor(S.min / 10) > Math.floor(prevMin / 10)) marketStep(10);
+    if (Math.floor(S.min / 30) > Math.floor(prevMin / 30)) marketHistory();
     if (prevH < 7 && hour() >= 7) morningNews();
     simEconomy(d, d / MIN_PER_SEC);
   }
@@ -2836,6 +3025,7 @@ function fastForwardToMorning() {
 // ---------- Inicio ----------
 function startGame(state) {
   S = state;
+  initMarket();
   setHomeFromLevel();
   cam.zoom = 1;
   P.x = S.player.x; P.y = S.player.y;
