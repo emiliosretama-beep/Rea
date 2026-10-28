@@ -151,19 +151,94 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 #progressCard{background:#0f1a2ee8;border:1px solid #46d98a55;border-radius:12px;padding:6px 10px;width:min(220px,calc(100vw - 180px));font-size:11px;display:grid;gap:4px}#progressCard strong{display:block;margin:4px 0 8px;font-size:13px}#progressCard small{color:var(--cash)}.guide-step{padding:12px;border-radius:12px;background:var(--ink-2);line-height:1.5}
 @media(max-height:620px){#progressCard{display:none}.hud{gap:3px}.title .card{gap:9px;padding:18px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
-/* Entrada de ERAGames: tapa la carga y se va sola (o al tocar) */
-#splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,#1a2a45 0%,#0b1322 70%);transition:opacity .45s ease;cursor:pointer}
-#splash.off{opacity:0;pointer-events:none}
-#splash .sp{display:grid;justify-items:center;gap:12px;animation:spIn .7s cubic-bezier(.2,.8,.2,1) both}
-#splash .sp-logo{font-family:var(--display);font-weight:800;font-size:clamp(52px,16vw,96px);line-height:1;letter-spacing:-.02em;color:#f3efe4}
-#splash .sp-logo b{color:#f04e23}
-#splash .sp-bar{height:4px;width:min(220px,56vw);border-radius:4px;background:#f04e23;transform-origin:left;animation:spBar .9s .25s cubic-bezier(.6,0,.2,1) both}
-#splash small{font:600 13px var(--body,system-ui);letter-spacing:.32em;text-transform:uppercase;color:#9fb0cb;animation:spIn .6s .55s both}
-@keyframes spIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
-@keyframes spBar{from{transform:scaleX(0)}}
 </style>
 </head>
 <body>
+<!-- ERA Games: pantalla de carga (se quita sola; ver ERASplash.done) -->
+<script>
+/*!
+ * ERA Games - pantalla de carga (splash)
+ * Integrado en línea en este index.html.
+ * Opcional: ERASplash.done.then(() => iniciarJuego());
+ * Se salta tocando la pantalla o con cualquier tecla.
+ */
+(function () {
+  "use strict";
+  var MIN_MS = 2600;   // duración de la animación
+  var MAX_MS = 8000;   // tope: nunca bloquea más de esto aunque el juego tarde en cargar
+  var BG = "#14183A";
+  var css = "" +
+  "#era-splash{position:fixed;inset:0;z-index:2147483647;background:"+BG+";display:flex;align-items:center;justify-content:center;transition:opacity .45s ease;cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+  "#era-splash.es-out{opacity:0;pointer-events:none}" +
+  "#era-splash svg{width:min(62vw,560px);height:auto;overflow:visible}" +
+  "#era-splash g{transform-box:fill-box}" +
+  ".es-a{transform-origin:50% 100%;animation:es-a .55s cubic-bezier(.2,.9,.3,1.25) both}" +
+  ".es-p{transform-origin:50% 50%;animation:es-p .6s cubic-bezier(.3,.7,.2,1) .45s both}" +
+  ".es-e{animation:es-in .45s cubic-bezier(.2,.8,.2,1) 1.05s both}" +
+  ".es-r{animation:es-in .45s cubic-bezier(.2,.8,.2,1) .95s both}" +
+  ".es-cover{animation:es-wipe .5s ease-in-out 1.45s both}" +
+  ".es-pulse .es-a,.es-pulse .es-p{animation:none}" +
+  "@keyframes es-a{from{opacity:0;transform:translateY(40px) scaleY(.6)}to{opacity:1;transform:none}}" +
+  "@keyframes es-p{0%{opacity:0;transform:translateX(-260px) rotate(-540deg) scale(.4)}70%{opacity:1;transform:translateX(8px) rotate(10deg) scale(1.15)}100%{opacity:1;transform:none}}" +
+  "@keyframes es-in{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}" +
+  "@keyframes es-wipe{from{transform:translateX(0)}to{transform:translateX(340px)}}" +
+  "@media (prefers-reduced-motion:reduce){#era-splash *{animation:none!important}.es-cover{display:none}}";
+
+  var style = document.createElement("style");
+  style.textContent = css;
+  var el = document.createElement("div");
+  el.id = "era-splash";
+  el.setAttribute("role", "img");
+  el.setAttribute("aria-label", "ERA Games");
+  el.innerHTML = '<svg viewBox="-8 -8 290 158" xmlns="http://www.w3.org/2000/svg" aria-label="ERA Games"><g transform="translate(21 0) skewX(-12)"> <g class="es-e"><path d="M0 0 H70 V24 H25 V39 H62 V61 H25 V76 H70 V100 H0 Z" fill="#FFFFFF"/></g> <g class="es-r"><g transform="translate(80 0)"><path d="M0 0 H50 Q78 0 78 30 Q78 54 57 60 L78 100 H50 L33 64 H25 V100 H0 Z M25 22 H48 Q55 22 55 31 Q55 42 48 42 H25 Z" fill="#FFFFFF" fill-rule="evenodd"/></g></g> <g class="es-a"><g transform="translate(166 0)"><path d="M0 100 L26 0 H66 L92 100 H64 L58 78 H34 L28 100 Z M38 24 L38 62 L64 43 Z" fill="#FFFFFF" fill-rule="evenodd"/></g></g> <g class="es-p"><g transform="translate(166 0)"><path d="M38 24 L38 62 L64 43 Z" fill="#F04E23"/></g></g></g><g class="es-g"><g transform="translate(5.10135748008053 118) skewX(-12) scale(0.24)"><clipPath id="es0"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(0 0)"><path d="M64 8.0 H8.0 V92.0 H56.0 V54 H32.0" clip-path="url(#es0)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es1"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(254 0)"><path d="M8.0 100 V8.0 H56.0 V100 M8.0 54 H56.0" clip-path="url(#es1)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es2"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(508 0)"><path d="M8.0 100 V8.0 L32.0 50 L56.0 8.0 V100" clip-path="url(#es2)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es3"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(762 0)"><path d="M64 8.0 H8.0 V92.0 H64 M8.0 50 H49.92" clip-path="url(#es3)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es4"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(1016 0)"><path d="M64 8.0 H8.0 V50 H56.0 V92.0 H0" clip-path="url(#es4)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g></g></g><rect class="es-cover" x="-30" y="104" width="340" height="60" fill="#14183A"/></svg>';
+
+  function mount() {
+    (document.head || document.documentElement).appendChild(style);
+    document.body.appendChild(el);
+  }
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+
+  var finished = false, resolveDone;
+  var done = new Promise(function (r) { resolveDone = r; });
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    el.classList.add("es-out");
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (style.parentNode) style.parentNode.removeChild(style);
+      resolveDone();
+      try { window.dispatchEvent(new Event("erasplash:done")); } catch (e) {}
+    }, 460);
+  }
+
+  // el tiempo cuenta desde que la animación se ve en pantalla (el juego puede bloquear al arrancar)
+  var minTime = new Promise(function (r) {
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(r, MIN_MS); }); });
+  });
+  var loaded = new Promise(function (r) {
+    if (document.readyState === "complete") r();
+    else window.addEventListener("load", r, { once: true });
+  });
+  Promise.all([minTime, loaded]).then(finish);
+  requestAnimationFrame(function () { setTimeout(finish, MAX_MS); });
+  el.addEventListener("pointerdown", finish);
+  function onKey(e) {
+    // la tecla que salta la animación no debe llegar al juego (p. ej. Enter = "Iniciar")
+    window.removeEventListener("keydown", onKey, true);
+    if (!finished) { e.preventDefault(); e.stopImmediatePropagation(); finish(); }
+  }
+  window.addEventListener("keydown", onKey, true);
+  el.addEventListener("click", function (e) { e.stopPropagation(); });
+
+  window.ERASplash = { done: done, skip: finish };
+})();
+</script>
+<script>
+// Al cambiar de idioma el juego se recarga: ahí la intro no se repite
+try { if (sessionStorage.getItem('emprende-city:skip-splash') === '1') { sessionStorage.removeItem('emprende-city:skip-splash'); var es0 = document.getElementById('era-splash'); if (es0) es0.style.display = 'none'; ERASplash.skip(); } } catch (e) { }
+</script>
 <canvas id="game" aria-label="Ciudad"></canvas>
 <canvas id="overlay" aria-hidden="true"></canvas>
 
@@ -203,23 +278,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 <div id="doorFx"></div>
 <div class="ticker" id="ticker" hidden><div class="tag" data-t="news"></div><div class="track" id="tickerTrack"></div></div>
 <div id="ui"></div>
-<div id="splash" role="img" aria-label="ERAGames"><div class="sp"><div class="sp-logo"><b>ERA</b>GAMES</div><div class="sp-bar"></div><small id="splashSub">presenta</small></div></div>
-<script>
-// La entrada de ERAGames va aparte del juego: se quita aunque el motor 3D tarde o no cargue
-(function () {
-  var sp = document.getElementById('splash'), lang = 'es', skip = false;
-  try { lang = localStorage.getItem('emprende-city:lang') || (/^es/i.test(navigator.language || 'es') ? 'es' : 'en'); skip = sessionStorage.getItem('emprende-city:skip-splash') === '1'; sessionStorage.removeItem('emprende-city:skip-splash'); } catch (e) { }
-  document.getElementById('splashSub').textContent = lang === 'en' ? 'presents' : 'presenta';
-  var gone = false, hide = function () { if (gone) return; gone = true; sp.classList.add('off'); setTimeout(function () { sp.remove(); }, 500); };
-  if (skip) { sp.remove(); return; }              // al cambiar de idioma no se repite
-  sp.addEventListener('pointerdown', hide);
-  window.addEventListener('keydown', hide, { once: true });
-  // Se queda mínimo 2.3 s y, cuando el juego terminó de armar la ciudad, 1.4 s más para que se vea completa
-  var t0 = Date.now(), min = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1200 : 2300;
-  window.addEventListener('era-ready', function () { setTimeout(hide, Math.max(1400, min - (Date.now() - t0))); }, { once: true });
-  setTimeout(hide, 8000);                         // por si el juego no avisa (sin motor 3D, error)
-})();
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
 <script>
@@ -3417,7 +3475,6 @@ const hotData = window.claude?.hot?.data;
 if (typeof hotData === 'string') { try { const d = JSON.parse(hotData); hydrate(d); startGame(S); } catch (e) { titleScreen(); } }
 else titleScreen();
 requestAnimationFrame(frame);
-window.dispatchEvent(new Event('era-ready'));   // quita la entrada de ERAGames
 </script>
 </body>
 </html>
