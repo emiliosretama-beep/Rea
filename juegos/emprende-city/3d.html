@@ -198,12 +198,16 @@ if (!window.THREE) document.getElementById('ui').innerHTML = '<div class="title"
 // ---------- Constantes del mundo ----------
 // La ciudad original (6×6 manzanas) se generó primero; los barrios nuevos se agregan al oeste (OX columnas) y al sur
 const T = 32, BLK = 12, NB = 8, OLD_NB = 6, OX = 2, CITY = NB * BLK + 2;      // 98 tiles de ciudad
-const SAND0 = CITY, WATER0 = CITY + 6, W = CITY + 18, H = CITY;
+const SAND0 = CITY, WATER0 = CITY + 6, H = CITY;
+// Isla Coral: al este cruzando el mar (3×4 manzanas con calles peatonales y playa alrededor)
+const IX0 = WATER0 + 21, IY0 = 13, INX = 3, INY = 4, IX1 = IX0 + INX * BLK + 2, IY1 = IY0 + INY * BLK + 2;
+const ISX0 = IX0 - 3, ISX1 = IX1 + 3, ISY0 = IY0 - 3, ISY1 = IY1 + 3, W = ISX1 + 10;
+const FERRY_ROW = 3 * BLK + 6, FERRY_A = { x: (WATER0 + 4) * T + 16, y: (3 * BLK + 6) * T + 16 }, FERRY_B = { x: (ISX0 - 5) * T + 16, y: (3 * BLK + 6) * T + 16 };
 const TL = { ROAD: 0, WALK: 1, GRASS: 2, LOT: 3, SAND: 4, WATER: 5, PLAZA: 6 };
 const MIN_PER_SEC = 2;                                      // 1 s real = 2 min de juego → día de 12 min
 const SAVE_KEY = 'emprende-city:save:v1', SAVE_VER = 2;   // v2: ciudad más grande (las partidas v1 se migran)
-const DISTRICTS = ['res', 'centro', 'tech', 'ind', 'playa', 'uni', 'puerto'];
-const LAND = { res: 1, centro: 1.35, tech: 1.25, ind: 0.85, playa: 1.2, uni: 1.05, puerto: 1.1 };
+const DISTRICTS = ['res', 'centro', 'tech', 'ind', 'playa', 'uni', 'puerto', 'isla'];
+const LAND = { res: 1, centro: 1.35, tech: 1.25, ind: 0.85, playa: 1.2, uni: 1.05, puerto: 1.1, isla: 1.4 };
 
 // ---------- Tipos de negocio ----------
 // fit: qué tan bien funciona en cada distrito · tags: outdoor/heat (sufren con lluvia), rainy (ganan con lluvia), leisure (fin de semana)
@@ -227,11 +231,18 @@ const TYPES = [
   { id: 'gamedev', em: '🎮', cost: 160000, ticket: 300, staff: 5, prof: 'day',       roof: '#f04e23', fit: { res: .8, centro: 1.1, tech: 1.7, ind: .9, playa: .8 }, tags: [] },
   { id: 'hotel',   em: '🏨', cost: 260000, ticket: 120, staff: 6, prof: 'allday',    roof: '#d4b483', fit: { res: .8, centro: 1.3, tech: 1, ind: .6, playa: 1.8 }, tags: ['leisure'] },
   { id: 'startup', em: '🚀', cost: 400000, ticket: 900, staff: 6, prof: 'day',       roof: '#1f8ef1', fit: { res: .6, centro: 1, tech: 1.8, ind: .7, playa: .8 }, tags: ['volatile'] },
+  // Nuevos con la isla (extra: no entran en la competencia que se generó con la ciudad)
+  { id: 'seafood', em: '🦞', cost: 18000,  ticket: 24,  staff: 3, prof: 'meal',      roof: '#e76f51', fit: { res: .7, centro: 1.0, tech: .7, ind: .6, playa: 1.5, uni: .8, puerto: 1.6, isla: 1.8 }, tags: ['leisure'], extra: true },
+  { id: 'diving',  em: '🤿', cost: 45000,  ticket: 70,  staff: 3, prof: 'day',       roof: '#00b4d8', fit: { res: .3, centro: .4, tech: .3, ind: .3, playa: 1.3, uni: .4, puerto: .9, isla: 1.9 }, tags: ['outdoor', 'leisure'], extra: true },
+  { id: 'resort',  em: '🏝️', cost: 350000, ticket: 240, staff: 7, prof: 'allday',    roof: '#f4a261', fit: { res: .4, centro: .6, tech: .4, ind: .3, playa: 1.2, uni: .4, puerto: .7, isla: 2.0 }, tags: ['leisure'], extra: true },
 ];
 const TYPE = Object.fromEntries(TYPES.map(t => [t.id, t]));
 // Encaje en los barrios nuevos: [Ciudad Universitaria, Puerto]
 const FIT_NEW = { lemon: [1.1, .9], tacos: [1.5, 1.4], ice: [1.1, 1.0], bakery: [1.0, .9], cafe: [1.5, 1.0], laundry: [1.3, .9], flowers: [.8, .7], books: [1.7, .6], surf: [.6, 1.2], gym: [1.2, .8], rest: [1.0, 1.5], garage: [.7, 1.4], pharma: [1.0, .9], bar: [1.4, 1.3], club: [1.3, 1.1], cinema: [1.3, .7], gamedev: [1.3, .8], hotel: [.7, 1.3], startup: [1.3, .9] };
-for (const t of TYPES) { t.fit.uni = FIT_NEW[t.id][0]; t.fit.puerto = FIT_NEW[t.id][1]; }
+for (const t of TYPES) if (FIT_NEW[t.id]) { t.fit.uni = FIT_NEW[t.id][0]; t.fit.puerto = FIT_NEW[t.id][1]; }
+// Encaje en Isla Coral (turística): ganan los negocios de playa y diversión
+const FIT_ISLA = { lemon: 1.3, tacos: 1.1, ice: 1.5, bakery: .9, cafe: 1.2, laundry: .5, flowers: .8, books: .6, surf: 1.7, gym: .6, rest: 1.5, garage: .3, pharma: .8, bar: 1.6, club: 1.5, cinema: .5, gamedev: .4, hotel: 1.8, startup: .3 };
+for (const t of TYPES) if (FIT_ISLA[t.id]) t.fit.isla = FIT_ISLA[t.id];
 
 // Curvas de demanda por hora del día: [centro, ancho, amplitud]
 const PROF = {
@@ -276,7 +287,7 @@ const I18N = {
     brandAsk: 'Nombre de tu marca', tagline: 'Empiezas con $800 y un sueño. Abre negocios, contrata gente y conquista la ciudad.',
     keys: 'Teclado: WASD o flechas para moverte · E comprar o gestionar · Espacio atender · F entrar o salir · Q/R girar cámara · Z zoom · M mapa · P móvil',
     moveHint: 'Desliza aquí para caminar', moveHintKb: 'Muévete con WASD o las flechas',
-    res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', uni: 'Ciudad Universitaria', puerto: 'Puerto', district: 'Distrito',
+    res: 'Residencial', centro: 'Centro', tech: 'Distrito Tech', ind: 'Zona Industrial', playa: 'Playa', uni: 'Ciudad Universitaria', puerto: 'Puerto', isla: 'Isla Coral', district: 'Distrito',
     days: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'], day: 'Día',
     sun: 'Soleado', cloud: 'Nublado', rain: 'Lluvia',
     buy: 'Comprar', manage: 'Gestionar', serve: 'Atender', offer: 'Ofertar', collect: 'Cobrar',
@@ -306,7 +317,7 @@ const I18N = {
   }
 };
 const NAMES = {
-  es: { lemon: 'Limonada', tacos: 'Tacos', ice: 'Heladería', bakery: 'Panadería', cafe: 'Café', laundry: 'Lavandería', flowers: 'Florería', books: 'Librería', surf: 'Surf Shop', gym: 'Gimnasio', rest: 'Restaurante', garage: 'Taller', pharma: 'Farmacia', bar: 'Bar', club: 'Antro', cinema: 'Cine', gamedev: 'Estudio de Juegos', hotel: 'Hotel', startup: 'Startup' },
+  es: { lemon: 'Limonada', tacos: 'Tacos', ice: 'Heladería', bakery: 'Panadería', cafe: 'Café', laundry: 'Lavandería', flowers: 'Florería', books: 'Librería', surf: 'Surf Shop', gym: 'Gimnasio', rest: 'Restaurante', garage: 'Taller', pharma: 'Farmacia', bar: 'Bar', club: 'Antro', cinema: 'Cine', gamedev: 'Estudio de Juegos', hotel: 'Hotel', startup: 'Startup', seafood: 'Mariscos', diving: 'Escuela de Buceo', resort: 'Resort' },
 };
 const VNAMES = { es: { walk: 'A pie', bike: 'Bicicleta', scooter: 'Moto', car: 'Auto' } };
 const RIVAL_OWNERS = ['Doña Lupe', 'Don Toño', 'La Esquina', 'El Güero', 'Los Primos', 'Mar Azul', 'Tía Chela', 'El Rey', 'Luna', 'Pepe', 'Sol', 'Nova'];
@@ -335,6 +346,9 @@ const GOALS = [
   { id: 'stock', r: 500, es: 'Compra tus primeras acciones (Móvil › Bolsa)', test: () => Object.keys(S.port || {}).length > 0 },
   { id: 'trader', r: 10000, es: 'Gana $10,000 vendiendo acciones', test: () => (S.stats.tradePL || 0) >= 10000 },
   { id: 'mansion', r: 100000, es: 'Múdate a una mansión', test: () => homeLv() >= 3 },
+  { id: 'ferry', r: 1000, es: 'Toma el ferry a Isla Coral (muelle de la playa)', test: () => (S.stats.ferry || 0) >= 1 },
+  { id: 'islabiz', r: 20000, es: 'Abre un negocio en Isla Coral', test: () => S.biz.some(b => lotOf(b).district === 'isla') },
+  { id: 'resort', r: 100000, es: 'Abre un resort', test: () => S.biz.some(b => b.type === 'resort') },
   { id: 'startup', r: 80000, es: 'Funda una startup', test: () => S.biz.some(b => b.type === 'startup') },
   { id: 'nw1m', r: 0, es: 'Llega a $1,000,000: conviértete en magnate', test: () => netWorth() >= 1e6 },
 ];
@@ -399,13 +413,27 @@ function districtOf(bx, by) {
 }
 function districtAt(px, py) {
   const tx = px / T | 0, ty = py / T | 0;
+  if (tx >= ISX0 - 6) return 'isla';   // incluye el muelle de la isla
   if (tx >= SAND0) return 'playa';
   return districtOf(clamp(tx / BLK | 0, 0, NB - 1), clamp(ty / BLK | 0, 0, NB - 1));
+}
+const ISL_LM = { '1,1': 'fun' }, ISL_PARK = new Set(['1,3']);
+let FUN = null;
+const UMBRELLAS = [];
+function islandTile(x, y) {
+  if (x < IX0 || x >= IX1 || y < IY0 || y >= IY1) return TL.SAND;
+  const lx = x - IX0, ly = y - IY0;
+  if (lx % BLK <= 1 || ly % BLK <= 1) return TL.PLAZA;                 // paseos peatonales
+  const bx = lx % BLK, by = ly % BLK, key = (lx / BLK | 0) + ',' + (ly / BLK | 0);
+  if (bx === 2 || bx === 11 || by === 2 || by === 11) return TL.WALK;
+  if (ISL_LM[key]) return -1;                                          // parque de diversiones (sólido)
+  return ISL_PARK.has(key) ? TL.GRASS : TL.LOT;
 }
 function buildWorld() {
   const R = mulberry(1977), R2 = mulberry(4242);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let k;
+    if (x >= ISX0 && x < ISX1 && y >= ISY0 && y < ISY1) { k = islandTile(x, y); tiles[y * W + x] = k; if (k === -1) { tiles[y * W + x] = TL.PLAZA; solid[y * W + x] = 1; } continue; }
     if (x >= WATER0) k = TL.WATER;
     else if (x >= SAND0) k = TL.SAND;
     else if (isRoadI(x) || isRoadI(y)) k = TL.ROAD;
@@ -450,6 +478,32 @@ function buildWorld() {
   };
   for (let by = 0; by < OLD_NB; by++) for (let bx = 0; bx < OLD_NB; bx++) block(bx + OX, by, R, false);
   for (let by = 0; by < NB; by++) for (let bx = 0; bx < NB; bx++) if (!(bx >= OX && by < OLD_NB)) block(bx, by, R2, true);
+  const R3 = mulberry(31337);
+  for (let jb = 0; jb < INY; jb++) for (let ib = 0; ib < INX; ib++) {
+    const x0 = IX0 + ib * BLK + 2, y0 = IY0 + jb * BLK + 2, key = ib + ',' + jb;
+    for (const [cx, cy] of [[x0, y0], [x0 + 9, y0], [x0, y0 + 9], [x0 + 9, y0 + 9]]) lamps.push({ x: cx * T + 16, y: cy * T + 16 });
+    if (ISL_LM[key]) { FUN = { x: (x0 + 5) * T, y: (y0 + 5) * T }; continue; }
+    if (ISL_PARK.has(key)) { for (let i = 0; i < 12; i++) trees.push({ x: (x0 + 1.5 + R3() * 7) * T, y: (y0 + 1.5 + R3() * 7) * T, r: 12 + R3() * 6, s: R3() * 6, palm: true }); benches.push({ x: (x0 + 5) * T, y: (y0 + 2.3) * T }); continue; }
+    for (let ly = 0; ly < 2; ly++) for (let lx = 0; lx < 2; lx++) {
+      const tx = IX0 + ib * BLK + 3 + lx * 4, ty = IY0 + jb * BLK + 3 + ly * 4;
+      lots.push({ id: lots.length, bx: 100 + ib, by: 100 + jb, lx, ly, tx, ty, district: 'isla', ext: 'isla',
+        x: tx * T + 4, y: ty * T + 4, w: 4 * T - 8, h: 4 * T - 8,
+        door: { x: tx * T + 2 * T, y: ly === 0 ? ty * T - 16 : (ty + 4) * T + 16, side: ly === 0 ? 'n' : 's' }, kind: 'deco', seed: R3(), rival: null });
+    }
+  }
+  // Palmeras en la playa de la isla y sombrillas en ambas playas
+  for (let i = 0; i < 40; i++) {
+    const side = i % 4, tt = R3();
+    const x = side === 0 ? ISX0 + 1 + R3() : side === 1 ? ISX1 - 2 + R3() : ISX0 + 1 + tt * (ISX1 - ISX0 - 2);
+    const y = side === 2 ? ISY0 + 1 + R3() : side === 3 ? ISY1 - 2 + R3() : ISY0 + 1 + tt * (ISY1 - ISY0 - 2);
+    if (Math.abs(y - FERRY_ROW - 0.5) < 2.5 && x < ISX0 + 3) continue;
+    trees.push({ x: x * T, y: y * T, r: 12 + R3() * 5, s: R3() * 6, palm: true });
+  }
+  const UC = ['#e63946', '#3a86ff', '#ffd166', '#06d6a0', '#f15bb5', '#ff924c'];
+  for (let i = 0; i < 26; i++) { const y = 3 + R3() * (H - 6); if (Math.abs(y - FERRY_ROW) < 3 || Math.abs(y - (6 * BLK + 6)) < 3) continue; UMBRELLAS.push({ x: (SAND0 + 1.5 + R3() * 3.5) * T, y: y * T, c: UC[i % 6], t: UC[(i + 3) % 6], a: R3() * 3 }); }
+  for (let i = 0; i < 18; i++) { const sx = R3() < 0.5, x = sx ? ISX0 + 0.8 + R3() * 1.4 : ISX0 + 2 + R3() * (ISX1 - ISX0 - 4), y = sx ? ISY0 + 3 + R3() * (ISY1 - ISY0 - 6) : (R3() < 0.5 ? ISY0 + 0.8 : ISY1 - 2) + R3(); if (Math.abs(y - FERRY_ROW) < 3 && x < ISX0 + 3) continue; UMBRELLAS.push({ x: x * T, y: y * T, c: UC[i % 6], t: UC[(i + 2) % 6], a: R3() * 3 }); }
+  // Muelles del ferry (se pueden caminar)
+  for (let yy = FERRY_ROW - 1; yy <= FERRY_ROW + 1; yy++) { for (let xx = WATER0; xx <= WATER0 + 4; xx++) { tiles[yy * W + xx] = TL.SAND; solid[yy * W + xx] = 0; } for (let xx = ISX0 - 5; xx < ISX0; xx++) { tiles[yy * W + xx] = TL.SAND; solid[yy * W + xx] = 0; } }
   // Muelle de la playa (se puede caminar) con la rueda de la fortuna, y el faro al sur
   FERRIS = { x: (WATER0 + 5) * T, y: (6 * BLK + 6) * T };
   for (let yy = 6 * BLK + 5; yy <= 6 * BLK + 7; yy++) for (let xx = WATER0; xx <= WATER0 + 6; xx++) { tiles[yy * W + xx] = TL.SAND; solid[yy * W + xx] = 0; }
@@ -459,13 +513,13 @@ function buildWorld() {
   // Asigna terrenos: en venta, competencia o decorado
   const start = new Set([(1 + OX) + ',2']);
   for (const l of lots) {
-    const RR = l.ext ? R2 : R, r = RR(), key = l.bx + ',' + l.by;
+    const RR = l.ext === 'isla' ? R3 : l.ext ? R2 : R, r = RR(), key = l.bx + ',' + l.by;
     if (start.has(key)) l.kind = l.lx === 0 ? 'sale' : (l.ly === 0 ? 'deco' : 'sale');
     else if (r < 0.46) l.kind = 'sale';
     else if (r < 0.6) l.kind = 'rival';
     else l.kind = 'deco';
     if (l.kind === 'rival') {
-      const opts = TYPES.filter(ty => ty.cost <= 75000 && ty.fit[l.district] >= 1);
+      const opts = TYPES.filter(ty => !ty.extra && ty.cost <= 75000 && ty.fit[l.district] >= 1);
       const ty = opts[(RR() * opts.length) | 0];
       l.rival = { type: ty.id, owner: RIVAL_OWNERS[(RR() * RIVAL_OWNERS.length) | 0], level: 1 + (RR() * 3 | 0) };
     }
@@ -516,6 +570,17 @@ function buildNodes() {
     const x0 = bx * BLK + 2, y0 = by * BLK + 2;
     if (bx < NB - 1) { link(idx[(x0 + 9) + ',' + y0], idx[(x0 + 12) + ',' + y0]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 12) + ',' + (y0 + 9)]); }
     if (by < NB - 1) { link(idx[x0 + ',' + (y0 + 9)], idx[x0 + ',' + (y0 + 12)]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 9) + ',' + (y0 + 12)]); }
+  }
+  // Isla Coral (red aparte, unida por el ferry)
+  for (let jb = 0; jb < INY; jb++) for (let ib = 0; ib < INX; ib++) {
+    const x0 = IX0 + ib * BLK + 2, y0 = IY0 + jb * BLK + 2;
+    const a = add(x0, y0), b = add(x0 + 9, y0), c = add(x0, y0 + 9), d = add(x0 + 9, y0 + 9);
+    link(a, b); link(c, d); link(a, c); link(b, d);
+  }
+  for (let jb = 0; jb < INY; jb++) for (let ib = 0; ib < INX; ib++) {
+    const x0 = IX0 + ib * BLK + 2, y0 = IY0 + jb * BLK + 2;
+    if (ib < INX - 1) { link(idx[(x0 + 9) + ',' + y0], idx[(x0 + 12) + ',' + y0]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 12) + ',' + (y0 + 9)]); }
+    if (jb < INY - 1) { link(idx[x0 + ',' + (y0 + 9)], idx[x0 + ',' + (y0 + 12)]); link(idx[(x0 + 9) + ',' + (y0 + 9)], idx[(x0 + 9) + ',' + (y0 + 12)]); }
   }
   // Playa
   let prev = null;
@@ -996,6 +1061,7 @@ function hitBox(x, y, r) { return isSolidPx(x - r, y - r) || isSolidPx(x + r, y 
 // Contexto: qué hay frente al jugador
 let ctxLot = null;
 function findContext() {
+  nearFerry = inside ? null : dist2(P.x, P.y, FERRY_A.x, FERRY_A.y) < 48 * 48 ? 'A' : dist2(P.x, P.y, FERRY_B.x, FERRY_B.y) < 48 * 48 ? 'B' : null;
   if (inside) { ctxLot = inside.l; return; }
   let best = null, bd = 64 * 64;
   for (const l of lots) {
@@ -1036,7 +1102,7 @@ function shade(hex, k) {
 function decoOf(l) {
   if (l._deco) return l._deco;
   const R = mulberry(l.id * 977 + 3), r = R();
-  const st = { res: r < .65 ? 'house' : 'apt', centro: r < .6 ? 'office' : 'apt', tech: r < .7 ? 'glass' : 'office', ind: r < .55 ? 'factory' : 'warehouse', playa: r < .6 ? 'beachhouse' : 'apt', uni: r < .5 ? 'apt' : r < .8 ? 'office' : 'house', puerto: r < .6 ? 'warehouse' : 'factory' }[l.district];
+  const st = { res: r < .65 ? 'house' : 'apt', centro: r < .6 ? 'office' : 'apt', tech: r < .7 ? 'glass' : 'office', ind: r < .55 ? 'factory' : 'warehouse', playa: r < .6 ? 'beachhouse' : 'apt', uni: r < .5 ? 'apt' : r < .8 ? 'office' : 'house', puerto: r < .6 ? 'warehouse' : 'factory', isla: r < .55 ? 'beachhouse' : 'apt' }[l.district];
   const pal = { house: ['#c65d4b', '#5d7fa3', '#8a6bb0', '#d08b3a', '#4e8f6b'], apt: ['#b9a58f', '#9a8f86', '#c9b79c'], office: ['#7d8ba3', '#94a3b8', '#6b7a90'], glass: ['#5fa8d3', '#4c90c0', '#77b9de'], factory: ['#8a8f99', '#7b7f87'], warehouse: ['#a07d5c', '#8f8070'], beachhouse: ['#f2c6a0', '#9fd8cb', '#f7d6e0', '#fff1c1'] }[st];
   l._deco = { st, col: pal[(R() * pal.length) | 0], tree: st === 'house' || st === 'beachhouse', seed: R() };
   if (l._deco.tree && !l._treeAdded) { l._treeAdded = true; trees.push({ x: l.x + (l.lx ? 14 : l.w - 14), y: l.y + (l.ly ? l.h - 14 : 14), r: 11, s: R() * 6 }); }
@@ -1167,7 +1233,7 @@ function initRenderer() {
   voidPlane.rotation.x = -Math.PI / 2; voidPlane.position.set(U(POCKET.x), 0.012, U(POCKET.y)); scene.add(voidPlane);
 }
 function buildGroundTexture() {
-  const K = 20, k = K / T;
+  const K = 16, k = K / T;
   return canvasTex(W * K, H * K, (g) => {
     const col = { [TL.ROAD]: '#474c57', [TL.WALK]: '#cbc4b6', [TL.GRASS]: '#79b35b', [TL.LOT]: '#ab9470', [TL.SAND]: '#ecd8a2', [TL.WATER]: '#2b88c2', [TL.PLAZA]: '#dccfb5' };
     for (let ty = 0; ty < H; ty++) for (let tx = 0; tx < W; tx++) {
@@ -1317,6 +1383,94 @@ function updateLandmarks(dt) {
   for (const m of adMats) if (m) m[4].emissive.setRGB(dark * 0.55, dark * 0.55, dark * 0.55);
 }
 
+// ---------- Isla Coral: parque de diversiones, ferry y sombrillas ----------
+const ISL = { ferry: null, coaster: null, coasterMat: null, carousel: null, drop: null, funMat: null };
+function buildIsland() {
+  const G = new Geo();
+  // Muelles del ferry (ciudad e isla)
+  for (const [x0, x1] of [[WATER0 - 0.2, WATER0 + 5], [ISX0 - 6, ISX0 + 0.2]]) {
+    G.box(x0, 0.02, FERRY_ROW - 1, x1, 0.28, FERRY_ROW + 2, '#8a6b4a');
+    for (let x = x0 + 0.4; x <= x1; x += 1.2) for (const z of [FERRY_ROW - 0.95, FERRY_ROW + 1.95]) G.box(x - 0.08, -0.4, z - 0.08, x + 0.08, 0.6, z + 0.08, '#6b4a2b');
+  }
+  for (const f of [FERRY_A, FERRY_B]) { const sp = new THREE.Sprite(emojiMat('⛴️')); sp.position.set(U(f.x), 2.0, U(f.y) - 1.1); sp.scale.set(1.1, 1.1, 1); scene.add(sp); }
+  // El ferry: va y viene entre los dos muelles
+  const fg = new THREE.Group();
+  const part = (col, sx, sy, sz, x, y, z) => { const m = new THREE.Mesh(BOX, lam(col)); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.castShadow = true; fg.add(m); return m; };
+  part('#f4f6f8', 3.6, 0.55, 1.5, 0, 0.25, 0); part('#1d6fb8', 3.62, 0.14, 1.52, 0, 0.36, 0); part('#f4f6f8', 1.8, 0.6, 1.2, -0.3, 0.82, 0); part('#2b2d42', 1.82, 0.18, 1.22, -0.3, 0.92, 0); part('#e63946', 0.25, 0.5, 0.25, 0.4, 1.35, 0);
+  scene.add(fg); ISL.ferry = fg;
+  // Parque de diversiones
+  if (FUN) {
+    const cx = U(FUN.x), cz = U(FUN.y);
+    G.box(cx - 4, 0.02, cz - 4, cx + 4, 0.05, cz + 4, '#f2cc8f');
+    ISL.coasterMat = new THREE.MeshBasicMaterial({ color: '#e63946' });
+    const track = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.09, 6, 56).rotateX(Math.PI / 2), ISL.coasterMat); track.scale.set(1.25, 1, 0.85); track.position.set(cx + 0.6, 1.7, cz - 0.6); scene.add(track);
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, px = cx + 0.6 + Math.cos(a) * 2.6 * 1.25, pz = cz - 0.6 + Math.sin(a) * 2.6 * 0.85; G.box(px - 0.06, 0, pz - 0.06, px + 0.06, 1.7, pz + 0.06, '#adb5bd'); }
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.09, 6, 32), ISL.coasterMat); loop.position.set(cx + 3.5, 2.6, cz - 0.6); loop.rotation.y = Math.PI / 2; scene.add(loop);
+    const car = new THREE.Mesh(BOX, lam('#ffd166')); car.scale.set(0.55, 0.28, 0.32); car.castShadow = true; scene.add(car); ISL.coaster = { car, cx: cx + 0.6, cz: cz - 0.6 };
+    // Carrusel
+    const cg = new THREE.Group(); cg.position.set(cx - 2.2, 0, cz + 2.2);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.2, 0.2, 18), lam('#f4f1de')); base.position.y = 0.1; cg.add(base);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(1.35, 0.7, 18), lam('#e63946')); roof.position.y = 1.75; cg.add(roof);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.5, 8), lam('#ffd166')); pole.position.y = 0.95; cg.add(pole);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, h = new THREE.Mesh(BOX, lam(['#f4f6f8', '#ffd166', '#f15bb5'][i % 3])); h.scale.set(0.18, 0.3, 0.42); h.position.set(Math.cos(a) * 0.85, 0.55, Math.sin(a) * 0.85); h.rotation.y = -a; cg.add(h); const pp = new THREE.Mesh(BOX, lam('#ffd166')); pp.scale.set(0.04, 1.3, 0.04); pp.position.set(Math.cos(a) * 0.85, 0.85, Math.sin(a) * 0.85); cg.add(pp); }
+    scene.add(cg); ISL.carousel = cg;
+    // Torre de caída
+    G.box(cx + 2.5 - 0.2, 0, cz + 2.5 - 0.2, cx + 2.5 + 0.2, 5.2, cz + 2.5 + 0.2, '#3a86ff');
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.35, 16), lam('#ff924c')); ring.position.set(cx + 2.5, 1, cz + 2.5); ring.castShadow = true; scene.add(ring); ISL.drop = ring;
+    // Arco de entrada
+    G.box(cx - 1.4, 0, cz + 3.6, cx - 1.2, 2.2, cz + 3.8, '#9b5de5'); G.box(cx + 1.2, 0, cz + 3.6, cx + 1.4, 2.2, cz + 3.8, '#9b5de5'); G.box(cx - 1.5, 2.2, cz + 3.55, cx + 1.5, 2.6, cz + 3.85, '#f15bb5');
+    const sp = new THREE.Sprite(emojiMat('🎢')); sp.position.set(cx, 5.8, cz); sp.scale.set(1.4, 1.4, 1); scene.add(sp);
+  }
+  const m = G.build(matStatic); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  // Sombrillas de playa (instanciadas)
+  if (UMBRELLAS.length) {
+    const top = new THREE.InstancedMesh(new THREE.ConeGeometry(0.6, 0.28, 8), new THREE.MeshLambertMaterial({ color: '#ffffff' }), UMBRELLAS.length);
+    const stick = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 5).translate(0, 0.55, 0), lam('#f4f1de'), UMBRELLAS.length);
+    const towel = new THREE.InstancedMesh(BOX, new THREE.MeshLambertMaterial({ color: '#ffffff' }), UMBRELLAS.length);
+    UMBRELLAS.forEach((u, i) => {
+      top.setMatrixAt(i, compose(U(u.x), 1.12, U(u.y), 0, 1, 1, 1)); stick.setMatrixAt(i, compose(U(u.x), 0, U(u.y), 0, 1, 1, 1)); towel.setMatrixAt(i, compose(U(u.x) + 0.5, 0.03, U(u.y) + 0.3, u.a, 0.45, 0.02, 0.9));
+      top.setColorAt(i, _c.set(u.c)); towel.setColorAt(i, _c.set(u.t));
+    });
+    top.castShadow = true; scene.add(top, stick, towel);
+  }
+}
+function updateIsland(dt) {
+  const dark = darkness();
+  if (ISL.ferry) { // ciclo de 40 s: espera, cruza, espera, regresa
+    const c = (now % 40) / 40, a = U(FERRY_A.x) + 2.6, b = U(FERRY_B.x) - 2.6;
+    let x, dir;
+    if (c < 0.2) { x = a; dir = 1; } else if (c < 0.5) { const k = (c - 0.2) / 0.3; x = lerp(a, b, k * k * (3 - 2 * k)); dir = 1; } else if (c < 0.7) { x = b; dir = -1; } else { const k = (c - 0.7) / 0.3; x = lerp(b, a, k * k * (3 - 2 * k)); dir = -1; }
+    ISL.ferry.position.set(x, Math.sin(now * 1.3) * 0.05, FERRY_ROW + 0.5); ISL.ferry.rotation.y = dir > 0 ? 0 : Math.PI; ISL.ferry.rotation.z = Math.sin(now) * 0.02;
+  }
+  if (ISL.coaster) { const t = now * 0.6, { car, cx, cz } = ISL.coaster; car.position.set(cx + Math.cos(t) * 2.6 * 1.25, 1.85, cz + Math.sin(t) * 2.6 * 0.85); car.rotation.y = -t - Math.PI / 2; }
+  if (ISL.carousel) ISL.carousel.rotation.y += dt * 0.8;
+  if (ISL.drop) { const c = (now % 8) / 8; ISL.drop.position.y = c < 0.6 ? 0.6 + c / 0.6 * 4.2 : c < 0.7 ? 4.8 : 4.8 - Math.min(1, (c - 0.7) / 0.08) * 4.2; }
+  if (ISL.coasterMat) ISL.coasterMat.color.setHSL(dark > 0.3 ? (now * 0.15) % 1 : 0.99, 0.85, dark > 0.3 ? 0.6 : 0.5);
+}
+// Ferry: tomarlo en cualquiera de los dos muelles
+let nearFerry = null;
+const regionOf = x => x >= (ISX0 - 8) * T ? 'isla' : 'ciudad';
+function takeFerry() {
+  if (sleeping || !nearFerry) return;
+  if (S.money < 15) { sfx('error'); toast('El ferry cuesta $15.', 'bad'); return; }
+  const toIsland = nearFerry === 'A';
+  S.money -= 15; S.stats.ferry = (S.stats.ferry || 0) + 1; sleeping = true; releaseAll();
+  const fx = $('sleepFx'); fx.querySelector('span').textContent = toIsland ? '⛴️ Rumbo a Isla Coral…' : '⛴️ De regreso a la ciudad…';
+  fx.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => fx.classList.add('on')));
+  tone(110, 0.6, 'sawtooth', 0.05); tone(98, 0.6, 'sawtooth', 0.04, 0.05);
+  setTimeout(() => {
+    advanceMinutes(20);
+    const dst = toIsland ? FERRY_B : FERRY_A;
+    P.x = dst.x + (toIsland ? 30 : -30); P.y = dst.y; P.vx = P.vy = 0; cam.fx = P.x; cam.fy = P.y; waypoint = waypoint && regionOf(waypoint.x) === regionOf(P.x) ? waypoint : null;
+    for (let i = peds.length - 1; i >= 0; i--) if (!['follow'].includes(peds[i].mode)) peds.splice(i, 1);
+    giver = null; thief = null; nearGiver = false; cars.length = 0;
+    updateCamera(0, cam.fx, cam.fy, false);
+    for (let i = 0; i < 24; i++) { const k = spawnPlace(500); if (k >= 0) peds.push(newPed(k)); }
+    setTimeout(() => { fx.classList.remove('on'); setTimeout(() => { fx.hidden = true; fx.querySelector('span').textContent = 'Zzz…'; sleeping = false; }, 800); }, 500);
+    lastDistrict = '';
+  }, 1000);
+}
+
 function buildStatic() {
   for (const l of lots) if (l.kind === 'deco') decoOf(l);
   // Suelo de la ciudad (una sola textura) y campo alrededor
@@ -1329,9 +1483,15 @@ function buildStatic() {
   const wtex = canvasTex(128, 128, (g) => { g.fillStyle = '#ffffff'; for (let i = 0; i < 26; i++) { g.globalAlpha = 0.15 + (i % 3) * 0.08; g.fillRect((i * 53) % 128, (i * 37) % 128, 14 + (i % 4) * 4, 2); } });
   wtex.wrapS = wtex.wrapT = THREE.RepeatWrapping; wtex.repeat.set(30, 70);
   matWater = new THREE.MeshPhongMaterial({ color: '#2a86c0', map: wtex, shininess: 90, specular: '#a8d8ff', transparent: true, opacity: 0.94 });
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(90, H + 140), matWater);
-  water.rotation.x = -Math.PI / 2; water.position.set(WATER0 + 45, 0.03, H / 2); water.receiveShadow = true; scene.add(water);
+  wtex.repeat.set(1, 1);
+  const wrect = (x0, x1, z0, z1) => {
+    const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0), uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (x1 - x0) / 3 + x0 / 3, uv.getY(i) * (z1 - z0) / 3 - z0 / 3);
+    const m = new THREE.Mesh(g, matWater); m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, 0.03, (z0 + z1) / 2); m.receiveShadow = true; scene.add(m);
+  };
+  wrect(WATER0, ISX0, -70, H + 70); wrect(ISX1, W + 60, -70, H + 70); wrect(ISX0, ISX1, -70, ISY0); wrect(ISX0, ISX1, ISY1, H + 70);
   matFoam = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 });
+  for (const [x, z, w2, d2] of [[ISX0, (ISY0 + ISY1) / 2, 0.35, ISY1 - ISY0], [ISX1, (ISY0 + ISY1) / 2, 0.35, ISY1 - ISY0], [(ISX0 + ISX1) / 2, ISY0, ISX1 - ISX0, 0.35], [(ISX0 + ISX1) / 2, ISY1, ISX1 - ISX0, 0.35]]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(w2, d2), matFoam); f.rotation.x = -Math.PI / 2; f.position.set(x, 0.05, z); scene.add(f); }
   const foam = new THREE.Mesh(new THREE.PlaneGeometry(0.35, H + 140), matFoam); foam.rotation.x = -Math.PI / 2; foam.position.set(WATER0 + 0.1, 0.05, H / 2); scene.add(foam);
   // Edificios decorativos combinados por manzana
   const chunks = new Map();
@@ -1370,12 +1530,13 @@ function buildStatic() {
   const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.9, 10), lam('#c9bc9f')); pil.position.set(fx, 0.7, fz); pil.castShadow = true; scene.add(pil);
   const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.2, 0.15, 14), lam('#c9bc9f')); bowl.position.set(fx, 1.1, fz); scene.add(bowl);
   buildLandmarks();
+  buildIsland();
   // Árboles (instanciados)
   treeTrunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 0.7, 6).translate(0, 0.35, 0), lam('#6b4a2b'), trees.length);
   treeCanopies = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: '#ffffff' }), trees.length);
   trees.forEach((tr, i) => {
-    treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, 1, 1));
-    const r = U(tr.r) * 1.25; treeCanopies.setMatrixAt(i, compose(U(tr.x), 0.7 + r * 0.8, U(tr.y), tr.s, r, r * 1.05, r));
+    treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, tr.palm ? 2.4 : 1, 1));
+    const r = U(tr.r) * 1.25; treeCanopies.setMatrixAt(i, compose(U(tr.x), tr.palm ? 1.75 : 0.7 + r * 0.8, U(tr.y), tr.s, r * (tr.palm ? 1.3 : 1), tr.palm ? r * 0.35 : r * 1.05, r * (tr.palm ? 1.3 : 1)));
     _c.set(['#3f8a3a', '#4c9a40', '#357a35', '#5aa548'][i % 4]); treeCanopies.setColorAt(i, _c);
   });
   treeCanopies.castShadow = true; treeTrunks.castShadow = true;
@@ -1662,11 +1823,12 @@ function updateDynamic(dt) {
   trees.forEach((tr, i) => {
     if (!inRect(tr.x, tr.y, view)) return;
     const r = U(tr.r) * 1.25, sw = Math.sin(now * 1.3 + tr.s) * amp;
-    treeCanopies.setMatrixAt(i, compose(U(tr.x) + sw, 0.7 + r * 0.8, U(tr.y), tr.s, r, r * 1.05, r, sw));
-    if (!tr._t) { tr._t = 1; treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, 0.8 + r * 0.4, 1)); treeTrunks.instanceMatrix.needsUpdate = true; }
+    treeCanopies.setMatrixAt(i, compose(U(tr.x) + sw, tr.palm ? 1.75 : 0.7 + r * 0.8, U(tr.y), tr.s, r * (tr.palm ? 1.3 : 1), tr.palm ? r * 0.35 : r * 1.05, r * (tr.palm ? 1.3 : 1), sw));
+    if (!tr._t) { tr._t = 1; treeTrunks.setMatrixAt(i, compose(U(tr.x), 0, U(tr.y), 0, 1, tr.palm ? 2.4 : 0.8 + r * 0.4, 1)); treeTrunks.instanceMatrix.needsUpdate = true; }
   });
   treeCanopies.instanceMatrix.needsUpdate = true;
   updateLandmarks(dt);
+  updateIsland(dt);
   // Barcos
   boats.forEach((s, i) => { boatObjs[i].position.set(U(s.x), Math.sin(now * 1.5 + i) * 0.04, U(s.y)); boatObjs[i].rotation.y = s.d > 0 ? 0 : Math.PI; boatObjs[i].rotation.z = Math.sin(now * 1.2 + i) * 0.05; });
   // Partículas
@@ -1726,8 +1888,8 @@ let waypoint = null;
 // z desde la pared de la puerta (0, abajo en pantalla) hasta el fondo (RD).
 let inside = null, insideK = 0, interiorLight = null, matWinInt = null, autoEnterArmed = true;
 const POCKET = { x: -130 * T, y: 50 * T };
-const FLOOR = { lemon: '#e9d8a6', tacos: '#c9733a', ice: '#f7e1ec', bakery: '#c79b6d', cafe: '#a9744f', laundry: '#d9e6ee', flowers: '#cfe3c4', books: '#8a5a3c', surf: '#e6d3a3', gym: '#4b505c', rest: '#9b5b3b', garage: '#7d8088', pharma: '#eef2f2', bar: '#3a2440', club: '#15101f', cinema: '#5b1f2a', gamedev: '#2b3550', hotel: '#d9c7a4', startup: '#e9edf2' };
-const ROOM = { lemon: [7, 6], tacos: [8, 7], ice: [8, 6.5], bakery: [8, 7], cafe: [9, 7.5], laundry: [9, 7], flowers: [8, 6.5], books: [10, 8], surf: [9, 7], gym: [11, 8.5], rest: [11, 8.5], garage: [12, 9], pharma: [10, 7.5], bar: [10, 8], club: [13, 9.5], cinema: [12, 10], gamedev: [11, 8.5], hotel: [13, 9.5], startup: [12, 9] };
+const FLOOR = { seafood: '#d4a373', diving: '#caf0f8', resort: '#f1e3c8', lemon: '#e9d8a6', tacos: '#c9733a', ice: '#f7e1ec', bakery: '#c79b6d', cafe: '#a9744f', laundry: '#d9e6ee', flowers: '#cfe3c4', books: '#8a5a3c', surf: '#e6d3a3', gym: '#4b505c', rest: '#9b5b3b', garage: '#7d8088', pharma: '#eef2f2', bar: '#3a2440', club: '#15101f', cinema: '#5b1f2a', gamedev: '#2b3550', hotel: '#d9c7a4', startup: '#e9edf2' };
+const ROOM = { seafood: [10, 8], diving: [12, 9], resort: [14, 10], lemon: [7, 6], tacos: [8, 7], ice: [8, 6.5], bakery: [8, 7], cafe: [9, 7.5], laundry: [9, 7], flowers: [8, 6.5], books: [10, 8], surf: [9, 7], gym: [11, 8.5], rest: [11, 8.5], garage: [12, 9], pharma: [10, 7.5], bar: [10, 8], club: [13, 9.5], cinema: [12, 10], gamedev: [11, 8.5], hotel: [13, 9.5], startup: [12, 9] };
 const HOME_ROOM = [[8, 6.5], [10, 7.5], [11, 8.5], [13, 9.5]];
 function roomSize(type, lvl, home) {
   if (home) return HOME_ROOM[homeLv()];
@@ -1751,9 +1913,10 @@ function bizPlan(type, lvl, RW, RD) {
     for (const s of [-1, 1]) { prop(x + s * (big ? 0.72 : 0.58), z, 0.32, 0.36, 0.28, '#5b3e26', false); p.seats.push({ x: x + s * (big ? 0.72 : 0.58), z, a: s < 0 ? 'r' : 'l' }); }
   };
   const shelfRow = (x, z, len, cols) => { prop(x, z, len, 0.42, 1.0, '#8f7a63'); for (let i = 0; i < Math.floor(len / 0.32); i++) prop(x - len / 2 + 0.18 + i * 0.32, z, 0.22, 0.46, 0.16, cols[i % cols.length], false, 0.62 + (i % 2) * 0.2); };
-  const food = ['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar'].includes(type);
+  const food = ['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar', 'seafood'].includes(type);
   if (food) {
-    grid(type === 'rest' ? 2.1 : 1.9, 1.6, (x, z) => table(x, z, type === 'cafe' || type === 'ice', type === 'rest'));
+    grid(type === 'rest' || type === 'seafood' ? 2.1 : 1.9, 1.6, (x, z) => table(x, z, type === 'cafe' || type === 'ice', type === 'rest' || type === 'seafood'));
+    if (type === 'seafood') { prop(RW - 0.5, (zone.z0 + zone.z1) / 2, 0.6, 2.4, 0.9, '#48cae4'); prop(RW - 0.5, (zone.z0 + zone.z1) / 2, 0.5, 2.2, 0.06, '#e76f51', false, 0.9); } // pecera con langostas
     if (type === 'bar') for (let x = 3.0; x < p.counter.x1 - 0.2; x += 0.75) { prop(x, cz - 0.55, 0.28, 0.28, 0.32, '#2b2d42', false); p.seats.push({ x, z: cz - 0.55, a: 'b' }); }
     if (type === 'bakery' || type === 'cafe' || type === 'ice') prop((p.counter.x0 + p.counter.x1) / 2 + 0.8, cz, 1.6, 0.42, 0.38, '#cfe8f5', false, 0.62); // vitrina
     plant(0.5, 0.6); plant(RW - 0.5, cz - 0.5);
@@ -1788,11 +1951,18 @@ function bizPlan(type, lvl, RW, RD) {
     grid(1.6, 1.5, (x, z) => { prop(x, z, 1.1, 0.6, 0.45, '#e9e3d3'); prop(x, z + 0.12, 0.6, 0.06, 0.38, '#1b2333', false, 0.45); prop(x, z + 0.1, 0.52, 0.02, 0.3, type === 'gamedev' ? '#46d98a' : '#3a86ff', false, 0.5); p.desks.push({ x, z: z - 0.45 }); });
     plant(0.5, 0.6); plant(RW - 0.5, 0.6);
     if (type === 'startup') { prop(1.2, 1.4, 0.6, 0.6, 0.3, '#ff924c', false); prop(1.9, 1.4, 0.6, 0.6, 0.3, '#06d6a0', false); }
-  } else if (type === 'hotel') {
+  } else if (type === 'diving') { // alberca de práctica con carriles, tanques y bancas
+    const pw = W - 1.2, pd = D - 1.0, px = (zone.x0 + zone.x1) / 2, pz = (zone.z0 + zone.z1) / 2;
+    prop(px, pz, pw + 0.4, pd + 0.4, 0.12, '#f4f1de'); prop(px, pz, pw, pd, 0.14, '#48cae4', false);
+    for (let i = 1; i < 4; i++) prop(px - pw / 2 + i * pw / 4, pz, 0.05, pd, 0.16, '#ffffff', false);
+    for (let z = 0.8; z < zone.z0 + 0.2 + 2; z += 0.5) prop(0.4, z, 0.25, 0.25, 0.7, '#ffd166');
+    for (let x = zone.x0; x < zone.x1; x += 1.2) p.seats.push({ x, z: pz - pd / 2 - 0.45, a: 'f' });
+  } else if (type === 'hotel' || type === 'resort') {
     prop((zone.x0 + zone.x1) / 2, (zone.z0 + zone.z1) / 2, W * 0.8, D * 0.75, 0.02, '#b3242c', false);
     grid(2.6, 2.0, (x, z) => { prop(x, z - 0.35, 1.5, 0.45, 0.4, '#2c3e70'); prop(x, z + 0.35, 0.7, 0.5, 0.3, '#e9e3d3'); p.seats.push({ x: x - 0.4, z: z - 0.35, a: 'b' }, { x: x + 0.4, z: z - 0.35, a: 'b' }); });
     for (const x of [RW - 2.4, RW - 1.0]) prop(x, RD - 0.15, 1.0, 0.1, 1.6, '#c0c6cf', false); // elevadores
     plant(0.5, 0.6); plant(RW - 0.5, 0.6); plant(zone.x0, cz - 0.4);
+    if (type === 'resort') { prop(RW - 2.2, 1.5, 3.2, 1.8, 0.1, '#48cae4'); for (let x = RW - 3.4; x < RW - 0.8; x += 0.8) { prop(x, 2.8, 0.45, 0.9, 0.18, '#ffffff', false); p.seats.push({ x, z: 2.8, a: 'b' }); } } // alberca y camastros
   } else if (type === 'club') {
     p.club = { x0: zone.x0 + 0.2, x1: zone.x1 - 1.8, z0: zone.z0 + 0.2, z1: zone.z1 };
     prop(RW - 0.9, (zone.z0 + zone.z1) / 2, 1.0, 2.2, 0.75, '#1b1b1b'); prop(RW - 0.9, (zone.z0 + zone.z1) / 2 - 0.5, 0.45, 0.45, 0.05, '#adb5bd', false, 0.75); prop(RW - 0.9, (zone.z0 + zone.z1) / 2 + 0.5, 0.45, 0.45, 0.05, '#adb5bd', false, 0.75);
@@ -1907,7 +2077,7 @@ function buildInterior() {
     box(mx, c.z, cw, 0.6, 0.85, shade(ty.roof, 0.8), true); box(mx, c.z, cw + 0.08, 0.66, 0.06, '#e9e3d3', false, 0.85);
     box(plan.reg.x, c.z, 0.42, 0.34, 0.26, '#2b2d42', false, 0.91); box(plan.reg.x, c.z - 0.05, 0.32, 0.06, 0.16, '#46d98a', false, 1.05); // caja registradora
     const goods = [ty.roof, '#ffd166', '#ef476f', '#06d6a0', '#3a86ff'];
-    if (['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar', 'flowers', 'books', 'pharma', 'surf', 'laundry'].includes(type)) { // estantería con producto
+    if (['lemon', 'tacos', 'ice', 'bakery', 'cafe', 'rest', 'bar', 'flowers', 'books', 'pharma', 'surf', 'laundry', 'seafood'].includes(type)) { // estantería con producto
       box(RW / 2, RD - 0.3, RW - 0.6, 0.45, 1.6, '#8f7a63', false);
       for (let i = 0; i < Math.floor((RW - 1) / 0.36); i++) for (const y of [0.5, 1.05]) box(0.5 + i * 0.36, RD - 0.32, 0.26, 0.36, 0.22, goods[(i + (y > 1 ? 2 : 0)) % goods.length], false, y);
     } else for (let x = 1.5; x < RW - 1; x += 3) box(x, RD - 0.03, 1.4, 0.04, 0.9, goods[Math.floor(x) % goods.length], false, 1.0); // cuadros en la pared
@@ -2212,7 +2382,8 @@ function updateHUD() {
   setText($clock, `${t('day')} ${S.day} · ${t('days')[weekday()]} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${wIco}${buff}`);
   // Botones de acción contextual
   let main = null, alt = null;
-  if (nearGiver && giver && !S.mission) main = { k: 'talk', label: 'Hablar', ico: '💬' };
+  if (nearFerry) main = { k: 'ferry', label: nearFerry === 'A' ? 'Ferry a Isla Coral · $15' : 'Ferry a la ciudad · $15', ico: '⛴️' };
+  else if (nearGiver && giver && !S.mission) main = { k: 'talk', label: 'Hablar', ico: '💬' };
   else if (ctxLot) {
     const l = ctxLot, b = bizAtLot(l.id);
     if (l.kind === 'sale') main = { k: 'buy', label: t('buy'), ico: '🏗️' };
@@ -2246,6 +2417,7 @@ function doAction(k) {
   audioInit();
   if (sleeping) return;
   if (k === 'talk') { talkToGiver(); return; }
+  if (k === 'ferry') { takeFerry(); return; }
   if (!ctxLot) return;
   const l = ctxLot, b = bizAtLot(l.id);
   if (k === 'sleep' && l === HOME) goSleep();
@@ -2492,7 +2664,7 @@ function openMap() {
     else if (b || l.kind === 'rival') { g.font = `${Math.round(s * 2)}px system-ui, "Apple Color Emoji"`; g.fillText(TYPE[b ? b.type : l.rival.type].em, x, y + 1); }
   }
   g.font = `800 ${Math.round(s * 2.2)}px system-ui`; g.fillStyle = 'rgba(255,255,255,.85)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = s * .6;
-  for (const [d, bx, by] of [['res', 2.5, 0.6], ['centro', 5, 2.5], ['tech', 6, 0.5], ['ind', 3.5, 4.6], ['playa', 8.1, 3.5], ['uni', 0.5, 3.4], ['puerto', 6, 6.6]]) { const x = bx * BLK * s + BLK * s / 2, y = by * BLK * s + BLK * s / 2; g.strokeText(t(d), x, y); g.fillText(t(d), x, y); }
+  for (const [d, bx, by] of [['res', 2.5, 0.6], ['centro', 5, 2.5], ['tech', 6, 0.5], ['ind', 3.5, 4.6], ['playa', 8.1, 3.5], ['uni', 0.5, 3.4], ['puerto', 6, 6.6], ['isla', (IX0 + 19) / BLK - 0.5, (IY0 + 26) / BLK - 0.5]]) { const x = bx * BLK * s + BLK * s / 2, y = by * BLK * s + BLK * s / 2; g.strokeText(t(d), x, y); g.fillText(t(d), x, y); }
   if (waypoint) { g.fillStyle = '#ffb627'; g.fillRect(waypoint.x / T * s - s * 1.5, waypoint.y / T * s - s * 1.5, s * 3, s * 3); }
   g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = s * .5; g.beginPath(); g.arc(P.x / T * s, P.y / T * s, s * 1.6, 0, 7); g.fill(); g.stroke();
   c.addEventListener('click', e => {
@@ -2550,6 +2722,7 @@ window.addEventListener('keydown', e => {
   if (c === 'KeyM' && !e.repeat) { $ui.querySelector('.mapwrap') ? closeSheet() : openMap(); return; }
   if ((c === 'KeyP' || c === 'Tab') && !e.repeat) { e.preventDefault(); sheet && sheet.kind === 'phone' ? closeSheet() : openPhone(); return; }
   if (sheet || $ui.firstChild) return;
+  if ((c === 'Space' || c === 'Enter') && nearFerry) { if (!e.repeat) doAction('ferry'); return; }
   if ((c === 'Space' || c === 'Enter') && nearGiver && !S.mission) { if (!e.repeat) doAction('talk'); return; }
   if (c === 'Space' || c === 'Enter') { if (ctxLot && (bizAtLot(ctxLot.id) || !e.repeat)) doAction($act.dataset.k); return; }
   if (c === 'KeyE' && !e.repeat) { if (ctxLot) { const b = bizAtLot(ctxLot.id); doAction(b ? 'manage' : $act.dataset.k); } return; }
@@ -2667,11 +2840,12 @@ function spawnGiver() {
   if (!cand.length) return;
   const p = newPed(pick(cand));
   p.mode = 'giver'; p.shirt = '#ffb627'; p.dog = false; p.wait = 0;
-  if (S.biz.length && rnd() < 0.35) {
-    const b = pick(S.biz), l = lotOf(b), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
+  const mine = S.biz.filter(b => regionOf(lotOf(b).door.x) === regionOf(p.x));
+  if (mine.length && rnd() < 0.35) {
+    const b = pick(mine), l = lotOf(b), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
     p.offer = { kind: 'vip', lot: l.id, reward: roundR((TYPE[b.type].ticket * 10 + 60) * missionScale()), time: Math.round(d / 70 + 35) };
   } else {
-    const opts = lots.filter(l => l.kind !== 'deco' && l.kind !== 'home').filter(l => { const d = Math.hypot(l.door.x - p.x, l.door.y - p.y); return d > 650 && d < 2300; });
+    const opts = lots.filter(l => l.kind !== 'deco' && l.kind !== 'home' && regionOf(l.door.x) === regionOf(p.x)).filter(l => { const d = Math.hypot(l.door.x - p.x, l.door.y - p.y); return d > 650 && d < 2300; });
     if (!opts.length) return;
     const l = pick(opts), d = Math.hypot(l.door.x - p.x, l.door.y - p.y);
     p.offer = { kind: 'deliver', lot: l.id, reward: roundR((40 + d * 0.12) * missionScale()), time: Math.round(d / 95 + 20) };
@@ -3001,9 +3175,7 @@ function goSleep() {
   }, 1000);
 }
 // Adelanta el reloj en pasos de 5 minutos: la economía, los sueldos de medianoche y las noticias siguen funcionando
-function fastForwardToMorning() {
-  const earned0 = S.stats.earned;
-  let left = ((7 * 60 - (S.min % 1440)) + 1440) % 1440; if (left < 1) left = 1440;
+function advanceMinutes(left) {
   while (left > 1e-6) {
     const d = Math.min(5, left), prevMin = S.min, prevH = hour();
     S.min += d; left -= d;
@@ -3013,6 +3185,11 @@ function fastForwardToMorning() {
     if (prevH < 7 && hour() >= 7) morningNews();
     simEconomy(d, d / MIN_PER_SEC);
   }
+}
+function fastForwardToMorning() {
+  const earned0 = S.stats.earned;
+  let left = ((7 * 60 - (S.min % 1440)) + 1440) % 1440; if (left < 1) left = 1440;
+  advanceMinutes(left);
   if (S.mission) { S.mission = null; S.streak = 0; toast('El encargo se canceló porque te fuiste a dormir.', '', 4000); }
   clearStreet(); waypoint = null;
   peds.length = 0; cars.length = 0; parts.length = 0; floats.length = 0;
