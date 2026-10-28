@@ -27,6 +27,7 @@ Hay dos versiones con la misma simulación y el mismo guardado:
 - **Cobrar**: la caja se cobra sola cuando pasas por la puerta. Si se llena, el negocio deja de vender; un gerente la cobra por ti.
 - **Móvil** (P): tus negocios, metas, banco (préstamos), vehículos y ajustes.
 - **Mapa** (M): toca un punto para marcar un destino con flecha.
+- **Pausa y guía (3D)**: Ⅱ (o Esc) pausa el reloj y te deja guardar a mano; **? Guía** (o H) explica los primeros pasos y tiene **Buscar un local asequible**, que te marca el terreno más cercano que puedes pagar. La guía sale al empezar una partida, y si ya tenías una te pregunta antes de reemplazarla. Bajo la meta, una barra muestra cuántas metas llevas.
 
 ## Qué hace que la ciudad se sienta viva
 

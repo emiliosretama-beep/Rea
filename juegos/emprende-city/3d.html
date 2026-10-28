@@ -148,7 +148,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
 .title{background:radial-gradient(ellipse at 50% 20%,#ffb62728,transparent 60%),#080e1ac9;backdrop-filter:blur(5px);overflow-y:auto;box-sizing:border-box}
 .title .card{padding:26px;border:1px solid #ffffff24;border-radius:28px;background:linear-gradient(145deg,#182940eb,#0b1424eb);box-sizing:border-box;box-shadow:0 30px 100px #0006}.title h1{font-size:clamp(42px,10vw,66px)}
 .session-tools{display:flex;gap:6px}.session-tools button{min-width:44px;min-height:40px;border:1px solid var(--line);border-radius:12px;background:var(--ink);font-weight:700;padding:8px 12px}
-#progressCard{background:#0f1a2ee8;border:1px solid #46d98a55;border-radius:14px;padding:10px 12px;width:min(250px,calc(100vw - 180px));font-size:12px}#progressCard strong{display:block;margin:4px 0 8px;font-size:13px}#progressCard small{color:var(--cash)}.guide-step{padding:12px;border-radius:12px;background:var(--ink-2);line-height:1.5}
+#progressCard{background:#0f1a2ee8;border:1px solid #46d98a55;border-radius:12px;padding:6px 10px;width:min(220px,calc(100vw - 180px));font-size:11px;display:grid;gap:4px}#progressCard strong{display:block;margin:4px 0 8px;font-size:13px}#progressCard small{color:var(--cash)}.guide-step{padding:12px;border-radius:12px;background:var(--ink-2);line-height:1.5}
 @media(max-height:620px){#progressCard{display:none}.hud{gap:3px}.title .card{gap:9px;padding:18px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
 </style>
@@ -162,7 +162,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outl
   <div class="chip" id="clock"></div>
   <div class="chip" id="place"></div>
   <div class="chip goal" id="goal"></div>
-  <div id="progressCard"><small>TU IMPERIO</small><strong id="progressLabel"></strong><div class="bar"><i id="progressFill"></i></div><small id="progressCount"></small></div>
+  <div id="progressCard"><div class="bar"><i id="progressFill"></i></div><small id="progressCount"></small></div>
   <div class="chip mission" id="mission" hidden></div>
 </div>
 
@@ -2793,7 +2793,7 @@ function frame(ts) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
   if (!running || document.hidden) return;
-  if (sheet && ['pause','guide','replace'].includes(sheet.kind)) { render(0); return; }
+  if (sheet && ['pause','guide','replace'].includes(sheet.kind)) { if (S) updateHUD(); render(0); return; }
   now += dt;
   acc += dt;
   while (acc >= STEP) { tick(STEP); acc -= STEP; }
@@ -3221,10 +3221,9 @@ function fastForwardToMorning() {
 }
 
 function updateProgress() {
- const next=GOALS.find(g=>!S.goalsDone.includes(g.id));
- $('progressLabel').textContent=next ? next[LANG] || next.es : '¡Imperio completado!';
- $('progressFill').style.width=(S.goalsDone.length/GOALS.length*100)+'%';
- $('progressCount').textContent=S.goalsDone.length+' / '+GOALS.length+' metas'+(next && next.r ? ' · Premio: '+fmt(next.r):'');
+ const next=GOALS.find(g=>!S.goalsDone.includes(g.id)), fill=(S.goalsDone.length/GOALS.length*100)+'%';
+ if ($('progressFill').style.width !== fill) $('progressFill').style.width = fill;
+ setText($('progressCount'), 'Tu imperio · '+S.goalsDone.length+' / '+GOALS.length+' metas'+(next && next.r ? ' · Premio: '+fmt(next.r):''));
 }
 function openPause(){
  if(!running || sleeping)return;
@@ -3253,7 +3252,9 @@ ACTIONS.starterRoute=()=>{
  const options=lots.filter(l=>l.kind==='sale' && regionOf(l.door.x)===regionOf(P.x) && priceOf('lemon',l.district)<=S.money);
  options.sort((a,b)=>dist2(a.door.x,a.door.y,P.x,P.y)-dist2(b.door.x,b.door.y,P.x,P.y));
  const l=options[0];if(!l){toast('No hay locales asequibles en esta zona. Haz encargos para reunir dinero.','',5000);return;}
- waypoint={x:l.door.x,y:l.door.y};closeSheet();toast('Sigue la flecha dorada. Limonada desde '+fmt(priceOf('lemon',l.district))+' · '+t(l.district),'good',6000);
+ closeSheet();const cost='Limonada desde '+fmt(priceOf('lemon',l.district))+' · '+t(l.district);
+ if(dist2(l.door.x,l.door.y,P.x,P.y)<60*60){toast('¡Tienes uno aquí mismo! Pulsa Comprar. '+cost,'good',6000);return;} // la ruta se borraría al instante
+ waypoint={x:l.door.x,y:l.door.y};toast('Sigue la flecha dorada. '+cost,'good',6000);
 };
 $('btnGuide').onclick=openGuide;$('btnPause').onclick=openPause;
 
@@ -3299,7 +3300,7 @@ function titleScreen() {
       <input id="tBrand" maxlength="16" value="${esc(saved ? saved.brand : 'Emprende')}" autocomplete="off" aria-label="${t('brandAsk')}">
       <button class="btn ${saved ? '' : 'primary'}" id="tNew">${saved ? t('newGame') : t('play')}</button>
       <p class="keys">${t('keys')}</p></div></div>`;
-    $('tNew').onclick = () => { audioInit(); const brand = ($('tBrand').value || 'Emprende').trim().slice(0, 16); const begin = () => { startGame(newState(brand)); save(); openGuide(); }; if (saved) { openSheet('replace', () => ({title:'¿Empezar de nuevo?', em:'↻', body:'<p class=note>La nueva partida sustituirá tu progreso guardado.</p><button class="btn danger" data-a=confirmNew>Crear nueva partida</button><button class="btn primary" data-a=cancelNew>Conservar mi partida</button>'})); ACTIONS.confirmNew = begin; ACTIONS.cancelNew = () => {sheet=null;draw();}; } else begin(); };
+    $('tNew').onclick = () => { audioInit(); const brand = ($('tBrand').value || 'Emprende').trim().slice(0, 16); const begin = () => { startGame(newState(brand)); save(); openGuide(); }; if (saved) { openSheet('replace', () => ({title:'¿Empezar de nuevo?', em:'↻', body:'<p class=note>La nueva partida sustituirá tu progreso guardado.</p><button class="btn danger" data-a=confirmNew>Crear nueva partida</button><button class="btn primary" data-a=cancelNew>Conservar mi partida</button>'})); ACTIONS.confirmNew = begin; ACTIONS.cancelNew = closeSheet; } else begin(); };
     if (saved) $('tContinue').onclick = () => { audioInit(); hydrate(saved); startGame(S); };
   };
   draw();
