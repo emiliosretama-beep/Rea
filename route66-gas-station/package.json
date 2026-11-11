@@ -1,0 +1,17 @@
+{
+  "name": "route66-gas-station",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Route 66 Gas Station (nombre provisional) - juego de navegador de ERAGames",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node build.mjs && npx --yes http-server dist -p 8066 -c-1"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
