@@ -12,6 +12,8 @@ export const LAYOUT = {
   building: { x: 0, z: -31, w: 16, d: 8, h: 4 },
   door: { x: -3, z: -27 },
   sign: { x: 18, z: -8.6 },
+  register: { x: 4.5, z: -17.9 },
+  laneZ: -12.9, // carril donde se detienen los autos, entre la carretera y la bomba
 };
 
 export function createStation(scene) {
@@ -26,6 +28,19 @@ export function createStation(scene) {
   // Parches viejos de concreto, para que no se vea liso
   parts.push(box(9, 0.07, 6, 0x9a958d, -12, 0.035, -18));
   parts.push(box(7, 0.07, 9, 0xb7b2a9, 13, 0.035, -24));
+
+  // Accesos desde la carretera (entrada al este, salida al oeste)
+  for (const sx of [1, -1]) parts.push(box(26, 0.05, 7, PAL.concrete, sx * 25, 0.025, -7.6));
+
+  // Mostrador con la caja registradora, a unos pasos de la bomba
+  const rx = L.register.x, rz = L.register.z;
+  parts.push(box(1.4, 1.0, 0.75, PAL.wood, rx, 0.56, rz));
+  parts.push(box(1.5, 0.08, 0.85, 0x80583c, rx, 1.1, rz));
+  parts.push(box(0.55, 0.3, 0.42, PAL.dark, rx, 1.29, rz));
+  parts.push(box(0.5, 0.26, 0.3, PAL.red, rx, 1.55, rz - 0.05));
+  parts.push(box(0.4, 0.12, 0.05, PAL.cream, rx, 1.57, rz + 0.11));
+  parts.push(box(0.5, 0.05, 0.2, PAL.chrome, rx, 1.14, rz + 0.3));
+  aabb(rx, rz, 1.5, 0.85);
 
   // Isla y bomba
   const px = L.pump.x, pz = L.pump.z;
@@ -110,7 +125,6 @@ export function createStation(scene) {
   scene.add(shadows);
 
   const interactables = [
-    { id: 'pump', x: px, y: 1.2, z: pz, prompt: 'promptPump', toast: 'toastPump' },
     { id: 'door', x: L.door.x, y: 1.3, z: front, prompt: 'promptDoor', toast: 'toastDoor' },
     { id: 'sign', x: L.sign.x, y: 1.6, z: L.sign.z, prompt: 'promptSign', toast: 'toastSign' },
     { id: 'drums', x: drumX + 0.5, y: 0.8, z: drumZ, prompt: 'promptDrum', toast: 'toastDrum' },

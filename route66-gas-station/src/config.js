@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.1 · Etapa 1',
+  version: 'DEV 0.2 · Etapa 2',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -22,6 +22,21 @@ export const CFG = {
   road: { width: 10, length: 640, laneZ: 2.5 },
 
   debugFps: true,
+};
+
+// Balance del negocio (precios de los años 50)
+export const BAL = {
+  pricePerGal: 0.3,
+  startRep: 50,
+  fillSeconds: 4.5, // tiempo aproximado para llenar un pedido
+  overfillMax: 1.12, // la bomba corta sola al 112 %
+  doneMin: 0.9, // desde aquí el cliente acepta la carga
+  perfectMin: 0.95,
+  perfectMax: 1.04,
+  payPatienceRate: 0.5, // esperando a pagar, la paciencia baja más lento
+  repPerfect: 3, repOk: 2, repOver: 1, repAngry: -6,
+  firstCustomer: 1.5, // segundos hasta el primer cliente
+  nextCustomer: [3, 7], // segundos entre clientes
 };
 
 // Paleta compartida entre el mundo 3D y la interfaz

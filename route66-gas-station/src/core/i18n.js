@@ -12,8 +12,11 @@ export function initI18n() {
   applyDom();
 }
 
-export function t(key) {
-  return STRINGS[lang][key] ?? STRINGS.es[key] ?? key;
+// t('promptCharge', { m: '$3.10' }) reemplaza {m} en el texto
+export function t(key, params) {
+  let s = STRINGS[lang][key] ?? STRINGS.es[key] ?? key;
+  if (params) for (const k in params) s = s.replace(`{${k}}`, params[k]);
+  return s;
 }
 
 export function getLang() { return lang; }

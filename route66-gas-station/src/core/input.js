@@ -11,7 +11,9 @@ export function createInput({ layer, joyEl, knobEl, interactBtn, canvas }) {
     touchMode: window.matchMedia('(pointer: coarse)').matches,
     locked: false,
     enabled: false,
+    interactHeld: false, // true mientras se mantiene E, clic o el botón naranja
   };
+  const held = { key: false, mouse: false, btn: false };
   let lookX = 0, lookY = 0;
   let interactCb = () => {};
   let modeCb = () => {};
@@ -32,6 +34,7 @@ export function createInput({ layer, joyEl, knobEl, interactBtn, canvas }) {
     look.id = null;
     joyEl.classList.remove('on');
     interactBtn.classList.remove('down');
+    held.key = held.mouse = held.btn = false;
   }
 
   // ---------- Teclado ----------
@@ -39,9 +42,15 @@ export function createInput({ layer, joyEl, knobEl, interactBtn, canvas }) {
   window.addEventListener('keydown', (e) => {
     if (!state.enabled) return;
     if (MOVE_KEYS.includes(e.code)) { keys.add(e.code); e.preventDefault(); }
-    if ((e.code === 'KeyE' || e.code === 'Space') && !e.repeat) { interactCb(); e.preventDefault(); }
+    if (e.code === 'KeyE' || e.code === 'Space') {
+      if (!e.repeat) { held.key = true; interactCb(); }
+      e.preventDefault();
+    }
   });
-  window.addEventListener('keyup', (e) => keys.delete(e.code));
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    if (e.code === 'KeyE' || e.code === 'Space') held.key = false;
+  });
   window.addEventListener('blur', releaseAll);
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
 
@@ -56,8 +65,9 @@ export function createInput({ layer, joyEl, knobEl, interactBtn, canvas }) {
     lookY += e.movementY * CFG.mouseSens;
   });
   document.addEventListener('mousedown', (e) => {
-    if (state.locked && state.enabled && e.button === 0) interactCb();
+    if (state.locked && state.enabled && e.button === 0) { held.mouse = true; interactCb(); }
   });
+  document.addEventListener('mouseup', (e) => { if (e.button === 0) held.mouse = false; });
 
   // ---------- Capa táctil / arrastre ----------
   layer.addEventListener('pointerdown', (e) => {
@@ -118,12 +128,14 @@ export function createInput({ layer, joyEl, knobEl, interactBtn, canvas }) {
     e.preventDefault();
     if (!state.enabled) return;
     interactBtn.classList.add('down');
+    held.btn = true;
+    try { interactBtn.setPointerCapture(e.pointerId); } catch { /* no crítico */ }
     interactCb();
   });
-  const up = () => interactBtn.classList.remove('down');
+  const up = () => { interactBtn.classList.remove('down'); held.btn = false; };
   interactBtn.addEventListener('pointerup', up);
   interactBtn.addEventListener('pointercancel', up);
-  interactBtn.addEventListener('pointerleave', up);
+  interactBtn.addEventListener('lostpointercapture', up);
 
   return Object.assign(state, {
     // Llamar una vez por frame antes de mover al jugador
@@ -139,6 +151,7 @@ export function createInput({ layer, joyEl, knobEl, interactBtn, canvas }) {
       if (joy.id !== null) { x = joy.x; y = joy.y; }
       state.moveX = x; state.moveY = y;
       state.joystick = joy.id !== null;
+      state.interactHeld = held.key || held.mouse || held.btn;
     },
     consumeLook(out) { out.x = lookX; out.y = lookY; lookX = 0; lookY = 0; },
     onInteract(fn) { interactCb = fn; },

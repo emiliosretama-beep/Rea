@@ -24,7 +24,10 @@ export function createTraffic(scene) {
     { dir: -1, z: -CFG.road.laneZ, timer: 3.5, last: null },
   ];
 
+  let westHold = false;
+
   function spawn(lane) {
+    if (lane.dir === -1 && westHold) return false;
     const car = cars.find((c) => !c.active);
     if (!car) return false;
     // No encimar: esperar a que el anterior se aleje del punto de salida
@@ -47,6 +50,24 @@ export function createTraffic(scene) {
 
   return {
     cars,
+    // Los clientes usan el carril hacia el oeste: se pausa la salida de autos nuevos mientras entran o salen
+    holdWest(on) { westHold = on; },
+    // Velocidad del auto más cercano que va adelante en el carril oeste (Infinity si no hay)
+    westAheadSpeed(x, range) {
+      let best = Infinity, bestD = range;
+      for (const c of cars) {
+        if (!c.active || c.dir !== -1) continue;
+        const d = x - c.group.position.x;
+        if (d > 0 && d < bestD) { bestD = d; best = c.speed; }
+      }
+      return best;
+    },
+    westClear(minX, maxX) {
+      for (const c of cars) {
+        if (c.active && c.dir === -1 && c.group.position.x > minX && c.group.position.x < maxX) return false;
+      }
+      return true;
+    },
     update(dt) {
       for (const lane of lanes) {
         lane.timer -= dt;

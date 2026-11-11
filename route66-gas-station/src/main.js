@@ -1,6 +1,6 @@
 // Arranque y bucle principal.
 import { CFG } from './config.js';
-import { initI18n, setLang, getLang, onLangChange, applyDom } from './core/i18n.js';
+import { initI18n, setLang, getLang, onLangChange, applyDom, t } from './core/i18n.js';
 import { createInput } from './core/input.js';
 import { createPlayer } from './core/player.js';
 import { createScene } from './world/scene.js';
@@ -10,6 +10,8 @@ import { createProps } from './world/props.js';
 import { createTraffic } from './world/traffic.js';
 import { createInteractions } from './game/interactions.js';
 import { createHud } from './ui/hud.js';
+import { createState } from './game/state.js';
+import { createCustomers } from './game/customers.js';
 
 const $ = (id) => document.getElementById(id);
 const body = document.body;
@@ -26,8 +28,21 @@ const traffic = createTraffic(view.scene);
 
 const colliders = [...station.colliders, ...props.colliders];
 const player = createPlayer(view.camera, colliders);
-const interactions = createInteractions(station.interactables);
 const hud = createHud();
+const state = createState();
+state.onChange((s) => hud.setStats(s));
+hud.setStats(state);
+
+const customers = createCustomers(view.scene, {
+  traffic, state, colliders,
+  onEvent: (key, params) => hud.toast(t(key, params)),
+});
+
+// Puntos de interacción: los fijos de la estación (solo muestran un mensaje) y los del servicio
+const interactions = createInteractions([
+  ...station.interactables.map((it) => ({ ...it, label: () => t(it.prompt), use: () => hud.toast(t(it.toast)) })),
+  ...customers.interactables(),
+]);
 hud.showFps(CFG.debugFps);
 
 const input = createInput({
@@ -64,7 +79,9 @@ function pause() {
   playing = false;
   body.classList.remove('playing');
   input.setEnabled(false);
+  stopHolding();
   interactions.clear();
+  hud.setPrompt(null);
 }
 
 $('btn-play').addEventListener('click', play);
@@ -74,17 +91,30 @@ $('btn-rotate-skip').addEventListener('click', () => body.classList.add('portrai
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 window.addEventListener('keydown', (e) => { if (e.code === 'KeyP' || e.code === 'Escape') pause(); });
 
-onLangChange(() => {
-  $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES';
-  hud.refreshLanguage();
-});
+onLangChange(() => { $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES'; });
 $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES';
 
-interactions.onChange((it) => hud.setPrompt(it ? it.prompt : null));
+// Pulsar: acción inmediata (cobrar, mirar). Mantener: cargar gasolina.
 input.onInteract(() => {
   const it = interactions.current;
-  if (it) hud.toast(it.toast);
+  if (it && it.use) it.use();
 });
+let holding = null;
+function stopHolding() {
+  if (holding) { holding.release(); holding = null; }
+}
+function updateService(dt) {
+  const it = interactions.current;
+  if (input.interactHeld && it && it.hold) {
+    if (holding && holding !== it) stopHolding();
+    holding = it;
+    it.hold(dt);
+  } else stopHolding();
+  hud.setPrompt(interactions.label, !!(it && it.holdable));
+  const bay = customers.bay;
+  hud.setCustomer(bay);
+  hud.setFuel(bay.c, !!bay.c && (bay.phase === 'fueling' || (bay.phase === 'waiting' && it && it.id === 'pump')));
+}
 
 // ---------- Cámara del menú: vista fija de la estación al atardecer ----------
 function menuCamera(time) {
@@ -105,7 +135,9 @@ function frame(now) {
   if (playing) {
     input.update();
     player.update(dt, input);
+    customers.update(dt, player);
     interactions.update(dt, player);
+    updateService(dt);
   } else if (started) {
     player.applyCamera();
   } else {
@@ -118,4 +150,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // Para pruebas automáticas y depuración (no afecta al juego)
-window.__r66 = { player, input, view, traffic, interactions, colliders, play, pause };
+window.__r66 = { player, input, view, traffic, interactions, colliders, customers, state, play, pause };

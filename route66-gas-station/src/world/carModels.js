@@ -92,10 +92,12 @@ export function createCar() {
 }
 
 // Elige un tipo al azar según su peso
-export function pickType(rand, ids = Object.keys(CAR_TYPES)) {
+// field: 'weight' para el tráfico de fondo, 'chance' para clientes
+export function pickType(rand, field = 'weight') {
+  const ids = Object.keys(CAR_TYPES).filter((id) => CAR_TYPES[id][field] > 0);
   let total = 0;
-  for (const id of ids) total += CAR_TYPES[id].weight;
+  for (const id of ids) total += CAR_TYPES[id][field];
   let r = rand() * total;
-  for (const id of ids) { r -= CAR_TYPES[id].weight; if (r <= 0) return id; }
+  for (const id of ids) { r -= CAR_TYPES[id][field]; if (r <= 0) return id; }
   return ids[0];
 }

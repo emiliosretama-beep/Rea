@@ -73,7 +73,7 @@ body.playing #hud { opacity: 1; }
 }
 
 #toast {
-  position: absolute; left: 50%; top: calc(14px + var(--safe-t));
+  position: absolute; left: 50%; top: calc(86px + var(--safe-t));
   transform: translate(-50%, -12px);
   max-width: min(560px, calc(100% - 150px));
   padding: .7em 1.1em; border-radius: 14px;
@@ -84,15 +84,95 @@ body.playing #hud { opacity: 1; }
 }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
 
+/* Dinero y reputación */
+#stats { position: absolute; left: calc(12px + var(--safe-l)); top: calc(10px + var(--safe-t)); display: flex; gap: 8px; }
+.chip {
+  display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 8px; border-radius: 999px;
+  background: rgba(28, 22, 38, .72); border: 1.5px solid rgba(246, 231, 200, .3);
+  font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums;
+}
+.chip svg { width: 20px; height: 20px; fill: none; stroke: var(--orange); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Tarjeta del cliente */
+#cust {
+  position: absolute; left: 50%; top: calc(10px + var(--safe-t)); transform: translate(-50%, -8px);
+  min-width: 210px; max-width: 46%; padding: 7px 14px 9px; border-radius: 14px; text-align: center;
+  background: rgba(28, 22, 38, .78); border: 1.5px solid rgba(246, 231, 200, .3);
+  opacity: 0; transition: opacity .2s, transform .2s;
+}
+#cust.on { opacity: 1; transform: translate(-50%, 0); }
+#cust-name { font-weight: 800; font-size: clamp(13px, 2.3vmin, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#cust-state { font-size: 12px; opacity: .8; margin: 1px 0 6px; }
+.bar { height: 7px; border-radius: 4px; background: rgba(246, 231, 200, .2); overflow: hidden; }
+#cust-bar { height: 100%; background: var(--teal); transform-origin: left; transition: transform .2s linear; }
+#cust-bar.warn { background: #e8b23a; }
+#cust-bar.bad { background: #e2533a; }
+
+/* Barra de llenado */
+#fuel {
+  position: absolute; left: 50%; bottom: calc(22% + 54px + var(--safe-b)); transform: translateX(-50%);
+  width: min(360px, 46%); text-align: center; opacity: 0; transition: opacity .15s;
+}
+#fuel.on { opacity: 1; }
+#fuel .track {
+  position: relative; height: 22px; border-radius: 11px; overflow: hidden;
+  background: rgba(28, 22, 38, .8); border: 2px solid var(--cream);
+}
+#fuel-fill { position: absolute; inset: 0; background: var(--orange); transform-origin: left; transform: scaleX(0); }
+#fuel-fill.over { background: #e2533a; }
+#fuel-zone { position: absolute; top: 0; bottom: 0; background: rgba(47, 165, 156, .75); }
+#fuel-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--cream); }
+#fuel-text { margin-top: 4px; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+
 #look-hint {
   position: absolute; left: 50%; bottom: calc(18px + var(--safe-b)); transform: translateX(-50%);
   font-size: 14px; font-weight: 600; padding: .4em .9em; border-radius: 999px;
   background: rgba(28, 22, 38, .6); transition: opacity .2s;
 }
-body.locked #look-hint { opacity: 0; }
+body.locked /* Dinero y reputación */
+#stats { position: absolute; left: calc(12px + var(--safe-l)); top: calc(10px + var(--safe-t)); display: flex; gap: 8px; }
+.chip {
+  display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 8px; border-radius: 999px;
+  background: rgba(28, 22, 38, .72); border: 1.5px solid rgba(246, 231, 200, .3);
+  font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums;
+}
+.chip svg { width: 20px; height: 20px; fill: none; stroke: var(--orange); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Tarjeta del cliente */
+#cust {
+  position: absolute; left: 50%; top: calc(10px + var(--safe-t)); transform: translate(-50%, -8px);
+  min-width: 210px; max-width: 46%; padding: 7px 14px 9px; border-radius: 14px; text-align: center;
+  background: rgba(28, 22, 38, .78); border: 1.5px solid rgba(246, 231, 200, .3);
+  opacity: 0; transition: opacity .2s, transform .2s;
+}
+#cust.on { opacity: 1; transform: translate(-50%, 0); }
+#cust-name { font-weight: 800; font-size: clamp(13px, 2.3vmin, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#cust-state { font-size: 12px; opacity: .8; margin: 1px 0 6px; }
+.bar { height: 7px; border-radius: 4px; background: rgba(246, 231, 200, .2); overflow: hidden; }
+#cust-bar { height: 100%; background: var(--teal); transform-origin: left; transition: transform .2s linear; }
+#cust-bar.warn { background: #e8b23a; }
+#cust-bar.bad { background: #e2533a; }
+
+/* Barra de llenado */
+#fuel {
+  position: absolute; left: 50%; bottom: calc(22% + 54px + var(--safe-b)); transform: translateX(-50%);
+  width: min(360px, 46%); text-align: center; opacity: 0; transition: opacity .15s;
+}
+#fuel.on { opacity: 1; }
+#fuel .track {
+  position: relative; height: 22px; border-radius: 11px; overflow: hidden;
+  background: rgba(28, 22, 38, .8); border: 2px solid var(--cream);
+}
+#fuel-fill { position: absolute; inset: 0; background: var(--orange); transform-origin: left; transform: scaleX(0); }
+#fuel-fill.over { background: #e2533a; }
+#fuel-zone { position: absolute; top: 0; bottom: 0; background: rgba(47, 165, 156, .75); }
+#fuel-mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--cream); }
+#fuel-text { margin-top: 4px; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+
+#look-hint { opacity: 0; }
 
 #fps {
-  position: absolute; left: calc(10px + var(--safe-l)); top: calc(8px + var(--safe-t));
+  position: absolute; left: calc(10px + var(--safe-l)); bottom: calc(6px + var(--safe-b));
   font: 600 12px ui-monospace, Menlo, monospace; color: var(--cream);
   background: rgba(28, 22, 38, .55); padding: 2px 7px; border-radius: 6px;
 }

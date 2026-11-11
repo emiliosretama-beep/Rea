@@ -14,6 +14,7 @@ export function createPlayer(camera, colliders) {
   function collide() {
     for (let pass = 0; pass < 2; pass++) {
       for (const c of colliders) {
+        if (c.off) continue;
         if (c.type === 'box') {
           const nx = Math.max(c.minX, Math.min(p.x, c.maxX));
           const nz = Math.max(c.minZ, Math.min(p.z, c.maxZ));
