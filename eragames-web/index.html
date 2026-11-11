@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ERAGames</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="ERAGames hace videojuegos de navegador pensados para iPhone y iPad: Born to Rally, Topple-Town, Born to Skate y 44meterfrontage. Abres el link y juegas.">
+<meta name="theme-color" content="#0c0f24">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ERAGames · Juegos que se juegan con el pulgar">
+<meta property="og:description" content="Videojuegos de navegador para iPhone, iPad y computadora. Sin descargas.">
+<!-- Al publicar en GitHub Pages cambia og.png por la URL completa (https://…/og.png) -->
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFB089'/%3E%3Cstop offset='.5' stop-color='%23F04E23'/%3E%3Cstop offset='1' stop-color='%23FFF'/%3E%3C/linearGradient%3E%3Cmask id='c'%3E%3Crect width='64' height='64' fill='%23fff'/%3E%3Crect x='32' y='22.4' width='22' height='5.6'/%3E%3Crect x='32' y='36' width='22' height='5.6'/%3E%3Crect x='47.5' y='27.5' width='8' height='9'/%3E%3C/mask%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%2314183A'/%3E%3Ccircle cx='32' cy='32' r='22' fill='url(%23s)' mask='url(%23c)'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"ERAGames","url":"https://eragames.itch.io","description":"Estudio de videojuegos de navegador."}
+</script>
+<style>
+/* Layout: lienzo 3D fijo a pantalla completa y secciones HTML altas que pasan encima.
+   Teléfono: consola arriba, texto abajo. Escritorio: texto y consola se alternan de lado.
+   Capas fijas, de atrás hacia adelante: gradient mesh → retícula isométrica → palabra cinética → 3D → etiquetas.
+   Estilo único y oscuro a propósito (noche + sol ERA), por eso no hay tema claro. */
+:root {
+  --night: #0c0f24;     /* fondo, 60 % */
+  --night-2: #14183a;   /* tarjetas */
+  --blue: #6f7ff0;      /* azul ERA aclarado para fondo oscuro */
+  --era: #f04e23;       /* naranja ERA, acento 10 % */
+  --dawn: #ffb089;      /* luz del amanecer */
+  --paper: #f2f3f9;     /* texto */
+  --muted: #a9afcf;     /* texto secundario */
+  --glass: rgba(242, 243, 249, .07);
+  --glass-edge: rgba(242, 243, 249, .16);
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+html { background: var(--night); }
+body {
+  margin: 0; background: var(--night); color: var(--paper);
+  font-family: var(--display); font-size: 1.0625rem; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 11; background: var(--night); }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 800; letter-spacing: -0.03em; }
+h1 { font-size: clamp(2.6rem, 10.5vw, 5.4rem); line-height: .94; }
+h2 { font-size: clamp(2.1rem, 7.5vw, 3.8rem); line-height: .98; }
+h3 { font-size: clamp(1.7rem, 5.6vw, 2.3rem); line-height: 1; }
+p { margin: 0; max-width: 34rem; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--dawn); outline-offset: 3px; border-radius: 12px; }
+
+/* ---------- Capas fijas del fondo ---------- */
+.backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--night); }
+#mesh { position: absolute; inset: 0; width: 100%; height: 100%; }            /* gradient mesh */
+.iso-grid {                                                                    /* retícula isométrica */
+  position: absolute; inset: -10%; opacity: 0;
+  background-image:
+    repeating-linear-gradient(30deg, rgba(111, 127, 240, .2) 0 1px, transparent 1px 38px),
+    repeating-linear-gradient(150deg, rgba(111, 127, 240, .2) 0 1px, transparent 1px 38px);
+  -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent);
+          mask-image: radial-gradient(closest-side, #000 40%, transparent);
+}
+.wordmark {                                                                    /* tipografía cinética */
+  position: absolute; left: 50%; top: 31%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
+  font-weight: 800; font-size: 33vw; line-height: .8; letter-spacing: -.04em;
+  color: rgba(240, 78, 35, 0); -webkit-text-stroke: 1.5px rgba(169, 180, 255, .24);
+  white-space: nowrap; user-select: none;
+}
+.wordmark i { font-style: normal; display: inline-block; will-change: transform; }
+
+#stage { position: fixed; left: 0; top: 0; width: 100%; height: 100vh; height: 100lvh; z-index: 1; pointer-events: none; }
+#stage canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .8s var(--ease); }
+#stage.is-ready canvas { opacity: 1; }
+.poster { position: absolute; left: 50%; top: 31%; width: min(78vw, 440px); transform: translate(-50%, -50%); transition: opacity .6s var(--ease); }
+#stage.is-ready .poster { opacity: 0; }
+#stage.is-fallback .poster { opacity: 1; }
+
+/* ---------- Vidrio (glassmorphism). El desenfoque real va solo en lo fijo, para no dar lag en iPhone ---------- */
+.glass {
+  background: linear-gradient(135deg, rgba(242, 243, 249, .13), rgba(242, 243, 249, .03));
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 24px 48px -28px rgba(0, 0, 0, .7);
+}
+.top {
+  position: fixed; inset: 0 0 auto; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: 10px;
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  background: rgba(12, 15, 36, .32);
+  -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid rgba(242, 243, 249, .1);
+}
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; letter-spacing: -.01em; font-size: 1.15rem; }
+.brand svg { width: 34px; height: 34px; }
+.hud {
+  position: fixed; z-index: 9; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; opacity: 0; pointer-events: none;
+  -webkit-backdrop-filter: blur(14px) saturate(150%); backdrop-filter: blur(14px) saturate(150%);
+  font: 600 .8rem/1 var(--mono); white-space: nowrap;
+}
+.hud b { color: var(--era); }
+.hud .rec { width: 7px; height: 7px; border-radius: 50%; background: var(--era); box-shadow: 0 0 10px var(--era); }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 12px; min-height: 48px; box-sizing: border-box;
+  padding: 7px 7px 7px 22px; border-radius: 999px; border: 0;
+  background: var(--era); color: var(--night); font: 700 1.0625rem/1 var(--display); text-decoration: none;
+  cursor: pointer; transition: transform .25s var(--ease), background-color .25s var(--ease);
+}
+.btn:hover { background: #ff6338; }
+.btn:active { transform: scale(.97); }
+.btn .ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(12, 15, 36, .16); }
+.btn .ico svg { width: 16px; height: 16px; }
+.btn-sm { min-height: 40px; padding: 0 18px; font-size: .95rem; }
+.btn-ghost { background: rgba(242, 243, 249, .04); color: var(--paper); padding: 0 22px; box-shadow: inset 0 0 0 1px rgba(242, 243, 249, .3); }
+.btn-ghost:hover { background: rgba(242, 243, 249, .1); }
+
+/* ---------- Secciones (beats) ---------- */
+main { position: relative; z-index: 3; overflow-x: clip; }
+.beat {
+  position: relative; box-sizing: border-box; min-height: 100vh; min-height: 100svh;
+  display: flex; align-items: flex-end;
+  padding-block: 88px 28px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+}
+.panel { position: relative; z-index: 2; width: 100%; max-width: 32rem; display: grid; gap: 16px; }
+.panel.solid { box-sizing: border-box; padding: 22px; border-radius: 26px; background-color: rgba(12, 15, 36, .62); }
+.lead { color: var(--muted); font-size: 1.125rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+.hero .panel { padding-bottom: 6px; }
+.hero h1 { max-width: 12ch; }
+
+/* Cinta cinética con los nombres de los juegos */
+.marquee { position: relative; z-index: 2; min-height: 90vh; min-height: 90svh; box-sizing: border-box; padding-block: 30vh 8vh; display: grid; align-content: center; gap: 4px; overflow: hidden; }
+.mq-row { overflow: hidden; }
+.mq-track {
+  display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; will-change: transform;
+  font-weight: 800; font-size: clamp(3rem, 13vw, 9rem); line-height: 1; letter-spacing: -.04em;
+}
+.mq-track span { display: inline-flex; align-items: center; gap: .35em; }
+.mq-track .sun { width: .42em; height: .42em; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--dawn), var(--era) 60%); flex: none; }
+.mq-row.outline .mq-track { color: transparent; -webkit-text-stroke: 1.5px var(--dawn); }
+.games-intro { min-height: auto; padding-block: 2vh 0; align-items: flex-start; }
+
+/* Tarjetas de juego: vidrio con doble borde (carcasa + núcleo, radios concéntricos) */
+.game { min-height: 92vh; min-height: 92svh; }
+.card { width: 100%; max-width: 30rem; padding: 6px; border-radius: 30px; position: relative; z-index: 2; box-sizing: border-box; }
+.card-core { display: grid; gap: 14px; padding: 22px; border-radius: 24px; background: rgba(12, 15, 36, .7); border: 1px solid rgba(242, 243, 249, .06); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; font: 600 .78rem/1 var(--mono); color: var(--dawn); }
+.meta span { padding: 7px 10px; border-radius: 999px; background: rgba(255, 176, 137, .1); }
+.meta .wip { color: var(--paper); background: rgba(111, 127, 240, .24); }
+.soon { font: 600 .9rem/1.2 var(--mono); color: var(--muted); }
+
+/* Etiquetas ancladas a las piezas (las mueve el JS; son fijas, así que llevan vidrio real) */
+.labels { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; }
+.leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.leaders line { stroke: var(--dawn); stroke-width: 1; stroke-opacity: .6; }
+.label { position: absolute; left: 0; top: 0; }
+.ldot, .lcard { position: absolute; left: 0; top: 0; will-change: transform; }
+.ldot { width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--dawn); box-shadow: 0 0 0 5px rgba(255, 176, 137, .22); }
+.lcard {
+  box-sizing: border-box; padding: 7px 11px; border-radius: 14px;
+  -webkit-backdrop-filter: blur(12px) saturate(150%); backdrop-filter: blur(12px) saturate(150%);
+  font: 400 .74rem/1.4 var(--mono); color: var(--muted);
+}
+.lcard.glass { background: rgba(12, 15, 36, .82); } /* sobre el naranja el vidrio necesita más cuerpo para leerse */
+.lcard b { display: block; color: var(--paper); font-weight: 600; font-size: .82rem; }
+.lcard .desc, .desk-only { display: none; }
+.parts-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font: 400 .8rem/1.45 var(--mono); color: var(--muted); }
+.parts-list b { color: var(--paper); font-weight: 600; margin-right: 4px; }
+
+/* Beat ASCII: la tabla de cues real de esta página */
+.code {
+  margin: 0; padding: 14px; border-radius: 16px; overflow-x: auto; max-width: 100%; box-sizing: border-box;
+  background: rgba(7, 9, 15, .7); border: 1px solid rgba(240, 78, 35, .25);
+  font: 400 .72rem/1.6 var(--mono); color: var(--dawn);
+}
+
+/* Toque interactivo */
+.drag-zone { position: absolute; left: 0; right: 0; top: 0; height: 56%; z-index: 1; touch-action: pan-y; cursor: grab; }
+.drag-zone:active { cursor: grabbing; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 8px;
+  border-radius: 999px; border: 1px solid rgba(242, 243, 249, .16); background: rgba(242, 243, 249, .04);
+  color: var(--paper); font: 600 .9rem/1 var(--display); cursor: pointer;
+  transition: border-color .2s var(--ease), transform .2s var(--ease);
+}
+.swatch:active { transform: scale(.96); }
+.swatch i { width: 26px; height: 26px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); }
+.swatch i.glass-dot { background: linear-gradient(135deg, rgba(255, 255, 255, .7), rgba(160, 175, 255, .15)); }
+.swatch[aria-pressed="true"] { border-color: var(--dawn); background: rgba(255, 176, 137, .12); }
+.hint { font: 400 .8rem/1.4 var(--mono); color: var(--muted); }
+
+.end { flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 40px; }
+footer {
+  position: relative; z-index: 2; display: grid; gap: 14px; padding-top: 20px;
+  border-top: 1px solid rgba(242, 243, 249, .1); font: 400 .78rem/1.5 var(--mono); color: var(--muted);
+}
+.ascii-sun { margin: 0; font: 600 .45rem/1.05 var(--mono); color: var(--era); }
+
+/* ---------- Escritorio y tablet horizontal ---------- */
+@media (min-width: 900px) and (min-aspect-ratio: 9/10) {
+  h1 { font-size: clamp(3rem, 5.6vw, 4.8rem); }
+  .wordmark { flex-direction: row; top: 50%; font-size: 15.5vw; }
+  .poster { left: 70%; top: 50%; width: min(42vw, 560px); }
+  .beat { align-items: center; padding-block: 96px; padding-left: max(6vw, env(safe-area-inset-left, 0px)); padding-right: max(6vw, env(safe-area-inset-right, 0px)); }
+  .beat[data-side="right"] { justify-content: flex-end; }
+  .beat[data-side="center"] { justify-content: center; text-align: center; }
+  .beat[data-side="center"] p { margin-inline: auto; }
+  .drag-zone { right: auto; width: 58%; height: 100%; }
+  footer { grid-auto-flow: column; justify-content: space-between; align-items: end; }
+  .lcard { width: 14rem; font-size: .8rem; padding: 10px 12px; }
+  .lcard .desc { display: inline; }
+  .desk-only { display: block; }
+  .parts-list { display: none; }
+}
+/* Con mouse y pantalla grande sí hay vidrio esmerilado real en lo que se desplaza */
+@media (hover: hover) and (min-width: 900px) {
+  .card, .panel.solid { -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); }
+  .card-core { background: rgba(12, 15, 36, .45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true">
+  <canvas id="mesh" width="48" height="96"></canvas>
+  <div class="iso-grid" id="isoGrid"></div>
+  <div class="wordmark" id="wordmark"><span><i>E</i><i>R</i><i>A</i></span><span><i>G</i><i>A</i><i>M</i><i>E</i><i>S</i></span></div>
+</div>
+
+<!-- Lienzo 3D. La ilustración se ve al instante y se queda si WebGL falla. -->
+<div id="stage" aria-hidden="true">
+  <svg class="poster" viewBox="0 0 260 132" role="img" aria-label="Consola portátil de ERAGames">
+    <defs>
+      <linearGradient id="pSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb089"/><stop offset=".55" stop-color="#f04e23"/><stop offset="1" stop-color="#f2f3f9"/></linearGradient>
+      <mask id="pCut"><rect width="260" height="132" fill="#fff"/><rect x="130" y="40" width="26" height="6" fill="#000"/><rect x="130" y="54" width="26" height="6" fill="#000"/><rect x="146" y="45" width="10" height="10" fill="#000"/></mask>
+    </defs>
+    <rect x="4" y="6" width="252" height="122" rx="46" fill="#f04e23"/>
+    <rect x="63" y="22" width="134" height="86" rx="8" fill="#14183a"/>
+    <rect x="72" y="30" width="116" height="70" rx="3" fill="#1b2260"/>
+    <circle cx="130" cy="58" r="25" fill="url(#pSun)" mask="url(#pCut)"/>
+    <rect x="72" y="74" width="116" height="26" fill="#0c0f24"/>
+    <rect x="24" y="60" width="32" height="10" rx="2" fill="#14183a"/><rect x="35" y="49" width="10" height="32" rx="2" fill="#14183a"/>
+    <circle cx="224" cy="56" r="10" fill="#14183a"/><circle cx="204" cy="74" r="10" fill="#14183a"/>
+  </svg>
+</div>
+
+<header class="top">
+  <a class="brand" href="#inicio" aria-label="ERAGames, inicio">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="bSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB089"/><stop offset=".5" stop-color="#F04E23"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient><mask id="bCut"><rect width="64" height="64" fill="#fff"/><rect x="32" y="22.4" width="22" height="5.6" fill="#000"/><rect x="32" y="36" width="22" height="5.6" fill="#000"/><rect x="47.5" y="27.5" width="8" height="9" fill="#000"/></mask></defs><rect width="64" height="64" rx="14" fill="#14183A"/><circle cx="32" cy="32" r="22" fill="url(#bSun)" mask="url(#bCut)"/></svg>
+    <span>ERAGAMES</span>
+  </a>
+  <a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar</a>
+</header>
+
+<!-- Indicador de canal (vidrio) mientras la pantalla muestra cada juego -->
+<div class="hud glass" id="hud" aria-hidden="true"><span class="rec"></span><b id="hudCh">CH 1</b><span id="hudName">Born to Rally</span></div>
+
+<main>
+  <!-- data-cue = nombre del plano en la tabla CUES del script. data-side = de qué lado va el texto en escritorio. -->
+  <section class="beat hero" id="inicio" data-cue="reveal" data-side="left">
+    <div class="panel">
+      <h1>Juegos que se juegan con el pulgar</h1>
+      <p class="lead">ERAGames es un estudio de videojuegos de navegador. Abres el link en tu iPhone, iPad o computadora y ya estás jugando.</p>
+      <div class="actions">
+        <a class="btn" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar en itch.io
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </a>
+        <a class="btn btn-ghost" href="#juegos">Ver los juegos</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="beat" data-cue="macro" data-side="center">
+    <div class="panel solid glass">
+      <h2>Sin descargas. Sin instalar.</h2>
+      <p class="lead">Tocas el link y el juego arranca en el navegador. Así funcionan todos los juegos de ERAGames.</p>
+    </div>
+  </section>
+
+  <section id="juegos" aria-labelledby="juegos-titulo">
+    <div class="marquee" id="marquee" data-cue="type" aria-hidden="true">
+      <div class="mq-row"><div class="mq-track"><span>Born to Rally<i class="sun"></i>Topple-Town<i class="sun"></i>Born to Skate<i class="sun"></i>44meterfrontage<i class="sun"></i></span><span>Born to Rally<i class="sun"></i>Topple-Town<i class="sun"></i>Born to Skate<i class="sun"></i>44meterfrontage<i class="sun"></i></span></div></div>
+      <div class="mq-row outline"><div class="mq-track"><span>Rally<i class="sun"></i>Demolición<i class="sun"></i>Skate<i class="sun"></i>Shooter<i class="sun"></i></span><span>Rally<i class="sun"></i>Demolición<i class="sun"></i>Skate<i class="sun"></i>Shooter<i class="sun"></i></span></div></div>
+    </div>
+    <div class="beat games-intro" data-side="left">
+      <div class="panel">
+        <h2 id="juegos-titulo">Los juegos</h2>
+        <p class="lead">Cuatro juegos, cuatro canales. Mira la pantalla de la consola mientras bajas.</p>
+      </div>
+    </div>
+
+    <article class="beat game" data-cue="game" data-game="rally" data-side="left">
+      <div class="card glass"><div class="card-core">
+        <div class="meta"><span>rally 3D</span><span>motor propio</span></div>
+        <h3>Born to Rally</h3>
+        <p>Curvas de tierra y saltos con un motor gráfico escrito desde cero en WebGL2, sin librerías.</p>
+        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar Born to Rally</a></div>
+      </div></div>
+    </article>
+
+    <article class="beat game" data-cue="game" data-game="topple" data-side="left">
+      <div class="card glass"><div class="card-core">
+        <div class="meta"><span>demolición</span><span>física</span></div>
+        <h3>Topple-Town</h3>
+        <p>Tumba edificios bloque por bloque y mira cómo se viene abajo el pueblo, en 2D y en 3D de vóxeles.</p>
+        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar Topple-Town</a></div>
+      </div></div>
+    </article>
+
+    <article class="beat game" data-cue="game" data-game="skate" data-side="left">
+      <div class="card glass"><div class="card-core">
+        <div class="meta"><span>skate</span></div>
+        <h3>Born to Skate</h3>
+        <p>Rampas, trucos y caídas. Skate para jugar con una mano en el celular.</p>
+        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar Born to Skate</a></div>
+      </div></div>
+    </article>
+
+    <article class="beat game" data-cue="game" data-game="war" data-side="left">
+      <div class="card glass"><div class="card-core">
+        <div class="meta"><span>shooter de guerra</span><span class="wip">en desarrollo</span></div>
+        <h3>44meterfrontage</h3>
+        <p>El proyecto más grande del estudio. Se está construyendo ahora mismo.</p>
+        <p class="soon">Próximamente en itch.io</p>
+      </div></div>
+    </article>
+  </section>
+
+  <section class="beat" data-cue="iso" data-side="right">
+    <div class="panel solid glass">
+      <h2>Hecho pieza por pieza</h2>
+      <p class="lead desk-only">Cada juego se programa a mano: la física, los controles y hasta esta consola, que está hecha con código y no con un modelo descargado.</p>
+      <ul class="parts-list">
+        <li><b>Pantalla</b> Se juega en el navegador, sin descargas.</li>
+        <li><b>Cruceta</b> Controles táctiles pensados para iPhone y iPad.</li>
+        <li><b>Chip</b> Motores y física programados a mano.</li>
+        <li><b>Botones</b> Cada versión se prueba en iPhone y iPad reales.</li>
+      </ul>
+    </div>
+    <!-- Etiquetas ancladas: el JS las pega a cada pieza mientras la consola se desarma -->
+    <div class="labels" id="labels">
+      <svg class="leaders" aria-hidden="true"><line/><line/><line/><line/></svg>
+      <div class="label" data-part="screen"><span class="ldot"></span><span class="lcard glass"><b>Pantalla</b><span class="desc">Se juega en el navegador, sin descargas.</span></span></div>
+      <div class="label" data-part="dpad"><span class="ldot"></span><span class="lcard glass"><b>Cruceta</b><span class="desc">Controles táctiles pensados para iPhone y iPad.</span></span></div>
+      <div class="label" data-part="chip"><span class="ldot"></span><span class="lcard glass"><b>Chip</b><span class="desc">Motores y física programados a mano.</span></span></div>
+      <div class="label" data-part="buttons"><span class="ldot"></span><span class="lcard glass"><b>Botones</b><span class="desc">Cada versión se prueba en iPhone y iPad reales.</span></span></div>
+    </div>
+  </section>
+
+  <section class="beat" data-cue="code" data-side="left">
+    <div class="panel solid glass">
+      <h2>Todo empieza como texto</h2>
+      <p class="lead">Antes de tener luz y color, un juego es puro código. Esta página también: estas líneas mueven la cámara que estás viendo.</p>
+      <pre class="code" id="cueTable">reveal   la consola aparece y sale el sol
+macro    la pantalla llena la vista
+type     las letras toman el escenario
+game     la pantalla cambia de canal
+iso      vista isométrica y desarme
+code     todo se vuelve texto
+color    la consola es tuya
+end      vuelve al primer plano</pre>
+    </div>
+  </section>
+
+  <section class="beat" id="color" data-cue="color" data-side="right">
+    <div class="drag-zone" id="dragZone" aria-hidden="true"></div>
+    <div class="panel solid glass">
+      <h2>Ahora es tuya</h2>
+      <p class="lead">Arrastra la consola de lado a lado para girarla y elige su color.</p>
+      <div class="swatches" role="group" aria-label="Color de la consola">
+        <button type="button" class="swatch" data-color="#f04e23" aria-pressed="true"><i style="--c:#f04e23"></i>Naranja ERA</button>
+        <button type="button" class="swatch" data-color="#2f3ea0" aria-pressed="false"><i style="--c:#2f3ea0"></i>Azul noche</button>
+        <button type="button" class="swatch" data-color="#ffb089" aria-pressed="false"><i style="--c:#ffb089"></i>Amanecer</button>
+        <button type="button" class="swatch" data-color="glass" aria-pressed="false"><i class="glass-dot"></i>Cristal</button>
+      </div>
+      <p class="hint">Desliza con un dedo sobre la consola.</p>
+    </div>
+  </section>
+
+  <section class="beat end" data-cue="end" data-side="left">
+    <div class="panel">
+      <h2>El primer nivel está a un toque</h2>
+      <p class="lead">Todos los juegos de ERAGames viven en itch.io y se abren directo en el navegador.</p>
+      <div class="actions">
+        <a class="btn" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar en itch.io
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </a>
+      </div>
+    </div>
+    <footer>
+<pre class="ascii-sun" aria-hidden="true">           %%%%%%%%%%%%
+       %%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ ################
+ ################
+#############################
+#############################
+#############################
+ ================
+ ================================
+   ============================
+    ==========================
+       ::::::::::::::::::::
+           ::::::::::::</pre>
+      <span>© 2026 ERAGames<br>Consola 3D modelada en código con three.js (MIT). Ruido del sol líquido: webgl-noise de Ashima Arts y Stefan Gustavson (MIT). Tipografías Bricolage Grotesque y JetBrains Mono (SIL OFL).</span>
+    </footer>
+  </section>
+</main>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+// ======================================================================
+//  Cambia aquí la dirección de tu página de itch.io (todos los botones la usan)
+// ======================================================================
+const ITCH_URL = 'https://eragames.itch.io';
+for (const a of document.querySelectorAll('[data-itch]')) a.href = ITCH_URL;
+
+// ======================================================================
+//  TABLA DE CUES: cada cue es un plano completo de la película.
+//  dir      = desde dónde mira la cámara (dirección, no distancia)
+//  look     = a qué punto mira · yaw = giro de la consola · explode = 0 armada, 1 desarmada
+//  frame    = cuánto mide (ancho, alto) lo que debe caber en pantalla; la distancia se calcula sola
+//  fov      = lente: 32 normal, ~3 casi isométrica (dolly zoom)
+//  desk/phone = corrimiento en pantalla (x, y de -1 a 1) para dejarle lugar al texto
+//  screen   = qué muestra la pantalla · sun = sol líquido [x, y, z, tamaño]
+//  mesh     = paleta del fondo · ascii / grid / hud = 0 apagado, 1 encendido
+//  Las versiones "...Phone" (opcionales) solo aplican en teléfono.
+// ======================================================================
+const ISO = [-1, 1, 1];
+const CUES = {
+  reveal: { dir: [2.2, 1.0, 5.6], look: [0, 0, 0], yaw: 0.42, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.42, 0.02], phone: [0, 0.38], screen: 'sun', sun: [0.1, 0.7, -3.4, 1.2], sunPhone: [0.35, 0.75, -3.4, 1.05], mesh: 'dawn' },
+  macro:  { dir: [0, 0.02, 1], look: [0, 0.01, 0], yaw: 0, explode: 0, frame: [1.0, 0.62], avail: [1, 1], fov: 32, desk: [0, 0.05], phone: [0, 0.12], screen: 'boot', sun: [1.2, -7, -3.2, 1.0], mesh: 'channel' },
+  type:   { dir: [0, 0.3, 6], look: [0, 0, 0], yaw: -0.5, explode: 0, frame: [6.5, 3.4], fov: 32, desk: [0, 0.5], phone: [0, 0.62], screen: 'boot', sun: [0, -7, -3.2, 0.9], mesh: 'channel' },
+  game:   { dir: [-1.3, 0.6, 5.6], look: [0, 0, 0], yaw: -0.2, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.40, 0], phone: [0, 0.40], screen: null, sun: [0, -7, -3.2, 0.9], mesh: 'channel', hud: 1 },
+  iso:    { dir: ISO, look: [0, 0.1, 0.35], lookPhone: [0, 0.37, 0.2], yaw: 0, explode: 1, frame: [4.6, 2.4], framePhone: [2.9, 4.9], fov: 3, desk: [-0.34, 0], phone: [0, 0.32], screen: 'sun', sun: [0, -7, -3.2, 0.6], mesh: 'blueprint', grid: 1 },
+  code:   { dir: [0.8, 0.4, 5.8], look: [0, 0, 0], yaw: 0.35, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.40, 0], phone: [0, 0.38], screen: 'boot', sun: [0, -7, -3.2, 0.6], mesh: 'code', ascii: 1 },
+  color:  { dir: [0, 0.55, 6], look: [0, 0, 0], yaw: 0, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [-0.38, 0], phone: [0, 0.40], screen: 'sun', sun: [-1.5, 0.9, -3.4, 0.95], sunPhone: [-0.2, 0.8, -3.4, 1.0], mesh: 'color', drag: 1 },
+  end:    { dir: [2.2, 1.0, 5.6], look: [0, 0, 0], yaw: 0.42, explode: 0, frame: [2.7, 1.4], framePhone: [3.6, 1.9], fov: 32, desk: [0.42, 0.02], phone: [0, 0.6], screen: 'sun', sun: [0.5, 0.7, -3.6, 1.75], sunPhone: [0.2, 0.75, -3.6, 1.3], mesh: 'dawn' },
+};
+// Qué tanto de la pantalla le toca a la consola en cada diseño (el resto es para el texto)
+const AVAIL = { desk: [0.45, 0.85], phone: [0.92, 0.5] };
+
+// Paletas del gradient mesh: color base + 5 manchas [color, intensidad]
+const PALETTES = {
+  dawn:      { base: '#0c0f24', blobs: [['#f04e23', .55], ['#ffb089', .26], ['#26337f', .55], ['#5b3f7a', .35], ['#b8413f', .3]] },
+  channel:   { base: '#0b0e22', blobs: [['#26337f', .5], ['#3b2f7a', .35], ['#14183a', .6], ['#6f7ff0', .16], ['#f04e23', .16]] },
+  blueprint: { base: '#0a1433', blobs: [['#1d3fa0', .45], ['#26337f', .5], ['#6f7ff0', .2], ['#0c0f24', .5], ['#3a5bd0', .25]] },
+  code:      { base: '#07090f', blobs: [['#14183a', .6], ['#f04e23', .14], ['#26337f', .3], ['#0c0f24', .4], ['#1d2a78', .25]] },
+  color:     { base: '#0c0f24', blobs: [['#ffb089', .26], ['#f04e23', .35], ['#6f7ff0', .28], ['#26337f', .45], ['#5b3f7a', .3]] },
+};
+const BLOBS = [[0.5, 1.05, 0.75], [0.08, 0.72, 0.45], [0.92, 0.18, 0.5], [0.18, 0.22, 0.4], [0.88, 0.78, 0.35]]; // x, y, radio
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stage = document.getElementById('stage');
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+
+// La tabla de la sección ASCII se escribe desde los cues reales
+{
+  const f = v => (v >= 0 ? ' ' : '') + v.toFixed(1);
+  document.getElementById('cueTable').textContent =
+    'cue      fov   desarme  pantalla\n' +
+    Object.entries(CUES).map(([k, c]) => `${k.padEnd(8)} ${String(c.fov).padStart(3)}   ${f(c.explode)}     ${c.screen || 'juego'}`).join('\n');
+}
+
+// ---------- Vista: se mide el contenedor del 3D, no la ventana ----------
+const view = { w: 1, h: 1, phone: true };
+function measure() {
+  view.w = stage.clientWidth || innerWidth; view.h = stage.clientHeight || innerHeight;
+  view.phone = !(view.w >= 900 && view.w / view.h >= 0.9);
+}
+measure();
+
+// ---------- Scroll → posición en la línea de tiempo ----------
+let anchors = [];
+function computeAnchors() {
+  const vh = document.documentElement.clientHeight;
+  const max = Math.max(0, document.documentElement.scrollHeight - vh);
+  const games = [...document.querySelectorAll('[data-game]')];
+  anchors = [...document.querySelectorAll('[data-cue]')].map(sec => {
+    const top = sec.getBoundingClientRect().top + window.scrollY;
+    const cue = CUES[sec.dataset.cue];
+    const gi = games.indexOf(sec);
+    return {
+      y: clamp(top + sec.offsetHeight / 2 - vh / 2, 0, max), cue,
+      screen: sec.dataset.game || cue.screen,
+      game: gi >= 0 ? { ch: gi + 1, name: sec.querySelector('h3').textContent } : null,
+    };
+  });
+  for (let i = 1; i < anchors.length; i++) if (anchors[i].y <= anchors[i - 1].y) anchors[i].y = anchors[i - 1].y + 1;
+}
+new ResizeObserver(() => { measure(); computeAnchors(); }).observe(document.querySelector('main'));
+new ResizeObserver(measure).observe(stage);
+if (document.fonts) document.fonts.ready.then(computeAnchors);
+computeAnchors();
+
+const goal = {
+  dir: [0, 0, 1], look: [0, 0, 0], dist: 6, yaw: 0, explode: 0, fov: 32, sx: 0, sy: 0,
+  drag: 0, ascii: 0, grid: 0, hud: 0, sun: [0, 0, 0, 1], screen: 'sun', game: null, meshA: 'dawn', meshB: 'dawn', meshS: 0,
+};
+const TAN = 2 * Math.tan(16 * Math.PI / 180); // alto visible por unidad de distancia con fov 32
+function cueDist(c, phone, aspect) {
+  const [fw, fh] = c.avail || (phone ? AVAIL.phone : AVAIL.desk);
+  const [w, h] = (phone && c.framePhone) || c.frame;
+  return Math.max(w / (fw * TAN * aspect), h / (fh * TAN));
+}
+function pick(c, key, phone) { return (phone && c[key + 'Phone'] !== undefined) ? c[key + 'Phone'] : c[key]; }
+function sample(y) {
+  if (!anchors.length) return;
+  const phone = view.phone, aspect = view.w / view.h;
+  let a = anchors[0], b = a, s = 0;
+  if (y > a.y) {
+    a = b = anchors[anchors.length - 1];
+    for (let i = 0; i < anchors.length - 1; i++) if (y < anchors[i + 1].y) {
+      a = anchors[i]; b = anchors[i + 1];
+      s = smooth(0.12, 0.88, (y - a.y) / (b.y - a.y)); // se queda quieta cerca de cada beat
+      break;
+    }
+  }
+  const A = a.cue, B = b.cue;
+  const da = pick(A, 'dir', phone), db = pick(B, 'dir', phone);
+  const na = Math.hypot(...da), nb = Math.hypot(...db);
+  const la = pick(A, 'look', phone), lb = pick(B, 'look', phone);
+  const sa = phone ? A.phone : A.desk, sb = phone ? B.phone : B.desk;
+  for (let i = 0; i < 3; i++) { goal.dir[i] = lerp(da[i] / na, db[i] / nb, s); goal.look[i] = lerp(la[i], lb[i], s); }
+  const ua = pick(A, 'sun', phone), ub = pick(B, 'sun', phone);
+  for (let i = 0; i < 4; i++) goal.sun[i] = lerp(ua[i], ub[i], s);
+  goal.dist = lerp(cueDist(A, phone, aspect), cueDist(B, phone, aspect), s);
+  goal.fov = lerp(A.fov, B.fov, s);
+  goal.yaw = lerp(pick(A, 'yaw', phone), pick(B, 'yaw', phone), s);
+  goal.explode = lerp(A.explode, B.explode, s);
+  goal.sx = lerp(sa[0], sb[0], s); goal.sy = lerp(sa[1], sb[1], s);
+  goal.drag = lerp(A.drag || 0, B.drag || 0, s);
+  goal.ascii = lerp(A.ascii || 0, B.ascii || 0, s);
+  goal.grid = lerp(A.grid || 0, B.grid || 0, s);
+  goal.hud = lerp(A.hud || 0, B.hud || 0, s);
+  goal.screen = s < 0.5 ? a.screen : b.screen;
+  goal.game = s < 0.5 ? a.game : b.game;
+  goal.meshA = A.mesh; goal.meshB = B.mesh; goal.meshS = s;
+}
+
+// ---------- Un solo bucle para todo; se detiene con la pestaña oculta ----------
+const tickers = [];
+const motion = { v: 0, speed: 0, y: window.scrollY, time: 0 };
+let running = true, last = performance.now(), lastY = window.scrollY;
+function loop(now) {
+  if (!running) return;
+  requestAnimationFrame(loop);
+  const dt = Math.min((now - last) / 1000, 0.05); last = now; motion.time += dt;
+  const y = window.scrollY; motion.y = y;
+  motion.v = lerp(motion.v, (y - lastY) / Math.max(dt, 1 / 240), 1 - Math.exp(-8 * dt)); lastY = y;
+  motion.speed = reduceMotion ? 0 : Math.min(Math.abs(motion.v) / 2200, 1);
+  sample(y); // el scroll se lee aquí, no en el evento scroll
+  for (const t of tickers) t(dt);
+}
+requestAnimationFrame(loop);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) running = false;
+  else if (!running) { running = true; last = performance.now(); requestAnimationFrame(loop); }
+});
+
+// ---------- Gradient mesh (canvas 2D diminuto, escalado: barato y suave) ----------
+{
+  const cv = document.getElementById('mesh'), g = cv.getContext('2d');
+  const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const PAL = Object.fromEntries(Object.entries(PALETTES).map(([k, p]) => [k, { base: hex(p.base), blobs: p.blobs.map(([c, a]) => [...hex(c), a]) }]));
+  const cur = { base: [...PAL.dawn.base], blobs: PAL.dawn.blobs.map(b => [...b]) };
+  let acc = 1;
+  const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+  tickers.push(dt => {
+    const A = PAL[goal.meshA], B = PAL[goal.meshB], s = goal.meshS, k = 1 - Math.exp(-3 * dt);
+    for (let i = 0; i < 3; i++) cur.base[i] = lerp(cur.base[i], lerp(A.base[i], B.base[i], s), k);
+    cur.blobs.forEach((b, j) => { for (let i = 0; i < 4; i++) b[i] = lerp(b[i], lerp(A.blobs[j][i], B.blobs[j][i], s), k); });
+    acc += dt; if (acc < 1 / 30) return; acc = 0;
+    const W = 48, H = clamp(Math.round(48 * view.h / view.w), 24, 128);
+    if (cv.height !== H) cv.height = H;
+    g.fillStyle = rgba(cur.base, 1); g.fillRect(0, 0, W, H);
+    const t = reduceMotion ? 0 : motion.time, drift = reduceMotion ? 0 : 1;
+    BLOBS.forEach(([bx, by, br], i) => {
+      const c = cur.blobs[i];
+      const x = (bx + Math.sin(t * 0.13 + i * 1.7) * 0.07 * drift) * W;
+      const y = (by + Math.cos(t * 0.11 + i * 2.3) * 0.05 * drift) * H;
+      const r = br * Math.max(W, H);
+      const grd = g.createRadialGradient(x, y, 0, x, y, r);
+      grd.addColorStop(0, rgba(c, c[3])); grd.addColorStop(1, rgba(c, 0));
+      g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    });
+  });
+}
+
+// ---------- Tipografía cinética: la palabra gigante y la cinta de juegos ----------
+{
+  const letters = [...document.querySelectorAll('#wordmark i')];
+  const cache = letters.map(() => '');
+  const word = document.getElementById('wordmark');
+  const rows = [...document.querySelectorAll('.mq-track')];
+  const widths = rows.map(() => 0);
+  const measureRows = () => rows.forEach((r, i) => { widths[i] = r.children[1].offsetLeft - r.children[0].offsetLeft; }); // un ciclo exacto
+  if (document.fonts) document.fonts.ready.then(measureRows);
+  new ResizeObserver(measureRows).observe(document.getElementById('marquee'));
+  let mqVisible = false;
+  new IntersectionObserver(e => { mqVisible = e[0].isIntersecting; }).observe(document.getElementById('marquee'));
+  let lastFill = -1;
+  tickers.push(() => {
+    const sp = motion.speed, t = reduceMotion ? 0 : motion.time;
+    const wght = Math.round(800 - sp * 560), wdth = Math.round(100 - sp * 25);
+    letters.forEach((el, i) => {
+      const ty = reduceMotion ? 0 : Math.sin(t * 1.1 + i * 0.75) * 8 + Math.sin(motion.y * 0.003 + i * 0.9) * 18;
+      const css = `${wght}|${wdth}|${ty.toFixed(0)}`;
+      if (css === cache[i]) return; cache[i] = css;
+      el.style.fontVariationSettings = `"wght" ${wght}, "wdth" ${wdth}`;
+      el.style.transform = `translate3d(0, ${ty.toFixed(0)}px, 0)`;
+    });
+    const fill = Math.round(sp * 40) / 100; // al scrollear rápido la palabra se llena de naranja
+    if (fill !== lastFill) { word.style.color = `rgba(240, 78, 35, ${fill})`; lastFill = fill; }
+    if (!mqVisible) return;
+    const off = motion.y * 0.5 + t * 40, skew = reduceMotion ? 0 : clamp(motion.v * 0.006, -14, 14);
+    rows.forEach((r, i) => {
+      const w = widths[i] || 1, x = i % 2 ? (off % w) - w : -(off % w);
+      r.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0) skewX(${(-skew).toFixed(2)}deg)`;
+      r.style.fontVariationSettings = `"wght" ${wght}`;
+    });
+  });
+}
+
+// ---------- Indicador de canal y retícula isométrica ----------
+{
+  const hud = document.getElementById('hud'), ch = document.getElementById('hudCh'), nm = document.getElementById('hudName');
+  const grid = document.getElementById('isoGrid');
+  let h = 0, gr = 0, shown = null;
+  tickers.push(dt => {
+    const k = 1 - Math.exp(-6 * dt);
+    h = lerp(h, goal.hud, k); gr = lerp(gr, goal.grid, k);
+    hud.style.opacity = smooth(0.5, 1, h).toFixed(3);
+    grid.style.opacity = gr.toFixed(3);
+    if (goal.game && goal.game !== shown) { shown = goal.game; ch.textContent = 'CH ' + shown.ch; nm.textContent = shown.name; }
+  });
+}
+
+// ---------- Colores de la consola (se recuerda el último) ----------
+const swatches = [...document.querySelectorAll('.swatch')];
+let shellChoice = '#f04e23';
+try { const saved = localStorage.getItem('eragames:color'); if (saved && swatches.some(s => s.dataset.color === saved)) shellChoice = saved; } catch (e) {}
+function markSwatch() { for (const s of swatches) s.setAttribute('aria-pressed', String(s.dataset.color === shellChoice)); }
+markSwatch();
+for (const s of swatches) s.addEventListener('click', () => {
+  shellChoice = s.dataset.color; markSwatch();
+  try { localStorage.setItem('eragames:color', shellChoice); } catch (e) {}
+});
+
+// ---------- 3D ----------
+function hasWebGL() {
+  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; }
+}
+if (hasWebGL()) boot().catch(err => { console.warn('El 3D no pudo cargar:', err); stage.classList.add('is-fallback'); });
+else stage.classList.add('is-fallback');
+
+async function boot() {
+  const THREE = await import('three');
+  const [{ RoomEnvironment }, { EffectComposer }, { RenderPass }, { ShaderPass }, { OutputPass }] = await Promise.all([
+    import('three/addons/environments/RoomEnvironment.js'),
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/ShaderPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+  ]);
+  const V3 = THREE.Vector3;
+
+  // ---------- Renderer ----------
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  const PR = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(PR);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.setClearColor(0x000000, 0);
+  stage.appendChild(renderer.domElement);
+  renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); stage.classList.remove('is-ready'); stage.classList.add('is-fallback'); });
+
+  const scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; // reflejos de estudio
+  pmrem.dispose();
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+
+  // Luz principal arriba a la izquierda, contorno detrás y un rebote cálido
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(-3, 5, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0x8fa0ff, 3.2); rim.position.set(3, 2.5, -5); scene.add(rim);
+  const warm = new THREE.DirectionalLight(0xffb089, 0.7); warm.position.set(4, -2, 3); scene.add(warm);
+
+  // ---------- Materiales ----------
+  const shellMat = new THREE.MeshPhysicalMaterial({ color: 0xf04e23, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.25, envMapIntensity: 0.9 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x14183a, roughness: 0.5 });
+  const chipMat = new THREE.MeshStandardMaterial({ color: 0x0a0c18, roughness: 0.3, metalness: 0.4 });
+  const dawnMat = new THREE.MeshStandardMaterial({ color: 0xffb089, roughness: 0.6 });
+  const GLASS_TINT = new THREE.Color('#c9d3ff');
+  const targetColor = new THREE.Color();
+
+  const pcbCanvas = document.createElement('canvas'); pcbCanvas.width = 256; pcbCanvas.height = 128;
+  {
+    const g = pcbCanvas.getContext('2d');
+    g.fillStyle = '#1d2a78'; g.fillRect(0, 0, 256, 128);
+    g.strokeStyle = '#ffb089'; g.globalAlpha = 0.55; g.lineWidth = 2;
+    for (let i = 0; i < 14; i++) { const y = 10 + i * 8; g.beginPath(); g.moveTo(8, y); g.lineTo(60 + (i * 37) % 90, y); g.lineTo(80 + (i * 37) % 90, y + 10); g.lineTo(248, y + 10); g.stroke(); }
+    g.globalAlpha = 1; g.fillStyle = '#ffb089';
+    for (let i = 0; i < 18; i++) g.fillRect(14 + (i * 53) % 228, 8 + (i * 29) % 110, 5, 5);
+  }
+  const pcbTex = new THREE.CanvasTexture(pcbCanvas); pcbTex.colorSpace = THREE.SRGBColorSpace;
+  const pcbMat = new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.55, metalness: 0.1 });
+
+  // ---------- Pantalla: pixel art animado en un canvas de 160x100 ----------
+  const SW = 160, SH = 100;
+  const sc = document.createElement('canvas'); sc.width = SW; sc.height = SH;
+  const sx = sc.getContext('2d');
+  const screenTex = new THREE.CanvasTexture(sc);
+  screenTex.colorSpace = THREE.SRGBColorSpace; screenTex.magFilter = THREE.NearestFilter; screenTex.generateMipmaps = false; screenTex.minFilter = THREE.LinearFilter;
+  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false });
+
+  // ---------- Geometría de la consola (todo en código) ----------
+  function roundedRect(w, h, r) {
+    const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+    s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.absarc(x + w - r, y + r, r, -Math.PI / 2, 0);
+    s.lineTo(x + w, y + h - r); s.absarc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+    s.lineTo(x + r, y + h); s.absarc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+    s.lineTo(x, y + r); s.absarc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+    return s;
+  }
+  const consoleGroup = new THREE.Group(); scene.add(consoleGroup);
+  const parts = {};
+  // ex = hacia dónde sale la pieza al desarmar; exPhone = lo mismo en teléfono,
+  // donde se abren hacia arriba porque la pantalla es alta y angosta
+  function part(name, obj, ex, exPhone) {
+    obj.userData.base = obj.position.clone(); obj.userData.ex = new V3(...ex); obj.userData.exPhone = new V3(...exPhone);
+    consoleGroup.add(obj); parts[name] = obj; return obj;
+  }
+  const bodyShape = roundedRect(2.56, 1.26, 0.46);
+  const extrudeOpts = { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 4, curveSegments: 18 };
+
+  const front = new THREE.Group();
+  const frontGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeOpts); frontGeo.translate(0, 0, 0.03);
+  front.add(new THREE.Mesh(frontGeo, shellMat));
+  const holes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.017, 0.017, 0.01, 10).rotateX(Math.PI / 2), darkMat, 12);
+  { const m = new THREE.Matrix4(); let i = 0; for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { m.makeTranslation(0.78 + c * 0.07, -0.36 - r * 0.07, 0.181); holes.setMatrixAt(i++, m); } }
+  front.add(holes);
+  part('front', front, [0, 0.12, 1.0], [0, 1.3, 0.35]);
+
+  const backGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeOpts); backGeo.translate(0, 0, -0.15);
+  part('back', new THREE.Mesh(backGeo, shellMat), [0, -0.2, -1.0], [0, -1.25, -0.5]);
+
+  const screen = new THREE.Group();
+  const bezel = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRect(1.34, 0.86, 0.07), { depth: 0.012, bevelEnabled: false, curveSegments: 8 }), darkMat);
+  bezel.position.z = 0.18; screen.add(bezel);
+  const display = new THREE.Mesh(new THREE.PlaneGeometry(1.16, 0.725), screenMat); display.position.z = 0.1935; screen.add(display);
+  part('screen', screen, [0, 0.3, 1.75], [0, 2.0, 0.5]);
+
+  const dpad = new THREE.Group(); dpad.position.set(-0.9, 0.02, 0.18);
+  dpad.add(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.05), darkMat));
+  dpad.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 0.05), darkMat));
+  dpad.children.forEach(m => m.position.z = 0.025);
+  part('dpad', dpad, [-0.25, 0.05, 1.4], [-0.1, 1.45, 0.55]);
+
+  const buttons = new THREE.Group(); buttons.position.set(0.92, 0.04, 0.18);
+  const btnGeo = new THREE.CylinderGeometry(0.095, 0.095, 0.05, 28).rotateX(Math.PI / 2);
+  const bA = new THREE.Mesh(btnGeo, darkMat); bA.position.set(0.12, 0.09, 0.025);
+  const bB = new THREE.Mesh(btnGeo, darkMat); bB.position.set(-0.12, -0.09, 0.025);
+  buttons.add(bA, bB);
+  part('buttons', buttons, [0.25, 0.05, 1.4], [0.1, 1.45, 0.55]);
+
+  const pills = new THREE.Group(); pills.position.set(0, -0.53, 0.18);
+  const pillGeo = new THREE.CapsuleGeometry(0.022, 0.09, 4, 8).rotateZ(Math.PI / 2);
+  for (const x of [-0.09, 0.09]) { const p = new THREE.Mesh(pillGeo, darkMat); p.position.set(x, 0, 0.02); pills.add(p); }
+  part('pills', pills, [0, -0.25, 1.25], [0, 1.15, 0.5]);
+
+  const shoulders = new THREE.Group();
+  for (const x of [-0.6, 0.6]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.07, 0.12), darkMat); s.position.set(x, 0.665, -0.05); shoulders.add(s); }
+  part('shoulders', shoulders, [0, 0.55, -0.2], [0, 1.5, -0.1]);
+
+  part('pcb', new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.98, 0.03), pcbMat), [0, 0, 0], [0, 0, 0]);
+  const chip = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.34, 0.06), chipMat); chip.position.set(0.32, 0.1, 0.045);
+  part('chip', chip, [0, 0.05, 0.5], [0, 0.25, 0.45]);
+  const battery = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.44, 0.08), dawnMat); battery.position.set(-0.5, -0.12, -0.055);
+  part('battery', battery, [0, -0.05, -0.55], [0, -0.65, -0.3]);
+
+  // ---------- Sol líquido (liquid morph): esfera deformada con ruido en el shader ----------
+  const orbUniforms = { uTime: { value: 0 }, uAmp: { value: 0.1 } };
+  const orbMat = new THREE.MeshPhysicalMaterial({ color: 0xf04e23, emissive: 0xf04e23, emissiveIntensity: 0.32, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.4 });
+  orbMat.onBeforeCompile = shader => {
+    shader.uniforms.uTime = orbUniforms.uTime; shader.uniforms.uAmp = orbUniforms.uAmp;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+uniform float uTime; uniform float uAmp;
+// webgl-noise, simplex 3D (Ashima Arts, Stefan Gustavson, MIT)
+vec3 m289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 m289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 perm(vec4 x){return m289(((x*34.0)+10.0)*x);}
+vec4 tis(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+  vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g; vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+  i=m289(i);
+  vec4 p=perm(perm(perm(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+  float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.0*floor(p*ns.z*ns.z); vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+  vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+  vec4 nr=tis(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=nr.x; p1*=nr.y; p2*=nr.z; p3*=nr.w;
+  vec4 m=max(0.5-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+  return 105.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}
+float liquid(vec3 p){ return snoise(p*0.85+vec3(0.0,uTime*0.3,uTime*0.18))*uAmp + snoise(p*1.7-uTime*0.22)*uAmp*0.2; }
+vec3 liquidAt(vec3 p){ vec3 n=normalize(p); return n*(1.0+liquid(n)); }`)
+      .replace('#include <beginnormal_vertex>', `
+vec3 lqN = normalize(position);
+vec3 lqT = normalize(cross(lqN, abs(lqN.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+vec3 lqB = normalize(cross(lqN, lqT));
+vec3 lqP = liquidAt(position);
+vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liquidAt(position + lqB * 0.01) - lqP));`)
+      .replace('#include <begin_vertex>', 'vec3 transformed = lqP;');
+  };
+  orbMat.customProgramCacheKey = () => 'era-liquid-sun';
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), orbMat);
+  scene.add(orb);
+
+  // Puntos de las piezas donde se pegan las etiquetas (coordenadas locales)
+  const anchorsLocal = { screen: new V3(0.5, 0.3, 0.2), dpad: new V3(0, 0, 0.05), chip: new V3(0, 0, 0.03), buttons: new V3(0, 0, 0.05) };
+  const leaderEls = [...document.querySelectorAll('.leaders line')], labelsBox = document.getElementById('labels');
+  const labelEls = [...document.querySelectorAll('.label')].map(el => ({
+    part: parts[el.dataset.part], local: anchorsLocal[el.dataset.part],
+    dot: el.querySelector('.ldot'), card: el.querySelector('.lcard'), w: 0, h: 0, x: 0, y: 0, cx: 0, cy: 0,
+  }));
+
+  // ---------- Dibujos de la pantalla (uno por juego) ----------
+  function makeSun(r) {
+    const c = document.createElement('canvas'); c.width = c.height = r * 2; const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0, 0, 0, r * 2); grd.addColorStop(0, '#ffb089'); grd.addColorStop(0.55, '#f04e23'); grd.addColorStop(1, '#f2f3f9');
+    g.fillStyle = grd; g.beginPath(); g.arc(r, r, r, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'destination-out'; const u = r / 50;
+    g.fillRect(50 * u, 30 * u, 52 * u, 12 * u); g.fillRect(50 * u, 58 * u, 52 * u, 12 * u); g.fillRect(84 * u, 41 * u, 18 * u, 18 * u);
+    return c;
+  }
+  const sunImg = makeSun(26);
+  const stars = Array.from({ length: 26 }, (_, i) => [(i * 61) % SW, (i * 37) % 60, i * 1.7]);
+  const g = sx;
+  function sky(top, bottom, h) { const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, top); grd.addColorStop(1, bottom); g.fillStyle = grd; g.fillRect(0, 0, SW, h); }
+  const ease = x => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+  const DRAW = {
+    sun(t) {
+      sky('#0c0f24', '#5b3f7a', 74);
+      g.fillStyle = '#f2f3f9';
+      for (const [x, y, p] of stars) if (Math.sin(t * 2 + p) > -0.4) g.fillRect(x, y, 1, 1);
+      const rise = reduceMotion ? 1 : ease(t / 2.2);
+      g.drawImage(sunImg, 80 - 26, 98 - rise * 44 - 26);
+      g.fillStyle = '#0c0f24'; g.fillRect(0, 74, SW, 26);
+      g.fillStyle = 'rgba(240,78,35,.7)'; g.fillRect(0, 74, SW, 1);
+    },
+    boot(t) {
+      g.fillStyle = '#0c0f24'; g.fillRect(0, 0, SW, SH);
+      const s = 16 + Math.sin(t * 4) * 1.5;
+      g.fillStyle = '#f04e23'; g.beginPath(); g.moveTo(80 - s * 0.7, 44 - s); g.lineTo(80 + s, 44); g.lineTo(80 - s * 0.7, 44 + s); g.closePath(); g.fill();
+      g.fillStyle = '#26337f'; g.fillRect(40, 74, 80, 6);
+      g.fillStyle = '#ffb089'; g.fillRect(41, 75, ((t % 2.4) / 2.4) * 78, 4);
+    },
+    rally(t) {
+      sky('#26337f', '#ffb089', 40);
+      g.fillStyle = '#3a2f5c'; g.beginPath(); g.moveTo(0, 40);
+      for (let x = 0; x <= SW; x += 8) g.lineTo(x, 32 - Math.abs(Math.sin(x * 0.07 + 1.3)) * 10);
+      g.lineTo(SW, 40); g.fill();
+      g.fillStyle = '#6b4630'; g.fillRect(0, 40, SW, 60);
+      const center = p => 80 + Math.sin(t * 0.9) * 34 * (1 - p) * (1 - p);
+      for (let y = 40; y < SH; y++) {
+        const p = (y - 40) / 60, c = center(p), hw = 4 + p * 58, stripe = Math.floor(1 / (p + 0.06) + t * 7) % 2;
+        g.fillStyle = stripe ? '#a07a55' : '#94704d'; g.fillRect(c - hw, y, hw * 2, 1);
+        g.fillStyle = stripe ? '#f2f3f9' : '#f04e23'; const kw = 1 + p * 3; g.fillRect(c - hw - kw, y, kw, 1); g.fillRect(c + hw, y, kw, 1);
+      }
+      const cx = center(0.75) + Math.sin(t * 2.3) * 5, cy = 82;
+      g.fillStyle = 'rgba(255,176,137,.5)';
+      for (let i = 0; i < 6; i++) { const k = (t * 3 + i / 6) % 1; g.fillRect(cx - 14 + i * 5 - k * 6, cy + 10 + k * 8, 3 - k * 2, 3 - k * 2); }
+      g.fillStyle = '#0c0f24'; g.fillRect(cx - 12, cy + 7, 6, 4); g.fillRect(cx + 6, cy + 7, 6, 4);
+      g.fillStyle = '#f04e23'; g.fillRect(cx - 13, cy, 26, 9);
+      g.fillStyle = '#14183a'; g.fillRect(cx - 7, cy - 5, 14, 6);
+      g.fillStyle = '#f2f3f9'; g.fillRect(cx - 2, cy + 2, 4, 2);
+    },
+    topple(t) {
+      sky('#14183a', '#26337f', 88);
+      g.fillStyle = '#ffb089'; g.beginPath(); g.arc(130, 22, 8, 0, Math.PI * 2); g.fill();
+      for (const [x, h] of [[4, 30], [20, 44], [36, 26], [108, 40], [124, 30], [142, 48]]) {
+        g.fillStyle = '#0c0f24'; g.fillRect(x, 88 - h, 15, h);
+        g.fillStyle = 'rgba(255,176,137,.6)';
+        for (let wy = 88 - h + 4; wy < 84; wy += 6) for (let wx = x + 3; wx < x + 13; wx += 5) if ((wx * 7 + wy * 3) % 5 > 1) g.fillRect(wx, wy, 2, 2);
+      }
+      g.fillStyle = '#0c0f24'; g.fillRect(0, 88, SW, 12);
+      const cyc = t % 4.2, fallP = clamp((cyc - 1.4) / 1.1, 0, 1);
+      const angle = fallP * fallP * Math.PI * 0.48 + (cyc > 1 && cyc < 1.4 ? Math.sin(t * 60) * 0.02 : 0);
+      g.save(); g.translate(90, 88); g.rotate(angle);
+      for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#ffb089' : '#f04e23'; g.fillRect(-20 + fallP * i * 0.6, -(i + 1) * 10 - fallP * fallP * i * 2.5, 20, 9); }
+      g.restore();
+      if (cyc > 2.5) { const d = (cyc - 2.5) / 1.7; g.fillStyle = `rgba(242,243,249,${0.45 * (1 - d)})`; for (let i = 0; i < 7; i++) g.fillRect(96 + i * 7 + d * i * 3, 84 - d * 10 - (i % 3) * 3, 4 + d * 4, 4 + d * 4); }
+    },
+    skate(t) {
+      sky('#ffb089', '#f2f3f9', SH);
+      g.fillStyle = '#26337f'; g.beginPath(); g.moveTo(0, 40); g.quadraticCurveTo(0, 86, 44, 86); g.lineTo(116, 86); g.quadraticCurveTo(160, 86, 160, 40); g.lineTo(160, 100); g.lineTo(0, 100); g.closePath(); g.fill();
+      g.fillStyle = '#f2f3f9'; g.fillRect(0, 39, 6, 2); g.fillRect(154, 39, 6, 2);
+      const s = Math.sin(t * 1.7), x = 80 + s * 62, d = Math.abs(x - 80);
+      const surf = dd => dd < 36 ? 86 : 86 - Math.pow((dd - 36) / 44, 2) * 46;
+      const y = surf(d), air = Math.max(0, Math.abs(s) - 0.9) / 0.1 * 8;
+      const slope = (surf(d + 1) - surf(d)) * Math.sign(x - 80);
+      g.save(); g.translate(x, y - air); g.rotate(Math.atan(slope)); g.scale(1.4, 1.4);
+      g.fillStyle = '#14183a'; g.fillRect(-7, -3, 14, 2); g.fillRect(-5, -1, 2, 2); g.fillRect(3, -1, 2, 2);
+      g.fillRect(-2, -11, 4, 8); g.fillStyle = '#f04e23'; g.fillRect(-3, -18, 6, 8); g.fillStyle = '#0c0f24'; g.fillRect(-2, -22, 4, 4);
+      g.restore();
+    },
+    war(t) {
+      sky('#1d2433', '#3a3f4a', 62);
+      g.fillStyle = '#2c3326'; g.fillRect(0, 62, SW, 38);
+      const spots = [[40, 62], [82, 60], [124, 63]];
+      const idx = Math.floor(t / 1.5) % 3, lt = t % 1.5;
+      spots.forEach(([x, y], i) => {
+        const up = i === idx ? Math.min(lt / 0.3, 1) * (lt > 1.0 ? Math.max(0, 1 - (lt - 1.0) / 0.25) : 1) : 0;
+        if (up > 0) { const h = 18 * up; g.fillStyle = '#0c0f24'; g.fillRect(x - 4, y - h, 8, h); g.fillRect(x - 3, y - h - 6, 6, 6); }
+      });
+      const [px, py] = spots[(idx + 2) % 3], [tx, ty] = spots[idx], k = ease(lt / 0.6);
+      const chx = px + (tx - px) * k, chy = py - 14 + (ty - py) * k;
+      if (lt > 0.85 && lt < 1.0) { g.strokeStyle = '#ffb089'; g.beginPath(); g.moveTo(80, 100); g.lineTo(chx, chy); g.stroke(); g.fillStyle = '#ffb089'; g.fillRect(76, 92, 8, 8); }
+      g.fillStyle = '#4a4a3a'; for (let i = 0; i < 9; i++) g.fillRect(i * 18 - 2, 88 + (i % 2) * 2, 17, 12);
+      g.fillStyle = '#ffb089'; g.fillRect(chx - 8, chy, 5, 1); g.fillRect(chx + 4, chy, 5, 1); g.fillRect(chx, chy - 8, 1, 5); g.fillRect(chx, chy + 4, 1, 5);
+    },
+  };
+  let mode = 'sun', modeT = 0, staticT = 0, screenAcc = 1;
+  const noise = sx.createImageData(SW, SH);
+  function drawScreen(dt, wanted) {
+    if (wanted && wanted !== mode) { mode = wanted; modeT = 0; staticT = reduceMotion ? 0 : 0.2; }
+    modeT += dt; staticT = Math.max(0, staticT - dt);
+    screenAcc += dt; if (screenAcc < 1 / 24) return; // la pantalla se actualiza a 24 cuadros
+    screenAcc = 0;
+    if (staticT > 0) {
+      const d = noise.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 200; d[i] = v; d[i + 1] = v; d[i + 2] = v + 30; d[i + 3] = 255; }
+      sx.putImageData(noise, 0, 0);
+    } else {
+      DRAW[mode](modeT);
+      sx.fillStyle = 'rgba(0,0,0,.13)'; for (let y = 0; y < SH; y += 2) sx.fillRect(0, y, SW, 1);
+    }
+    screenTex.needsUpdate = true;
+  }
+
+  // ---------- ASCII: post-proceso que solo se enciende en su beat ----------
+  const GLYPHS = ' .:-=+*#%@';
+  const glyphCanvas = document.createElement('canvas'); glyphCanvas.width = 16 * GLYPHS.length; glyphCanvas.height = 28;
+  const glyphTex = new THREE.CanvasTexture(glyphCanvas); glyphTex.minFilter = THREE.LinearFilter; glyphTex.generateMipmaps = false;
+  function drawGlyphs() {
+    const gx = glyphCanvas.getContext('2d');
+    gx.fillStyle = '#000'; gx.fillRect(0, 0, glyphCanvas.width, 28);
+    gx.fillStyle = '#fff'; gx.font = '600 22px "JetBrains Mono", ui-monospace, Menlo, monospace'; gx.textAlign = 'center'; gx.textBaseline = 'middle';
+    [...GLYPHS].forEach((ch, i) => gx.fillText(ch, i * 16 + 8, 15));
+    glyphTex.needsUpdate = true;
+  }
+  drawGlyphs(); if (document.fonts) document.fonts.ready.then(drawGlyphs);
+  const AsciiShader = {
+    uniforms: {
+      tDiffuse: { value: null }, tGlyphs: { value: glyphTex }, uRes: { value: new THREE.Vector2(1, 1) }, uCell: { value: new THREE.Vector2(8, 14) },
+      uMix: { value: 0 }, uCount: { value: GLYPHS.length }, uTint: { value: new THREE.Color('#ffb089') }, uTint2: { value: new THREE.Color('#f04e23') },
+    },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      uniform sampler2D tDiffuse, tGlyphs; uniform vec2 uRes, uCell; uniform float uMix, uCount; uniform vec3 uTint, uTint2;
+      varying vec2 vUv;
+      void main(){
+        vec4 base = texture2D(tDiffuse, vUv);
+        vec2 px = vUv * uRes;
+        vec2 cuv = (floor(px / uCell) + 0.5) * uCell / uRes;
+        vec2 o = uCell * 0.3 / uRes;
+        vec4 src = texture2D(tDiffuse, cuv) * 0.4 + (texture2D(tDiffuse, cuv + o) + texture2D(tDiffuse, cuv - o)
+                 + texture2D(tDiffuse, cuv + vec2(o.x, -o.y)) + texture2D(tDiffuse, cuv + vec2(-o.x, o.y))) * 0.15;
+        float a = src.a;
+        vec3 c = a > 0.001 ? src.rgb / a : vec3(0.0);
+        float l = clamp(pow(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.45) * 1.15, 0.0, 1.0);
+        float gi = a > 0.08 ? max(1.0, floor(l * (uCount - 1.0) + 0.5)) : 0.0;
+        vec2 inCell = fract(px / uCell);
+        float gl = texture2D(tGlyphs, vec2((gi + inCell.x) / uCount, inCell.y)).r;
+        vec4 ascii = vec4(mix(uTint2, uTint, l) * gl, gl);
+        float yTop = 1.0 - vUv.y, edge = uMix * 1.12 - 0.06;
+        float m = 1.0 - smoothstep(edge - 0.015, edge + 0.015, yTop);
+        float scan = exp(-abs(yTop - edge) * 140.0) * (1.0 - step(0.999, uMix));
+        gl_FragColor = mix(base, ascii, m) + vec4(uTint, 1.0) * scan * 0.5;
+      }`,
+  };
+  let composer = null, asciiPass = null;
+  function cellSize() { return view.phone ? [7, 12] : [9, 15]; }
+  function ensureComposer() {
+    if (composer) return;
+    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+    composer = new EffectComposer(renderer, rt);
+    composer.addPass(new RenderPass(scene, camera));
+    asciiPass = new ShaderPass(AsciiShader); composer.addPass(asciiPass);
+    asciiPass.uniforms.tGlyphs.value = glyphTex; // ShaderPass clona las texturas; usamos la original para que se actualice
+    composer.addPass(new OutputPass());
+    sizeComposer();
+  }
+  function sizeComposer() {
+    if (!composer) return;
+    composer.setPixelRatio(PR); composer.setSize(W, H);
+    asciiPass.uniforms.uRes.value.set(W * PR, H * PR);
+    const [cw, chh] = cellSize(); asciiPass.uniforms.uCell.value.set(cw * PR, chh * PR);
+  }
+
+  // ---------- Tamaño ----------
+  let W = 1, H = 1;
+  function resize() {
+    W = view.w; H = view.h;
+    renderer.setSize(W, H, false);
+    camera.aspect = W / H;
+    for (const l of labelEls) { l.w = l.card.offsetWidth; l.h = l.card.offsetHeight; }
+    sizeComposer();
+  }
+  new ResizeObserver(() => { measure(); resize(); }).observe(stage);
+  if (document.fonts) document.fonts.ready.then(resize);
+  resize();
+
+  // ---------- Arrastrar para girar (solo en la sección de color) ----------
+  const zone = document.getElementById('dragZone');
+  const drag = { on: false, x: 0, v: 0 };
+  let dragYaw = 0;
+  zone.addEventListener('pointerdown', e => { drag.on = true; drag.x = e.clientX; drag.v = 0; zone.setPointerCapture(e.pointerId); });
+  zone.addEventListener('pointermove', e => { if (!drag.on) return; const dx = (e.clientX - drag.x) * 0.012; drag.x = e.clientX; dragYaw += dx; drag.v = dx; });
+  const release = () => { drag.on = false; };
+  zone.addEventListener('pointerup', release); zone.addEventListener('pointercancel', release);
+
+  // ---------- Fotograma ----------
+  const cur = { dir: new V3(2.2, 1, 5.6).normalize(), look: new V3(), dist: 8, fov: 32, yaw: 0.42, explode: 0, sx: 0, sy: 0, ascii: 0, sun: [1.2, 0.85, -3.2, 1.25], glass: 0 };
+  const tmp = new V3(), tv = new V3();
+  let first = true, intro = reduceMotion ? 1 : 0, wasGlass = false;
+
+  tickers.push(dt => {
+    const k = first ? 1 : 1 - Math.exp(-6 * dt);
+    cur.dir.lerp(tv.set(...goal.dir), k).normalize(); cur.look.lerp(tmp.set(...goal.look), k);
+    cur.dist = lerp(cur.dist, goal.dist, k); cur.fov = lerp(cur.fov, goal.fov, k);
+    cur.yaw = lerp(cur.yaw, goal.yaw, k); cur.explode = lerp(cur.explode, goal.explode, k);
+    cur.sx = lerp(cur.sx, goal.sx, k); cur.sy = lerp(cur.sy, goal.sy, k);
+    cur.ascii = lerp(cur.ascii, goal.ascii, k); if (cur.ascii < 0.002) cur.ascii = 0;
+    for (let i = 0; i < 4; i++) cur.sun[i] = lerp(cur.sun[i], goal.sun[i], 1 - Math.exp(-3 * dt));
+
+    // Cámara: dolly zoom. Al cerrar el lente se aleja para que la consola conserve su tamaño
+    const dist = cur.dist * Math.tan(16 * Math.PI / 180) / Math.tan(cur.fov * Math.PI / 360);
+    camera.fov = cur.fov; camera.near = Math.max(0.05, dist - 8); camera.far = dist + 12;
+    camera.position.copy(cur.dir).multiplyScalar(dist).add(cur.look);
+    camera.lookAt(cur.look);
+    camera.updateProjectionMatrix();
+    camera.projectionMatrix.elements[8] = -cur.sx;   // corre la imagen sin girar la cámara
+    camera.projectionMatrix.elements[9] = -cur.sy;
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+
+    // Arrastre con inercia; fuera de la sección de color regresa a su lugar
+    if (!drag.on) { dragYaw += drag.v; drag.v *= reduceMotion ? 0 : Math.exp(-5 * dt); }
+    if (goal.drag < 0.5 && !drag.on) { dragYaw = Math.atan2(Math.sin(dragYaw), Math.cos(dragYaw)); dragYaw = lerp(dragYaw, 0, k); }
+
+    intro = Math.min(1, intro + dt / 1.6); const ei = ease(intro);
+    const t = motion.time, bob = reduceMotion ? 0 : Math.sin(t * 1.1) * 0.035 * (1 - cur.explode);
+    consoleGroup.position.y = bob - (1 - ei) * 1.4;
+    consoleGroup.rotation.set(reduceMotion ? 0 : Math.sin(t * 0.7) * 0.03 * (1 - cur.explode), cur.yaw + dragYaw - (1 - ei) * 1.6, 0);
+    const e = cur.explode * cur.explode * (3 - 2 * cur.explode);
+    for (const p of Object.values(parts)) p.position.copy(p.userData.base).addScaledVector(view.phone ? p.userData.exPhone : p.userData.ex, e);
+
+    // Carcasa: color o cristal (vidrio translúcido; no usa transmisión para cuidar el iPhone)
+    const glass = shellChoice === 'glass';
+    cur.glass = lerp(cur.glass, glass ? 1 : 0, k);
+    shellMat.color.lerp(glass ? GLASS_TINT : targetColor.set(shellChoice), k);
+    shellMat.roughness = lerp(0.42, 0.08, cur.glass); shellMat.clearcoat = lerp(0.7, 1, cur.glass);
+    shellMat.opacity = lerp(1, 0.32, cur.glass);
+    const isGlass = cur.glass > 0.01;
+    if (isGlass !== wasGlass) { shellMat.transparent = isGlass; shellMat.needsUpdate = true; wasGlass = isGlass; }
+
+    // Sol líquido: se deforma más cuando scrolleas o arrastras rápido
+    const [ox, oy, oz, os] = cur.sun;
+    orb.visible = os > 0.02 && oy > -6.5; // abajo de -6.5 ya se metió el sol
+    orb.position.set(ox, oy + (1 - ei) * -1.5, oz); orb.scale.setScalar(os * (0.6 + 0.4 * ei));
+    orbUniforms.uTime.value = reduceMotion ? 0 : t;
+    orbUniforms.uAmp.value = lerp(orbUniforms.uAmp.value, 0.1 + (reduceMotion ? 0 : motion.speed * 0.2 + Math.min(Math.abs(drag.v) * 2, 0.15)), 1 - Math.exp(-4 * dt));
+
+    drawScreen(dt, goal.screen);
+    if (cur.ascii > 0) {
+      ensureComposer();
+      asciiPass.uniforms.uMix.value = cur.ascii;
+      composer.render(dt);
+    } else renderer.render(scene, camera);
+
+    // Etiquetas: se proyecta el punto 3D de cada pieza a la pantalla
+    const op = smooth(0.55, 0.9, cur.explode) * (1 - cur.ascii);
+    labelsBox.style.opacity = op.toFixed(3);
+    if (op > 0.001) {
+      for (const l of labelEls) {
+        tmp.copy(l.local); l.part.localToWorld(tmp); tmp.project(camera);
+        l.x = (tmp.x * 0.5 + 0.5) * W; l.y = (-tmp.y * 0.5 + 0.5) * H;
+        // En escritorio el texto está a la derecha: las tarjetas van a la izquierda del punto si caben
+        const left = view.phone ? l.x > W * 0.5 : l.x - 16 - l.w > 10;
+        l.cx = clamp(left ? l.x - 16 - l.w : l.x + 16, 10, W - l.w - 10);
+        l.cy = clamp(l.y - l.h / 2, 70, (view.phone ? H * 0.7 : H - 10) - l.h);
+      }
+      // Si dos tarjetas se tocan, la de abajo se recorre hacia abajo
+      const byY = [...labelEls].sort((a, b) => a.cy - b.cy);
+      for (let i = 1; i < byY.length; i++) for (let j = 0; j < i; j++) {
+        const a = byY[j], b = byY[i];
+        if (b.cx < a.cx + a.w + 6 && a.cx < b.cx + b.w + 6 && b.cy < a.cy + a.h + 6) b.cy = a.cy + a.h + 6;
+      }
+      labelEls.forEach((l, i) => {
+        l.dot.style.transform = `translate(${l.x.toFixed(1)}px, ${l.y.toFixed(1)}px)`;
+        l.card.style.transform = `translate(${l.cx.toFixed(1)}px, ${l.cy.toFixed(1)}px)`;
+        const ln = leaderEls[i];
+        ln.setAttribute('x1', l.x.toFixed(1)); ln.setAttribute('y1', l.y.toFixed(1));
+        ln.setAttribute('x2', clamp(l.x, l.cx, l.cx + l.w).toFixed(1)); ln.setAttribute('y2', clamp(l.y, l.cy, l.cy + l.h).toFixed(1));
+      });
+    }
+
+    if (first) { first = false; stage.classList.add('is-ready'); }
+  });
+}
+</script>
+</body>
+</html>
