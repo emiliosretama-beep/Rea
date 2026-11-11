@@ -16,7 +16,7 @@ constructores web con IA, hecho desde cero con identidad propia de **ERA**.
 | Proyectos                   | Se guardan en tu navegador con miniatura.                                                                                                                |
 | Exportar                    | Descarga un `.html` listo para subir a cualquier hosting, o ábrelo en otra pestaña.                                                                      |
 | Imágenes propias            | Sube logos o capturas (botón, pegar o arrastrar). La IA las ve y las coloca; se incluyen dentro del `.html` descargado.                                  |
-| Estilo visual               | Elige hasta 2 estilos al crear (vidrio, tipografía cinética, gradient mesh, isométrico, ASCII, líquido); la IA los aplica con reglas de rendimiento para celular.  |
+| Estilo visual               | Elige hasta 2 estilos al crear (cambia con el scroll, vidrio, tipografía cinética, gradient mesh, isométrico, ASCII, líquido); la IA los aplica con reglas de rendimiento para celular.  |
 | **Inspector ERA**           | Activa el Inspector, haz clic en cualquier elemento y pide un cambio solo para él.                                                                       |
 | **Análisis ERA**            | Revisión de SEO, accesibilidad y calidad con puntuación y la **evidencia** (el código exacto) de cada problema. Un botón le pide a la IA que lo arregle. |
 

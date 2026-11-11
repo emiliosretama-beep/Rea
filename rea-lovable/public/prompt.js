@@ -36,6 +36,12 @@ No escribas nada después del bloque de código.`;
 // técnica concreta con sus reglas de rendimiento (pensadas para iPhone).
 export const STYLES = [
   {
+    id: "scroll",
+    label: "Cambia con el scroll",
+    brief:
+      "Scrollytelling: la página se transforma mientras el visitante baja. Elige UN elemento protagonista (el producto, una ilustración SVG, el titular o un objeto dibujado con CSS/canvas) y déjalo fijo con position: sticky dentro de una sección alta (300 a 500vh); mientras se baja, cambia de tamaño, posición, giro, color o se arma y desarma por partes, y los textos HTML van pasando a su lado, uno por paso. Escribe primero, en un comentario, una tabla de 4 a 6 pasos (porcentaje de scroll → qué hace el elemento → qué texto aparece) y prográmala como una lista de pasos en JavaScript fácil de editar. Calcula el progreso de 0 a 1 de esa sección dentro de requestAnimationFrame (no dentro del evento scroll), interpola entre pasos con una curva suave y suaviza el movimiento para que nunca salte. Cambia también el color de fondo entre pasos. Anima solo transform y opacity, deja el scroll táctil nativo (no lo secuestres), haz que termine en un estado parecido al inicial, y con prefers-reduced-motion muestra todos los pasos como secciones normales sin animación. Sin librerías.",
+  },
+  {
     id: "glass",
     label: "Vidrio",
     brief:
