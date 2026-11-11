@@ -1218,7 +1218,12 @@ document.querySelectorAll(".devices button").forEach((b) =>
 els.inspectBtn.addEventListener("click", () => {
   if (!currentHtml()) return toast("Primero genera una web.");
   setInspecting(!state.inspecting);
-  if (state.inspecting) toast("Haz clic en un elemento de la vista previa");
+  if (state.inspecting)
+    toast(
+      matchMedia("(pointer: coarse)").matches
+        ? "Toca un elemento de la vista previa"
+        : "Haz clic en un elemento de la vista previa",
+    );
 });
 
 els.versionsBtn.addEventListener("click", (e) => {

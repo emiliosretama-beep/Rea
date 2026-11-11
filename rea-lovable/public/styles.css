@@ -268,3 +268,19 @@ button { cursor: pointer; }
   #editor.preview-max .messages { display: none; }
   #editor.preview-max .frame-wrap { margin: 6px; }
 }
+
+/* ---------- Ajustes para celular (auditoría a 360 px) ---------- */
+.check > div { min-width: 0; }
+.check span { overflow-wrap: anywhere; }
+/* La miniatura llena el ancho de la tarjeta, sea cual sea su tamaño */
+.thumb { container-type: inline-size; height: auto; aspect-ratio: 16 / 9; }
+@supports (transform: scale(tan(atan2(1px, 1px)))) {
+  .thumb iframe { transform: scale(tan(atan2(100cqw, 1280px))); }
+}
+@media (max-width: 820px) {
+  /* El menú de versiones ya no se sale por la izquierda */
+  .menu { position: fixed; left: 10px; right: 10px; top: 104px; width: auto; }
+  .audit { padding: 18px 14px; }
+  /* El aviso sale arriba para no tapar el campo del chat */
+  .toast { top: calc(env(safe-area-inset-top, 0px) + 12px); bottom: auto; max-width: calc(100% - 32px); text-align: center; border-radius: 16px; }
+}
