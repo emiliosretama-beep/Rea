@@ -12,6 +12,7 @@ import {
   tokenizeDataUris,
 } from "./assets.js";
 import { createBackend } from "./backend.js";
+import { STYLES, styleBrief } from "./prompt.js";
 
 const STORAGE_KEY = "rea-studio:projects";
 const MAX_VERSIONS = 25;
@@ -278,6 +279,7 @@ function startFromHome(prompt) {
   if (!prompt && !images.length) return;
   if (!prompt) prompt = "Crea una página web usando estas imágenes.";
   const project = createProject(prompt);
+  project.styles = [...pickedStyles]; // estilo visual elegido en el inicio
   els.homePrompt.value = "";
   location.hash = `#p-${project.id}`;
   openEditor(project);
@@ -620,7 +622,11 @@ async function generate(prompt, images = []) {
   try {
     const { truncated } = await state.backend.generate(
       {
-        prompt,
+        // El estilo elegido solo se manda al crear; después la página ya lo lleva
+        prompt:
+          baseHtml || state.backend.mode === "demo"
+            ? prompt
+            : prompt + styleBrief(p.styles),
         currentHtml: baseHtml,
         history,
         selection,
@@ -654,10 +660,11 @@ async function generate(prompt, images = []) {
       }),
     );
     if (p.autoName) {
-      const title = code
-        .match(/<title>([^<]{2,80})<\/title>/i)?.[1]
-        ?.split(/[—|·-]/)[0]
-        ?.trim();
+      const title = decodeEntities(
+        code.match(/<title>([^<]{2,80})<\/title>/i)?.[1] ?? "",
+      )
+        .split(/[—|·-]/)[0]
+        .trim();
       if (title) {
         p.name = title;
         els.projectName.value = title;
@@ -1104,6 +1111,53 @@ function submitOnEnter(textarea, form) {
     }
   });
 }
+
+// "Grano &amp; Horno" en el <title> debe verse "Grano & Horno" en el nombre
+function decodeEntities(text) {
+  return new DOMParser().parseFromString(text, "text/html").documentElement
+    .textContent;
+}
+
+// ---------------- Estilo visual (inicio) ----------------
+const pickedStyles = new Set();
+const STYLE_SWATCH = { kinetic: "Aa", ascii: "#%" };
+const styleChips = $("#styleChips");
+for (const st of STYLES) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.dataset.style = st.id;
+  b.setAttribute("aria-pressed", "false");
+  const sw = Object.assign(document.createElement("span"), {
+    className: `sw sw-${st.id}`,
+    textContent: STYLE_SWATCH[st.id] ?? "",
+  });
+  sw.setAttribute("aria-hidden", "true");
+  b.append(sw, st.label);
+  styleChips.append(b);
+}
+styleChips.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const id = b.dataset.style;
+  if (pickedStyles.has(id)) pickedStyles.delete(id);
+  else if (pickedStyles.size >= 2)
+    return toast("Elige máximo 2 estilos para que la página no se sature.");
+  else pickedStyles.add(id);
+  b.setAttribute("aria-pressed", String(pickedStyles.has(id)));
+  if (pickedStyles.has(id) && state.backend?.mode === "demo")
+    toast("Los estilos se aplican con la IA conectada; el modo demo usa plantillas.");
+});
+
+// ---------------- Agrandar la vista previa (celular) ----------------
+const expandBtn = $("#expandBtn");
+expandBtn.addEventListener("click", () => {
+  const on = $("#editor").classList.toggle("preview-max");
+  expandBtn.setAttribute("aria-pressed", String(on));
+  expandBtn.setAttribute(
+    "aria-label",
+    on ? "Volver a mostrar el chat" : "Agrandar la vista previa",
+  );
+});
 
 els.homeForm.addEventListener("submit", (e) => {
   e.preventDefault();

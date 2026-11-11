@@ -52,6 +52,11 @@
         <button type="button" data-prompt="Web para un gimnasio llamado &quot;Pulso Gym&quot; con planes de precios, horarios de clases y testimonios">💪 Gimnasio</button>
       </div>
 
+      <div class="style-pick" role="group" aria-labelledby="styleTitle">
+        <p class="style-title" id="styleTitle">Estilo visual <span class="muted">· opcional, hasta 2</span></p>
+        <div class="style-chips" id="styleChips"></div>
+      </div>
+
       <section class="projects" aria-labelledby="projectsTitle">
         <div class="projects-head">
           <h2 id="projectsTitle">Tus proyectos</h2>
@@ -145,6 +150,9 @@
         <div class="panel" data-panel="preview">
           <div class="frame-wrap" id="frameWrap">
             <iframe id="preview" title="Vista previa de la web" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+            <button class="expand-btn" id="expandBtn" type="button" aria-pressed="false" aria-label="Agrandar la vista previa" title="Agrandar la vista previa">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <div class="building" id="building" hidden>
               <div class="orb"></div>
               <p id="buildingText">Pensando el diseño…</p>

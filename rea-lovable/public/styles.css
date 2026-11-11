@@ -245,3 +245,26 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .attachment.loading::after { animation: none; } }
 /* En pantallas táctiles, objetivo de al menos 44 px (recomendación de Apple). */
 @media (pointer: coarse) { .attach-btn { width: 44px; height: 44px; } }
+
+/* ---------- Estilo visual elegible ---------- */
+.style-pick { margin-top: 22px; text-align: center; }
+.style-title { margin: 0 0 10px; font-size: .88rem; font-weight: 600; }
+.style-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.style-chips button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, transparent); border-radius: 999px; padding: 6px 14px 6px 8px; font-size: .88rem; color: var(--muted); transition: color .15s, border-color .15s, background-color .15s; }
+.style-chips button[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.style-chips .sw { width: 24px; height: 24px; border-radius: 8px; flex: none; border: 1px solid var(--line); overflow: hidden; display: grid; place-items: center; font: 700 9px/1 var(--mono); color: var(--fg); }
+.sw-glass { background: linear-gradient(135deg, rgb(255 255 255 / .75), rgb(111 127 240 / .25)); }
+.sw-kinetic { font: 800 15px/1 Inter, sans-serif !important; font-style: italic; }
+.sw-mesh { background: radial-gradient(circle at 20% 25%, var(--accent), transparent 60%), radial-gradient(circle at 80% 70%, var(--accent-3), transparent 60%), var(--accent-2); }
+.sw-iso { background: repeating-linear-gradient(30deg, var(--muted) 0 1px, transparent 1px 6px), repeating-linear-gradient(150deg, var(--muted) 0 1px, transparent 1px 6px); }
+.sw-liquid { background: var(--accent); border-radius: 62% 38% 55% 45% / 45% 60% 40% 55% !important; border: 0 !important; }
+
+/* ---------- Agrandar la vista previa en celular ---------- */
+.expand-btn { display: none; position: absolute; right: 8px; bottom: 8px; z-index: 3; width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 88%, transparent); color: var(--fg); place-items: center; box-shadow: 0 6px 18px rgb(0 0 0 / .25); }
+.expand-btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: transparent; }
+@media (max-width: 820px) {
+  .expand-btn { display: grid; }
+  #editor.preview-max .editor-body { grid-template-rows: 1fr auto; }
+  #editor.preview-max .messages { display: none; }
+  #editor.preview-max .frame-wrap { margin: 6px; }
+}

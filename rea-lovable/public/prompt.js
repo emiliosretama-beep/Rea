@@ -22,6 +22,8 @@ Estándar de agencia (guía profesional de diseño web de ERA Studio; aplícalo 
 - Si es un negocio en México y el usuario dio un número de WhatsApp, añade un botón flotante a https://wa.me/52NUMERO?text= con un mensaje prellenado.
 - Si la página pide datos personales (un formulario), incluye un enlace o texto de aviso de privacidad junto al formulario.
 - Datos de contacto y horarios visibles cuando sea un negocio.
+- Evita los vicios de página genérica: etiquetas en MAYÚSCULAS espaciadas sobre cada título, una palabra del titular en otro color, todas las tarjetas idénticas, degradados morados de adorno, flechas en todos los botones y animar cada sección con "aparecer y subir". Gasta la audacia en UN elemento memorable y deja el resto sobrio.
+- Movimiento con moderación: anima solo transform y opacity, usa curvas cubic-bezier propias, respeta prefers-reduced-motion y deja la página completa y legible aunque no corra ninguna animación.
 - NUNCA inventes testimonios, reseñas, cifras, premios, logos de clientes, teléfonos, correos ni direcciones. Si faltan, pon un marcador claro entre corchetes que el cliente deba completar, por ejemplo "[Testimonio real de un cliente]" o "[Tu número de WhatsApp]".
 - Contenido realista en el idioma que use el usuario. Nada de "Lorem ipsum".
 
@@ -29,6 +31,56 @@ Formato de respuesta:
 1. Una o dos frases cortas: qué hiciste y la decisión de diseño más importante (y por qué), para que el usuario aprenda.
 2. El archivo completo dentro de un único bloque \`\`\`html ... \`\`\`.
 No escribas nada después del bloque de código.`;
+
+// Estilos visuales que el usuario puede elegir al crear una web. Cada uno es una
+// técnica concreta con sus reglas de rendimiento (pensadas para iPhone).
+export const STYLES = [
+  {
+    id: "glass",
+    label: "Vidrio",
+    brief:
+      "Glassmorphism: paneles translúcidos con borde fino claro y brillo interior sobre un fondo con color. Usa backdrop-filter: blur() SOLO en elementos fijos (barra superior, botón flotante); en tarjetas que se desplazan usa fondo translúcido sin desenfoque. Cuida el contraste del texto sobre el vidrio.",
+  },
+  {
+    id: "kinetic",
+    label: "Tipografía cinética",
+    brief:
+      "Tipografía cinética: el titular es el protagonista. Usa una fuente variable de Google Fonts y haz que el peso, la inclinación o la posición de las letras reaccionen al scroll o al toque (lee el scroll dentro de requestAnimationFrame, no en el evento). Añade una cinta de texto grande que se mueva con el scroll. El texto sigue siendo HTML real y legible quieto.",
+  },
+  {
+    id: "mesh",
+    label: "Gradient mesh",
+    brief:
+      "Gradient mesh: fondo de manchas de color suaves que se mezclan (varios radial-gradient superpuestos o un <canvas> pequeño escalado), con los colores de la marca y movimiento muy lento. Que cambie de tono entre secciones. El texto encima debe conservar buen contraste.",
+  },
+  {
+    id: "iso",
+    label: "Isométrico",
+    brief:
+      "Isométrico: ilustra la portada y las secciones con escenas isométricas hechas en SVG o con transformaciones CSS (rotateX(55deg) rotateZ(45deg)), como maquetas en bloques del producto o del local, sobre una retícula isométrica tenue. Mantén el texto recto y fuera de la ilustración.",
+  },
+  {
+    id: "ascii",
+    label: "ASCII",
+    brief:
+      "Arte ASCII: usa una fuente monoespaciada y dibuja el elemento principal (logo, producto o escena) con caracteres dentro de <pre aria-hidden=\"true\">, con una animación sutil de caracteres (por ejemplo un barrido). Estética de terminal bien compuesta, con un solo color de acento. El contenido real va en texto normal accesible.",
+  },
+  {
+    id: "liquid",
+    label: "Líquido",
+    brief:
+      "Liquid morph: formas orgánicas que cambian de silueta suavemente (animación de border-radius con 8 valores, o un SVG con filtro feTurbulence + feDisplacementMap, o trazos SVG que se transforman). Úsalo en UNA pieza protagonista (la forma detrás del titular o el botón principal), no en todo.",
+  },
+];
+
+export function styleBrief(ids = []) {
+  const chosen = STYLES.filter((s) => ids.includes(s.id));
+  if (!chosen.length) return "";
+  return (
+    "\n\nDirección visual elegida por el usuario (aplícala con oficio, adaptada al giro del negocio, sin sacrificar legibilidad ni rendimiento en celular):\n" +
+    chosen.map((s) => `- ${s.brief}`).join("\n")
+  );
+}
 
 function describeImage(img, i) {
   const size = img.width && img.height ? ` (${img.width}×${img.height})` : "";
