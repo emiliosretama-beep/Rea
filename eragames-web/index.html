@@ -5,35 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ERAGames</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="ERAGames hace videojuegos de navegador pensados para iPhone y iPad: Born to Rally, Topple-Town, Born to Skate y 44meterfrontage. Abres el link y juegas.">
-<meta name="theme-color" content="#0c0f24">
+<meta name="description" content="ERA Games hace videojuegos de navegador pensados para iPhone y iPad: Born to Rally, Topple-Town, Born to Skate y FRENTE 44. Abres el link y juegas.">
+<meta name="theme-color" content="#14183a">
 <meta property="og:type" content="website">
-<meta property="og:title" content="ERAGames · Juegos que se juegan con el pulgar">
+<meta property="og:title" content="ERA Games · Juegos que se juegan con el pulgar">
 <meta property="og:description" content="Videojuegos de navegador para iPhone, iPad y computadora. Sin descargas.">
 <!-- Al publicar en GitHub Pages cambia og.png por la URL completa (https://…/og.png) -->
 <meta property="og:image" content="og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFB089'/%3E%3Cstop offset='.5' stop-color='%23F04E23'/%3E%3Cstop offset='1' stop-color='%23FFF'/%3E%3C/linearGradient%3E%3Cmask id='c'%3E%3Crect width='64' height='64' fill='%23fff'/%3E%3Crect x='32' y='22.4' width='22' height='5.6'/%3E%3Crect x='32' y='36' width='22' height='5.6'/%3E%3Crect x='47.5' y='27.5' width='8' height='9'/%3E%3C/mask%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%2314183A'/%3E%3Ccircle cx='32' cy='32' r='22' fill='url(%23s)' mask='url(%23c)'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314183A'/%3E%3Cg transform='translate(15 8) skewX(-12) scale(.48)'%3E%3Cpath d='M0 100 L26 0 H66 L92 100 H64 L58 78 H34 L28 100 Z M38 24 L38 62 L64 43 Z' fill='%23fff' fill-rule='evenodd'/%3E%3Cpath d='M38 24 L38 62 L64 43 Z' fill='%23F04E23'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=JetBrains+Mono:wght@400;600&display=swap">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","name":"ERAGames","url":"https://eragames.itch.io","description":"Estudio de videojuegos de navegador."}
+{"@context":"https://schema.org","@type":"Organization","name":"ERA Games","alternateName":"ERAGames","url":"https://eragames.itch.io","description":"Estudio de videojuegos de navegador."}
 </script>
 <style>
 /* Layout: lienzo 3D fijo a pantalla completa y secciones HTML altas que pasan encima.
    Teléfono: consola arriba, texto abajo. Escritorio: texto y consola se alternan de lado.
    Capas fijas, de atrás hacia adelante: gradient mesh → retícula isométrica → palabra cinética → 3D → etiquetas.
-   Estilo único y oscuro a propósito (noche + sol ERA), por eso no hay tema claro. */
+   Estilo único y oscuro a propósito (azul noche del logo + naranja del play), por eso no hay tema claro. */
 :root {
   --night: #0c0f24;     /* fondo, 60 % */
-  --night-2: #14183a;   /* tarjetas */
-  --blue: #6f7ff0;      /* azul ERA aclarado para fondo oscuro */
-  --era: #f04e23;       /* naranja ERA, acento 10 % */
-  --dawn: #ffb089;      /* luz del amanecer */
+  --night-2: #14183a;   /* azul del logo de ERA Games */
+  --blue: #6f7ff0;      /* azul aclarado para fondo oscuro */
+  --era: #f04e23;       /* naranja del triángulo de play, acento 10 % */
+  --dawn: #ffb089;      /* naranja claro */
   --paper: #f2f3f9;     /* texto */
   --muted: #a9afcf;     /* texto secundario */
-  --glass: rgba(242, 243, 249, .07);
   --glass-edge: rgba(242, 243, 249, .16);
   --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -68,8 +67,8 @@ a { color: inherit; }
   -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent);
           mask-image: radial-gradient(closest-side, #000 40%, transparent);
 }
-.wordmark {                                                                    /* tipografía cinética */
-  position: absolute; left: 50%; top: 31%; transform: translate(-50%, -50%);
+.wordmark {                                                                    /* tipografía cinética, inclinada como el logo */
+  position: absolute; left: 50%; top: 31%; transform: translate(-50%, -50%) skewX(-12deg);
   display: flex; flex-direction: column; align-items: center;
   font-weight: 800; font-size: 33vw; line-height: .8; letter-spacing: -.04em;
   color: rgba(240, 78, 35, 0); -webkit-text-stroke: 1.5px rgba(169, 180, 255, .24);
@@ -93,14 +92,19 @@ a { color: inherit; }
 .top {
   position: fixed; inset: 0 0 auto; z-index: 10;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: 10px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px); padding-bottom: 8px;
   padding-left: var(--gutter-l); padding-right: var(--gutter-r);
   background: rgba(12, 15, 36, .32);
   -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%);
   border-bottom: 1px solid rgba(242, 243, 249, .1);
 }
-.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; letter-spacing: -.01em; font-size: 1.15rem; }
-.brand svg { width: 34px; height: 34px; }
+.brand { display: inline-flex; align-items: center; text-decoration: none; }
+.brand svg { height: 42px; width: auto; display: block; overflow: visible; }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.lang {
+  min-width: 44px; min-height: 40px; border-radius: 999px; border: 1px solid rgba(242, 243, 249, .25); background: rgba(242, 243, 249, .05);
+  color: var(--paper); font: 600 .8rem/1 var(--mono); cursor: pointer;
+}
 .hud {
   position: fixed; z-index: 9; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%);
   display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; opacity: 0; pointer-events: none;
@@ -108,7 +112,7 @@ a { color: inherit; }
   font: 600 .8rem/1 var(--mono); white-space: nowrap;
 }
 .hud b { color: var(--era); }
-.hud .rec { width: 7px; height: 7px; border-radius: 50%; background: var(--era); box-shadow: 0 0 10px var(--era); }
+.play-ico { width: 9px; height: 10px; background: var(--era); clip-path: polygon(0 0, 100% 50%, 0 100%); flex: none; }
 
 /* ---------- Botones ---------- */
 .btn {
@@ -132,6 +136,7 @@ main { position: relative; z-index: 3; overflow-x: clip; }
   display: flex; align-items: flex-end;
   padding-block: 88px 28px; padding-left: var(--gutter-l); padding-right: var(--gutter-r);
 }
+.beat.short { min-height: 72vh; min-height: 72svh; }
 .panel { position: relative; z-index: 2; width: 100%; max-width: 32rem; display: grid; gap: 16px; }
 .panel.solid { box-sizing: border-box; padding: 22px; border-radius: 26px; background-color: rgba(12, 15, 36, .62); }
 .lead { color: var(--muted); font-size: 1.125rem; }
@@ -140,21 +145,22 @@ main { position: relative; z-index: 3; overflow-x: clip; }
 .hero h1 { max-width: 12ch; }
 
 /* Cinta cinética con los nombres de los juegos */
-.marquee { position: relative; z-index: 2; min-height: 90vh; min-height: 90svh; box-sizing: border-box; padding-block: 30vh 8vh; display: grid; align-content: center; gap: 4px; overflow: hidden; }
+.marquee { position: relative; z-index: 2; min-height: 62vh; min-height: 62svh; box-sizing: border-box; padding-block: 24vh 4vh; display: grid; align-content: center; gap: 4px; overflow: hidden; }
 .mq-row { overflow: hidden; }
 .mq-track {
   display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; will-change: transform;
   font-weight: 800; font-size: clamp(3rem, 13vw, 9rem); line-height: 1; letter-spacing: -.04em;
 }
 .mq-track span { display: inline-flex; align-items: center; gap: .35em; }
-.mq-track .sun { width: .42em; height: .42em; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--dawn), var(--era) 60%); flex: none; }
+.mq-track .tri { width: .36em; height: .42em; background: var(--era); clip-path: polygon(0 0, 100% 50%, 0 100%); flex: none; }
 .mq-row.outline .mq-track { color: transparent; -webkit-text-stroke: 1.5px var(--dawn); }
 .games-intro { min-height: auto; padding-block: 2vh 0; align-items: flex-start; }
 
 /* Tarjetas de juego: vidrio con doble borde (carcasa + núcleo, radios concéntricos) */
-.game { min-height: 92vh; min-height: 92svh; }
+.game { min-height: 86vh; min-height: 86svh; }
 .card { width: 100%; max-width: 30rem; padding: 6px; border-radius: 30px; position: relative; z-index: 2; box-sizing: border-box; }
 .card-core { display: grid; gap: 14px; padding: 22px; border-radius: 24px; background: rgba(12, 15, 36, .7); border: 1px solid rgba(242, 243, 249, .06); }
+.shot { display: none; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 14px; background: var(--night-2); }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; font: 600 .78rem/1 var(--mono); color: var(--dawn); }
 .meta span { padding: 7px 10px; border-radius: 999px; background: rgba(255, 176, 137, .1); }
 .meta .wip { color: var(--paper); background: rgba(111, 127, 240, .24); }
@@ -178,13 +184,6 @@ main { position: relative; z-index: 3; overflow-x: clip; }
 .parts-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font: 400 .8rem/1.45 var(--mono); color: var(--muted); }
 .parts-list b { color: var(--paper); font-weight: 600; margin-right: 4px; }
 
-/* Beat ASCII: la tabla de cues real de esta página */
-.code {
-  margin: 0; padding: 14px; border-radius: 16px; overflow-x: auto; max-width: 100%; box-sizing: border-box;
-  background: rgba(7, 9, 15, .7); border: 1px solid rgba(240, 78, 35, .25);
-  font: 400 .72rem/1.6 var(--mono); color: var(--dawn);
-}
-
 /* Toque interactivo */
 .drag-zone { position: absolute; left: 0; right: 0; top: 0; height: 56%; z-index: 1; touch-action: pan-y; cursor: grab; }
 .drag-zone:active { cursor: grabbing; }
@@ -206,7 +205,8 @@ footer {
   position: relative; z-index: 2; display: grid; gap: 14px; padding-top: 20px;
   border-top: 1px solid rgba(242, 243, 249, .1); font: 400 .78rem/1.5 var(--mono); color: var(--muted);
 }
-.ascii-sun { margin: 0; font: 600 .45rem/1.05 var(--mono); color: var(--era); }
+.ascii-logo { margin: 0; font: 600 .42rem/1.1 var(--mono); color: var(--paper); }
+.ascii-logo b { color: var(--era); }
 
 /* ---------- Escritorio y tablet horizontal ---------- */
 @media (min-width: 900px) and (min-aspect-ratio: 9/10) {
@@ -219,9 +219,10 @@ footer {
   .beat[data-side="center"] p { margin-inline: auto; }
   .drag-zone { right: auto; width: 58%; height: 100%; }
   footer { grid-auto-flow: column; justify-content: space-between; align-items: end; }
+  .ascii-logo { font-size: .5rem; }
   .lcard { width: 14rem; font-size: .8rem; padding: 10px 12px; }
   .lcard .desc { display: inline; }
-  .desk-only { display: block; }
+  .desk-only, .shot { display: block; } /* en teléfono la captura ya se ve en la pantalla de la consola */
   .parts-list { display: none; }
 }
 /* Con mouse y pantalla grande sí hay vidrio esmerilado real en lo que se desplaza */
@@ -235,6 +236,87 @@ footer {
 </style>
 </head>
 <body>
+<!-- ERA Games: pantalla de carga (se quita sola; ver ERASplash.done) -->
+<script>
+/*!
+ * ERA Games - pantalla de carga (splash)
+ * Integrado en línea en este index.html.
+ * Opcional: ERASplash.done.then(() => iniciarJuego());
+ * Se salta tocando la pantalla o con cualquier tecla.
+ */
+(function () {
+  "use strict";
+  var MIN_MS = 2600;   // duración de la animación
+  var MAX_MS = 8000;   // tope: nunca bloquea más de esto aunque el juego tarde en cargar
+  var BG = "#14183A";
+  var css = "" +
+  "#era-splash{position:fixed;inset:0;z-index:2147483647;background:"+BG+";display:flex;align-items:center;justify-content:center;transition:opacity .45s ease;cursor:pointer;-webkit-tap-highlight-color:transparent}" +
+  "#era-splash.es-out{opacity:0;pointer-events:none}" +
+  "#era-splash svg{width:min(62vw,560px);height:auto;overflow:visible}" +
+  "#era-splash g{transform-box:fill-box}" +
+  ".es-a{transform-origin:50% 100%;animation:es-a .55s cubic-bezier(.2,.9,.3,1.25) both}" +
+  ".es-p{transform-origin:50% 50%;animation:es-p .6s cubic-bezier(.3,.7,.2,1) .45s both}" +
+  ".es-e{animation:es-in .45s cubic-bezier(.2,.8,.2,1) 1.05s both}" +
+  ".es-r{animation:es-in .45s cubic-bezier(.2,.8,.2,1) .95s both}" +
+  ".es-cover{animation:es-wipe .5s ease-in-out 1.45s both}" +
+  ".es-pulse .es-a,.es-pulse .es-p{animation:none}" +
+  "@keyframes es-a{from{opacity:0;transform:translateY(40px) scaleY(.6)}to{opacity:1;transform:none}}" +
+  "@keyframes es-p{0%{opacity:0;transform:translateX(-260px) rotate(-540deg) scale(.4)}70%{opacity:1;transform:translateX(8px) rotate(10deg) scale(1.15)}100%{opacity:1;transform:none}}" +
+  "@keyframes es-in{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}" +
+  "@keyframes es-wipe{from{transform:translateX(0)}to{transform:translateX(340px)}}" +
+  "@media (prefers-reduced-motion:reduce){#era-splash *{animation:none!important}.es-cover{display:none}}";
+
+  var style = document.createElement("style");
+  style.textContent = css;
+  var el = document.createElement("div");
+  el.id = "era-splash";
+  el.setAttribute("role", "img");
+  el.setAttribute("aria-label", "ERA Games");
+  el.innerHTML = '<svg viewBox="-8 -8 290 158" xmlns="http://www.w3.org/2000/svg" aria-label="ERA Games"><g transform="translate(21 0) skewX(-12)"> <g class="es-e"><path d="M0 0 H70 V24 H25 V39 H62 V61 H25 V76 H70 V100 H0 Z" fill="#FFFFFF"/></g> <g class="es-r"><g transform="translate(80 0)"><path d="M0 0 H50 Q78 0 78 30 Q78 54 57 60 L78 100 H50 L33 64 H25 V100 H0 Z M25 22 H48 Q55 22 55 31 Q55 42 48 42 H25 Z" fill="#FFFFFF" fill-rule="evenodd"/></g></g> <g class="es-a"><g transform="translate(166 0)"><path d="M0 100 L26 0 H66 L92 100 H64 L58 78 H34 L28 100 Z M38 24 L38 62 L64 43 Z" fill="#FFFFFF" fill-rule="evenodd"/></g></g> <g class="es-p"><g transform="translate(166 0)"><path d="M38 24 L38 62 L64 43 Z" fill="#F04E23"/></g></g></g><g class="es-g"><g transform="translate(5.10135748008053 118) skewX(-12) scale(0.24)"><clipPath id="es0"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(0 0)"><path d="M64 8.0 H8.0 V92.0 H56.0 V54 H32.0" clip-path="url(#es0)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es1"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(254 0)"><path d="M8.0 100 V8.0 H56.0 V100 M8.0 54 H56.0" clip-path="url(#es1)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es2"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(508 0)"><path d="M8.0 100 V8.0 L32.0 50 L56.0 8.0 V100" clip-path="url(#es2)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es3"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(762 0)"><path d="M64 8.0 H8.0 V92.0 H64 M8.0 50 H49.92" clip-path="url(#es3)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g><clipPath id="es4"><rect x="0" y="0" width="64" height="100"/></clipPath><g transform="translate(1016 0)"><path d="M64 8.0 H8.0 V50 H56.0 V92.0 H0" clip-path="url(#es4)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"/></g></g></g><rect class="es-cover" x="-30" y="104" width="340" height="60" fill="#14183A"/></svg>';
+
+  function mount() {
+    (document.head || document.documentElement).appendChild(style);
+    document.body.appendChild(el);
+  }
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+
+  var finished = false, resolveDone;
+  var done = new Promise(function (r) { resolveDone = r; });
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    el.classList.add("es-out");
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (style.parentNode) style.parentNode.removeChild(style);
+      resolveDone();
+      try { window.dispatchEvent(new Event("erasplash:done")); } catch (e) {}
+    }, 460);
+  }
+
+  // el tiempo cuenta desde que la animación se ve en pantalla (el juego puede bloquear al arrancar)
+  var minTime = new Promise(function (r) {
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(r, MIN_MS); }); });
+  });
+  var loaded = new Promise(function (r) {
+    if (document.readyState === "complete") r();
+    else window.addEventListener("load", r, { once: true });
+  });
+  Promise.all([minTime, loaded]).then(finish);
+  requestAnimationFrame(function () { setTimeout(finish, MAX_MS); });
+  el.addEventListener("pointerdown", finish);
+  function onKey(e) {
+    // la tecla que salta la animación no debe llegar al juego (p. ej. Enter = "Iniciar")
+    window.removeEventListener("keydown", onKey, true);
+    if (!finished) { e.preventDefault(); e.stopImmediatePropagation(); finish(); }
+  }
+  window.addEventListener("keydown", onKey, true);
+  el.addEventListener("click", function (e) { e.stopPropagation(); });
+
+  window.ERASplash = { done: done, skip: finish };
+})();
+</script>
 
 <div class="backdrop" aria-hidden="true">
   <canvas id="mesh" width="48" height="96"></canvas>
@@ -244,81 +326,86 @@ footer {
 
 <!-- Lienzo 3D. La ilustración se ve al instante y se queda si WebGL falla. -->
 <div id="stage" aria-hidden="true">
-  <svg class="poster" viewBox="0 0 260 132" role="img" aria-label="Consola portátil de ERAGames">
-    <defs>
-      <linearGradient id="pSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb089"/><stop offset=".55" stop-color="#f04e23"/><stop offset="1" stop-color="#f2f3f9"/></linearGradient>
-      <mask id="pCut"><rect width="260" height="132" fill="#fff"/><rect x="130" y="40" width="26" height="6" fill="#000"/><rect x="130" y="54" width="26" height="6" fill="#000"/><rect x="146" y="45" width="10" height="10" fill="#000"/></mask>
-    </defs>
+  <svg class="poster" viewBox="0 0 260 132" role="img" aria-label="Consola portátil de ERA Games">
     <rect x="4" y="6" width="252" height="122" rx="46" fill="#f04e23"/>
-    <rect x="63" y="22" width="134" height="86" rx="8" fill="#14183a"/>
-    <rect x="72" y="30" width="116" height="70" rx="3" fill="#1b2260"/>
-    <circle cx="130" cy="58" r="25" fill="url(#pSun)" mask="url(#pCut)"/>
-    <rect x="72" y="74" width="116" height="26" fill="#0c0f24"/>
+    <rect x="63" y="22" width="134" height="86" rx="8" fill="#0c0f24"/>
+    <rect x="72" y="30" width="116" height="70" rx="3" fill="#14183a"/>
+    <g transform="translate(86 46) scale(.33)"><g transform="translate(21 0) skewX(-12)">
+      <path d="M0 0 H70 V24 H25 V39 H62 V61 H25 V76 H70 V100 H0 Z" fill="#fff"/>
+      <path transform="translate(80 0)" d="M0 0 H50 Q78 0 78 30 Q78 54 57 60 L78 100 H50 L33 64 H25 V100 H0 Z M25 22 H48 Q55 22 55 31 Q55 42 48 42 H25 Z" fill="#fff" fill-rule="evenodd"/>
+      <path transform="translate(166 0)" d="M0 100 L26 0 H66 L92 100 H64 L58 78 H34 L28 100 Z M38 24 L38 62 L64 43 Z" fill="#fff" fill-rule="evenodd"/>
+      <path transform="translate(166 0)" d="M38 24 L38 62 L64 43 Z" fill="#f04e23"/>
+    </g></g>
     <rect x="24" y="60" width="32" height="10" rx="2" fill="#14183a"/><rect x="35" y="49" width="10" height="32" rx="2" fill="#14183a"/>
     <circle cx="224" cy="56" r="10" fill="#14183a"/><circle cx="204" cy="74" r="10" fill="#14183a"/>
   </svg>
 </div>
 
 <header class="top">
-  <a class="brand" href="#inicio" aria-label="ERAGames, inicio">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="bSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB089"/><stop offset=".5" stop-color="#F04E23"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient><mask id="bCut"><rect width="64" height="64" fill="#fff"/><rect x="32" y="22.4" width="22" height="5.6" fill="#000"/><rect x="32" y="36" width="22" height="5.6" fill="#000"/><rect x="47.5" y="27.5" width="8" height="9" fill="#000"/></mask></defs><rect width="64" height="64" rx="14" fill="#14183A"/><circle cx="32" cy="32" r="22" fill="url(#bSun)" mask="url(#bCut)"/></svg>
-    <span>ERAGAMES</span>
+  <a class="brand" href="#inicio" aria-label="ERA Games, inicio" data-en-aria="ERA Games, home">
+    <!-- Logo oficial de ERA Games (el mismo de la intro de los juegos) -->
+    <svg viewBox="-4 -4 282 150" aria-hidden="true"><g transform="translate(21 0) skewX(-12)"><path d="M0 0 H70 V24 H25 V39 H62 V61 H25 V76 H70 V100 H0 Z" fill="#fff"/><path transform="translate(80 0)" d="M0 0 H50 Q78 0 78 30 Q78 54 57 60 L78 100 H50 L33 64 H25 V100 H0 Z M25 22 H48 Q55 22 55 31 Q55 42 48 42 H25 Z" fill="#fff" fill-rule="evenodd"/><path transform="translate(166 0)" d="M0 100 L26 0 H66 L92 100 H64 L58 78 H34 L28 100 Z M38 24 L38 62 L64 43 Z" fill="#fff" fill-rule="evenodd"/><path transform="translate(166 0)" d="M38 24 L38 62 L64 43 Z" fill="#F04E23"/></g><g transform="translate(5.10135748008053 118) skewX(-12) scale(0.24)" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"><clipPath id="hg"><rect x="0" y="0" width="64" height="100"/></clipPath><g><path d="M64 8 H8 V92 H56 V54 H32" clip-path="url(#hg)"/></g><g transform="translate(254 0)"><path d="M8 100 V8 H56 V100 M8 54 H56" clip-path="url(#hg)"/></g><g transform="translate(508 0)"><path d="M8 100 V8 L32 50 L56 8 V100" clip-path="url(#hg)"/></g><g transform="translate(762 0)"><path d="M64 8 H8 V92 H64 M8 50 H49.92" clip-path="url(#hg)"/></g><g transform="translate(1016 0)"><path d="M64 8 H8 V50 H56 V92 H0" clip-path="url(#hg)"/></g></g></svg>
   </a>
-  <a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar</a>
+  <div class="top-actions">
+    <button type="button" class="lang" id="langBtn" aria-label="Switch to English">EN</button>
+    <a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener" data-en="Play">Jugar</a>
+  </div>
 </header>
 
 <!-- Indicador de canal (vidrio) mientras la pantalla muestra cada juego -->
-<div class="hud glass" id="hud" aria-hidden="true"><span class="rec"></span><b id="hudCh">CH 1</b><span id="hudName">Born to Rally</span></div>
+<div class="hud glass" id="hud" aria-hidden="true"><span class="play-ico"></span><b id="hudCh">CH 1</b><span id="hudName">Born to Rally</span></div>
 
 <main>
-  <!-- data-cue = nombre del plano en la tabla CUES del script. data-side = de qué lado va el texto en escritorio. -->
+  <!-- data-cue = nombre del plano en la tabla CUES del script. data-side = de qué lado va el texto en escritorio.
+       data-en = el mismo texto en inglés (el botón EN/ES lo intercambia). -->
   <section class="beat hero" id="inicio" data-cue="reveal" data-side="left">
     <div class="panel">
-      <h1>Juegos que se juegan con el pulgar</h1>
-      <p class="lead">ERAGames es un estudio de videojuegos de navegador. Abres el link en tu iPhone, iPad o computadora y ya estás jugando.</p>
+      <h1 data-en="Games you play with your thumb">Juegos que se juegan con el pulgar</h1>
+      <p class="lead" data-en="ERA Games is a browser game studio. Open the link on your iPhone, iPad or computer and you're already playing.">ERA Games es un estudio de videojuegos de navegador. Abres el link en tu iPhone, iPad o computadora y ya estás jugando.</p>
       <div class="actions">
-        <a class="btn" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar en itch.io
+        <a class="btn" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener"><span data-en="Play on itch.io">Jugar en itch.io</span>
           <span class="ico" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
-        <a class="btn btn-ghost" href="#juegos">Ver los juegos</a>
+        <a class="btn btn-ghost" href="#juegos" data-en="See the games">Ver los juegos</a>
       </div>
     </div>
   </section>
 
   <section class="beat" data-cue="macro" data-side="center">
     <div class="panel solid glass">
-      <h2>Sin descargas. Sin instalar.</h2>
-      <p class="lead">Tocas el link y el juego arranca en el navegador. Así funcionan todos los juegos de ERAGames.</p>
+      <h2 data-en="No downloads. No installs.">Sin descargas. Sin instalar.</h2>
+      <p class="lead" data-en="Tap the link and the game starts in your browser. That's how every ERA Games title works.">Tocas el link y el juego arranca en el navegador. Así funcionan todos los juegos de ERA Games.</p>
     </div>
   </section>
 
   <section id="juegos" aria-labelledby="juegos-titulo">
     <div class="marquee" id="marquee" data-cue="type" aria-hidden="true">
-      <div class="mq-row"><div class="mq-track"><span>Born to Rally<i class="sun"></i>Topple-Town<i class="sun"></i>Born to Skate<i class="sun"></i>44meterfrontage<i class="sun"></i></span><span>Born to Rally<i class="sun"></i>Topple-Town<i class="sun"></i>Born to Skate<i class="sun"></i>44meterfrontage<i class="sun"></i></span></div></div>
-      <div class="mq-row outline"><div class="mq-track"><span>Rally<i class="sun"></i>Demolición<i class="sun"></i>Skate<i class="sun"></i>Shooter<i class="sun"></i></span><span>Rally<i class="sun"></i>Demolición<i class="sun"></i>Skate<i class="sun"></i>Shooter<i class="sun"></i></span></div></div>
+      <div class="mq-row"><div class="mq-track"><span>Born to Rally<i class="tri"></i>Topple-Town<i class="tri"></i>Born to Skate<i class="tri"></i>FRENTE 44<i class="tri"></i></span><span>Born to Rally<i class="tri"></i>Topple-Town<i class="tri"></i>Born to Skate<i class="tri"></i>FRENTE 44<i class="tri"></i></span></div></div>
+      <div class="mq-row outline"><div class="mq-track"><span>Rally<i class="tri"></i><b data-en="Demolition">Demolición</b><i class="tri"></i>Skate<i class="tri"></i>Shooter<i class="tri"></i></span><span>Rally<i class="tri"></i><b data-en="Demolition">Demolición</b><i class="tri"></i>Skate<i class="tri"></i>Shooter<i class="tri"></i></span></div></div>
     </div>
     <div class="beat games-intro" data-side="left">
       <div class="panel">
-        <h2 id="juegos-titulo">Los juegos</h2>
-        <p class="lead">Cuatro juegos, cuatro canales. Mira la pantalla de la consola mientras bajas.</p>
+        <h2 id="juegos-titulo" data-en="The games">Los juegos</h2>
+        <p class="lead" data-en="Four games, four channels. Watch the console screen as you scroll.">Cuatro juegos, cuatro canales. Mira la pantalla de la consola mientras bajas.</p>
       </div>
     </div>
 
     <article class="beat game" data-cue="game" data-game="rally" data-side="left">
       <div class="card glass"><div class="card-core">
-        <div class="meta"><span>rally 3D</span><span>motor propio</span></div>
+        <img class="shot" src="shots/rally.jpg" width="640" height="400" loading="lazy" decoding="async" alt="Captura de Born to Rally: un coche de rally en un tramo de grava entre pinos" data-en-alt="Born to Rally screenshot: a rally car on a gravel stage among pine trees">
+        <div class="meta"><span data-en="3D rally">rally 3D</span><span data-en="custom engine">motor propio</span></div>
         <h3>Born to Rally</h3>
-        <p>Curvas de tierra y saltos con un motor gráfico escrito desde cero en WebGL2, sin librerías.</p>
-        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar Born to Rally</a></div>
+        <p data-en="3D rally against the clock: 11 stages, four seasons, day and night, rain and snow, and a co-driver calling the corners. Custom WebGL 2 engine, no libraries.">Rally contra el crono en 3D: 11 tramos, cuatro estaciones, día y noche, lluvia y nieve, y un copiloto que te canta las curvas. Motor gráfico propio en WebGL 2, sin librerías.</p>
+        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener" data-en="Play Born to Rally">Jugar Born to Rally</a></div>
       </div></div>
     </article>
 
     <article class="beat game" data-cue="game" data-game="topple" data-side="left">
       <div class="card glass"><div class="card-core">
-        <div class="meta"><span>demolición</span><span>física</span></div>
+        <div class="meta"><span data-en="demolition">demolición</span><span data-en="physics">física</span></div>
         <h3>Topple-Town</h3>
-        <p>Tumba edificios bloque por bloque y mira cómo se viene abajo el pueblo, en 2D y en 3D de vóxeles.</p>
-        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar Topple-Town</a></div>
+        <p data-en="Knock buildings down block by block and watch the town collapse, in 2D and in voxel 3D.">Tumba edificios bloque por bloque y mira cómo se viene abajo el pueblo, en 2D y en 3D de vóxeles.</p>
+        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener" data-en="Play Topple-Town">Jugar Topple-Town</a></div>
       </div></div>
     </article>
 
@@ -326,99 +413,89 @@ footer {
       <div class="card glass"><div class="card-core">
         <div class="meta"><span>skate</span></div>
         <h3>Born to Skate</h3>
-        <p>Rampas, trucos y caídas. Skate para jugar con una mano en el celular.</p>
-        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar Born to Skate</a></div>
+        <p data-en="Skateboarding in the browser, from the makers of Born to Rally.">Skate en el navegador, de los creadores de Born to Rally.</p>
+        <div class="actions"><a class="btn btn-sm" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener" data-en="Play Born to Skate">Jugar Born to Skate</a></div>
       </div></div>
     </article>
 
     <article class="beat game" data-cue="game" data-game="war" data-side="left">
       <div class="card glass"><div class="card-core">
-        <div class="meta"><span>shooter de guerra</span><span class="wip">en desarrollo</span></div>
-        <h3>44meterfrontage</h3>
-        <p>El proyecto más grande del estudio. Se está construyendo ahora mismo.</p>
-        <p class="soon">Próximamente en itch.io</p>
+        <img class="shot" src="shots/frente44.jpg" width="640" height="400" loading="lazy" decoding="async" alt="Pantalla de título de FRENTE 44: Normandía, Las Ardenas" data-en-alt="FRENTE 44 title screen: Normandy, the Ardennes">
+        <div class="meta"><span data-en="first-person shooter">shooter en primera persona</span><span class="wip" data-en="in development">en desarrollo</span></div>
+        <h3>FRENTE 44</h3>
+        <p data-en="World War II in first person: a campaign from Normandy to the Ardennes with your squad, designed for iPad first.">Segunda Guerra Mundial en primera persona: una campaña de Normandía a Las Ardenas con tu escuadra, pensada sobre todo para iPad.</p>
+        <p class="soon" data-en="Coming soon to itch.io">Próximamente en itch.io</p>
       </div></div>
     </article>
   </section>
 
+  <section class="beat short" data-cue="code" data-side="left">
+    <div class="panel">
+      <h2 data-en="First, it's code.">Primero es código.</h2>
+      <p class="lead" data-en="Before it has light and color, a game is plain text.">Antes de tener luz y color, un juego es puro texto.</p>
+    </div>
+  </section>
+
   <section class="beat" data-cue="iso" data-side="right">
     <div class="panel solid glass">
-      <h2>Hecho pieza por pieza</h2>
-      <p class="lead desk-only">Cada juego se programa a mano: la física, los controles y hasta esta consola, que está hecha con código y no con un modelo descargado.</p>
+      <h2 data-en="Then, piece by piece.">Luego, pieza por pieza.</h2>
+      <p class="lead desk-only" data-en="Every game is coded by hand: the physics, the controls, even this console, which is built in code and not from a downloaded model.">Cada juego se programa a mano: la física, los controles y hasta esta consola, que está hecha con código y no con un modelo descargado.</p>
       <ul class="parts-list">
-        <li><b>Pantalla</b> Se juega en el navegador, sin descargas.</li>
-        <li><b>Cruceta</b> Controles táctiles pensados para iPhone y iPad.</li>
-        <li><b>Chip</b> Motores y física programados a mano.</li>
-        <li><b>Botones</b> Cada versión se prueba en iPhone y iPad reales.</li>
+        <li><b data-en="Screen">Pantalla</b> <span data-en="Plays in the browser, no downloads.">Se juega en el navegador, sin descargas.</span></li>
+        <li><b data-en="D-pad">Cruceta</b> <span data-en="Touch controls designed for iPhone and iPad.">Controles táctiles pensados para iPhone y iPad.</span></li>
+        <li><b>Chip</b> <span data-en="Engines and physics written by hand.">Motores y física programados a mano.</span></li>
+        <li><b data-en="Buttons">Botones</b> <span data-en="Every build is tested on real iPhones and iPads.">Cada versión se prueba en iPhone y iPad reales.</span></li>
       </ul>
     </div>
     <!-- Etiquetas ancladas: el JS las pega a cada pieza mientras la consola se desarma -->
     <div class="labels" id="labels">
       <svg class="leaders" aria-hidden="true"><line/><line/><line/><line/></svg>
-      <div class="label" data-part="screen"><span class="ldot"></span><span class="lcard glass"><b>Pantalla</b><span class="desc">Se juega en el navegador, sin descargas.</span></span></div>
-      <div class="label" data-part="dpad"><span class="ldot"></span><span class="lcard glass"><b>Cruceta</b><span class="desc">Controles táctiles pensados para iPhone y iPad.</span></span></div>
-      <div class="label" data-part="chip"><span class="ldot"></span><span class="lcard glass"><b>Chip</b><span class="desc">Motores y física programados a mano.</span></span></div>
-      <div class="label" data-part="buttons"><span class="ldot"></span><span class="lcard glass"><b>Botones</b><span class="desc">Cada versión se prueba en iPhone y iPad reales.</span></span></div>
-    </div>
-  </section>
-
-  <section class="beat" data-cue="code" data-side="left">
-    <div class="panel solid glass">
-      <h2>Todo empieza como texto</h2>
-      <p class="lead">Antes de tener luz y color, un juego es puro código. Esta página también: estas líneas mueven la cámara que estás viendo.</p>
-      <pre class="code" id="cueTable">reveal   la consola aparece y sale el sol
-macro    la pantalla llena la vista
-type     las letras toman el escenario
-game     la pantalla cambia de canal
-iso      vista isométrica y desarme
-code     todo se vuelve texto
-color    la consola es tuya
-end      vuelve al primer plano</pre>
+      <div class="label" data-part="screen"><span class="ldot"></span><span class="lcard glass"><b data-en="Screen">Pantalla</b><span class="desc" data-en="Plays in the browser, no downloads.">Se juega en el navegador, sin descargas.</span></span></div>
+      <div class="label" data-part="dpad"><span class="ldot"></span><span class="lcard glass"><b data-en="D-pad">Cruceta</b><span class="desc" data-en="Touch controls designed for iPhone and iPad.">Controles táctiles pensados para iPhone y iPad.</span></span></div>
+      <div class="label" data-part="chip"><span class="ldot"></span><span class="lcard glass"><b>Chip</b><span class="desc" data-en="Engines and physics written by hand.">Motores y física programados a mano.</span></span></div>
+      <div class="label" data-part="buttons"><span class="ldot"></span><span class="lcard glass"><b data-en="Buttons">Botones</b><span class="desc" data-en="Every build is tested on real iPhones and iPads.">Cada versión se prueba en iPhone y iPad reales.</span></span></div>
     </div>
   </section>
 
   <section class="beat" id="color" data-cue="color" data-side="right">
     <div class="drag-zone" id="dragZone" aria-hidden="true"></div>
     <div class="panel solid glass">
-      <h2>Ahora es tuya</h2>
-      <p class="lead">Arrastra la consola de lado a lado para girarla y elige su color.</p>
-      <div class="swatches" role="group" aria-label="Color de la consola">
-        <button type="button" class="swatch" data-color="#f04e23" aria-pressed="true"><i style="--c:#f04e23"></i>Naranja ERA</button>
-        <button type="button" class="swatch" data-color="#2f3ea0" aria-pressed="false"><i style="--c:#2f3ea0"></i>Azul noche</button>
-        <button type="button" class="swatch" data-color="#ffb089" aria-pressed="false"><i style="--c:#ffb089"></i>Amanecer</button>
-        <button type="button" class="swatch" data-color="glass" aria-pressed="false"><i class="glass-dot"></i>Cristal</button>
+      <h2 data-en="Now it's yours">Ahora es tuya</h2>
+      <p class="lead" data-en="Drag the console side to side to spin it, and pick its color.">Arrastra la consola de lado a lado para girarla y elige su color.</p>
+      <div class="swatches" role="group" aria-label="Color de la consola" data-en-aria="Console color">
+        <button type="button" class="swatch" data-color="#f04e23" aria-pressed="true"><i style="--c:#f04e23"></i><span data-en="ERA orange">Naranja ERA</span></button>
+        <button type="button" class="swatch" data-color="#2f3ea0" aria-pressed="false"><i style="--c:#2f3ea0"></i><span data-en="Night blue">Azul noche</span></button>
+        <button type="button" class="swatch" data-color="#e9e4da" aria-pressed="false"><i style="--c:#e9e4da"></i><span data-en="Bone">Hueso</span></button>
+        <button type="button" class="swatch" data-color="glass" aria-pressed="false"><i class="glass-dot"></i><span data-en="Glass">Cristal</span></button>
       </div>
-      <p class="hint">Desliza con un dedo sobre la consola.</p>
+      <p class="hint" data-en="Swipe across the console with one finger.">Desliza con un dedo sobre la consola.</p>
     </div>
   </section>
 
   <section class="beat end" data-cue="end" data-side="left">
     <div class="panel">
-      <h2>El primer nivel está a un toque</h2>
-      <p class="lead">Todos los juegos de ERAGames viven en itch.io y se abren directo en el navegador.</p>
+      <h2 data-en="Level one is a tap away">El primer nivel está a un toque</h2>
+      <p class="lead" data-en="Every ERA Games title lives on itch.io and opens right in your browser.">Todos los juegos de ERA Games viven en itch.io y se abren directo en el navegador.</p>
       <div class="actions">
-        <a class="btn" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener">Jugar en itch.io
+        <a class="btn" data-itch href="https://eragames.itch.io" target="_blank" rel="noopener"><span data-en="Play on itch.io">Jugar en itch.io</span>
           <span class="ico" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
       </div>
     </div>
     <footer>
-<pre class="ascii-sun" aria-hidden="true">           %%%%%%%%%%%%
-       %%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%
-   %%%%%%%%%%%%%%%%%%%%%%%%%%%%
- ################
- ################
-#############################
-#############################
-#############################
- ================
- ================================
-   ============================
-    ==========================
-       ::::::::::::::::::::
-           ::::::::::::</pre>
-      <span>© 2026 ERAGames<br>Consola 3D modelada en código con three.js (MIT). Ruido del sol líquido: webgl-noise de Ashima Arts y Stefan Gustavson (MIT). Tipografías Bricolage Grotesque y JetBrains Mono (SIL OFL).</span>
+<pre class="ascii-logo" aria-hidden="true">     +##############  +###########++          ########+
+     ###############  ###############+       ##########
+    +##############  +################      ###########
+    #####+           #####+      ####+     +###<b>&gt;&gt;</b>######
+   +#####            #####      #####     +####<b>&gt;&gt;&gt;&gt;</b>####
+   #############+   ################     +####+<b>&gt;&gt;&gt;&gt;&gt;</b>###
+   #############    ##############+      #####<b>&gt;&gt;&gt;</b>######
+  +#####           +#####+######        ###############
+  #####+           #####+  #####+      ################+
+  ##############+  #####   +#####     ######     +#####+
+ +##############  +####+    #####+   ######      +#####+
+ ##############+  #####     +#####  +#####        #####+</pre>
+      <span>© 2026 ERA Games<br><span data-en="3D console modeled in code with three.js (MIT). Liquid noise: webgl-noise by Ashima Arts and Stefan Gustavson (MIT). Typefaces: Bricolage Grotesque and JetBrains Mono (SIL OFL).">Consola 3D modelada en código con three.js (MIT). Ruido líquido: webgl-noise de Ashima Arts y Stefan Gustavson (MIT). Tipografías Bricolage Grotesque y JetBrains Mono (SIL OFL).</span></span>
     </footer>
   </section>
 </main>
@@ -436,6 +513,10 @@ end      vuelve al primer plano</pre>
 const ITCH_URL = 'https://eragames.itch.io';
 for (const a of document.querySelectorAll('[data-itch]')) a.href = ITCH_URL;
 
+// Capturas reales de los juegos: se ven en las tarjetas y en la pantalla de la consola.
+// Los juegos que no tengan captura usan su dibujo en pixel art.
+const SHOTS = { rally: 'shots/rally.jpg', war: 'shots/frente44.jpg' };
+
 // ======================================================================
 //  TABLA DE CUES: cada cue es un plano completo de la película.
 //  dir      = desde dónde mira la cámara (dirección, no distancia)
@@ -443,31 +524,32 @@ for (const a of document.querySelectorAll('[data-itch]')) a.href = ITCH_URL;
 //  frame    = cuánto mide (ancho, alto) lo que debe caber en pantalla; la distancia se calcula sola
 //  fov      = lente: 32 normal, ~3 casi isométrica (dolly zoom)
 //  desk/phone = corrimiento en pantalla (x, y de -1 a 1) para dejarle lugar al texto
-//  screen   = qué muestra la pantalla · sun = sol líquido [x, y, z, tamaño]
+//  screen   = qué muestra la pantalla · drop = gota líquida [x, y, z, tamaño]
+//  play     = forma de la gota: 0 gota, 1 triángulo de play del logo (liquid morph)
 //  mesh     = paleta del fondo · ascii / grid / hud = 0 apagado, 1 encendido
 //  Las versiones "...Phone" (opcionales) solo aplican en teléfono.
 // ======================================================================
-const ISO = [-1, 1, 1];
+const ISO = [-1, 1, 1], GONE = [0, -7, -3.2, 0.8];
 const CUES = {
-  reveal: { dir: [2.2, 1.0, 5.6], look: [0, 0, 0], yaw: 0.42, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.42, 0.02], phone: [0, 0.38], screen: 'sun', sun: [0.1, 0.7, -3.4, 1.2], sunPhone: [0.35, 0.75, -3.4, 1.05], mesh: 'dawn' },
-  macro:  { dir: [0, 0.02, 1], look: [0, 0.01, 0], yaw: 0, explode: 0, frame: [1.0, 0.62], avail: [1, 1], fov: 32, desk: [0, 0.05], phone: [0, 0.12], screen: 'boot', sun: [1.2, -7, -3.2, 1.0], mesh: 'channel' },
-  type:   { dir: [0, 0.3, 6], look: [0, 0, 0], yaw: -0.5, explode: 0, frame: [6.5, 3.4], fov: 32, desk: [0, 0.5], phone: [0, 0.62], screen: 'boot', sun: [0, -7, -3.2, 0.9], mesh: 'channel' },
-  game:   { dir: [-1.3, 0.6, 5.6], look: [0, 0, 0], yaw: -0.2, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.40, 0], phone: [0, 0.40], screen: null, sun: [0, -7, -3.2, 0.9], mesh: 'channel', hud: 1 },
-  iso:    { dir: ISO, look: [0, 0.1, 0.35], lookPhone: [0, 0.37, 0.2], yaw: 0, explode: 1, frame: [4.6, 2.4], framePhone: [2.9, 4.9], fov: 3, desk: [-0.34, 0], phone: [0, 0.32], screen: 'sun', sun: [0, -7, -3.2, 0.6], mesh: 'blueprint', grid: 1 },
-  code:   { dir: [0.8, 0.4, 5.8], look: [0, 0, 0], yaw: 0.35, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.40, 0], phone: [0, 0.38], screen: 'boot', sun: [0, -7, -3.2, 0.6], mesh: 'code', ascii: 1 },
-  color:  { dir: [0, 0.55, 6], look: [0, 0, 0], yaw: 0, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [-0.38, 0], phone: [0, 0.40], screen: 'sun', sun: [-1.5, 0.9, -3.4, 0.95], sunPhone: [-0.2, 0.8, -3.4, 1.0], mesh: 'color', drag: 1 },
-  end:    { dir: [2.2, 1.0, 5.6], look: [0, 0, 0], yaw: 0.42, explode: 0, frame: [2.7, 1.4], framePhone: [3.6, 1.9], fov: 32, desk: [0.42, 0.02], phone: [0, 0.6], screen: 'sun', sun: [0.5, 0.7, -3.6, 1.75], sunPhone: [0.2, 0.75, -3.6, 1.3], mesh: 'dawn' },
+  reveal: { dir: [2.2, 1.0, 5.6], look: [0, 0, 0], yaw: 0.42, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.42, 0.02], phone: [0, 0.38], screen: 'logo', drop: [-0.9, 1.25, -1.0, 0.42], dropPhone: [-0.75, 1.2, -1.0, 0.36], play: 1, mesh: 'ember' },
+  macro:  { dir: [0, 0.02, 1], look: [0, 0.01, 0], yaw: 0, explode: 0, frame: [1.0, 0.62], avail: [1, 1], fov: 32, desk: [0, 0.05], phone: [0, 0.12], screen: 'boot', drop: GONE, play: 0, mesh: 'channel' },
+  type:   { dir: [0, 0.3, 6], look: [0, 0, 0], yaw: -0.5, explode: 0, frame: [6.5, 3.4], fov: 32, desk: [0, 0.5], phone: [0, 0.62], screen: 'boot', drop: GONE, play: 0, mesh: 'channel' },
+  game:   { dir: [-1.3, 0.6, 5.6], look: [0, 0, 0], yaw: -0.2, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.40, 0], phone: [0, 0.40], screen: null, drop: GONE, play: 0, mesh: 'channel', hud: 1 },
+  code:   { dir: [0.8, 0.4, 5.8], look: [0, 0, 0], yaw: 0.35, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [0.40, 0], phone: [0, 0.34], screen: 'boot', drop: GONE, play: 0, mesh: 'code', ascii: 1 },
+  iso:    { dir: ISO, look: [0, 0.1, 0.35], lookPhone: [0, 0.37, 0.2], yaw: 0, explode: 1, frame: [4.6, 2.4], framePhone: [2.9, 4.9], fov: 3, desk: [-0.34, 0], phone: [0, 0.32], screen: 'logo', drop: GONE, play: 0, mesh: 'blueprint', grid: 1 },
+  color:  { dir: [0, 0.55, 6], look: [0, 0, 0], yaw: 0, explode: 0, frame: [2.7, 1.4], fov: 32, desk: [-0.38, 0], phone: [0, 0.40], screen: 'logo', drop: [-1.5, 0.9, -3.4, 0.95], dropPhone: [-0.2, 0.8, -3.4, 1.0], play: 0, mesh: 'color', drag: 1 },
+  end:    { dir: [2.2, 1.0, 5.6], look: [0, 0, 0], yaw: 0.42, explode: 0, frame: [2.7, 1.4], framePhone: [3.6, 1.9], fov: 32, desk: [0.42, 0.02], phone: [0, 0.6], screen: 'logo', drop: [-0.9, 1.3, -1.0, 0.6], dropPhone: [1.0, -1.0, -0.6, 0.4], play: 1, mesh: 'ember' },
 };
 // Qué tanto de la pantalla le toca a la consola en cada diseño (el resto es para el texto)
 const AVAIL = { desk: [0.45, 0.85], phone: [0.92, 0.5] };
 
 // Paletas del gradient mesh: color base + 5 manchas [color, intensidad]
 const PALETTES = {
-  dawn:      { base: '#0c0f24', blobs: [['#f04e23', .55], ['#ffb089', .26], ['#26337f', .55], ['#5b3f7a', .35], ['#b8413f', .3]] },
+  ember:     { base: '#0c0f24', blobs: [['#f04e23', .5], ['#ffb089', .22], ['#26337f', .55], ['#5b3f7a', .35], ['#b8413f', .28]] },
   channel:   { base: '#0b0e22', blobs: [['#26337f', .5], ['#3b2f7a', .35], ['#14183a', .6], ['#6f7ff0', .16], ['#f04e23', .16]] },
   blueprint: { base: '#0a1433', blobs: [['#1d3fa0', .45], ['#26337f', .5], ['#6f7ff0', .2], ['#0c0f24', .5], ['#3a5bd0', .25]] },
   code:      { base: '#07090f', blobs: [['#14183a', .6], ['#f04e23', .14], ['#26337f', .3], ['#0c0f24', .4], ['#1d2a78', .25]] },
-  color:     { base: '#0c0f24', blobs: [['#ffb089', .26], ['#f04e23', .35], ['#6f7ff0', .28], ['#26337f', .45], ['#5b3f7a', .3]] },
+  color:     { base: '#0c0f24', blobs: [['#ffb089', .24], ['#f04e23', .33], ['#6f7ff0', .28], ['#26337f', .45], ['#5b3f7a', .3]] },
 };
 const BLOBS = [[0.5, 1.05, 0.75], [0.08, 0.72, 0.45], [0.92, 0.18, 0.5], [0.18, 0.22, 0.4], [0.88, 0.78, 0.35]]; // x, y, radio
 
@@ -477,12 +559,34 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
 const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
 
-// La tabla de la sección ASCII se escribe desde los cues reales
+// ---------- Intro oficial: una vez por visita, y sin "toque fantasma" al saltarla ----------
+const splash = window.ERASplash;
+try { if (sessionStorage.getItem('eragames:intro')) splash && splash.skip(); else sessionStorage.setItem('eragames:intro', '1'); } catch (e) {}
+document.addEventListener('click', e => { if (document.getElementById('era-splash')) { e.stopPropagation(); e.preventDefault(); } }, true);
+let splashDone = !splash;
+if (splash) splash.done.then(() => { splashDone = true; });
+
+// ---------- Idioma: el español está en el HTML y el inglés en data-en ----------
+const langHooks = [];
 {
-  const f = v => (v >= 0 ? ' ' : '') + v.toFixed(1);
-  document.getElementById('cueTable').textContent =
-    'cue      fov   desarme  pantalla\n' +
-    Object.entries(CUES).map(([k, c]) => `${k.padEnd(8)} ${String(c.fov).padStart(3)}   ${f(c.explode)}     ${c.screen || 'juego'}`).join('\n');
+  const els = [...document.querySelectorAll('[data-en]')].map(el => ({ el, es: el.textContent, en: el.dataset.en }));
+  const attrs = [];
+  for (const el of document.querySelectorAll('[data-en-aria]')) attrs.push({ el, attr: 'aria-label', es: el.getAttribute('aria-label'), en: el.dataset.enAria });
+  for (const el of document.querySelectorAll('[data-en-alt]')) attrs.push({ el, attr: 'alt', es: el.getAttribute('alt'), en: el.dataset.enAlt });
+  const btn = document.getElementById('langBtn');
+  let lang = 'es';
+  function setLang(l) {
+    lang = l; document.documentElement.lang = l;
+    for (const o of els) o.el.textContent = o[l];
+    for (const o of attrs) o.el.setAttribute(o.attr, o[l]);
+    btn.textContent = l === 'es' ? 'EN' : 'ES';
+    btn.setAttribute('aria-label', l === 'es' ? 'Switch to English' : 'Cambiar a español');
+    for (const f of langHooks) f();
+  }
+  let start = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
+  try { const saved = localStorage.getItem('eragames:lang'); if (saved === 'es' || saved === 'en') start = saved; } catch (e) {}
+  if (start !== 'es') setLang(start);
+  btn.addEventListener('click', () => { setLang(lang === 'es' ? 'en' : 'es'); try { localStorage.setItem('eragames:lang', lang); } catch (e) {} });
 }
 
 // ---------- Vista: se mide el contenedor del 3D, no la ventana ----------
@@ -518,7 +622,7 @@ computeAnchors();
 
 const goal = {
   dir: [0, 0, 1], look: [0, 0, 0], dist: 6, yaw: 0, explode: 0, fov: 32, sx: 0, sy: 0,
-  drag: 0, ascii: 0, grid: 0, hud: 0, sun: [0, 0, 0, 1], screen: 'sun', game: null, meshA: 'dawn', meshB: 'dawn', meshS: 0,
+  drag: 0, ascii: 0, grid: 0, hud: 0, drop: [0, 0, 0, 1], play: 1, screen: 'logo', game: null, meshA: 'ember', meshB: 'ember', meshS: 0,
 };
 const TAN = 2 * Math.tan(16 * Math.PI / 180); // alto visible por unidad de distancia con fov 32
 function cueDist(c, phone, aspect) {
@@ -544,9 +648,10 @@ function sample(y) {
   const na = Math.hypot(...da), nb = Math.hypot(...db);
   const la = pick(A, 'look', phone), lb = pick(B, 'look', phone);
   const sa = phone ? A.phone : A.desk, sb = phone ? B.phone : B.desk;
+  const ua = pick(A, 'drop', phone), ub = pick(B, 'drop', phone);
   for (let i = 0; i < 3; i++) { goal.dir[i] = lerp(da[i] / na, db[i] / nb, s); goal.look[i] = lerp(la[i], lb[i], s); }
-  const ua = pick(A, 'sun', phone), ub = pick(B, 'sun', phone);
-  for (let i = 0; i < 4; i++) goal.sun[i] = lerp(ua[i], ub[i], s);
+  for (let i = 0; i < 4; i++) goal.drop[i] = lerp(ua[i], ub[i], s);
+  goal.play = lerp(A.play, B.play, s);
   goal.dist = lerp(cueDist(A, phone, aspect), cueDist(B, phone, aspect), s);
   goal.fov = lerp(A.fov, B.fov, s);
   goal.yaw = lerp(pick(A, 'yaw', phone), pick(B, 'yaw', phone), s);
@@ -563,12 +668,13 @@ function sample(y) {
 
 // ---------- Un solo bucle para todo; se detiene con la pestaña oculta ----------
 const tickers = [];
-const motion = { v: 0, speed: 0, y: window.scrollY, time: 0 };
+const motion = { v: 0, speed: 0, y: window.scrollY, time: 0, raw: 1 / 60 };
 let running = true, last = performance.now(), lastY = window.scrollY;
 function loop(now) {
   if (!running) return;
   requestAnimationFrame(loop);
-  const dt = Math.min((now - last) / 1000, 0.05); last = now; motion.time += dt;
+  motion.raw = (now - last) / 1000;
+  const dt = Math.min(motion.raw, 0.05); last = now; motion.time += dt;
   const y = window.scrollY; motion.y = y;
   motion.v = lerp(motion.v, (y - lastY) / Math.max(dt, 1 / 240), 1 - Math.exp(-8 * dt)); lastY = y;
   motion.speed = reduceMotion ? 0 : Math.min(Math.abs(motion.v) / 2200, 1);
@@ -586,7 +692,7 @@ document.addEventListener('visibilitychange', () => {
   const cv = document.getElementById('mesh'), g = cv.getContext('2d');
   const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
   const PAL = Object.fromEntries(Object.entries(PALETTES).map(([k, p]) => [k, { base: hex(p.base), blobs: p.blobs.map(([c, a]) => [...hex(c), a]) }]));
-  const cur = { base: [...PAL.dawn.base], blobs: PAL.dawn.blobs.map(b => [...b]) };
+  const cur = { base: [...PAL.ember.base], blobs: PAL.ember.blobs.map(b => [...b]) };
   let acc = 1;
   const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
   tickers.push(dt => {
@@ -620,6 +726,7 @@ document.addEventListener('visibilitychange', () => {
   const measureRows = () => rows.forEach((r, i) => { widths[i] = r.children[1].offsetLeft - r.children[0].offsetLeft; }); // un ciclo exacto
   if (document.fonts) document.fonts.ready.then(measureRows);
   new ResizeObserver(measureRows).observe(document.getElementById('marquee'));
+  langHooks.push(measureRows);
   let mqVisible = false;
   new IntersectionObserver(e => { mqVisible = e[0].isIntersecting; }).observe(document.getElementById('marquee'));
   let lastFill = -1;
@@ -639,7 +746,7 @@ document.addEventListener('visibilitychange', () => {
     const off = motion.y * 0.5 + t * 40, skew = reduceMotion ? 0 : clamp(motion.v * 0.006, -14, 14);
     rows.forEach((r, i) => {
       const w = widths[i] || 1, x = i % 2 ? (off % w) - w : -(off % w);
-      r.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0) skewX(${(-skew).toFixed(2)}deg)`;
+      r.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0) skewX(${(-12 - skew).toFixed(2)}deg)`; // inclinada como el logo
       r.style.fontVariationSettings = `"wght" ${wght}`;
     });
   });
@@ -690,7 +797,7 @@ async function boot() {
 
   // ---------- Renderer ----------
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  const PR = Math.min(window.devicePixelRatio || 1, 2);
+  let PR = Math.min(window.devicePixelRatio || 1, 2); // la calidad baja sola si el teléfono va lento (ver "calidad adaptable")
   renderer.setPixelRatio(PR);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -730,12 +837,12 @@ async function boot() {
   const pcbTex = new THREE.CanvasTexture(pcbCanvas); pcbTex.colorSpace = THREE.SRGBColorSpace;
   const pcbMat = new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.55, metalness: 0.1 });
 
-  // ---------- Pantalla: pixel art animado en un canvas de 160x100 ----------
-  const SW = 160, SH = 100;
-  const sc = document.createElement('canvas'); sc.width = SW; sc.height = SH;
+  // ---------- Pantalla de la consola: canvas de 320x200 (pixel art a doble tamaño, capturas a tamaño real) ----------
+  const SW = 160, SH = 100, SCALE = 2;
+  const sc = document.createElement('canvas'); sc.width = SW * SCALE; sc.height = SH * SCALE;
   const sx = sc.getContext('2d');
   const screenTex = new THREE.CanvasTexture(sc);
-  screenTex.colorSpace = THREE.SRGBColorSpace; screenTex.magFilter = THREE.NearestFilter; screenTex.generateMipmaps = false; screenTex.minFilter = THREE.LinearFilter;
+  screenTex.colorSpace = THREE.SRGBColorSpace; screenTex.generateMipmaps = false; screenTex.minFilter = THREE.LinearFilter;
   const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false });
 
   // ---------- Geometría de la consola (todo en código) ----------
@@ -803,14 +910,47 @@ async function boot() {
   const battery = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.44, 0.08), dawnMat); battery.position.set(-0.5, -0.12, -0.055);
   part('battery', battery, [0, -0.05, -0.55], [0, -0.65, -0.3]);
 
-  // ---------- Sol líquido (liquid morph): esfera deformada con ruido en el shader ----------
-  const orbUniforms = { uTime: { value: 0 }, uAmp: { value: 0.1 } };
-  const orbMat = new THREE.MeshPhysicalMaterial({ color: 0xf04e23, emissive: 0xf04e23, emissiveIntensity: 0.32, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.4 });
-  orbMat.onBeforeCompile = shader => {
-    shader.uniforms.uTime = orbUniforms.uTime; shader.uniforms.uAmp = orbUniforms.uAmp;
+  // ---------- Liquid morph: una gota que se convierte en el triángulo de play del logo ----------
+  // La forma del triángulo se guarda como "radio en cada dirección" en una textura pequeña;
+  // el shader mezcla esfera ↔ triángulo y le suma ruido líquido.
+  const canMorph = renderer.capabilities.isWebGL2;
+  const shapeTex = (() => {
+    if (!canMorph) return new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+    const TW = 256, TH = 128, data = new Uint16Array(TW * TH);
+    const A = [-0.52, 0.66], B = [-0.52, -0.66], C = [0.78, 0], RAD = 0.16, HALF = 0.3, GROW = 1.3;
+    const seg = (px, py, a, b) => { // distancia² a un lado y de qué lado queda el punto
+      const ex = b[0] - a[0], ey = b[1] - a[1], vx = px - a[0], vy = py - a[1];
+      const h = clamp((vx * ex + vy * ey) / (ex * ex + ey * ey), 0, 1), qx = vx - ex * h, qy = vy - ey * h;
+      return [qx * qx + qy * qy, vx * ey - vy * ex];
+    };
+    const sgn = Math.sign((B[0] - A[0]) * (A[1] - C[1]) - (B[1] - A[1]) * (A[0] - C[0]));
+    const tri = (px, py) => {
+      const s = [seg(px, py, A, B), seg(px, py, B, C), seg(px, py, C, A)];
+      return -Math.sqrt(Math.min(s[0][0], s[1][0], s[2][0])) * Math.sign(Math.min(sgn * s[0][1], sgn * s[1][1], sgn * s[2][1]));
+    };
+    const sdf = (x, y, z) => { // triángulo redondeado con grosor
+      const wx = tri(x, y) + RAD, wz = Math.abs(z) - (HALF - RAD);
+      return Math.min(Math.max(wx, wz), 0) + Math.hypot(Math.max(wx, 0), Math.max(wz, 0)) - RAD;
+    };
+    for (let j = 0; j < TH; j++) for (let i = 0; i < TW; i++) {
+      const phi = ((i + 0.5) / TW - 0.5) * 2 * Math.PI, th = (j + 0.5) / TH * Math.PI;
+      const dx = Math.sin(th) * Math.cos(phi), dy = Math.cos(th), dz = Math.sin(th) * Math.sin(phi);
+      let lo = 0, hi = 2;
+      for (let k = 0; k < 22; k++) { const m = (lo + hi) / 2; if (sdf(dx * m, dy * m, dz * m) < 0) lo = m; else hi = m; }
+      data[j * TW + i] = THREE.DataUtils.toHalfFloat(lo * GROW);
+    }
+    const t = new THREE.DataTexture(data, TW, TH, THREE.RedFormat, THREE.HalfFloatType);
+    t.wrapS = THREE.RepeatWrapping; t.minFilter = t.magFilter = THREE.LinearFilter;
+    return t;
+  })();
+  shapeTex.needsUpdate = true;
+  const dropU = { uTime: { value: 0 }, uAmp: { value: 0.1 }, uMorph: { value: 1 }, uShape: { value: shapeTex } };
+  const dropMat = new THREE.MeshPhysicalMaterial({ color: 0xf04e23, emissive: 0xf04e23, emissiveIntensity: 0.3, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.4 });
+  dropMat.onBeforeCompile = shader => {
+    Object.assign(shader.uniforms, dropU);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
-uniform float uTime; uniform float uAmp;
+uniform float uTime; uniform float uAmp; uniform float uMorph; uniform sampler2D uShape;
 // webgl-noise, simplex 3D (Ashima Arts, Stefan Gustavson, MIT)
 vec3 m289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 m289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -836,18 +976,22 @@ float snoise(vec3 v){
   return 105.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
 }
 float liquid(vec3 p){ return snoise(p*0.85+vec3(0.0,uTime*0.3,uTime*0.18))*uAmp + snoise(p*1.7-uTime*0.22)*uAmp*0.2; }
-vec3 liquidAt(vec3 p){ vec3 n=normalize(p); return n*(1.0+liquid(n)); }`)
+float shapeR(vec3 n){
+  vec2 uv = vec2(atan(n.z, n.x) * 0.15915494 + 0.5, acos(clamp(n.y, -1.0, 1.0)) * 0.31830989);
+  return mix(1.0, texture2D(uShape, uv).r, uMorph);
+}
+vec3 liquidAt(vec3 p){ vec3 n=normalize(p); return n*shapeR(n)*(1.0+liquid(n)*mix(1.0,0.22,uMorph)); }`)
       .replace('#include <beginnormal_vertex>', `
 vec3 lqN = normalize(position);
 vec3 lqT = normalize(cross(lqN, abs(lqN.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
 vec3 lqB = normalize(cross(lqN, lqT));
 vec3 lqP = liquidAt(position);
-vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liquidAt(position + lqB * 0.01) - lqP));`)
+vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.012) - lqP, liquidAt(position + lqB * 0.012) - lqP));`)
       .replace('#include <begin_vertex>', 'vec3 transformed = lqP;');
   };
-  orbMat.customProgramCacheKey = () => 'era-liquid-sun';
-  const orb = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), orbMat);
-  scene.add(orb);
+  dropMat.customProgramCacheKey = () => 'era-liquid-play';
+  const drop = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 80), dropMat);
+  scene.add(drop);
 
   // Puntos de las piezas donde se pegan las etiquetas (coordenadas locales)
   const anchorsLocal = { screen: new V3(0.5, 0.3, 0.2), dpad: new V3(0, 0, 0.05), chip: new V3(0, 0, 0.03), buttons: new V3(0, 0, 0.05) };
@@ -857,32 +1001,70 @@ vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liqui
     dot: el.querySelector('.ldot'), card: el.querySelector('.lcard'), w: 0, h: 0, x: 0, y: 0, cx: 0, cy: 0,
   }));
 
-  // ---------- Dibujos de la pantalla (uno por juego) ----------
-  function makeSun(r) {
-    const c = document.createElement('canvas'); c.width = c.height = r * 2; const g = c.getContext('2d');
-    const grd = g.createLinearGradient(0, 0, 0, r * 2); grd.addColorStop(0, '#ffb089'); grd.addColorStop(0.55, '#f04e23'); grd.addColorStop(1, '#f2f3f9');
-    g.fillStyle = grd; g.beginPath(); g.arc(r, r, r, 0, Math.PI * 2); g.fill();
-    g.globalCompositeOperation = 'destination-out'; const u = r / 50;
-    g.fillRect(50 * u, 30 * u, 52 * u, 12 * u); g.fillRect(50 * u, 58 * u, 52 * u, 12 * u); g.fillRect(84 * u, 41 * u, 18 * u, 18 * u);
-    return c;
-  }
-  const sunImg = makeSun(26);
-  const stars = Array.from({ length: 26 }, (_, i) => [(i * 61) % SW, (i * 37) % 60, i * 1.7]);
+  // ---------- Lo que muestra la pantalla ----------
   const g = sx;
-  function sky(top, bottom, h) { const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, top); grd.addColorStop(1, bottom); g.fillStyle = grd; g.fillRect(0, 0, SW, h); }
   const ease = x => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+  function sky(top, bottom, h) { const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, top); grd.addColorStop(1, bottom); g.fillStyle = grd; g.fillRect(0, 0, SW, h); }
+
+  // Logo oficial de ERA Games, con la misma animación de la intro de los juegos
+  const SKEW = Math.tan(-12 * Math.PI / 180);
+  const LOGO = {
+    e: new Path2D('M0 0 H70 V24 H25 V39 H62 V61 H25 V76 H70 V100 H0 Z'),
+    r: new Path2D('M0 0 H50 Q78 0 78 30 Q78 54 57 60 L78 100 H50 L33 64 H25 V100 H0 Z M25 22 H48 Q55 22 55 31 Q55 42 48 42 H25 Z'),
+    a: new Path2D('M0 100 L26 0 H66 L92 100 H64 L58 78 H34 L28 100 Z M38 24 L38 62 L64 43 Z'),
+    p: new Path2D('M38 24 L38 62 L64 43 Z'),
+    games: ['M64 8 H8 V92 H56 V54 H32', 'M8 100 V8 H56 V100 M8 54 H56', 'M8 100 V8 L32 50 L56 8 V100', 'M64 8 H8 V92 H64 M8 50 H49.92', 'M64 8 H8 V50 H56 V92 H0'].map(d => new Path2D(d)),
+  };
+  function drawLogo(t) {
+    const T = reduceMotion ? 9 : t, K = 0.94;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = '#14183a'; g.fillRect(0, 0, sc.width, sc.height);
+    g.setTransform(K, 0, 0, K, (sc.width - 274 * K) / 2, (sc.height - 142 * K) / 2);
+    g.save(); g.translate(21, 0); g.transform(1, 0, SKEW, 1, 0, 0);
+    const slide = (delay, x, path) => { // E y R entran deslizándose
+      const p = ease((T - delay) / 0.45); if (p <= 0) return;
+      g.save(); g.globalAlpha = p; g.translate(x - 60 * (1 - p), 0); g.fillStyle = '#fff'; g.fill(path, 'evenodd'); g.restore();
+    };
+    slide(1.05, 0, LOGO.e); slide(0.95, 80, LOGO.r);
+    const pa = ease(T / 0.55); // la A crece desde abajo
+    if (pa > 0) { g.save(); g.globalAlpha = pa; g.translate(166 + 46, 100 + 40 * (1 - pa)); g.scale(1, 0.6 + 0.4 * pa); g.translate(-46, -100); g.fillStyle = '#fff'; g.fill(LOGO.a, 'evenodd'); g.restore(); }
+    const pp = clamp((T - 0.45) / 0.6, 0, 1); // el play llega rodando
+    if (pp > 0) {
+      const e = ease(pp), k = 0.4 + 0.6 * e + Math.sin(pp * Math.PI) * 0.12;
+      g.save(); g.globalAlpha = Math.min(1, pp * 3); g.translate(166 + 51 - 260 * (1 - e), 43); g.rotate(-3 * Math.PI * (1 - e)); g.scale(k, k); g.translate(-51, -43);
+      g.fillStyle = '#f04e23'; g.fill(LOGO.p); g.restore();
+    }
+    g.restore();
+    const pg = clamp((T - 1.45) / 0.5, 0, 1); // GAMES se descubre de izquierda a derecha
+    if (pg > 0) {
+      g.save(); g.beginPath(); g.rect(-30, 104, 340 * pg, 60); g.clip();
+      g.translate(5.1, 118); g.transform(1, 0, SKEW, 1, 0, 0); g.scale(0.24, 0.24);
+      g.strokeStyle = '#fff'; g.lineWidth = 16; g.lineCap = 'square'; g.lineJoin = 'miter'; g.miterLimit = 10;
+      LOGO.games.forEach((path, i) => { g.save(); g.translate(i * 254, 0); g.beginPath(); g.rect(0, 0, 64, 100); g.clip(); g.stroke(path); g.restore(); });
+      g.restore();
+    }
+  }
+
+  // Capturas reales: si no cargan (o no existen) se usa el dibujo en pixel art
+  const shots = {};
+  for (const [k, src] of Object.entries(SHOTS)) {
+    const img = new Image();
+    img.onload = () => {
+      try { const c = document.createElement('canvas'); c.width = c.height = 2; const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, 2, 2); cx.getImageData(0, 0, 1, 1); shots[k] = img; }
+      catch (e) { /* imagen de otro origen: no se puede pasar a WebGL */ }
+    };
+    img.src = src;
+  }
+  function drawShot(img, t) { // paneo lento para que la captura no se vea estática
+    const z = 1.08, w = sc.width * z, h = sc.height * z, m = reduceMotion ? 0 : 1;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(img, (sc.width - w) / 2 + Math.sin(t * 0.35) * 10 * m, (sc.height - h) / 2 + Math.cos(t * 0.27) * 6 * m, w, h);
+  }
+
   const DRAW = {
-    sun(t) {
-      sky('#0c0f24', '#5b3f7a', 74);
-      g.fillStyle = '#f2f3f9';
-      for (const [x, y, p] of stars) if (Math.sin(t * 2 + p) > -0.4) g.fillRect(x, y, 1, 1);
-      const rise = reduceMotion ? 1 : ease(t / 2.2);
-      g.drawImage(sunImg, 80 - 26, 98 - rise * 44 - 26);
-      g.fillStyle = '#0c0f24'; g.fillRect(0, 74, SW, 26);
-      g.fillStyle = 'rgba(240,78,35,.7)'; g.fillRect(0, 74, SW, 1);
-    },
+    logo: drawLogo,
     boot(t) {
-      g.fillStyle = '#0c0f24'; g.fillRect(0, 0, SW, SH);
+      g.fillStyle = '#14183a'; g.fillRect(0, 0, SW, SH);
       const s = 16 + Math.sin(t * 4) * 1.5;
       g.fillStyle = '#f04e23'; g.beginPath(); g.moveTo(80 - s * 0.7, 44 - s); g.lineTo(80 + s, 44); g.lineTo(80 - s * 0.7, 44 + s); g.closePath(); g.fill();
       g.fillStyle = '#26337f'; g.fillRect(40, 74, 80, 6);
@@ -948,24 +1130,27 @@ vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liqui
       });
       const [px, py] = spots[(idx + 2) % 3], [tx, ty] = spots[idx], k = ease(lt / 0.6);
       const chx = px + (tx - px) * k, chy = py - 14 + (ty - py) * k;
-      if (lt > 0.85 && lt < 1.0) { g.strokeStyle = '#ffb089'; g.beginPath(); g.moveTo(80, 100); g.lineTo(chx, chy); g.stroke(); g.fillStyle = '#ffb089'; g.fillRect(76, 92, 8, 8); }
+      if (lt > 0.85 && lt < 1.0) { g.strokeStyle = '#ffb089'; g.lineWidth = 1; g.beginPath(); g.moveTo(80, 100); g.lineTo(chx, chy); g.stroke(); g.fillStyle = '#ffb089'; g.fillRect(76, 92, 8, 8); }
       g.fillStyle = '#4a4a3a'; for (let i = 0; i < 9; i++) g.fillRect(i * 18 - 2, 88 + (i % 2) * 2, 17, 12);
       g.fillStyle = '#ffb089'; g.fillRect(chx - 8, chy, 5, 1); g.fillRect(chx + 4, chy, 5, 1); g.fillRect(chx, chy - 8, 1, 5); g.fillRect(chx, chy + 4, 1, 5);
     },
   };
-  let mode = 'sun', modeT = 0, staticT = 0, screenAcc = 1;
-  const noise = sx.createImageData(SW, SH);
+  let mode = 'logo', modeT = 0, staticT = 0, screenAcc = 1;
+  const noise = sx.createImageData(sc.width, sc.height);
   function drawScreen(dt, wanted) {
     if (wanted && wanted !== mode) { mode = wanted; modeT = 0; staticT = reduceMotion ? 0 : 0.2; }
-    modeT += dt; staticT = Math.max(0, staticT - dt);
+    if (splashDone) modeT += dt; // el logo de la pantalla espera a que termine la intro
+    staticT = Math.max(0, staticT - dt);
     screenAcc += dt; if (screenAcc < 1 / 24) return; // la pantalla se actualiza a 24 cuadros
     screenAcc = 0;
     if (staticT > 0) {
       const d = noise.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 200; d[i] = v; d[i + 1] = v; d[i + 2] = v + 30; d[i + 3] = 255; }
       sx.putImageData(noise, 0, 0);
     } else {
-      DRAW[mode](modeT);
-      sx.fillStyle = 'rgba(0,0,0,.13)'; for (let y = 0; y < SH; y += 2) sx.fillRect(0, y, SW, 1);
+      if (shots[mode]) drawShot(shots[mode], modeT);
+      else { g.setTransform(SCALE, 0, 0, SCALE, 0, 0); DRAW[mode](modeT); }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = 'rgba(0,0,0,.12)'; for (let y = 0; y < sc.height; y += 3) g.fillRect(0, y, sc.width, 1);
     }
     screenTex.needsUpdate = true;
   }
@@ -1034,13 +1219,14 @@ vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liqui
   let W = 1, H = 1;
   function resize() {
     W = view.w; H = view.h;
-    renderer.setSize(W, H, false);
+    renderer.setPixelRatio(PR); renderer.setSize(W, H, false);
     camera.aspect = W / H;
     for (const l of labelEls) { l.w = l.card.offsetWidth; l.h = l.card.offsetHeight; }
     sizeComposer();
   }
   new ResizeObserver(() => { measure(); resize(); }).observe(stage);
   if (document.fonts) document.fonts.ready.then(resize);
+  langHooks.push(resize); // las etiquetas cambian de ancho con el idioma
   resize();
 
   // ---------- Arrastrar para girar (solo en la sección de color) ----------
@@ -1053,18 +1239,34 @@ vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liqui
   zone.addEventListener('pointerup', release); zone.addEventListener('pointercancel', release);
 
   // ---------- Fotograma ----------
-  const cur = { dir: new V3(2.2, 1, 5.6).normalize(), look: new V3(), dist: 8, fov: 32, yaw: 0.42, explode: 0, sx: 0, sy: 0, ascii: 0, sun: [1.2, 0.85, -3.2, 1.25], glass: 0 };
+  const cur = { dir: new V3(2.2, 1, 5.6).normalize(), look: new V3(), dist: 8, fov: 32, yaw: 0.42, explode: 0, sx: 0, sy: 0, ascii: 0, drop: [0, 0, 0, 0.5], play: 1, glass: 0 };
   const tmp = new V3(), tv = new V3();
   let first = true, intro = reduceMotion ? 1 : 0, wasGlass = false;
+  let slow = 0, graceT = 0, idleT = 0, frameNo = 0, carry = 0; // calidad adaptable y modo reposo
 
-  tickers.push(dt => {
+  tickers.push(dt0 => {
+    // Calidad adaptable: si tras el arranque el teléfono no llega a ~40 cuadros por segundo, baja la resolución un paso
+    graceT += motion.raw;
+    if (graceT > 3) {
+      slow = lerp(slow, motion.raw > 1 / 40 ? 1 : 0, 0.04);
+      if (slow > 0.8 && PR > 1) { PR = Math.max(1, PR - 0.25); slow = 0; graceT = 1.5; resize(); }
+    }
+    // Modo reposo: con todo quieto se dibuja uno de cada dos cuadros (ahorra batería)
+    frameNo++;
+    const settled = Math.abs(motion.v) < 4 && !drag.on && Math.abs(drag.v) < 0.0005 && intro >= 1 && Math.abs(cur.explode - goal.explode) < 0.002 && Math.abs(cur.fov - goal.fov) < 0.02 && Math.abs(cur.dist - goal.dist) < 0.004;
+    idleT = settled ? idleT + dt0 : 0;
+    if (idleT > 1.2 && (frameNo & 1)) { carry += dt0; return; }
+    const dt = dt0 + carry; carry = 0;
+
     const k = first ? 1 : 1 - Math.exp(-6 * dt);
     cur.dir.lerp(tv.set(...goal.dir), k).normalize(); cur.look.lerp(tmp.set(...goal.look), k);
     cur.dist = lerp(cur.dist, goal.dist, k); cur.fov = lerp(cur.fov, goal.fov, k);
     cur.yaw = lerp(cur.yaw, goal.yaw, k); cur.explode = lerp(cur.explode, goal.explode, k);
     cur.sx = lerp(cur.sx, goal.sx, k); cur.sy = lerp(cur.sy, goal.sy, k);
     cur.ascii = lerp(cur.ascii, goal.ascii, k); if (cur.ascii < 0.002) cur.ascii = 0;
-    for (let i = 0; i < 4; i++) cur.sun[i] = lerp(cur.sun[i], goal.sun[i], 1 - Math.exp(-3 * dt));
+    const kd = first ? 1 : 1 - Math.exp(-3.5 * dt);
+    for (let i = 0; i < 4; i++) cur.drop[i] = lerp(cur.drop[i], goal.drop[i], kd);
+    cur.play = lerp(cur.play, goal.play, kd);
 
     // Cámara: dolly zoom. Al cerrar el lente se aleja para que la consola conserve su tamaño
     const dist = cur.dist * Math.tan(16 * Math.PI / 180) / Math.tan(cur.fov * Math.PI / 360);
@@ -1080,7 +1282,8 @@ vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liqui
     if (!drag.on) { dragYaw += drag.v; drag.v *= reduceMotion ? 0 : Math.exp(-5 * dt); }
     if (goal.drag < 0.5 && !drag.on) { dragYaw = Math.atan2(Math.sin(dragYaw), Math.cos(dragYaw)); dragYaw = lerp(dragYaw, 0, k); }
 
-    intro = Math.min(1, intro + dt / 1.6); const ei = ease(intro);
+    if (splashDone) intro = Math.min(1, intro + dt / 1.6); // el revelado empieza cuando termina la intro
+    const ei = ease(intro);
     const t = motion.time, bob = reduceMotion ? 0 : Math.sin(t * 1.1) * 0.035 * (1 - cur.explode);
     consoleGroup.position.y = bob - (1 - ei) * 1.4;
     consoleGroup.rotation.set(reduceMotion ? 0 : Math.sin(t * 0.7) * 0.03 * (1 - cur.explode), cur.yaw + dragYaw - (1 - ei) * 1.6, 0);
@@ -1096,12 +1299,16 @@ vec3 objectNormal = normalize(cross(liquidAt(position + lqT * 0.01) - lqP, liqui
     const isGlass = cur.glass > 0.01;
     if (isGlass !== wasGlass) { shellMat.transparent = isGlass; shellMat.needsUpdate = true; wasGlass = isGlass; }
 
-    // Sol líquido: se deforma más cuando scrolleas o arrastras rápido
-    const [ox, oy, oz, os] = cur.sun;
-    orb.visible = os > 0.02 && oy > -6.5; // abajo de -6.5 ya se metió el sol
-    orb.position.set(ox, oy + (1 - ei) * -1.5, oz); orb.scale.setScalar(os * (0.6 + 0.4 * ei));
-    orbUniforms.uTime.value = reduceMotion ? 0 : t;
-    orbUniforms.uAmp.value = lerp(orbUniforms.uAmp.value, 0.1 + (reduceMotion ? 0 : motion.speed * 0.2 + Math.min(Math.abs(drag.v) * 2, 0.15)), 1 - Math.exp(-4 * dt));
+    // Gota líquida ↔ triángulo de play. Se deforma más cuando scrolleas o arrastras rápido
+    const [ox, oy, oz, os] = cur.drop, pl = canMorph ? cur.play : 0;
+    drop.visible = os > 0.02 && oy > -6.5; // abajo de -6.5 ya salió de cuadro
+    if (drop.visible) {
+      drop.position.set(ox, oy + (1 - ei) * 2.2, oz); drop.scale.setScalar(os * (0.5 + 0.5 * ei));
+      drop.lookAt(camera.position); // la cara del triángulo mira a la cámara
+      drop.rotateZ((1 - pl) * -2.6 + (1 - ei) * 5 + (reduceMotion ? 0 : Math.sin(t * 0.6) * 0.07)); // rueda al transformarse, como en la intro
+      dropU.uTime.value = reduceMotion ? 0 : t; dropU.uMorph.value = pl * pl * (3 - 2 * pl);
+      dropU.uAmp.value = lerp(dropU.uAmp.value, 0.1 + (reduceMotion ? 0 : motion.speed * 0.2 + Math.min(Math.abs(drag.v) * 2, 0.15)), 1 - Math.exp(-4 * dt));
+    }
 
     drawScreen(dt, goal.screen);
     if (cur.ascii > 0) {
