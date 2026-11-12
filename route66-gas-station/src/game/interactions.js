@@ -1,5 +1,5 @@
 // Detecta qué objeto interactuable está cerca y enfrente del jugador.
-// Cada objeto: { x, z, label(): texto o null si no está disponible, use?(), hold?(dt), release?() }
+// Cada objeto: { x, z, label(): texto o null si no está disponible, use?(), hold?(dt), release?(), near?(player) }
 import { CFG } from '../config.js';
 
 export function createInteractions(items) {
@@ -10,6 +10,7 @@ export function createInteractions(items) {
     const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
     let best = null, bestLabel = null, bestScore = -Infinity;
     for (const it of items) {
+      if (it.near && !it.near(player)) continue;
       const dx = it.x - player.x, dz = it.z - player.z;
       const d = Math.hypot(dx, dz);
       if (d > CFG.interactRange) continue;

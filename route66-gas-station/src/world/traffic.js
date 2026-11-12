@@ -25,6 +25,7 @@ export function createTraffic(scene) {
   ];
 
   let westHold = false;
+  let level = 1;
 
   function spawn(lane) {
     if (lane.dir === -1 && westHold) return false;
@@ -33,11 +34,12 @@ export function createTraffic(scene) {
     // No encimar: esperar a que el anterior se aleje del punto de salida
     const prev = lane.last;
     if (prev && prev.active && Math.abs(prev.group.position.x - (-lane.dir * SPAWN_X)) < 45) return false;
-    const typeId = pickType(Math.random);
+    const typeId = pickType(Math.random, 'weight', (T) => T.level <= level);
     const T = CAR_TYPES[typeId];
     car.setType(typeId, T.colors[(Math.random() * T.colors.length) | 0]);
     car.dir = lane.dir;
     car.speed = (typeId === 'truck' ? 17 : 21) + Math.random() * 7;
+    if (typeId === 'sports') car.speed = 27;
     // Nunca más rápido que el de adelante: así no se alcanzan
     if (prev && prev.active) car.speed = Math.min(car.speed, prev.speed);
     car.group.position.set(-lane.dir * SPAWN_X, 0, lane.z);
@@ -52,6 +54,8 @@ export function createTraffic(scene) {
     cars,
     // Los clientes usan el carril hacia el oeste: se pausa la salida de autos nuevos mientras entran o salen
     holdWest(on) { westHold = on; },
+    // Con cada nivel pasan más tipos de auto por la carretera
+    setLevel(n) { level = n; },
     // Velocidad del auto más cercano que va adelante en el carril oeste (Infinity si no hay)
     westAheadSpeed(x, range) {
       let best = Infinity, bestD = range;

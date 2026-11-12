@@ -9,18 +9,27 @@ import { box, cyl, merge, tint, vertexMat } from './geo.js';
 export const LAYOUT = {
   lot: { x: 0, z: -22, w: 48, d: 32 },
   yard: { minX: -39, maxX: 39, minZ: -40.5, maxZ: -6.2 }, // terreno cercado por la barda
-  pump: { x: 0, z: -15 },
-  island: { w: 5.2, d: 1.5 },
+  island: { x: 0, z: -15, w: 5.2, d: 1.5 },
+  pumps: [{ x: -1.2, z: -15 }, { x: 1.2, z: -15 }], // la segunda es una mejora
+  // Carriles donde paran los autos: norte y sur de la isla, y uno de servicios más al sur
+  lanes: { north: -12.9, south: -17.1, service: -21.2 },
+  garage: { x: 9.5, ctrlZ: -23.7 },
+  carwash: { x: -9.5, ctrlZ: -23.5 },
   building: { x: 0, z: -31, w: 16, d: 8, h: 4 },
   door: { x: -3, w: 1.3, h: 2.35 },
   windows: [{ x: 2.2, w: 3.0 }, { x: 5.8, w: 3.0 }],
   winY: [1.1, 2.7],
   fuse: { x: -6.3, z: -34.6 },
   sign: { x: 18, z: -8.6 },
-  register: { x: 4.5, z: -17.9 },
-  cooler: { x: 5.85, z: -17.9 },
-  phone: { x: -1.3, z: -27 },
-  laneZ: -12.9, // carril donde se detienen los autos, entre la carretera y la bomba
+  // Dentro de la tienda: caja junto a la puerta, refrigerador y estantes al fondo
+  counter: { x: -0.3, z: -29.3, w: 2.8, d: 0.8 },
+  register: { x: -1.0, z: -29.3 },
+  fridge: { x: -3.4, w: 2.0 },
+  shelves: [{ x: 0.2, w: 2.4 }, { x: 3.2, w: 2.4 }],
+  // Cajones de estacionamiento al oeste de la tienda (los autos entran por el norte y salen por el sur)
+  stalls: [-17.5, -21, -24.5, -28],
+  stallZ: -26.8,
+  phone: { x: -5.4, z: -27.35 }, // dentro de la tienda, junto a la puerta
 };
 
 export function createStation(scene) {
@@ -36,11 +45,19 @@ export function createStation(scene) {
   const circle = (x, z, r) => colliders.push({ type: 'circle', x, z, r });
 
   // ---------- Patio ----------
+  // Todo el terreno cercado está pavimentado; la losa central de concreto queda un poco más clara
+  const Yd = L.yard;
+  parts.push(box(Yd.maxX - Yd.minX, 0.024, Yd.maxZ - Yd.minZ, 0x8f8983, (Yd.minX + Yd.maxX) / 2, 0.012, (Yd.minZ + Yd.maxZ) / 2));
+  // Asfalto del estacionamiento (cuatro cajones; los dos últimos se pintan con la mejora)
+  parts.push(box(16, 0.07, 9.4, 0x4b4753, -22.8, 0.035, L.stallZ - 0.4));
   parts.push(box(L.lot.w, 0.06, L.lot.d, PAL.concrete, L.lot.x, 0.03, L.lot.z));
   parts.push(box(9, 0.07, 6, 0x9a958d, -12, 0.035, -18));
   parts.push(box(7, 0.07, 9, 0xb7b2a9, 13, 0.035, -24));
   // Accesos desde la carretera (entrada al este, salida al oeste)
-  for (const sx of [1, -1]) parts.push(box(26, 0.05, 7, PAL.concrete, sx * 25, 0.025, -7.6));
+  for (const sx of [1, -1]) parts.push(box(27, 0.055, 7, PAL.concrete, sx * 25.5, 0.025, -7.6));
+
+  // Estacionamiento: líneas blancas de los dos primeros cajones (los demás llegan con la mejora)
+  stallLines(parts, 0, 2);
 
   // ---------- Barda de concreto alrededor del terreno ----------
   const Y = L.yard;
@@ -65,36 +82,22 @@ export function createStation(scene) {
   wallX(-12, 12, Y.maxZ); // frente, entre los dos accesos
   for (const sx of [1, -1]) parts.push(box(0.46, 1.5, 0.46, CAP, sx * Y.maxX, 0.75, Y.maxZ));
 
-  // ---------- Mostrador con la caja registradora y hielera ----------
-  const rx = L.register.x, rz = L.register.z;
-  parts.push(box(1.4, 1.0, 0.75, PAL.wood, rx, 0.56, rz));
-  parts.push(box(1.5, 0.08, 0.85, 0x80583c, rx, 1.1, rz));
-  parts.push(box(0.55, 0.3, 0.42, PAL.dark, rx, 1.29, rz));
-  parts.push(box(0.5, 0.26, 0.3, PAL.red, rx, 1.55, rz - 0.05));
-  parts.push(box(0.4, 0.12, 0.05, PAL.cream, rx, 1.57, rz + 0.11));
-  parts.push(box(0.5, 0.05, 0.2, PAL.chrome, rx, 1.14, rz + 0.3));
-  aabb(rx, rz, 1.5, 0.85);
-  const cx = L.cooler.x, cz = L.cooler.z;
-  parts.push(box(0.9, 0.8, 0.65, PAL.red, cx, 0.46, cz));
-  parts.push(box(0.96, 0.1, 0.71, PAL.cream, cx, 0.91, cz));
-  parts.push(box(0.5, 0.2, 0.02, PAL.cream, cx, 0.5, cz + 0.335));
-  aabb(cx, cz, 0.96, 0.71);
-
   // ---------- Isla, bomba y marquesina ----------
-  const px = L.pump.x, pz = L.pump.z;
-  parts.push(box(L.island.w, 0.2, L.island.d, 0xc9c4ba, px, 0.16, pz));
-  parts.push(box(0.72, 1.45, 0.5, PAL.red, px, 0.26 + 0.725, pz));
-  parts.push(box(0.5, 0.42, 0.52, PAL.cream, px, 1.32, pz));
-  parts.push(box(0.3, 0.1, 0.54, PAL.dark, px, 1.3, pz));
-  parts.push(box(0.8, 0.08, 0.58, PAL.chrome, px, 1.75, pz));
-  const globe = new THREE.SphereGeometry(0.24, 8, 6);
-  globe.translate(px, 2.03, pz);
-  parts.push(tint(globe, 0xf2e6c4));
-  parts.push(box(0.08, 0.5, 0.08, PAL.dark, px + 0.42, 1.2, pz));
-  aabb(px, pz, L.island.w, L.island.d);
-  parts.push(box(12, 0.35, 7, PAL.cream, px, 4.3, pz));
-  parts.push(box(12.12, 0.14, 7.12, PAL.teal, px, 4.16, pz));
-  for (const sx of [-2.25, 2.25]) parts.push(box(0.32, 4.0, 0.32, PAL.cream, px + sx, 2.15, pz));
+  // La isla no es colisionador: se puede caminar sobre ella para llegar a las bombas con autos a ambos lados
+  const ix = L.island.x, iz = L.island.z;
+  parts.push(box(L.island.w, 0.2, L.island.d, 0xc9c4ba, ix, 0.16, iz));
+  pumpParts(parts, L.pumps[0].x, L.pumps[0].z, PAL.red);
+  aabb(L.pumps[0].x, L.pumps[0].z, 0.72, 0.5);
+  // Base vacía donde irá la segunda bomba
+  parts.push(box(0.5, 0.26, 0.4, 0x7d7a74, L.pumps[1].x, 0.39, L.pumps[1].z));
+  parts.push(box(0.14, 0.2, 0.14, 0x5a4a44, L.pumps[1].x, 0.6, L.pumps[1].z));
+  parts.push(box(12, 0.35, 7, PAL.cream, ix, 4.3, iz));
+  parts.push(box(12.12, 0.14, 7.12, PAL.teal, ix, 4.16, iz));
+  for (const sx of [-2.25, 2.25]) {
+    parts.push(box(0.32, 4.0, 0.32, PAL.cream, ix + sx, 2.15, iz));
+    aabb(ix + sx, iz, 0.32, 0.32);
+  }
+  const px = ix, pz = iz; // centro de la marquesina (para la sombra)
 
   // ---------- Tienda: paredes huecas con puerta y ventanas ----------
   const b = L.building;
@@ -139,9 +142,10 @@ export function createStation(scene) {
   parts.push(box(b.w + 1.2, 0.28, b.d + 1.4, 0x6b5a4e, b.x, b.h + 0.14, b.z)); // losa del techo
   for (const sx of [-2.4, 2.4]) parts.push(box(0.12, 0.7, 0.12, PAL.dark, b.x + sx, b.h + 0.6, front - 0.6));
   // Teléfono de pared para llamar al proveedor
-  parts.push(box(0.6, 0.8, 0.06, PAL.teal, L.phone.x, 1.5, front + 0.03));
-  parts.push(box(0.34, 0.46, 0.14, PAL.dark, L.phone.x, 1.45, front + 0.1));
-  parts.push(box(0.1, 0.34, 0.1, PAL.chrome, L.phone.x - 0.24, 1.45, front + 0.12));
+  const pz0 = front - T; // cara interior de la pared del frente
+  inside.push(box(0.6, 0.8, 0.06, PAL.teal, L.phone.x, 1.5, pz0 - 0.03));
+  inside.push(box(0.34, 0.46, 0.14, PAL.dark, L.phone.x, 1.45, pz0 - 0.1));
+  inside.push(box(0.1, 0.34, 0.1, PAL.chrome, L.phone.x - 0.24, 1.45, pz0 - 0.12));
 
   aabb(b.x, back + T / 2, b.w, T);
   aabb(x0 + T / 2, b.z, T, b.d);
@@ -157,17 +161,29 @@ export function createStation(scene) {
   inside.push(box(iw, b.h, 0.04, INNER, b.x, b.h / 2, back + T + 0.02));
   inside.push(box(0.04, b.h, id, INNER, x0 + T + 0.02, b.h / 2, b.z));
   inside.push(box(0.04, b.h, id, INNER, x1 - T - 0.02, b.h / 2, b.z));
-  // Mostrador viejo y estantes vacíos
-  inside.push(box(4.2, 1.0, 0.8, PAL.wood, 3.6, 0.6, b.z - 0.6));
-  inside.push(box(4.4, 0.07, 0.95, 0x80583c, 3.6, 1.13, b.z - 0.6));
-  aabb(3.6, b.z - 0.6, 4.4, 0.95);
-  for (const sx of [-1.6, 1.4, 4.4]) {
-    inside.push(box(2.4, 2.1, 0.45, 0x8a6a4a, sx, 1.15, back + T + 0.27));
-    for (const sy of [0.75, 1.35, 1.95]) inside.push(box(2.3, 0.04, 0.5, 0x6e4a32, sx, sy, back + T + 0.3));
-    inside.push(box(0.5, 0.3, 0.3, PAL.red, sx - 0.6, 0.92, back + T + 0.32));
-    inside.push(box(0.4, 0.34, 0.3, PAL.teal, sx + 0.5, 1.54, back + T + 0.32));
+  // Mostrador con la caja registradora, junto a la puerta
+  const C = L.counter;
+  inside.push(box(C.w, 1.0, C.d, PAL.wood, C.x, 0.6, C.z));
+  inside.push(box(C.w + 0.14, 0.07, C.d + 0.14, 0x80583c, C.x, 1.13, C.z));
+  inside.push(box(0.55, 0.3, 0.42, PAL.dark, L.register.x, 1.32, L.register.z));
+  inside.push(box(0.5, 0.26, 0.3, PAL.red, L.register.x, 1.58, L.register.z + 0.05));
+  inside.push(box(0.4, 0.12, 0.05, PAL.cream, L.register.x, 1.6, L.register.z - 0.11));
+  aabb(C.x, C.z, C.w, C.d);
+  // Refrigerador de sodas: mueble con marco; las botellas se dibujan aparte según el inventario
+  const backZ = back + T; // cara interior de la pared del fondo
+  const F = L.fridge;
+  inside.push(box(F.w, 2.25, 0.66, 0xdfe7ea, F.x, 1.2, backZ + 0.35));
+  inside.push(box(F.w - 0.16, 1.7, 0.05, 0x2a3440, F.x, 1.25, backZ + 0.7)); // fondo oscuro de la puerta
+  inside.push(box(F.w, 0.3, 0.68, PAL.red, F.x, 2.2, backZ + 0.36));
+  inside.push(box(0.06, 1.7, 0.07, 0xdfe7ea, F.x, 1.25, backZ + 0.72));
+  // Estantes de comida
+  for (const sh of L.shelves) {
+    inside.push(box(sh.w, 2.1, 0.45, 0x8a6a4a, sh.x, 1.15, backZ + 0.25));
+    for (const sy of [0.7, 1.25, 1.8]) inside.push(box(sh.w - 0.1, 0.05, 0.5, 0x6e4a32, sh.x, sy, backZ + 0.3));
   }
-  aabb(1.4, back + T + 0.27, 8.6, 0.6);
+  aabb((F.x - F.w / 2 + L.shelves[1].x + L.shelves[1].w / 2) / 2, backZ + 0.33, L.shelves[1].x + L.shelves[1].w / 2 - (F.x - F.w / 2), 0.7);
+  // Tapete de la entrada
+  inside.push(box(1.6, 0.02, 1.0, PAL.red, L.door.x, 0.11, front - T - 0.75));
   // Caja de fusibles
   inside.push(box(0.6, 0.8, 0.14, 0x5a6b6f, L.fuse.x, 1.5, back + T + 0.09));
   inside.push(box(0.12, 0.3, 0.06, PAL.red, L.fuse.x + 0.12, 1.5, back + T + 0.19));
@@ -253,15 +269,21 @@ export function createStation(scene) {
     flat(2.2, Y.maxZ - Y.minZ, Y.minX + 1.25, (Y.minZ + Y.maxZ) / 2),
   ]), shadowMat));
 
+  let neon = false;
+  function setNeon(on) {
+    neon = on;
+    art.draw(on);
+    if (on) { signMat.color.set(0xffffff); roofMat.color.set(0xffffff); }
+  }
   function setPower(on) {
     insideMat.color.set(on ? 0xffffff : 0x4b4654);
     insideMat.emissive.set(on ? 0x3d3222 : 0x000000); // con luz, todo el interior se aclara
     lampMat.color.set(on ? 0xfff2c4 : 0x3a3838);
     glassMat.color.set(on ? 0xffd27a : 0x1c2530);
     glassMat.opacity = on ? 0.4 : 0.55;
-    roofMat.color.set(on ? 0xffffff : 0x8a8580);
+    roofMat.color.set(on || neon ? 0xffffff : 0x8a8580);
   }
-  function setOpen(on) { signMat.color.set(on ? 0xffffff : 0x8a8580); }
+  function setOpen(on) { signMat.color.set(on || neon ? 0xffffff : 0x8a8580); }
 
   return {
     colliders,
@@ -281,8 +303,41 @@ export function createStation(scene) {
     },
     setPower,
     setOpen,
-    redrawText: art.draw,
+    setNeon,
+    insideMat,
+    front,
+    redrawText: () => art.draw(neon),
   };
+}
+
+// ¿Está el punto dentro de la tienda? (para que caja, teléfono y fusibles no se usen a través de la pared)
+export function insideStore(p) {
+  const b = LAYOUT.building;
+  return Math.abs(p.x - b.x) < b.w / 2 - 0.2 && Math.abs(p.z - b.z) < b.d / 2 - 0.2;
+}
+
+// Líneas blancas de los cajones [from, to) del estacionamiento
+export function stallLines(parts, from, to) {
+  const L = LAYOUT;
+  const WHITE = 0xece4d2;
+  for (let i = from; i < to; i++) {
+    const x = L.stalls[i];
+    if (i === 0) parts.push(box(0.14, 0.02, 5.6, WHITE, x + 1.75, 0.08, L.stallZ));
+    parts.push(box(0.14, 0.02, 5.6, WHITE, x - 1.75, 0.08, L.stallZ));
+    parts.push(box(1.4, 0.02, 0.14, WHITE, x, 0.08, L.stallZ + 2.7)); // tope de entrada
+  }
+}
+
+// Piezas de una bomba (se usa también para la segunda, en world/upgrades3d.js)
+export function pumpParts(parts, x, z, hex) {
+  parts.push(box(0.72, 1.45, 0.5, hex, x, 0.26 + 0.725, z));
+  parts.push(box(0.5, 0.42, 0.52, PAL.cream, x, 1.32, z));
+  parts.push(box(0.3, 0.1, 0.54, PAL.dark, x, 1.3, z));
+  parts.push(box(0.8, 0.08, 0.58, PAL.chrome, x, 1.75, z));
+  const globe = new THREE.SphereGeometry(0.24, 8, 6);
+  globe.translate(x, 2.03, z);
+  parts.push(tint(globe, 0xf2e6c4));
+  parts.push(box(0.08, 0.5, 0.08, PAL.dark, x + 0.42, 1.2, z));
 }
 
 function signTextures() {
@@ -297,32 +352,56 @@ function signTextures() {
   const r = mk(512, 128);
   const slab = (px) => `${px}px "Alfa Slab One", Impact, serif`;
 
-  function draw() {
-    // Letrero de carretera: diseño propio (franja roja, 66 grande, franja turquesa)
+  function glow(c, text, x, y, font, color) {
+    c.font = font; c.shadowColor = color; c.shadowBlur = 22;
+    c.fillStyle = color; c.fillText(text, x, y);
+    c.shadowBlur = 8; c.fillStyle = '#fff6e6'; c.globalAlpha = 0.55; c.fillText(text, x, y);
+    c.globalAlpha = 1; c.shadowBlur = 0;
+  }
+
+  // neon = true: versión encendida (mejora "letrero de neón")
+  function draw(neon = false) {
     let c = s.ctx;
-    c.fillStyle = '#e4d3ae'; c.fillRect(0, 0, 256, 256);
-    c.fillStyle = '#a8412f'; c.fillRect(0, 0, 256, 62);
-    c.fillStyle = '#2a8a84'; c.fillRect(0, 196, 256, 60);
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = '#f0e4c6'; c.font = slab(38); c.fillText('ROUTE', 128, 33);
-    c.fillStyle = '#2a2430'; c.font = slab(128); c.fillText('66', 128, 132);
-    c.fillStyle = '#f0e4c6'; c.font = slab(40); c.fillText('GAS', 128, 228);
-    c.globalAlpha = 0.16;
-    c.fillStyle = '#7a4a30';
-    for (let i = 0; i < 26; i++) c.fillRect((i * 97) % 256, (i * 53) % 256, 6 + (i % 5) * 7, 3 + (i % 3) * 4);
-    c.globalAlpha = 1;
-    c.strokeStyle = '#2a2430'; c.lineWidth = 10; c.strokeRect(5, 5, 246, 246);
+    if (neon) {
+      c.fillStyle = '#17122a'; c.fillRect(0, 0, 256, 256);
+      glow(c, 'ROUTE', 128, 36, slab(38), '#ff5fa8');
+      glow(c, '66', 128, 130, slab(128), '#ffd76a');
+      glow(c, 'GAS', 128, 226, slab(42), '#4fe0d2');
+      c.strokeStyle = '#ff5fa8'; c.lineWidth = 6; c.shadowColor = '#ff5fa8'; c.shadowBlur = 16;
+      c.strokeRect(10, 10, 236, 236); c.shadowBlur = 0;
+    } else {
+      // Diseño propio: franja roja, 66 grande, franja turquesa
+      c.fillStyle = '#e4d3ae'; c.fillRect(0, 0, 256, 256);
+      c.fillStyle = '#a8412f'; c.fillRect(0, 0, 256, 62);
+      c.fillStyle = '#2a8a84'; c.fillRect(0, 196, 256, 60);
+      c.fillStyle = '#f0e4c6'; c.font = slab(38); c.fillText('ROUTE', 128, 33);
+      c.fillStyle = '#2a2430'; c.font = slab(128); c.fillText('66', 128, 132);
+      c.fillStyle = '#f0e4c6'; c.font = slab(40); c.fillText('GAS', 128, 228);
+      c.globalAlpha = 0.16;
+      c.fillStyle = '#7a4a30';
+      for (let i = 0; i < 26; i++) c.fillRect((i * 97) % 256, (i * 53) % 256, 6 + (i % 5) * 7, 3 + (i % 3) * 4);
+      c.globalAlpha = 1;
+      c.strokeStyle = '#2a2430'; c.lineWidth = 10; c.strokeRect(5, 5, 246, 246);
+    }
     s.tex.needsUpdate = true;
 
     // Letrero del techo
     c = r.ctx;
-    c.fillStyle = '#d8c59d'; c.fillRect(0, 0, 512, 128);
-    c.strokeStyle = '#8f3a2a'; c.lineWidth = 8; c.strokeRect(6, 6, 500, 116);
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = '#8f3a2a'; c.font = slab(86); c.fillText('G A S', 256, 68);
-    c.globalAlpha = 0.2; c.fillStyle = '#d8c59d';
-    for (let i = 0; i < 30; i++) c.fillRect((i * 71) % 512, (i * 37) % 128, 10 + (i % 4) * 9, 4);
-    c.globalAlpha = 1;
+    if (neon) {
+      c.fillStyle = '#17122a'; c.fillRect(0, 0, 512, 128);
+      glow(c, 'G A S', 256, 68, slab(86), '#ff6a5a');
+      c.strokeStyle = '#4fe0d2'; c.lineWidth = 5; c.shadowColor = '#4fe0d2'; c.shadowBlur = 14;
+      c.strokeRect(10, 10, 492, 108); c.shadowBlur = 0;
+    } else {
+      c.fillStyle = '#d8c59d'; c.fillRect(0, 0, 512, 128);
+      c.strokeStyle = '#8f3a2a'; c.lineWidth = 8; c.strokeRect(6, 6, 500, 116);
+      c.fillStyle = '#8f3a2a'; c.font = slab(86); c.fillText('G A S', 256, 68);
+      c.globalAlpha = 0.2; c.fillStyle = '#d8c59d';
+      for (let i = 0; i < 30; i++) c.fillRect((i * 71) % 512, (i * 37) % 128, 10 + (i % 4) * 9, 4);
+      c.globalAlpha = 1;
+    }
     r.tex.needsUpdate = true;
   }
   draw();

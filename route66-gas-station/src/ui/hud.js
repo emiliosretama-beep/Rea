@@ -2,14 +2,16 @@
 import { t } from '../core/i18n.js';
 import { BAL } from '../config.js';
 import { fmtMoney } from '../game/state.js';
+import { UPGRADES } from '../data/upgrades.js';
 
 export function createHud() {
   const $ = (id) => document.getElementById(id);
   const el = {
     prompt: $('prompt'), promptText: $('prompt-text'), toast: $('toast'), fps: $('fps'), btn: $('btn-interact'),
-    money: $('money'), rep: $('rep'), fuelStock: $('fuel-stock'), sodaStock: $('soda-stock'),
-    chipFuel: $('chip-fuel'), chipSoda: $('chip-soda'),
-    mission: $('mission'), missionTitle: $('mission-title'), missionBar: $('mission-bar'), missionProgress: $('mission-progress'), missionReward: $('mission-reward'),
+    money: $('money'), rep: $('rep'), fuelStock: $('fuel-stock'), sodaStock: $('soda-stock'), snackStock: $('snack-stock'),
+    chipFuel: $('chip-fuel'), chipSoda: $('chip-soda'), chipSnack: $('chip-snack'), level: $('level'), book: $('btn-book'),
+    mission: $('mission'), missionTitle: $('mission-title'), missionBar: $('mission-bar'),
+    missionProgress: $('mission-progress'), missionReward: $('mission-reward'),
     cust: $('cust'), custName: $('cust-name'), custState: $('cust-state'), custBar: $('cust-bar'),
     fuel: $('fuel'), fuelFill: $('fuel-fill'), fuelText: $('fuel-text'),
   };
@@ -19,7 +21,7 @@ export function createHud() {
   $('fuel-zone').style.width = `${((BAL.perfectMax - BAL.perfectMin) / BAL.overfillMax) * 100}%`;
   $('fuel-mark').style.left = pct(1);
 
-  const last = { fuelStock: null, soda: '', mTitle: '', mProg: '', prompt: null, money: null, rep: null, cust: '', custBar: -1, fuel: '', fuelOn: false };
+  const last = { fuelStock: null, soda: null, snack: null, level: '', can: null, mTitle: '', mProg: '', prompt: null, money: null, rep: null, cust: '', custBar: -1, bar: '', barOn: false, barWork: null };
   let toastTimer = 0;
   let frames = 0, acc = 0;
 
@@ -48,13 +50,26 @@ export function createHud() {
         el.fuelStock.textContent = `${fuel} gal`;
         el.chipFuel.classList.toggle('low', fuel < BAL.fuelLow);
       }
-      const soda = `${state.sodas}${state.carrying ? ` · 1 ${t('inHand')}` : ''}`;
-      if (soda !== last.soda) {
-        last.soda = soda;
-        el.sodaStock.textContent = soda;
-        el.chipSoda.classList.toggle('carry', state.carrying);
-        el.chipSoda.classList.toggle('low', state.sodas === 0 && !state.carrying);
+      if (state.sodas !== last.soda) {
+        last.soda = state.sodas;
+        el.sodaStock.textContent = state.sodas;
+        el.chipSoda.classList.toggle('low', state.sodas === 0);
       }
+      if (state.snacks !== last.snack) {
+        last.snack = state.snacks;
+        el.snackStock.textContent = state.snacks;
+        el.chipSnack.classList.toggle('low', state.snacks === 0);
+      }
+      const level = t('levelN', { l: state.level() });
+      if (level !== last.level) { last.level = level; el.level.textContent = level; }
+      // Punto en el botón de la libreta cuando alcanza para alguna mejora
+      const can = state.open && UPGRADES.some((u) => state.canBuyUpgrade(u) === 'ok');
+      if (can !== last.can) { last.can = can; el.book.classList.toggle('can', can); }
+    },
+    levelPop() {
+      el.level.classList.remove('up');
+      void el.level.offsetWidth;
+      el.level.classList.add('up');
     },
     setMission(missions) {
       const title = missions.title(), prog = missions.progressText();
@@ -74,21 +89,17 @@ export function createHud() {
       void el.mission.offsetWidth; // reinicia la animación
       el.mission.classList.add('done');
     },
-    // Tarjeta del cliente: tipo, pedido, estado y paciencia
-    setCustomer(bay) {
-      const c = bay.c;
-      const show = c && (bay.phase === 'waiting' || bay.phase === 'fueling' || bay.phase === 'toPay');
-      const key = show ? `${c.name}|${c.want}|${c.soda}|${bay.phase === 'toPay'}|${document.documentElement.lang}` : '';
+    // Tarjeta del cliente: info = { key, title, status, p } o null
+    setCustomer(info) {
+      const key = info ? `${info.key}|${document.documentElement.lang}` : '';
       if (key !== last.cust) {
         last.cust = key;
-        el.cust.classList.toggle('on', !!show);
-        if (show) {
-          el.custName.textContent = `${t(c.name)} · ${t('wants', { n: c.want })}${c.soda ? t('wantsSoda') : ''}`;
-          el.custState.textContent = t(bay.phase === 'toPay' ? 'stPay' : 'stWaiting');
-        }
+        last.custBar = -1;
+        el.cust.classList.toggle('on', !!info);
+        if (info) { el.custName.textContent = info.title; el.custState.textContent = info.status; }
       }
-      if (!show) return;
-      const p = Math.max(0, c.patience / c.patienceMax);
+      if (!info) return;
+      const p = Math.max(0, info.p);
       const step = Math.round(p * 100);
       if (step !== last.custBar) {
         last.custBar = step;
@@ -96,17 +107,18 @@ export function createHud() {
         el.custBar.className = p > 0.5 ? '' : p > 0.25 ? 'warn' : 'bad';
       }
     },
-    // Barra de llenado: visible mientras apuntas a la bomba con un cliente esperando
-    setFuel(c, visible) {
-      if (visible !== last.fuelOn) { last.fuelOn = visible; el.fuel.classList.toggle('on', visible); }
+    // Barra central: llenado de gasolina (con zona exacta) o avance de un trabajo
+    setBar(c, visible) {
+      if (visible !== last.barOn) { last.barOn = visible; el.fuel.classList.toggle('on', visible); }
       if (!visible) return;
-      const txt = `${c.got.toFixed(1)} / ${c.want} gal`;
-      if (txt !== last.fuel) {
-        last.fuel = txt;
-        el.fuelText.textContent = txt;
-        el.fuelFill.style.transform = `scaleX(${Math.min(1, c.got / (c.want * BAL.overfillMax))})`;
-        el.fuelFill.classList.toggle('over', c.got > c.want * BAL.perfectMax);
-      }
+      const work = c.kind !== 'fuel';
+      if (work !== last.barWork) { last.barWork = work; el.fuel.classList.toggle('work', work); }
+      const txt = work ? `${t(c.job)} ${Math.min(100, Math.round((c.done / c.work) * 100))}%` : `${c.got.toFixed(1)} / ${c.want} gal`;
+      if (txt === last.bar) return;
+      last.bar = txt;
+      el.fuelText.textContent = txt;
+      el.fuelFill.style.transform = `scaleX(${work ? Math.min(1, c.done / c.work) : Math.min(1, c.got / (c.want * BAL.overfillMax))})`;
+      el.fuelFill.classList.toggle('over', !work && c.got > c.want * BAL.perfectMax);
     },
     tickFps(dt) {
       frames++; acc += dt;

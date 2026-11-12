@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.4 · Etapa 3',
+  version: 'DEV 0.6 · Etapa 4',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -36,14 +36,33 @@ export const BAL = {
   payPatienceRate: 0.5, // esperando a pagar, la paciencia baja más lento
   repPerfect: 2, repOk: 1, repOver: 0, repAngry: -6,
   firstCustomer: 1.5, // segundos hasta el primer cliente
-  nextCustomer: [3, 7], // segundos entre clientes (con reputación 50)
+  nextCustomer: [6, 11], // segundos entre llegadas (con reputación 50 y una sola bomba)
+  afterLeave: 2.5, // respiro mínimo cuando se libera un lugar
   repSpeed: [1.6, 0.6], // multiplicador de esa espera con reputación 0 y con 100
 
   // Inventario y proveedor
   fuelStart: 80, fuelCap: 120, fuelOrder: 60, fuelCost: 0.12, // costo por galón
   fuelLow: 15, // con menos de esto se puede pedir a crédito
-  sodaStart: 6, sodaCap: 12, sodaOrder: 6, sodaCost: 0.08, sodaPrice: 0.25,
-  sodaChance: 0.4, // probabilidad de que un cliente quiera refresco
+  sodaStart: 8, sodaCap: 12, sodaOrder: 8, sodaCost: 0.08, sodaPrice: 0.25,
+  snackStart: 6, snackCap: 12, snackOrder: 8, snackCost: 0.12, snackPrice: 0.4,
+  // Clientes que después de cargar se estacionan y entran a comprar
+  shopChance: 0.5, shopChanceShop: 0.75, // sin y con la mejora "tienda surtida"
+  counterPatience: 45, // segundos que espera en la caja
+  walkSpeed: 1.7,
+
+  // Mejoras (los costos están en data/upgrades.js)
+  storageMult: 2, // almacén: capacidad x2
+  neonSpawn: 0.8, // neón: los clientes llegan 20 % más seguido
+  cafeChance: 0.35, cafePrice: 0.45,
+  parkingPatience: 1.25,
+  helperDelay: 1.5, helperSpeed: 0.55, helperPayDelay: 3,
+  // Servicios: segundos de trabajo y pago
+  jobs: {
+    wash: [{ id: 'jobWash', work: 3.5, pay: 1.2 }],
+    garage: [{ id: 'jobOil', work: 5, pay: 1.8 }, { id: 'jobTires', work: 7, pay: 2.6 }],
+  },
+  servicePatience: 40, serviceTip: 0.3,
+  bayWeight: { fuel: 3, wash: 1.3, garage: 1.1 },
 
   // Basura en el patio
   litterStart: 16, litterMax: 8, // al inicio el terreno está lleno; ya abierto, hasta 8

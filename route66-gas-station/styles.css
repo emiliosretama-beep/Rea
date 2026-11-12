@@ -67,7 +67,7 @@ body.playing #hud { opacity: 1; }
 /* Dinero, reputación, gasolina y refrescos */
 #stats {
   position: absolute; left: calc(12px + var(--safe-l)); top: calc(10px + var(--safe-t));
-  display: grid; grid-template-columns: auto auto; gap: 9px 7px; justify-content: start;
+  display: flex; flex-wrap: wrap; gap: 9px 7px; max-width: min(420px, 40vw);
 }
 .chip {
   display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px 0 3px; border-radius: 999px;
@@ -81,6 +81,8 @@ body.playing #hud { opacity: 1; }
 #chip-rep svg { background: var(--red); }
 #chip-fuel svg { background: var(--night); }
 #chip-soda svg { background: var(--teal); }
+#chip-snack svg { background: #d3a15a; }
+#chip-money, #chip-rep { order: 0; }
 .chip.low { background: #ffd3c4; border-color: var(--red); color: var(--red); }
 .chip.carry { background: #cfeee9; }
 
@@ -184,6 +186,53 @@ body.locked #look-hint { opacity: 0; }
   background: rgba(28, 22, 38, .55); padding: 2px 7px; border-radius: 6px;
 }
 
+/* Nivel de la estación y libreta */
+#level {
+  position: absolute; right: calc(128px + var(--safe-r)); top: calc(16px + var(--safe-t));
+  height: 36px; padding: 0 13px; border-radius: 999px; display: flex; align-items: center;
+  background: var(--night); color: var(--cream); border: 2.5px solid var(--cream);
+  font-family: var(--display); font-size: clamp(12px, 2.2vmin, 15px); letter-spacing: .04em; white-space: nowrap;
+}
+#level.up { animation: mission-pop .6s cubic-bezier(.2, .9, .3, 1.4); }
+#btn-book {
+  position: absolute; right: calc(70px + var(--safe-r)); top: calc(10px + var(--safe-t));
+  width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--orange); border: 2.5px solid var(--night); box-shadow: 0 4px 0 rgba(28, 22, 38, .6);
+}
+body.playing #btn-book { pointer-events: auto; }
+#btn-book svg { width: 26px; height: 26px; fill: none; stroke: var(--cream); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#btn-book:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(28, 22, 38, .6); }
+#book-dot {
+  position: absolute; right: -3px; top: -3px; width: 15px; height: 15px; border-radius: 50%;
+  background: var(--teal); border: 2.5px solid var(--night); display: none;
+}
+#btn-book.can #book-dot { display: block; animation: dot-pulse 1.2s ease-in-out infinite; }
+@keyframes dot-pulse { 50% { transform: scale(1.3); } }
+
+/* Marcadores sobre los autos */
+#markers { position: absolute; inset: 0; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .25s; }
+body.playing #markers { opacity: 1; }
+.marker {
+  position: absolute; left: 0; top: 0; margin: -46px 0 0 -21px; width: 42px; display: none;
+  flex-direction: column; align-items: center; gap: 3px; will-change: transform;
+}
+.marker.on { display: flex; }
+.marker svg {
+  width: 34px; height: 34px; padding: 5px; border-radius: 50%;
+  background: var(--orange); border: 2.5px solid var(--night); box-shadow: 0 3px 0 rgba(28, 22, 38, .6);
+  fill: none; stroke: var(--cream); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.marker[data-kind="pay"] svg { background: var(--teal); }
+.marker[data-kind="wash"] svg { background: #3f8fc4; }
+.marker[data-kind="garage"] svg { background: var(--night); }
+.marker i { display: block; width: 42px; height: 8px; border-radius: 4px; background: var(--cream); border: 2px solid var(--night); overflow: hidden; }
+.marker b { display: block; height: 100%; background: var(--teal); transform-origin: left; }
+.marker b.warn { background: #e8b23a; }
+.marker b.bad { background: #e2533a; }
+
+#fuel.work #fuel-zone, #fuel.work #fuel-mark { display: none; }
+#fuel.work #fuel-fill { background: var(--teal); }
+
 #btn-pause {
   position: absolute; right: calc(12px + var(--safe-r)); top: calc(10px + var(--safe-t));
   width: 48px; height: 48px; border-radius: 50%;
@@ -269,30 +318,46 @@ h1 {
 }
 #version { position: absolute; right: calc(16px + var(--safe-r)); bottom: calc(12px + var(--safe-b)); font-size: 11px; opacity: .6; }
 
-/* ---------- Pedidos al proveedor ---------- */
-#order {
+/* ---------- Libreta del negocio ---------- */
+#book {
   position: absolute; inset: 0; z-index: 5; display: none; place-items: center;
-  padding: calc(12px + var(--safe-t)) calc(16px + var(--safe-r)) calc(12px + var(--safe-b)) calc(16px + var(--safe-l));
+  padding: calc(10px + var(--safe-t)) calc(14px + var(--safe-r)) calc(10px + var(--safe-b)) calc(14px + var(--safe-l));
   background: rgba(28, 22, 38, .6);
 }
-body.ordering #order { display: grid; }
-.order-card {
-  width: min(440px, 100%); max-height: 100%; overflow: auto; padding: 16px 18px 14px; border-radius: 18px;
+body.booking #book { display: grid; }
+.book-card {
+  width: min(520px, 100%); max-height: 100%; border-radius: 18px; overflow: hidden;
   background: var(--cream); color: var(--night); border: 3px solid var(--night); box-shadow: 0 7px 0 var(--teal);
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: column;
 }
-.order-card h2 { font-family: var(--display); font-weight: 400; font-size: 24px; }
-.order-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1.5px solid rgba(28, 22, 38, .15); }
-.order-row b { display: block; font-size: 16px; }
-.order-row span { font-size: 13px; opacity: .75; font-variant-numeric: tabular-nums; }
-.order-row button {
-  min-height: 48px; padding: 0 16px; border-radius: 999px; font-weight: 800; font-size: 14px;
-  color: var(--cream); background: var(--orange); box-shadow: 0 4px 0 var(--orange-deep);
+.book-head { display: flex; align-items: center; gap: 12px; padding: 10px 12px 8px 18px; }
+.book-head h2 { font-family: var(--display); font-weight: 400; font-size: clamp(18px, 4.6vmin, 24px); flex: 1; }
+#book-money { font-family: var(--display); font-size: 17px; padding: 2px 12px 3px; border-radius: 999px; background: var(--night); color: var(--cream); font-variant-numeric: tabular-nums; }
+#btn-book-close { width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid var(--night); display: grid; place-items: center; flex: none; }
+#btn-book-close svg { width: 20px; height: 20px; fill: none; stroke: var(--night); stroke-width: 2.8; stroke-linecap: round; }
+.book-tabs { display: flex; gap: 6px; padding: 0 14px; border-bottom: 3px solid var(--night); }
+.book-tabs button {
+  flex: 1; min-height: 44px; border-radius: 12px 12px 0 0; border: 2.5px solid var(--night); border-bottom: 0;
+  font-family: var(--display); font-size: 15px; background: rgba(28, 22, 38, .1);
 }
-.order-row button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--orange-deep); }
-.order-row button:disabled { background: rgba(28, 22, 38, .25); box-shadow: none; color: var(--night); opacity: .7; cursor: default; transform: none; }
-#btn-order-close { align-self: center; min-height: 48px; padding: 0 28px; border-radius: 999px; font-weight: 800; border: 2px solid var(--night); }
-.order-card button:focus-visible { outline-color: var(--night); }
+.book-tabs button.on { background: var(--red); color: var(--cream); }
+.book-pane { padding: 4px 16px 12px; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.book-pane[hidden] { display: none; }
+#book-level { margin: 8px 0 2px; font-size: 13px; font-weight: 800; color: var(--orange-deep); }
+.book-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1.5px solid rgba(28, 22, 38, .15); }
+.book-row:first-child { border-top: 0; }
+.book-row b { display: block; font-size: 15px; }
+.book-row span { display: block; font-size: 12.5px; line-height: 1.3; opacity: .78; font-variant-numeric: tabular-nums; }
+.book-row button {
+  flex: none; min-width: 92px; min-height: 46px; padding: 0 14px; border-radius: 999px;
+  font-family: var(--display); font-size: 15px; font-variant-numeric: tabular-nums;
+  color: var(--cream); background: var(--orange); border: 2.5px solid var(--night); box-shadow: 0 4px 0 var(--night);
+}
+.book-row button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--night); }
+.book-row button:disabled { background: rgba(28, 22, 38, .14); color: var(--night); box-shadow: none; border-color: rgba(28, 22, 38, .35); transform: none; cursor: default; font-family: var(--ui); font-weight: 800; font-size: 12.5px; }
+.book-row.owned button:disabled { background: var(--teal); color: var(--cream); border-color: var(--night); }
+.book-row.locked b, .book-row.locked span { opacity: .5; }
+.book-card button:focus-visible { outline-color: var(--night); }
 
 /* ---------- Aviso de orientación ---------- */
 #rotate {

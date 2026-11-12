@@ -58,7 +58,7 @@ function frontRear(out, T, P) {
   out.push(box(0.05, 0.2, T.wid * 0.6, PAL.dark, f + 0.005, mid + 0.02, 0)); // parrilla
   out.push(box(0.07, 0.045, T.wid * 0.64, PAL.chrome, f + 0.01, mid + 0.06, 0));
   out.push(box(0.07, 0.045, T.wid * 0.64, PAL.chrome, f + 0.01, mid - 0.04, 0));
-  out.push(box(T.len * 0.8, 0.04, T.wid + 0.03, PAL.chrome, 0, mid + 0.04, 0)); // moldura lateral
+  out.push(box(T.len * 0.8, 0.04, T.wid + 0.03, P.trim || PAL.chrome, 0, mid + 0.04, 0)); // moldura lateral
   for (const s of [-1, 1]) {
     out.push(cylX(0.12, 0.08, 8, LAMP, f - 0.0, mid + 0.1, s * (hw - 0.26)));
     out.push(box(0.06, 0.16, 0.2, TAIL, -f - 0.005, P.belt - 0.14, s * (hw - 0.2)));
@@ -102,6 +102,75 @@ const BUILDERS = {
     detail.push(box(2.05, 0.06, T.wid - 0.3, 0x3a2e2a, -1.35, 1.0, 0)); // fondo de la caja
     frontRear(detail, T, P);
     wheels(detail, T, P.ax, [P.ax, -P.ax]);
+  },
+  // Deportivo: bajo, cabina pequeña y franja de carreras
+  sports(T, body, detail) {
+    const P = { L: T.len, floor: 0.22, belt: 0.78, hoodX: 0.55, noseY: 0.58, ax: 1.3, arch: 0.42 };
+    body.push(extrude(lowerShape(P), T.wid, WHITE));
+    cabin(body, detail, T, [[-0.95, 0.78], [-0.62, 1.13], [0.12, 1.15], [0.72, 0.78]], { twoTone: false });
+    detail.push(box(1.4, 0.02, 0.34, ROOF, 1.3, 0.79, 0)); // franja en el cofre
+    detail.push(box(1.0, 0.02, 0.34, ROOF, -1.55, 0.79, 0));
+    detail.push(box(0.5, 0.05, T.wid - 0.3, PAL.dark, -T.len / 2 + 0.3, 0.92, 0)); // alerón
+    for (const s of [-1, 1]) detail.push(box(0.06, 0.14, 0.06, PAL.dark, -T.len / 2 + 0.3, 0.85, s * 0.6));
+    frontRear(detail, T, P);
+    wheels(detail, T, P.ax, [P.ax, -P.ax]);
+  },
+  // Clásico: cofre largo, cabina erguida, parrilla alta y estribos
+  classic(T, body, detail) {
+    const P = { L: T.len, floor: 0.32, belt: 1.0, hoodX: 1.25, noseY: 0.9, ax: 1.78, arch: 0.5 };
+    body.push(extrude(lowerShape(P), T.wid - 0.16, WHITE));
+    cabin(body, detail, T, [[-1.95, 1.0], [-1.68, 1.62], [0.05, 1.64], [0.42, 1.0]], { twoTone: true, pillars: [-0.85] });
+    // Salpicaderas anchas sobre cada rueda y estribo entre ellas
+    for (const s of [-1, 1]) {
+      const z = s * (T.wid / 2 - 0.12);
+      detail.push(box(1.25, 0.14, 0.3, PAL.dark, P.ax, 0.9, z));
+      detail.push(box(1.25, 0.14, 0.3, PAL.dark, -P.ax, 0.9, z));
+      detail.push(box(2.3, 0.07, 0.3, PAL.dark, 0, 0.36, z));
+    }
+    detail.push(box(0.1, 0.62, 0.8, PAL.chrome, T.len / 2 + 0.01, 0.72, 0)); // parrilla alta
+    detail.push(box(0.12, 0.1, 0.06, PAL.chrome, T.len / 2 - 0.15, 1.02, 0)); // adorno del cofre
+    frontRear(detail, T, P);
+    wheels(detail, T, P.ax, [P.ax, -P.ax]);
+  },
+  // VIP: limusina larga con molduras doradas
+  vip(T, body, detail) {
+    const GOLD = 0xd9b24a;
+    const P = { L: T.len, floor: 0.3, belt: 0.95, hoodX: 2.25, noseY: 0.78, ax: 2.4, arch: 0.45, tail: 0.07, trim: GOLD };
+    body.push(extrude(lowerShape(P), T.wid, WHITE));
+    cabin(body, detail, T, [[-2.45, 0.95], [-2.15, 1.45], [1.45, 1.47], [2.05, 0.95]], { twoTone: false, pillars: [-1.3, -0.2, 0.9] });
+    for (const s of [-1, 1]) {
+      detail.push(box(0.03, 0.34, 0.03, PAL.chrome, T.len / 2 - 0.35, 1.05, s * (T.wid / 2 - 0.12))); // astas
+      detail.push(box(0.2, 0.13, 0.02, GOLD, T.len / 2 - 0.44, 1.16, s * (T.wid / 2 - 0.12))); // banderines
+    }
+    frontRear(detail, T, P);
+    wheels(detail, T, P.ax, [P.ax, -P.ax]);
+  },
+  // Motocicleta con su piloto
+  moto(T, body, detail) {
+    const r = T.wheelR;
+    for (const x of [0.72, -0.72]) {
+      detail.push(wheel(r, 0.14, TIRE, x, r, 0));
+      detail.push(wheel(r * 0.5, 0.16, PAL.chrome, x, r, 0));
+      body.push(box(0.5, 0.05, 0.18, WHITE, x, r * 2 + 0.03, 0)); // salpicadera
+    }
+    body.push(box(0.62, 0.26, 0.3, WHITE, 0.12, 0.84, 0)); // tanque
+    detail.push(box(0.6, 0.1, 0.28, PAL.dark, -0.42, 0.82, 0)); // asiento
+    detail.push(box(0.5, 0.36, 0.3, 0x55585c, 0.02, 0.5, 0)); // motor
+    detail.push(slopePanel(0.72, 0.36, 0.5, 1.06, 0.12, PAL.chrome, 0)); // horquilla
+    detail.push(box(0.06, 0.06, 0.72, PAL.chrome, 0.5, 1.08, 0)); // manubrio
+    detail.push(cylX(0.1, 0.1, 8, LAMP, 0.62, 0.95, 0));
+    detail.push(cylX(0.045, 0.9, 6, PAL.chrome, -0.5, 0.36, 0.2)); // escape
+    detail.push(box(0.06, 0.1, 0.12, TAIL, -1.0, 0.7, 0));
+    // Piloto
+    const SKIN = 0xe0a878, JACKET = 0x3a2e2a, JEANS = 0x3d4a66;
+    detail.push(box(0.3, 0.56, 0.42, JACKET, -0.3, 1.2, 0));
+    detail.push(slopePanel(-0.18, 1.34, 0.46, 1.1, 0.5, JACKET, 0)); // brazos al manubrio
+    detail.push(box(0.26, 0.26, 0.26, SKIN, -0.24, 1.62, 0));
+    body.push(box(0.3, 0.16, 0.3, WHITE, -0.25, 1.75, 0)); // casco
+    for (const s of [-1, 1]) {
+      detail.push(box(0.5, 0.16, 0.16, JEANS, -0.12, 0.9, s * 0.22));
+      detail.push(box(0.14, 0.5, 0.14, JEANS, 0.1, 0.62, s * 0.24));
+    }
   },
   truck(T, body, detail) {
     const f = T.len / 2, hw = T.wid / 2, r = T.wheelR;
@@ -164,8 +233,9 @@ export function createCar() {
 }
 
 // Elige un tipo al azar. field: 'weight' para el tráfico de fondo, 'chance' para clientes
-export function pickType(rand, field = 'weight') {
-  const ids = Object.keys(CAR_TYPES).filter((id) => CAR_TYPES[id][field] > 0);
+// only: filtro opcional (por nivel de la estación, o solo los que piden servicios)
+export function pickType(rand, field = 'weight', only = null) {
+  const ids = Object.keys(CAR_TYPES).filter((id) => CAR_TYPES[id][field] > 0 && (!only || only(CAR_TYPES[id])));
   let total = 0;
   for (const id of ids) total += CAR_TYPES[id][field];
   let r = rand() * total;
