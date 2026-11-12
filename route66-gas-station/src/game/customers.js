@@ -63,19 +63,17 @@ function findS(path, test) {
 const yieldTest = (p) => p.x < -25 && p.z > -8.5;
 
 export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
-  const offBox = () => {
-    const b = { type: 'box', off: true, minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
-    colliders.push(b);
-    return b;
-  };
-  const fitBox = (box, m) => {
+  // Cada auto detenido es un obstáculo para el jugador (los que se mueven frenan por él)
+  function updateBox(m) {
+    const b = m.box;
+    if (m.mode === 'free' || m.v > 0.4 || m.pos.z > -4) { b.off = true; return; }
     const T = CAR_TYPES[m.car.typeId];
-    const ax = Math.abs(m.tan.x) > Math.abs(m.tan.z);
-    const hx = (ax ? T.len : T.wid) / 2, hz = (ax ? T.wid : T.len) / 2;
-    box.minX = m.pos.x - hx; box.maxX = m.pos.x + hx;
-    box.minZ = m.pos.z - hz; box.maxZ = m.pos.z + hz;
-    box.off = false;
-  };
+    const c = Math.abs(m.tan.x), sn = Math.abs(m.tan.z);
+    const hx = (c * T.len + sn * T.wid) / 2, hz = (sn * T.len + c * T.wid) / 2;
+    b.minX = m.pos.x - hx; b.maxX = m.pos.x + hx;
+    b.minZ = m.pos.z - hz; b.maxZ = m.pos.z + hz;
+    b.off = false;
+  }
 
   // ---------- Cajones de estacionamiento ----------
   const stalls = LAYOUT.stalls.map((sx, i) => {
@@ -83,7 +81,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     if (sx - 2.2 > -31) outPts.push([-32.6, -34.2]);
     outPts.push([-35, -31.4], [-35.3, -20], [-35.5, -12.5], [-37.4, -6.8], [-41, -3.7], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]);
     const outPath = makePath(outPts);
-    return { i, x: sx, shopper: null, box: offBox(), outPath, yieldS: findS(outPath, yieldTest), carSpot: [sx + 1.3, STZ + 0.6] };
+    return { i, x: sx, shopper: null, outPath, yieldS: findS(outPath, yieldTest), carSpot: [sx + 1.3, STZ + 0.6] };
   });
   // Camino de cada carril de bomba a cada cajón: sigue derecho al oeste y da vuelta hacia el sur
   const stallPath = (bay, st) => {
@@ -103,7 +101,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       inPath: makePath([...ENTRY, ...laneIn, [d.stopX, z]]),
       outPath,
       yieldS: findS(outPath, yieldTest),
-      box: offBox(),
+      next: null, // auto formado detrás (solo bombas)
       // phase: idle | inbound | waiting | fueling | working
       phase: 'idle',
       m: null, // auto que ocupa la bahía
@@ -121,9 +119,12 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const car = createCar();
     car.group.visible = false;
     scene.add(car.group);
-    movers.push({ id: i, car, mode: 'free', stall: null, path: null, s: 0, v: 0, merged: false, yieldS: 0, released: true, pos: new THREE.Vector3(), tan: new THREE.Vector3(1, 0, 0) });
+    const box = { type: 'box', off: true, minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
+    colliders.push(box);
+    movers.push({ id: i, car, box, mode: 'free', stall: null, path: null, s: 0, v: 0, merged: false, yieldS: 0, released: true, pos: new THREE.Vector3(), tan: new THREE.Vector3(1, 0, 0) });
   }
   const busy = (m) => m.mode !== 'free';
+  const ACCEL = 2.6, DECEL = 3.6; // m/s² cómodos para arrancar y frenar
 
   // El carril oeste se pausa mientras algún cliente entra o sale (contador, no bandera)
   let holds = 0;
@@ -143,42 +144,90 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
 
   const lenOf = (m) => CAR_TYPES[m.car.typeId].len;
 
-  // ¿Está (dx, dz) dentro del corredor que el auto va a recorrer? Solo cuenta lo que tiene enfrente y en su carril.
-  function inPath(m, dx, dz, halfLen, halfWid, ahead) {
-    const along = dx * m.tan.x + dz * m.tan.z;
-    if (along <= 0 || along > lenOf(m) / 2 + halfLen + ahead) return false;
-    const side = Math.abs(dx * m.tan.z - dz * m.tan.x);
-    return side < CAR_TYPES[m.car.typeId].wid / 2 + halfWid + 0.35;
+  // Ángulo de giro (con signo, + = izquierda) entre la dirección actual y la que tendrá d metros más adelante
+  const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3();
+  function turn(m, from, d) {
+    const L = m.path.length;
+    const a = Math.min(L, m.s + from), b = Math.min(L, m.s + from + d);
+    if (b - a < 0.3) return 0;
+    m.path.curve.getTangentAt(a / L, _t1);
+    m.path.curve.getTangentAt(b / L, _t2);
+    // En pantalla la izquierda del auto es -z: un giro hacia -z es positivo
+    return -Math.atan2(_t1.x * _t2.z - _t1.z * _t2.x, _t1.x * _t2.x + _t1.z * _t2.z);
   }
 
-  // Avanza por la ruta respetando un límite de velocidad y un punto donde debe poder frenar
+  // Recorre la ruta del auto desde su defensa delantera hasta "ahead" metros y devuelve
+  // la distancia al primer punto donde hit(x, z) es verdadero (-1 si no hay nada).
+  const _sp = new THREE.Vector3();
+  function sweep(m, ahead, hit) {
+    const L = m.path.length;
+    const front = CAR_TYPES[m.car.typeId].len / 2;
+    for (let d = 0; d <= ahead; d += 0.7) {
+      const s = m.s + front + d;
+      if (s > L) {
+        // Pasado el final de la ruta, sigue derecho
+        m.path.curve.getPointAt(1, _sp);
+        const extra = s - L;
+        if (hit(_sp.x + m.tan.x * extra, _sp.z + m.tan.z * extra)) return d;
+        continue;
+      }
+      m.path.curve.getPointAt(s / L, _sp);
+      if (hit(_sp.x, _sp.z)) return d;
+    }
+    return -1;
+  }
+  // ¿El punto (x, z) cae dentro del rectángulo del auto o, agrandado por "pad" a los lados?
+  function overlaps(o, x, z, pad) {
+    const T = CAR_TYPES[o.car.typeId];
+    const dx = x - o.pos.x, dz = z - o.pos.z;
+    const lx = dx * o.tan.x + dz * o.tan.z;
+    const lz = dx * o.tan.z - dz * o.tan.x;
+    return Math.abs(lx) < T.len / 2 + 0.3 && Math.abs(lz) < T.wid / 2 + pad;
+  }
+
+  // Avanza por la ruta: frena antes de las curvas cerradas, se detiene suave al final
+  // y frena por el jugador y por otros autos. También informa al modelo cómo animarse.
   function drive(m, dt, vMax, stopS, player) {
-    let target = Math.min(vMax, Math.sqrt(Math.max(0, 2 * 4 * (stopS - m.s))));
+    let target = Math.min(vMax, Math.sqrt(Math.max(0, 2 * DECEL * (stopS - m.s))));
+    // Curvas: velocidad máxima según qué tan cerrada es la vuelta que viene
+    const look = Math.max(3, m.v * 1.2);
+    const k = Math.max(Math.abs(turn(m, 0, look)), Math.abs(turn(m, look, look))) / look;
+    if (k > 0.002) target = Math.min(target, Math.max(2.4, Math.sqrt(3.4 / k)));
+    let obstacle = false;
+    m.blockedBy = null;
     if (m.pos.z < -3.5) {
-      // Frenar si el jugador está en su camino
-      if (inPath(m, player.x - m.pos.x, player.z - m.pos.z, 0.4, 0.4, 2.6)) target = 0;
-      // Frenar si hay otro auto en su camino. Si cada uno está en el camino del otro (dos carriles que se juntan), pasa el de menor número.
+      const ahead = 2.6 + m.v * 0.45;
+      // Jugador en el camino (siguiendo la curva de la ruta)
+      const gp = sweep(m, ahead, (px, pz) => Math.hypot(px - player.x, pz - player.z) < CAR_TYPES[m.car.typeId].wid / 2 + 0.55);
+      if (gp >= 0) { target = Math.min(target, gp < 0.9 ? 0 : Math.sqrt(2 * DECEL * (gp - 0.8))); obstacle = true; m.blockedBy = 'player'; }
       for (const o of movers) {
         if (o === m || !busy(o)) continue;
         const ox = o.pos.x - m.pos.x, oz = o.pos.z - m.pos.z;
-        if (Math.abs(ox) + Math.abs(oz) > 16) continue;
-        // Tamaño del otro auto visto desde mi dirección (si viene cruzado ocupa más ancho)
-        const To = CAR_TYPES[o.car.typeId], Tm = CAR_TYPES[m.car.typeId];
-        const cross = Math.abs(m.tan.x * o.tan.z - m.tan.z * o.tan.x);
-        const oHalfWid = (To.wid + (To.len - To.wid) * cross) / 2;
-        const oHalfLen = (To.len - (To.len - To.wid) * cross) / 2;
-        if (!inPath(m, ox, oz, oHalfLen, oHalfWid, 2.4)) continue;
-        const mHalfWid = (Tm.wid + (Tm.len - Tm.wid) * cross) / 2;
-        const mHalfLen = (Tm.len - (Tm.len - Tm.wid) * cross) / 2;
-        const mutual = o.mode !== 'parked' && inPath(o, -ox, -oz, mHalfLen, mHalfWid, 2.4);
-        if (!(mutual && m.id < o.id)) { target = 0; break; }
+        if (Math.abs(ox) + Math.abs(oz) > 22) continue;
+        const gap = sweep(m, ahead, (px, pz) => overlaps(o, px, pz, CAR_TYPES[m.car.typeId].wid / 2 + 0.25));
+        if (gap < 0) continue;
+        // Si yo también estorbo al otro (dos carriles que se juntan), pasa el de menor número
+        // (aunque los dos estén detenidos: así nunca se quedan esperándose para siempre)
+        if (o.mode !== 'parked' && m.id < o.id && o.path &&
+          sweep(o, 2.6 + o.v * 0.45, (px, pz) => overlaps(m, px, pz, CAR_TYPES[o.car.typeId].wid / 2 + 0.25)) >= 0) continue;
+        // Seguir al de adelante a su velocidad; parar si está muy cerca
+        target = Math.min(target, gap < 1.0 ? 0 : Math.min(Math.max(o.v, 0), Math.sqrt(2 * DECEL * (gap - 0.9))) + (gap > 4 ? 1 : 0));
+        obstacle = true;
+        m.blockedBy = o.id;
       }
     }
-    const rate = target < m.v ? 9 : 5;
+    const v0 = m.v;
     const dv = target - m.v;
+    const rate = dv > 0 ? ACCEL : (obstacle && target < 0.5 ? 10 : 6);
     m.v += Math.sign(dv) * Math.min(Math.abs(dv), rate * dt);
     m.s = Math.min(m.s + m.v * dt, m.path.length);
     place(m);
+    // Animación: giro de las llantas delanteras, inclinación y direccional en las vueltas que vienen
+    const T = CAR_TYPES[m.car.typeId];
+    const steer = THREE.MathUtils.clamp(Math.atan((turn(m, 0, 1.6) / 1.6) * T.len * 0.6), -0.6, 0.6);
+    const upcoming = turn(m, 2, 18);
+    const signal = m.v > 0.5 && Math.abs(upcoming) > 0.7 ? Math.sign(upcoming) : 0;
+    m.car.motion(m.v, dt > 0 ? (m.v - v0) / dt : 0, steer, signal);
   }
 
   // ---------- Llegadas ----------
@@ -217,13 +266,18 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     };
   }
 
-  function spawn(bay, m) {
-    bay.c = newCustomer(bay);
-    const T = CAR_TYPES[bay.c.typeId];
-    m.car.setType(bay.c.typeId, T.colors[(Math.random() * T.colors.length) | 0]);
-    bay.phase = 'inbound';
-    bay.m = m;
-    bay.byHelper = false; bay.helperWait = 0;
+  // queued: si la bomba está ocupada, el auto llega y se forma detrás
+  function spawn(bay, m, queued) {
+    const c = newCustomer(bay);
+    const T = CAR_TYPES[c.typeId];
+    m.car.setType(c.typeId, T.colors[(Math.random() * T.colors.length) | 0]);
+    if (queued) bay.next = { c, m };
+    else {
+      bay.c = c;
+      bay.phase = 'inbound';
+      bay.m = m;
+      bay.byHelper = false; bay.helperWait = 0;
+    }
     m.mode = 'bay'; m.released = true;
     m.path = bay.inPath; m.s = 0; m.v = ROAD_SPEED;
     hold(m);
@@ -243,27 +297,35 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     // El autolavado está después del taller en el mismo carril: no mandar a nadie a lavar si el taller está ocupado
     const garageBusy = bays[2].phase !== 'idle';
     const free = bays.filter((b) => b.unlocked() && b.phase === 'idle' && !(b.kind === 'wash' && garageBusy));
+    // Bombas ocupadas sin nadie formado: el siguiente puede esperar detrás
+    const line = bays.filter((b) => b.kind === 'fuel' && b.unlocked() && !b.next && (b.phase === 'waiting' || b.phase === 'fueling'));
     const m = movers.find((x) => !busy(x));
-    if (!free.length || !m) return;
+    if ((!free.length && !line.length) || !m) return;
     // Toca cliente: se pausa el carril y sale en cuanto el punto de aparición queda despejado
     if (!pending) { pending = true; holds++; traffic.holdWest(true); }
     if (!traffic.westClear(SPAWN_X - 25, 330)) return;
     pending = false; holds--;
+    if (!free.length) { spawn(line[(Math.random() * line.length) | 0], m, true); spawnTimer = nextSpawnDelay() * 1.6; return; }
     let total = 0;
     for (const b of free) total += BAL.bayWeight[b.kind];
     let r = Math.random() * total;
     let bay = free[0];
     for (const b of free) { r -= BAL.bayWeight[b.kind]; if (r <= 0) { bay = b; break; } }
-    spawn(bay, m);
+    spawn(bay, m, false);
     spawnTimer = nextSpawnDelay();
   }
 
   // La bahía queda libre; el auto sigue por su cuenta
   function freeBay(bay) {
-    bay.box.off = true;
     bay.m = null; bay.c = null;
     bay.phase = 'idle';
-    bay.byHelper = false;
+    bay.byHelper = false; bay.helperWait = 0;
+    // El que estaba formado avanza a la bomba
+    if (bay.next) {
+      bay.m = bay.next.m; bay.c = bay.next.c;
+      bay.next = null;
+      bay.phase = 'inbound';
+    }
     spawnTimer = Math.max(spawnTimer, BAL.afterLeave);
   }
 
@@ -492,7 +554,6 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         sh.state = 'gone';
         const m = sh.m;
         startLeaving(m, sh.st.outPath, sh.st.yieldS);
-        sh.st.box.off = true;
         shoppers.splice(shoppers.indexOf(sh), 1);
         break;
       }
@@ -529,7 +590,6 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const sh = m.stall.shopper;
     m.mode = 'parked';
     m.v = 0;
-    fitBox(sh.st.box, m);
     const [cx, cz] = sh.st.carSpot;
     sh.x = cx; sh.z = cz;
     people.show(sh.person, true);
@@ -556,6 +616,10 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
           if (m.s >= m.path.length - 0.05 && m.v < 0.2) parked(m);
         }
       }
+      for (const m of movers) {
+        if (m.mode === 'parked') m.car.motion(0, 0, 0, 0, false);
+        updateBox(m);
+      }
       for (const sh of shoppers.slice()) {
         if (sh.state === 'toShelfStart' && !sh.route) goShelf(sh);
         else if (sh.state !== 'driving') updateShopper(sh, dt);
@@ -568,6 +632,13 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
 
       const hb = helperBay();
       for (const bay of bays) {
+        if (bay.m && bay.phase !== 'inbound') bay.m.car.motion(0, 0, 0, 0, false);
+        // Auto formado: avanza por la misma ruta y se detiene detrás del que está cargando
+        if (bay.next) {
+          const q = bay.next.m;
+          drive(q, dt, q.pos.x > 80 ? Math.min(ROAD_SPEED, traffic.westAheadSpeed(q.pos.x, 30)) : q.pos.x > 42 ? 9 : LOT_SPEED, q.path.length, player);
+          if (q.pos.z < -4) release(q);
+        }
         const c = bay.c, m = bay.m;
         switch (bay.phase) {
           case 'inbound': {
@@ -579,7 +650,6 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
             if (m.s >= m.path.length - 0.05 && m.v < 0.2) {
               m.v = 0;
               bay.phase = 'waiting';
-              fitBox(bay.box, m);
               onEvent(c.kind !== 'fuel' ? 'toastArriveService' : 'toastArrive', { j: c.job ? t(c.job) : '' });
             }
             break;

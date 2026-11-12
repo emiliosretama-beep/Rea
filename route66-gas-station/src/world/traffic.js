@@ -46,6 +46,7 @@ export function createTraffic(scene) {
     car.group.rotation.y = lane.dir === 1 ? 0 : Math.PI;
     car.group.visible = true;
     car.active = true;
+    car.motion(car.speed, 0, 0, 0);
     lane.last = car;
     return true;
   }

@@ -10,6 +10,7 @@
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="vignette"></div>
 <div id="touch-layer"></div>
 <div id="markers"></div>
 
@@ -69,7 +70,10 @@
     <div class="badge" aria-hidden="true"><span>ROUTE</span><b>66</b></div>
     <h1>Route 66<br>Gas Station</h1>
     <p class="tagline" data-i18n="tagline"></p>
-    <button id="btn-play" type="button" data-i18n="play"></button>
+    <div class="menu-actions">
+      <button id="btn-play" type="button" data-i18n="play"></button>
+      <button id="btn-quality" type="button"></button>
+    </div>
     <p class="help pc-only" data-i18n="helpPc"></p>
     <p class="help touch-only" data-i18n="helpTouch"></p>
   </div>

@@ -1,7 +1,7 @@
 // Vegetación y rocas del desierto. Tres mallas instanciadas = tres llamadas de dibujo.
 import * as THREE from 'three';
 import { CFG, PAL } from '../config.js';
-import { cyl, merge, rng } from './geo.js';
+import { cyl, merge, rng, addGrain } from './geo.js';
 import { LAYOUT } from './station.js';
 
 export function createProps(scene) {
@@ -39,7 +39,7 @@ export function createProps(scene) {
     cyl(0.14, 0.15, 0.9, 5, PAL.cactus, -0.75, 2.5, 0),
     cyl(0.14, 0.14, 0.5, 5, PAL.cactus, -0.5, 2.05, 0),
   ]);
-  scatter(cactusGeo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 70, 190, (x, z, obj) => {
+  scatter(cactusGeo, addGrain(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 1.2, 0.2), 70, 190, (x, z, obj) => {
     if (!free(x, z, 2)) return false;
     const s = 0.7 + rand() * 0.8;
     obj.position.set(x, 0, z);
@@ -49,7 +49,7 @@ export function createProps(scene) {
   });
 
   const rockGeo = new THREE.IcosahedronGeometry(1, 0);
-  scatter(rockGeo, new THREE.MeshLambertMaterial({ color: PAL.rock, flatShading: true }), 90, 210, (x, z, obj) => {
+  scatter(rockGeo, addGrain(new THREE.MeshLambertMaterial({ color: PAL.rock, flatShading: true }), 0.6, 0.3), 90, 210, (x, z, obj) => {
     if (!free(x, z, 1)) return false;
     const s = 0.25 + rand() * rand() * 2.4;
     obj.position.set(x, s * 0.25, z);

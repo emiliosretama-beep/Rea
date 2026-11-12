@@ -1,5 +1,6 @@
 // Arranque y bucle principal.
 import { CFG, BAL } from './config.js';
+import { loadQuality, saveQuality, ORDER } from './core/quality.js';
 import { initI18n, setLang, getLang, onLangChange, applyDom, t } from './core/i18n.js';
 import { createInput } from './core/input.js';
 import { createPlayer } from './core/player.js';
@@ -19,6 +20,11 @@ import { createHud } from './ui/hud.js';
 import { createMarkers } from './ui/markers.js';
 import { createNotebook } from './ui/notebook.js';
 import { CAR_TYPES } from './data/carTypes.js';
+import { initCarFx, updateCarFx } from './world/carModels.js';
+import { createTumbleweeds } from './world/tumbleweeds.js';
+import { createPumpDisplays } from './world/pumpDisplays.js';
+import { createViewModel } from './core/viewmodel.js';
+import { fmtMoney } from './game/state.js';
 
 const $ = (id) => document.getElementById(id);
 const body = document.body;
@@ -48,6 +54,30 @@ const litter = createLitter(view.scene, state);
 const upgrades3d = createUpgradeVisuals(view.scene, { colliders, station });
 const customers = createCustomers(view.scene, { traffic, state, colliders, onEvent: toast });
 const stock3d = createStockVisuals(view.scene);
+initCarFx(view.scene); // después de crear todos los autos (tráfico y clientes)
+const tumbleweeds = createTumbleweeds(view.scene);
+const pumpDisplays = createPumpDisplays(view.scene);
+const viewModel = createViewModel(view.scene, view.camera);
+state.onEvent((name, data) => { if (name === 'earn') hud.popMoney(`+${fmtMoney(data.amount)}`); });
+
+// ---------- Sombras y calidad ----------
+// Todo lo que tiene iluminación proyecta y recibe sombra; lo que brilla (MeshBasic) no.
+function applyShadowFlags() {
+  view.scene.traverse((o) => {
+    if (!o.isMesh || o.userData.noShadow) return;
+    const lit = !o.material.isMeshBasicMaterial;
+    o.castShadow = lit && !o.userData.noCast;
+    o.receiveShadow = lit;
+  });
+}
+let quality = loadQuality();
+function setQuality(q) {
+  quality = q;
+  saveQuality(q);
+  const real = view.setQuality(q);
+  station.fakeShadows.visible = !real;
+  $('btn-quality').textContent = `${t('gfx')}: ${t(`gfx_${q}`)}`;
+}
 
 function refreshHud() { hud.setStats(state); hud.setMission(missions); stock3d.update(state); }
 state.onChange(refreshHud);
@@ -61,7 +91,7 @@ state.onChange((s) => {
 
 // Mejoras: construir lo visual y avisar al subir de nivel
 state.onEvent((name, data) => {
-  if (name === 'upgrade') { upgrades3d.build(data.id); traffic.setLevel(state.level()); }
+  if (name === 'upgrade') { upgrades3d.build(data.id); applyShadowFlags(); traffic.setLevel(state.level()); }
   if (name === 'level') {
     hud.levelPop();
     const news = Object.values(CAR_TYPES).filter((T) => T.level === data.level && T.chance).map((T) => t(T.name)).join(', ');
@@ -69,10 +99,12 @@ state.onEvent((name, data) => {
   }
 });
 for (const id in state.upgrades) upgrades3d.build(id);
+applyShadowFlags();
+setQuality(quality);
 traffic.setLevel(state.level());
 
 const notebook = createNotebook(state, {
-  onOpen: () => { stopHolding(); input.setEnabled(false); hud.setPrompt(null); },
+  onOpen: () => { stopHolding(); viewModel.hide(); input.setEnabled(false); hud.setPrompt(null); },
   onClose: () => { if (playing) input.setEnabled(true); },
   onBought: toast,
   onUpgrade: (u) => toast('toastUpgrade', { u: t(`u_${u.id}`) }),
@@ -174,6 +206,7 @@ function pause() {
   body.classList.remove('playing');
   input.setEnabled(false);
   stopHolding();
+  viewModel.hide();
   interactions.clear();
   hud.setPrompt(null);
 }
@@ -182,6 +215,7 @@ $('btn-play').addEventListener('click', play);
 $('btn-pause').addEventListener('click', pause);
 $('btn-book').addEventListener('click', () => { if (playing) notebook.open(); });
 $('btn-lang').addEventListener('click', () => setLang(getLang() === 'es' ? 'en' : 'es'));
+$('btn-quality').addEventListener('click', () => setQuality(ORDER[(ORDER.indexOf(quality) + 1) % ORDER.length]));
 $('btn-rotate-skip').addEventListener('click', () => body.classList.add('portrait-ok'));
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 window.addEventListener('keydown', (e) => {
@@ -193,7 +227,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-onLangChange(() => { $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES'; refreshHud(); notebook.render(); });
+onLangChange(() => { $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES'; refreshHud(); notebook.render(); setQuality(quality); });
 $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES';
 refreshHud();
 
@@ -219,6 +253,9 @@ function updateService(dt) {
   const bay = it && it.bay;
   const active = !!(bay && bay.c && (customers.canFuel(bay) || customers.canWork(bay)) && !bay.byHelper);
   hud.setBar(active ? bay.c : null, active);
+  // Herramienta en la mano: aparece al mantener pulsado en una bomba o servicio
+  const tool = holding && holding.bay && active ? (holding.bay.kind === 'fuel' ? 'fuel' : holding.bay.kind) : null;
+  viewModel.update(dt, tool, !!tool);
 }
 
 // ---------- Cámara del menú: vista fija de la estación al atardecer ----------
@@ -226,6 +263,15 @@ function menuCamera(time) {
   const cam = view.camera;
   cam.position.set(15 + Math.sin(time * 0.1) * 1.2, 2.3, -8.2);
   cam.lookAt(-18, 3.6, -21);
+}
+
+// Quién puede abrir la puerta de la tienda: el jugador y los clientes que caminan
+const _near = [];
+function doorNear() {
+  _near.length = 0;
+  if (started) _near.push(player);
+  for (const sh of customers.shoppers) if (sh.state !== 'driving' && sh.state !== 'gone') _near.push(sh);
+  return _near;
 }
 
 // ---------- Bucle ----------
@@ -258,7 +304,12 @@ function frame(now) {
   } else {
     menuCamera(now / 1000);
   }
-  view.update();
+  // Mundo vivo (también en pausa y en el menú)
+  tumbleweeds.update(dt);
+  pumpDisplays.update(customers.bays, state.has('pump2'));
+  station.update(dt, doorNear());
+  updateCarFx(dt, now / 1000);
+  view.update(dt);
   view.renderer.render(view.scene, view.camera);
   if (CFG.debugFps) hud.tickFps(dt);
 }

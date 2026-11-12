@@ -1,21 +1,33 @@
 // La Ruta 66: asfalto, líneas, postes de teléfono y el "66" pintado.
 import * as THREE from 'three';
 import { CFG, PAL } from '../config.js';
-import { cyl, box, merge } from './geo.js';
+import { cyl, box, merge, addGrain } from './geo.js';
 
 export function createRoad(scene) {
   const { width, length } = CFG.road;
   const flat = (w, d) => { const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2); return g; };
   // polygonOffset evita parpadeos entre capas pegadas al suelo
-  const layer = (color, n) => new THREE.MeshLambertMaterial({
+  const layer = (color, n, gs, gk) => addGrain(new THREE.MeshLambertMaterial({
     color, polygonOffset: true, polygonOffsetFactor: -n, polygonOffsetUnits: -n,
-  });
+  }), gs, gk);
 
-  const shoulder = new THREE.Mesh(flat(length, width + 5), layer(PAL.sandDark, 1));
+  const shoulder = new THREE.Mesh(flat(length, width + 5), layer(PAL.sandDark, 1, 0.5, 0.3));
   shoulder.position.y = 0.01;
-  const asphalt = new THREE.Mesh(flat(length, width), layer(PAL.asphalt, 2));
+  const asphalt = new THREE.Mesh(flat(length, width), layer(PAL.asphalt, 2, 0.9, 0.3));
+  shoulder.receiveShadow = asphalt.receiveShadow = true;
   asphalt.position.y = 0.02;
   scene.add(shoulder, asphalt);
+
+  // Marcas oscuras donde pisan las llantas (dos por carril)
+  const trackMat = new THREE.MeshBasicMaterial({
+    color: 0x14121a, transparent: true, opacity: 0.22, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -2.5, polygonOffsetUnits: -2.5,
+  });
+  const tracks = [];
+  for (const lane of [CFG.road.laneZ, -CFG.road.laneZ]) {
+    for (const s of [-0.8, 0.8]) { const g = flat(length, 0.55); g.translate(0, 0.025, lane + s); tracks.push(g); }
+  }
+  scene.add(new THREE.Mesh(merge(tracks), trackMat));
 
   // Líneas de orilla (2) y línea central discontinua (instanciada)
   const lineMat = new THREE.MeshBasicMaterial({

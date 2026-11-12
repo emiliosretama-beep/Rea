@@ -90,3 +90,77 @@ export function rng(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+// ---------- Grano de material ----------
+// Una textura de ruido que se repite sin costura, proyectada en coordenadas del mundo según hacia dónde mira
+// cada cara. Le da textura a concreto, paredes, tierra y asfalto sin UVs ni imágenes pesadas.
+let grainTex = null;
+function grainTexture() {
+  if (grainTex) return grainTex;
+  const N = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = N;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(N, N);
+  const rand = rng(1966);
+  // Ruido de valor con varias octavas; cada rejilla se repite para que el borde empate
+  const octaves = [[4, 0.45], [8, 0.27], [16, 0.16], [64, 0.12]].map(([cells, amp]) => {
+    const g = new Float32Array(cells * cells);
+    for (let i = 0; i < g.length; i++) g[i] = rand();
+    return { cells, amp, g };
+  });
+  const smooth = (t) => t * t * (3 - 2 * t);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      let v = 0;
+      for (const o of octaves) {
+        const fx = (x / N) * o.cells, fy = (y / N) * o.cells;
+        const x0 = Math.floor(fx), y0 = Math.floor(fy);
+        const tx = smooth(fx - x0), ty = smooth(fy - y0);
+        const at = (i, j) => o.g[((j % o.cells) * o.cells) + (i % o.cells)];
+        const a = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * tx;
+        const b = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * tx;
+        v += (a + (b - a) * ty) * o.amp;
+      }
+      const c = Math.max(0, Math.min(255, Math.round(v * 255)));
+      const k = (y * N + x) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = c;
+      img.data[k + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  grainTex = new THREE.CanvasTexture(cv);
+  grainTex.wrapS = grainTex.wrapT = THREE.RepeatWrapping;
+  grainTex.colorSpace = THREE.NoColorSpace;
+  return grainTex;
+}
+
+// scale: repeticiones por metro · strength: cuánto oscurece/aclara (0 a 1)
+export function addGrain(mat, scale = 0.35, strength = 0.16) {
+  const tex = grainTexture();
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.grainMap = { value: tex };
+    shader.uniforms.grainParams = { value: new THREE.Vector2(scale, strength) };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vGrainPos;')
+      .replace('#include <project_vertex>', `#include <project_vertex>
+        vec4 grainP = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          grainP = instanceMatrix * grainP;
+        #endif
+        vGrainPos = (modelMatrix * grainP).xyz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vGrainPos;\nuniform sampler2D grainMap;\nuniform vec2 grainParams;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        {
+          vec3 gn = abs(normalize(cross(dFdx(vGrainPos), dFdy(vGrainPos))));
+          vec2 guv = gn.y > 0.6 ? vGrainPos.xz : (gn.x > gn.z ? vGrainPos.zy : vGrainPos.xy);
+          float g = texture2D(grainMap, guv * grainParams.x).r * 0.6 + texture2D(grainMap, guv * grainParams.x * 5.3).r * 0.4;
+          diffuseColor.rgb *= 1.0 + (g - 0.5) * grainParams.y * 2.0;
+        }`);
+  };
+  mat.customProgramCacheKey = () => 'grain';
+  return mat;
+}
+
+addGrain(vertexMat, 0.4, 0.14);

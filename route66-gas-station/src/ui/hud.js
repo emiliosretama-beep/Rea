@@ -34,6 +34,14 @@ export function createHud() {
       el.prompt.classList.toggle('hold', !!holdable);
       if (text) el.promptText.textContent = text;
     },
+    // "+$4.90" que sube y se desvanece cerca del centro
+    popMoney(text) {
+      const el2 = document.createElement('div');
+      el2.className = 'money-pop';
+      el2.textContent = text;
+      document.getElementById('hud').append(el2);
+      setTimeout(() => el2.remove(), 1300);
+    },
     toast(text) {
       el.toast.textContent = text;
       el.toast.classList.add('on');

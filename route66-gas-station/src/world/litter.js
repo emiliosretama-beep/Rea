@@ -19,14 +19,17 @@ export function createLitter(scene, state) {
   let count = 0;
   let timer = BAL.litterEvery;
 
-  function set(i, on) {
-    active[i] = on;
-    o.position.set(SPOTS[i][0], on ? 0.13 : -5, SPOTS[i][1]);
-    o.rotation.set(0.25, i * 1.7, 0.12);
+  const popping = []; // { i, t }
+  function set(i, on, t = 0) {
+    if (t === 0) active[i] = on;
+    const up = t > 0 ? Math.sin(t * Math.PI / 0.35) * 0.45 : 0;
+    o.position.set(SPOTS[i][0], on || t > 0 ? 0.13 + up : -5, SPOTS[i][1]);
+    o.rotation.set(0.25 + t * 8, i * 1.7 + t * 6, 0.12);
+    o.scale.setScalar(t > 0 ? Math.max(0.01, 1 - t / 0.35) : 1);
     o.updateMatrix();
     mesh.setMatrixAt(i, o.matrix);
     mesh.instanceMatrix.needsUpdate = true;
-    count += on ? 1 : -1;
+    if (t === 0) count += on ? 1 : -1;
   }
   function spawn() {
     const free = [];
@@ -40,6 +43,11 @@ export function createLitter(scene, state) {
   return {
     get count() { return count; },
     update(dt) {
+      for (let k = popping.length - 1; k >= 0; k--) {
+        const p = popping[k];
+        p.t += dt;
+        if (p.t >= 0.35) { popping.splice(k, 1); o.scale.setScalar(1); active[p.i] = true; set(p.i, false); } else set(p.i, false, p.t);
+      }
       timer -= dt;
       // La basura nueva solo aparece con la gasolinera abierta (la tiran los clientes)
       if (!state.open) return;
@@ -50,8 +58,9 @@ export function createLitter(scene, state) {
         id: 'litter', x, y: 0.1, z,
         label: () => (active[i] ? t('promptLitter') : null),
         use: () => {
-          if (!active[i]) return;
-          set(i, false);
+          if (!active[i] || popping.some((p) => p.i === i)) return;
+          popping.push({ i, t: 0.001 });
+          active[i] = false; // el conteo baja cuando termina de desaparecer
           state.litterPicked++;
           state.addRep(BAL.repLitter);
           state.emit('litter');

@@ -3,7 +3,7 @@
 // Las mejoras de la Etapa 4 agregarán piezas alrededor sin mover lo esencial.
 import * as THREE from 'three';
 import { PAL } from '../config.js';
-import { box, cyl, merge, tint, vertexMat } from './geo.js';
+import { box, cyl, merge, tint, vertexMat, addGrain } from './geo.js';
 
 // Posiciones clave
 export const LAYOUT = {
@@ -55,6 +55,11 @@ export function createStation(scene) {
   parts.push(box(7, 0.07, 9, 0xb7b2a9, 13, 0.035, -24));
   // Accesos desde la carretera (entrada al este, salida al oeste)
   for (const sx of [1, -1]) parts.push(box(27, 0.055, 7, PAL.concrete, sx * 25.5, 0.025, -7.6));
+
+  // Juntas del concreto cada 4 m (la parte oeste lleva asfalto y servicios)
+  const JOINT = 0x8c867d;
+  for (let x = -12; x <= 24; x += 4) parts.push(box(0.05, 0.012, L.lot.d, JOINT, x, 0.07, L.lot.z));
+  for (let z = L.lot.z - L.lot.d / 2 + 4; z < L.lot.z + L.lot.d / 2; z += 4) parts.push(box(36, 0.012, 0.05, JOINT, 6, 0.07, z));
 
   // Estacionamiento: líneas blancas de los dos primeros cajones (los demás llegan con la mejora)
   stallLines(parts, 0, 2);
@@ -153,6 +158,17 @@ export function createStation(scene) {
   aabb((x0 + dL) / 2, fz, dL - x0, T);
   aabb((dR + x1) / 2, fz, x1 - dR, T);
   const doorBlock = aabb(L.door.x, fz, L.door.w, T); // se quita al destapar la puerta
+  // Puerta: gira sobre la bisagra izquierda hacia adentro cuando alguien se acerca
+  const doorGeo = merge([
+    box(L.door.w - 0.04, L.door.h - 0.04, 0.06, PAL.wood, (L.door.w - 0.04) / 2, 0, 0),
+    box(0.7, 0.8, 0.07, PAL.glass, (L.door.w - 0.04) / 2, 0.45, 0),
+    box(0.06, 0.06, 0.16, PAL.chrome, L.door.w - 0.2, -0.05, 0),
+    box(0.9, 0.12, 0.075, PAL.red, (L.door.w - 0.04) / 2, -0.3, 0), // placa de empuje
+  ]);
+  const door = new THREE.Mesh(doorGeo, vertexMat);
+  door.position.set(dL + 0.02, L.door.h / 2, fz);
+  scene.add(door);
+  let doorAngle = 0;
 
   // ---------- Interior ----------
   const iw = b.w - T * 2, id = b.d - T * 2;
@@ -192,7 +208,7 @@ export function createStation(scene) {
   // ---------- Mallas ----------
   scene.add(new THREE.Mesh(merge(parts), vertexMat));
   // El interior tiene su propio material: oscuro sin luz, normal con luz
-  const insideMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const insideMat = addGrain(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 0.5, 0.12);
   scene.add(new THREE.Mesh(merge(inside), insideMat));
   // Lámparas del techo
   const lampMat = new THREE.MeshBasicMaterial({ color: 0x3a3838 });
@@ -213,10 +229,13 @@ export function createStation(scene) {
   const boardMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.24, 0.07), new THREE.MeshLambertMaterial({ color: PAL.wood, flatShading: true }), boardDefs.length);
   const o = new THREE.Object3D();
   const boardOn = boardDefs.map(() => true);
-  function placeBoard(i) {
+  const falling = []; // { i, t }: tablas que van cayendo
+  function placeBoard(i, t = 0) {
     const d = boardDefs[i];
-    o.position.set(d.x, boardOn[i] ? d.y : -5, front + 0.07);
-    o.rotation.set(0, 0, d.rot);
+    const gone = !boardOn[i] && t <= 0;
+    // Al caer: se despega hacia afuera, gira y cae con gravedad
+    o.position.set(d.x + t * 0.3, gone ? -5 : Math.max(0.12, d.y - 4.9 * t * t), front + 0.07 + t * 1.1);
+    o.rotation.set(t * 2.2, 0, d.rot + t * 1.6);
     o.scale.set(d.w, 1, 1);
     o.updateMatrix();
     boardMesh.setMatrixAt(i, o.matrix);
@@ -262,12 +281,16 @@ export function createStation(scene) {
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
   });
   const flat = (w, d, x, z) => { const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2); g.translate(x, 0.07, z); return g; };
-  scene.add(new THREE.Mesh(merge([
+  // Manchas de aceite donde se detienen los autos
+  scene.add(oilStains());
+
+  const fakeShadows = new THREE.Mesh(merge([
     flat(13, 7, px + 4.5, pz),
     flat(7, b.d + 1, b.x + b.w / 2 + 3.5, b.z),
     flat(3.4, 3.2, L.sign.x + 5, L.sign.z),
     flat(2.2, Y.maxZ - Y.minZ, Y.minX + 1.25, (Y.minZ + Y.maxZ) / 2),
-  ]), shadowMat));
+  ]), shadowMat);
+  scene.add(fakeShadows);
 
   let neon = false;
   function setNeon(on) {
@@ -285,7 +308,23 @@ export function createStation(scene) {
   }
   function setOpen(on) { signMat.color.set(on || neon ? 0xffffff : 0x8a8580); }
 
+  // dt y lista de puntos {x, z} que abren la puerta (jugador y clientes)
+  function update(dt, near) {
+    for (let k = falling.length - 1; k >= 0; k--) {
+      const f = falling[k];
+      f.t += dt;
+      if (f.t > 0.75) { falling.splice(k, 1); placeBoard(f.i, 0); } else placeBoard(f.i, f.t);
+    }
+    // La puerta solo funciona cuando ya no tiene tablas
+    let open = false;
+    if (doorBlock.off) for (const p of near) if (Math.hypot(p.x - L.door.x, p.z - front) < 2.3) { open = true; break; }
+    const target = open ? 1.45 : 0;
+    doorAngle += (target - doorAngle) * (1 - Math.exp(-7 * dt));
+    door.rotation.y = doorAngle;
+  }
+
   return {
+    update,
     colliders,
     interactables: [
       { id: 'drums', x: drumX + 0.5, y: 0.8, z: drumZ, prompt: 'promptDrum', toast: 'toastDrum' },
@@ -297,7 +336,7 @@ export function createStation(scene) {
       // Quita la tabla; al destapar las dos de la puerta se puede entrar
       remove(i) {
         boardOn[i] = false;
-        placeBoard(i);
+        falling.push({ i, t: 0.001 });
         doorBlock.off = !boardDefs.some((d, k) => d.door && boardOn[k]);
       },
     },
@@ -305,9 +344,43 @@ export function createStation(scene) {
     setOpen,
     setNeon,
     insideMat,
+    fakeShadows,
     front,
     redrawText: () => art.draw(neon),
   };
+}
+
+// Manchas de aceite y llantas (una malla instanciada con textura de mancha suave)
+function oilStains() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const ctx = cv.getContext('2d');
+  for (let i = 0; i < 7; i++) {
+    const x = 20 + Math.random() * 24, y = 20 + Math.random() * 24, r = 8 + Math.random() * 14;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.7)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  const spots = [];
+  // Bajo el motor de los autos que cargan (paran con el frente hacia el oeste)
+  spots.push([LAYOUT.pumps[0].x - 1.4, LAYOUT.lanes.north, 1.7], [LAYOUT.pumps[1].x - 1.4, LAYOUT.lanes.south, 1.7]);
+  for (const x of LAYOUT.stalls) spots.push([x, LAYOUT.stallZ - 1.2, 1.5]);
+  spots.push([LAYOUT.garage.x, LAYOUT.lanes.service, 2.4]);
+  const geo = new THREE.PlaneGeometry(1, 1);
+  geo.rotateX(-Math.PI / 2);
+  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({
+    map: tex, color: 0x1a1418, transparent: true, opacity: 0.32, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6,
+  }), spots.length);
+  const o = new THREE.Object3D();
+  spots.forEach(([x, z, s], i) => {
+    o.position.set(x, 0.09, z); o.rotation.set(0, i * 1.3, 0); o.scale.set(s, 1, s * 0.7); o.updateMatrix();
+    mesh.setMatrixAt(i, o.matrix);
+  });
+  return mesh;
 }
 
 // ¿Está el punto dentro de la tienda? (para que caja, teléfono y fusibles no se usen a través de la pared)

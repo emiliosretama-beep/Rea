@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { PAL } from '../config.js';
 import { box, cyl, merge, tint, vertexMat } from './geo.js';
 import { LAYOUT, pumpParts, stallLines } from './station.js';
+import { buildPerson } from './people.js';
 
 // Material sin sombreado para lo que "brilla" (neón, lámparas)
 const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
@@ -192,20 +193,12 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       circle(cx - 2.2, bz + 0.05, 0.4);
     },
 
-    // Ayudante: figura sencilla junto a su bomba
+    // Ayudante: persona con overol turquesa junto a su bomba
     helper() {
-      const p = [];
-      const JEANS = 0x3d4a66, SKIN = 0xe0a878;
-      for (const s of [-1, 1]) {
-        p.push(box(0.17, 0.78, 0.2, JEANS, s * 0.11, 0.39, 0));
-        p.push(box(0.12, 0.55, 0.15, PAL.teal, s * 0.29, 1.08, 0));
-      }
-      p.push(box(0.44, 0.6, 0.26, PAL.teal, 0, 1.08, 0));
-      p.push(box(0.26, 0.26, 0.26, SKIN, 0, 1.52, 0));
-      p.push(box(0.29, 0.1, 0.29, PAL.red, 0, 1.69, 0));
-      p.push(box(0.29, 0.03, 0.16, PAL.red, 0, 1.65, 0.2));
-      helper = add(p);
-      helper.userData.x = helper.userData.z = null;
+      helper = buildPerson(PAL.teal);
+      helper.root.userData.x = helper.root.userData.z = null;
+      helper.walkT = 0;
+      scene.add(helper.root);
     },
   };
 
@@ -223,13 +216,19 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       const busy = bay.c && (bay.byHelper || (bay.phase === 'waiting' && bay.helperWait > 0));
       const tx = busy ? pump.x - 0.05 : pump.x + (pump.x > 0 ? 0.63 : -0.63);
       const tz = busy ? pump.z + side * 0.5 : pump.z;
-      const u = helper.userData;
+      const u = helper.root.userData;
       if (u.x === null) { u.x = tx; u.z = tz; }
-      const k = 1 - Math.exp(-6 * dt);
-      u.x += (tx - u.x) * k; u.z += (tz - u.z) * k;
+      // Camina hacia su lugar a paso normal
+      const dx = tx - u.x, dz = tz - u.z, d = Math.hypot(dx, dz);
+      const step = Math.min(d, 1.6 * dt);
+      if (d > 0.01) { u.x += (dx / d) * step; u.z += (dz / d) * step; }
+      const walking = d > 0.05;
+      if (walking) helper.walkT += dt;
       const working = bay.byHelper && bay.phase === 'fueling';
-      helper.position.set(u.x, 0.2 + (working ? Math.abs(Math.sin(time * 6)) * 0.04 : 0), u.z);
-      helper.rotation.y = side > 0 ? 0 : Math.PI;
+      helper.root.position.set(u.x, 0.2, u.z);
+      helper.root.rotation.y = walking ? Math.atan2(dx, dz) : side > 0 ? 0 : Math.PI;
+      helper.pose(walking ? helper.walkT : null, working ? 1 : 0);
     },
+
   };
 }
