@@ -80,7 +80,10 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const T = CAR_TYPES[typeId];
     m.car.setType(typeId, T.colors[(Math.random() * T.colors.length) | 0]);
     const want = Math.round(T.want[0] + Math.random() * (T.want[1] - T.want[0]));
-    bay.c = { typeId, name: T.name, want, got: 0, patience: T.patience, patienceMax: T.patience, tipBase: T.tip, quality: null };
+    bay.c = {
+      typeId, name: T.name, want, got: 0, patience: T.patience, patienceMax: T.patience, tipBase: T.tip, quality: null,
+      soda: Math.random() < BAL.sodaChance,
+    };
     bay.phase = 'inbound';
     bay.m = m;
     m.busy = true; m.leaving = false; m.released = true;
@@ -99,7 +102,9 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     m.leaving = true;
     bay.m = null; bay.c = null;
     bay.phase = 'idle';
-    bay.timer = BAL.nextCustomer[0] + Math.random() * (BAL.nextCustomer[1] - BAL.nextCustomer[0]);
+    // Mejor reputación = clientes más seguido
+    const speed = BAL.repSpeed[0] + (BAL.repSpeed[1] - BAL.repSpeed[0]) * (state.rep / 100);
+    bay.timer = (BAL.nextCustomer[0] + Math.random() * (BAL.nextCustomer[1] - BAL.nextCustomer[0])) * speed;
   }
 
   // Avanza por la ruta respetando un límite de velocidad y un punto donde debe poder frenar
@@ -137,7 +142,8 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const fuel = Math.min(c.got, c.want) * BAL.pricePerGal;
     const mult = c.quality === 'perfect' ? 2 : c.quality === 'ok' ? 1 : 0;
     const tip = c.tipBase * mult * (0.4 + 0.6 * (c.patience / c.patienceMax));
-    return { total: Math.round((fuel + tip) * 100) / 100, tip: Math.round(tip * 100) / 100 };
+    const soda = c.soda && state.carrying; // solo se vende si llevas el refresco en la mano
+    return { total: Math.round((fuel + tip + (soda ? BAL.sodaPrice : 0)) * 100) / 100, tip: Math.round(tip * 100) / 100, soda };
   }
 
   function finishFuel() {
@@ -145,6 +151,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const r = c.got / c.want;
     c.quality = r > BAL.perfectMax ? 'over' : r >= BAL.perfectMin ? 'perfect' : 'ok';
     bay.phase = 'toPay';
+    state.emit('fuelDone', { quality: c.quality });
     onEvent(c.quality === 'perfect' ? 'toastPerfect' : c.quality === 'over' ? 'toastOver' : 'toastOk');
   }
 
@@ -182,7 +189,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
             carBox.minX = m.pos.x - T.len / 2; carBox.maxX = m.pos.x + T.len / 2;
             carBox.minZ = m.pos.z - T.wid / 2; carBox.maxZ = m.pos.z + T.wid / 2;
             carBox.off = false;
-            onEvent('toastArrive');
+            onEvent(c.soda ? 'toastArriveSoda' : 'toastArrive');
           }
           break;
         }
@@ -193,6 +200,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
           if (c.patience <= 0) {
             state.lost++;
             state.addRep(BAL.repAngry);
+            state.emit('angry');
             onEvent(bay.phase === 'toPay' ? 'toastAngryUnpaid' : 'toastAngry');
             leave();
           }
@@ -208,9 +216,16 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     fuelHold(dt) {
       if (!api.canFuel()) return;
       const c = bay.c;
+      // La gasolina sale del tanque de la estación (también la que se derrama)
+      const amount = Math.min((c.want / BAL.fillSeconds) * dt, state.fuel, c.want * BAL.overfillMax - c.got);
+      if (state.fuel <= 0) {
+        if (bay.phase === 'fueling') api.fuelRelease();
+        return;
+      }
       bay.phase = 'fueling';
-      c.got += (c.want / BAL.fillSeconds) * dt;
-      if (c.got >= c.want * BAL.overfillMax) { c.got = c.want * BAL.overfillMax; finishFuel(); }
+      c.got += amount;
+      state.useFuel(amount);
+      if (c.got >= c.want * BAL.overfillMax - 1e-6) finishFuel();
     },
     fuelRelease() {
       if (bay.phase !== 'fueling') return;
@@ -222,10 +237,12 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     charge() {
       if (bay.phase !== 'toPay') return;
       const c = bay.c;
-      const { total, tip } = payout();
+      const { total, tip, soda } = payout();
+      if (soda) state.setCarrying(false);
       state.served++;
-      state.addMoney(total);
+      state.addMoney(total, true);
       state.addRep(c.quality === 'perfect' ? BAL.repPerfect : c.quality === 'ok' ? BAL.repOk : BAL.repOver);
+      state.emit('served', { quality: c.quality, soda, typeId: c.typeId });
       onEvent(tip > 0 ? 'toastPaid' : 'toastPaidNoTip', { m: fmtMoney(total), t: fmtMoney(tip) });
       leave();
     },
@@ -235,14 +252,25 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       return [
         {
           id: 'pump', x: LAYOUT.pump.x, y: 1.2, z: LAYOUT.pump.z, holdable: true,
-          label: () => (api.canFuel() ? t('promptFuel') : null),
+          label: () => (!api.canFuel() ? null : state.fuel > 0 ? t('promptFuel') : t('promptNoFuel')),
           hold: (dt) => api.fuelHold(dt),
           release: () => api.fuelRelease(),
         },
         {
           id: 'register', x: LAYOUT.register.x, y: 1.2, z: LAYOUT.register.z,
-          label: () => (api.canCharge() ? t('promptCharge', { m: fmtMoney(payout().total) }) : null),
+          label: () => {
+            if (!api.canCharge()) return null;
+            const missing = bay.c.soda && !state.carrying;
+            return t(missing ? 'promptChargeNoSoda' : 'promptCharge', { m: fmtMoney(payout().total) });
+          },
           use: () => api.charge(),
+        },
+        {
+          id: 'cooler', x: LAYOUT.cooler.x, y: 0.9, z: LAYOUT.cooler.z,
+          label: () => (state.carrying ? null : t(state.sodas > 0 ? 'promptSoda' : 'promptNoSoda')),
+          use: () => {
+            if (state.sodas > 0) { state.takeSoda(); onEvent('toastSoda'); } else onEvent('toastNoSoda');
+          },
         },
       ];
     },

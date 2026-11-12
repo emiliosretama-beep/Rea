@@ -26,6 +26,7 @@ export function createInteractions(items) {
   }
 
   return Object.assign(state, {
+    items,
     // Se revisa ~12 veces por segundo: suficiente y más barato que cada frame
     update(dt, player) {
       acc += dt;

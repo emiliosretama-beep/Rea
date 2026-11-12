@@ -13,6 +13,8 @@ export const LAYOUT = {
   door: { x: -3, z: -27 },
   sign: { x: 18, z: -8.6 },
   register: { x: 4.5, z: -17.9 },
+  cooler: { x: 5.85, z: -17.9 },
+  phone: { x: -1.3, z: -27 },
   laneZ: -12.9, // carril donde se detienen los autos, entre la carretera y la bomba
 };
 
@@ -41,6 +43,12 @@ export function createStation(scene) {
   parts.push(box(0.4, 0.12, 0.05, PAL.cream, rx, 1.57, rz + 0.11));
   parts.push(box(0.5, 0.05, 0.2, PAL.chrome, rx, 1.14, rz + 0.3));
   aabb(rx, rz, 1.5, 0.85);
+  // Hielera de refrescos junto a la caja
+  const cx = L.cooler.x, cz = L.cooler.z;
+  parts.push(box(0.9, 0.8, 0.65, PAL.red, cx, 0.46, cz));
+  parts.push(box(0.96, 0.1, 0.71, PAL.cream, cx, 0.91, cz));
+  parts.push(box(0.5, 0.2, 0.02, PAL.cream, cx, 0.5, cz + 0.335));
+  aabb(cx, cz, 0.96, 0.71);
 
   // Isla y bomba
   const px = L.pump.x, pz = L.pump.z;
@@ -70,6 +78,10 @@ export function createStation(scene) {
   // Puerta
   parts.push(box(1.3, 2.35, 0.1, PAL.wood, L.door.x, 1.2, front + 0.03));
   parts.push(box(0.1, 0.1, 0.08, PAL.chrome, L.door.x + 0.45, 1.15, front + 0.1));
+  // Teléfono de pared para llamar al proveedor
+  parts.push(box(0.6, 0.8, 0.06, PAL.teal, L.phone.x, 1.5, front + 0.03));
+  parts.push(box(0.34, 0.46, 0.14, PAL.dark, L.phone.x, 1.45, front + 0.1));
+  parts.push(box(0.1, 0.34, 0.1, PAL.chrome, L.phone.x - 0.24, 1.45, front + 0.12));
   // Ventanas tapiadas
   for (const wx of [2.2, 5.8]) {
     parts.push(box(3.0, 1.6, 0.08, PAL.glass, wx, 1.9, front + 0.02));

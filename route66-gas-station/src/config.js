@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.2 · Etapa 2',
+  version: 'DEV 0.3 · Etapa 3',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -34,9 +34,19 @@ export const BAL = {
   perfectMin: 0.95,
   perfectMax: 1.04,
   payPatienceRate: 0.5, // esperando a pagar, la paciencia baja más lento
-  repPerfect: 3, repOk: 2, repOver: 1, repAngry: -6,
+  repPerfect: 2, repOk: 1, repOver: 0, repAngry: -6,
   firstCustomer: 1.5, // segundos hasta el primer cliente
-  nextCustomer: [3, 7], // segundos entre clientes
+  nextCustomer: [3, 7], // segundos entre clientes (con reputación 50)
+  repSpeed: [1.6, 0.6], // multiplicador de esa espera con reputación 0 y con 100
+
+  // Inventario y proveedor
+  fuelStart: 80, fuelCap: 120, fuelOrder: 60, fuelCost: 0.12, // costo por galón
+  fuelLow: 15, // con menos de esto se puede pedir a crédito
+  sodaStart: 6, sodaCap: 12, sodaOrder: 6, sodaCost: 0.08, sodaPrice: 0.25,
+  sodaChance: 0.4, // probabilidad de que un cliente quiera refresco
+
+  // Basura en el patio
+  litterStart: 5, litterMax: 8, litterEvery: 35, repLitter: 0.5,
 };
 
 // Paleta compartida entre el mundo 3D y la interfaz

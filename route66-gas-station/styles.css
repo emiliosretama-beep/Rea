@@ -75,7 +75,7 @@ body.playing #hud { opacity: 1; }
 #toast {
   position: absolute; left: 50%; top: calc(86px + var(--safe-t));
   transform: translate(-50%, -12px);
-  max-width: min(560px, calc(100% - 150px));
+  max-width: min(520px, 44%);
   padding: .7em 1.1em; border-radius: 14px;
   background: var(--cream); color: var(--night);
   border-bottom: 4px solid var(--teal);
@@ -85,13 +85,32 @@ body.playing #hud { opacity: 1; }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
 
 /* Dinero y reputación */
-#stats { position: absolute; left: calc(12px + var(--safe-l)); top: calc(10px + var(--safe-t)); display: flex; gap: 8px; }
+#stats {
+  position: absolute; left: calc(12px + var(--safe-l)); top: calc(10px + var(--safe-t));
+  display: grid; grid-template-columns: auto auto; gap: 6px; justify-content: start;
+}
 .chip {
   display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 8px; border-radius: 999px;
   background: rgba(28, 22, 38, .72); border: 1.5px solid rgba(246, 231, 200, .3);
-  font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums;
+  font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+.chip.low { border-color: #e2533a; color: #ffb9a8; }
+.chip.carry { border-color: var(--teal); }
 .chip svg { width: 20px; height: 20px; fill: none; stroke: var(--orange); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Misión actual */
+#mission {
+  position: absolute; right: calc(12px + var(--safe-r)); top: calc(66px + var(--safe-t));
+  width: min(210px, 30%); padding: 7px 11px 8px; border-radius: 12px;
+  background: rgba(28, 22, 38, .72); border: 1.5px solid rgba(246, 231, 200, .3);
+  border-left: 4px solid var(--orange);
+}
+#mission-label { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); }
+#mission-title { font-weight: 700; font-size: clamp(12px, 2vmin, 14px); line-height: 1.25; margin: 1px 0 6px; text-wrap: balance; }
+#mission-bar { height: 100%; background: var(--orange); transform-origin: left; transform: scaleX(0); transition: transform .25s; }
+#mission-progress { margin-top: 3px; font-size: 11px; font-weight: 700; opacity: .85; font-variant-numeric: tabular-nums; text-align: right; }
+#mission.done { animation: mission-pop .5s cubic-bezier(.2, .9, .3, 1.4); }
+@keyframes mission-pop { 40% { transform: scale(1.06); border-color: var(--cream); } }
 
 /* Tarjeta del cliente */
 #cust {
@@ -262,6 +281,31 @@ h1 {
   background: rgba(28, 22, 38, .65); border: 1.5px solid rgba(246, 231, 200, .4);
 }
 #version { position: absolute; right: calc(16px + var(--safe-r)); bottom: calc(12px + var(--safe-b)); font-size: 11px; opacity: .6; }
+
+/* ---------- Pedidos al proveedor ---------- */
+#order {
+  position: absolute; inset: 0; z-index: 5; display: none; place-items: center;
+  padding: calc(12px + var(--safe-t)) calc(16px + var(--safe-r)) calc(12px + var(--safe-b)) calc(16px + var(--safe-l));
+  background: rgba(28, 22, 38, .6);
+}
+body.ordering #order { display: grid; }
+.order-card {
+  width: min(440px, 100%); max-height: 100%; overflow: auto; padding: 16px 18px 14px; border-radius: 18px;
+  background: var(--cream); color: var(--night); border-bottom: 6px solid var(--teal);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.order-card h2 { font-family: var(--display); font-weight: 400; font-size: 24px; }
+.order-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1.5px solid rgba(28, 22, 38, .15); }
+.order-row b { display: block; font-size: 16px; }
+.order-row span { font-size: 13px; opacity: .75; font-variant-numeric: tabular-nums; }
+.order-row button {
+  min-height: 48px; padding: 0 16px; border-radius: 999px; font-weight: 800; font-size: 14px;
+  color: var(--cream); background: var(--orange); box-shadow: 0 4px 0 var(--orange-deep);
+}
+.order-row button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--orange-deep); }
+.order-row button:disabled { background: rgba(28, 22, 38, .25); box-shadow: none; color: var(--night); opacity: .7; cursor: default; transform: none; }
+#btn-order-close { align-self: center; min-height: 48px; padding: 0 28px; border-radius: 999px; font-weight: 800; border: 2px solid var(--night); }
+.order-card button:focus-visible { outline-color: var(--night); }
 
 /* ---------- Aviso de orientación ---------- */
 #rotate {

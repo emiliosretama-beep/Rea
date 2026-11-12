@@ -7,7 +7,9 @@ export function createHud() {
   const $ = (id) => document.getElementById(id);
   const el = {
     prompt: $('prompt'), promptText: $('prompt-text'), toast: $('toast'), fps: $('fps'), btn: $('btn-interact'),
-    money: $('money'), rep: $('rep'),
+    money: $('money'), rep: $('rep'), fuelStock: $('fuel-stock'), sodaStock: $('soda-stock'),
+    chipFuel: $('chip-fuel'), chipSoda: $('chip-soda'),
+    mission: $('mission'), missionTitle: $('mission-title'), missionBar: $('mission-bar'), missionProgress: $('mission-progress'),
     cust: $('cust'), custName: $('cust-name'), custState: $('cust-state'), custBar: $('cust-bar'),
     fuel: $('fuel'), fuelFill: $('fuel-fill'), fuelText: $('fuel-text'),
   };
@@ -17,7 +19,7 @@ export function createHud() {
   $('fuel-zone').style.width = `${((BAL.perfectMax - BAL.perfectMin) / BAL.overfillMax) * 100}%`;
   $('fuel-mark').style.left = pct(1);
 
-  const last = { prompt: null, money: null, rep: null, cust: '', custBar: -1, fuel: '', fuelOn: false };
+  const last = { fuelStock: null, soda: '', mTitle: '', mProg: '', prompt: null, money: null, rep: null, cust: '', custBar: -1, fuel: '', fuelOn: false };
   let toastTimer = 0;
   let frames = 0, acc = 0;
 
@@ -40,17 +42,44 @@ export function createHud() {
       if (state.money !== last.money) { last.money = state.money; el.money.textContent = fmtMoney(state.money); }
       const rep = Math.round(state.rep);
       if (rep !== last.rep) { last.rep = rep; el.rep.textContent = rep; }
+      const fuel = Math.floor(state.fuel);
+      if (fuel !== last.fuelStock) {
+        last.fuelStock = fuel;
+        el.fuelStock.textContent = `${fuel} gal`;
+        el.chipFuel.classList.toggle('low', fuel < BAL.fuelLow);
+      }
+      const soda = `${state.sodas}${state.carrying ? ` · 1 ${t('inHand')}` : ''}`;
+      if (soda !== last.soda) {
+        last.soda = soda;
+        el.sodaStock.textContent = soda;
+        el.chipSoda.classList.toggle('carry', state.carrying);
+        el.chipSoda.classList.toggle('low', state.sodas === 0 && !state.carrying);
+      }
+    },
+    setMission(missions) {
+      const title = missions.title(), prog = missions.progressText();
+      if (title !== last.mTitle) { last.mTitle = title; el.missionTitle.textContent = title; }
+      if (prog !== last.mProg) {
+        last.mProg = prog;
+        el.missionProgress.textContent = prog;
+        el.missionBar.style.transform = `scaleX(${missions.fraction()})`;
+      }
+    },
+    missionPop() {
+      el.mission.classList.remove('done');
+      void el.mission.offsetWidth; // reinicia la animación
+      el.mission.classList.add('done');
     },
     // Tarjeta del cliente: tipo, pedido, estado y paciencia
     setCustomer(bay) {
       const c = bay.c;
       const show = c && (bay.phase === 'waiting' || bay.phase === 'fueling' || bay.phase === 'toPay');
-      const key = show ? `${c.name}|${c.want}|${bay.phase === 'toPay'}|${document.documentElement.lang}` : '';
+      const key = show ? `${c.name}|${c.want}|${c.soda}|${bay.phase === 'toPay'}|${document.documentElement.lang}` : '';
       if (key !== last.cust) {
         last.cust = key;
         el.cust.classList.toggle('on', !!show);
         if (show) {
-          el.custName.textContent = `${t(c.name)} · ${t('wants', { n: c.want })}`;
+          el.custName.textContent = `${t(c.name)} · ${t('wants', { n: c.want })}${c.soda ? t('wantsSoda') : ''}`;
           el.custState.textContent = t(bay.phase === 'toPay' ? 'stPay' : 'stWaiting');
         }
       }
