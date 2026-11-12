@@ -5,8 +5,9 @@ import { t } from '../core/i18n.js';
 
 // Lugares posibles (lejos de la bomba, la caja y el carril de los autos)
 const SPOTS = [
-  [-9, -19], [-15, -24], [-6, -24.5], [8, -22], [14, -20], [17, -25], [-19, -16], [10, -25.5],
-  [-3, -21], [20, -17], [-12, -17.5], [2, -24], [-20, -23], [15, -16.5],
+  [-9, -19], [-15, -24], [-6, -24.5], [8, -22], [14, -20], [17, -25], [-19, -17], [10, -25.5],
+  [-3, -21], [21, -18], [-12, -17.5], [2, -24], [-24, -23], [15, -17], [-28, -30], [26, -31],
+  [-13, -33], [12, -34], [-33, -20], [31, -22],
 ];
 
 export function createLitter(scene, state) {
@@ -37,8 +38,11 @@ export function createLitter(scene, state) {
   for (let i = 0; i < BAL.litterStart; i++) spawn();
 
   return {
+    get count() { return count; },
     update(dt) {
       timer -= dt;
+      // La basura nueva solo aparece con la gasolinera abierta (la tiran los clientes)
+      if (!state.open) return;
       if (timer <= 0) { timer = BAL.litterEvery; if (count < BAL.litterMax) spawn(); }
     },
     interactables() {
@@ -48,6 +52,7 @@ export function createLitter(scene, state) {
         use: () => {
           if (!active[i]) return;
           set(i, false);
+          state.litterPicked++;
           state.addRep(BAL.repLitter);
           state.emit('litter');
         },

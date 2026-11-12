@@ -28,16 +28,53 @@ export function cyl(rTop, rBottom, h, seg, hex, x = 0, y = 0, z = 0) {
 
 // Rueda: cilindro con el eje a lo ancho del auto (eje Z)
 export function wheel(r, w, hex, x, y, z) {
-  const g = new THREE.CylinderGeometry(r, r, w, 10);
+  const g = new THREE.CylinderGeometry(r, r, w, 12);
   g.rotateX(Math.PI / 2);
   g.translate(x, y, z);
   return tint(g, hex);
 }
 
+// Perfil lateral (x, y) extruido a lo ancho (z): da siluetas con curvas baratas, como la de un auto
+export function extrude(shape, depth, hex) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 5 });
+  g.translate(0, 0, -depth / 2);
+  return tint(g, hex);
+}
+
+export function shapeOf(points) {
+  const s = new THREE.Shape();
+  points.forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)));
+  s.closePath();
+  return s;
+}
+
+// Lámina delgada apoyada sobre una pendiente del perfil (parabrisas, medallón)
+export function slopePanel(x1, y1, x2, y2, width, hex, trim = 0.07) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  const g = new THREE.BoxGeometry(len - trim * 2, 0.04, width);
+  g.rotateZ(Math.atan2(dy, dx));
+  let nx = dy / len, ny = -dx / len; // normal hacia afuera = la que apunta hacia arriba
+  if (ny < 0) { nx = -nx; ny = -ny; }
+  g.translate((x1 + x2) / 2 + nx * 0.012, (y1 + y2) / 2 + ny * 0.012, 0);
+  return tint(g, hex);
+}
+
+// Cilindro con el eje a lo largo del auto (faros)
+export function cylX(r, len, seg, hex, x, y, z) {
+  const g = new THREE.CylinderGeometry(r, r, len, seg);
+  g.rotateZ(Math.PI / 2);
+  g.translate(x, y, z);
+  return tint(g, hex);
+}
+
 export function merge(list) {
-  const g = mergeGeometries(list, false);
+  // Las extrusiones no traen índices: se igualan todas para poder fusionarlas
+  const flat = list.map((g) => (g.index ? g.toNonIndexed() : g));
+  const out = mergeGeometries(flat, false);
   list.forEach((x) => x.dispose());
-  return g;
+  flat.forEach((x) => x.dispose());
+  return out;
 }
 
 // Material único para todo lo que usa color por vértice

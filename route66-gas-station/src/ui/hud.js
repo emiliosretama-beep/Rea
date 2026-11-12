@@ -9,7 +9,7 @@ export function createHud() {
     prompt: $('prompt'), promptText: $('prompt-text'), toast: $('toast'), fps: $('fps'), btn: $('btn-interact'),
     money: $('money'), rep: $('rep'), fuelStock: $('fuel-stock'), sodaStock: $('soda-stock'),
     chipFuel: $('chip-fuel'), chipSoda: $('chip-soda'),
-    mission: $('mission'), missionTitle: $('mission-title'), missionBar: $('mission-bar'), missionProgress: $('mission-progress'),
+    mission: $('mission'), missionTitle: $('mission-title'), missionBar: $('mission-bar'), missionProgress: $('mission-progress'), missionReward: $('mission-reward'),
     cust: $('cust'), custName: $('cust-name'), custState: $('cust-state'), custBar: $('cust-bar'),
     fuel: $('fuel'), fuelFill: $('fuel-fill'), fuelText: $('fuel-text'),
   };
@@ -58,7 +58,11 @@ export function createHud() {
     },
     setMission(missions) {
       const title = missions.title(), prog = missions.progressText();
-      if (title !== last.mTitle) { last.mTitle = title; el.missionTitle.textContent = title; }
+      if (title !== last.mTitle) {
+        last.mTitle = title;
+        el.missionTitle.textContent = title;
+        el.missionReward.textContent = `${t('reward')}: ${missions.reward()}`;
+      }
       if (prog !== last.mProg) {
         last.mProg = prog;
         el.missionProgress.textContent = prog;

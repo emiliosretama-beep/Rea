@@ -163,6 +163,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       const m = bay.m;
       switch (bay.phase) {
         case 'idle': {
+          if (!state.open) break; // cerrado: nadie entra
           bay.timer -= dt;
           if (bay.timer > 0) break;
           // Toca cliente: se pausa el carril y sale en cuanto el punto de aparición queda despejado

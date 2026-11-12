@@ -8,14 +8,13 @@ export function createProps(scene) {
   const rand = rng(1966);
   const colliders = [];
   const o = new THREE.Object3D();
-  const lot = LAYOUT.lot;
   const roadHalf = CFG.road.width / 2 + 3.5;
-  const b = CFG.bounds;
 
+  const Y = LAYOUT.yard;
+  // Fuera de la carretera y fuera del terreno cercado (la barda ya impide llegar a ellos)
   const free = (x, z, pad) =>
     Math.abs(z) > roadHalf + pad &&
-    !(Math.abs(x - lot.x) < lot.w / 2 + pad + 1 && Math.abs(z - lot.z) < lot.d / 2 + pad + 1);
-  const walkable = (x, z) => x > b.minX - 2 && x < b.maxX + 2 && z > b.minZ - 2 && z < b.maxZ + 2;
+    !(x > Y.minX - pad - 1.5 && x < Y.maxX + pad + 1.5 && z > Y.minZ - pad - 1.5 && z < 0);
 
   function scatter(geo, mat, count, range, place) {
     const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -46,7 +45,6 @@ export function createProps(scene) {
     obj.position.set(x, 0, z);
     obj.rotation.set(0, rand() * Math.PI * 2, 0);
     obj.scale.set(s, s, s);
-    if (walkable(x, z)) colliders.push({ type: 'circle', x, z, r: 0.45 * s });
     return true;
   });
 
@@ -57,7 +55,6 @@ export function createProps(scene) {
     obj.position.set(x, s * 0.25, z);
     obj.rotation.set(rand() * 3, rand() * 3, rand() * 3);
     obj.scale.set(s * (0.8 + rand() * 0.6), s * 0.7, s * (0.8 + rand() * 0.6));
-    if (s > 0.7 && walkable(x, z)) colliders.push({ type: 'circle', x, z, r: s * 0.95 });
     return true;
   });
 

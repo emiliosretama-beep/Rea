@@ -14,6 +14,11 @@ export function createState() {
     fuel: BAL.fuelStart,
     sodas: BAL.sodaStart,
     carrying: false, // llevas un refresco en la mano
+    // Restauración inicial
+    boards: 0, // tablas quitadas
+    power: false, // luz arreglada
+    open: false, // gasolinera abierta al público
+    litterPicked: 0,
     mission: 0, // índice de la misión actual
     missionProgress: 0,
 

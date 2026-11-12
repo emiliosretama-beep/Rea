@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.3 · Etapa 3',
+  version: 'DEV 0.4 · Etapa 3',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -15,8 +15,8 @@ export const CFG = {
   touchSens: 0.0048,
   interactRange: 3.2,
 
-  // Zona caminable (la carretera queda fuera: limite en el acotamiento)
-  bounds: { minX: -48, maxX: 48, minZ: -58, maxZ: -6.6 },
+  // Zona caminable: el terreno cercado. En los accesos de autos el límite es invisible.
+  bounds: { minX: -38.4, maxX: 38.4, minZ: -39.9, maxZ: -6.8 }, // por dentro de la barda
 
   // Carretera: corre a lo largo del eje X, centrada en z = 0
   road: { width: 10, length: 640, laneZ: 2.5 },
@@ -46,7 +46,8 @@ export const BAL = {
   sodaChance: 0.4, // probabilidad de que un cliente quiera refresco
 
   // Basura en el patio
-  litterStart: 5, litterMax: 8, litterEvery: 35, repLitter: 0.5,
+  litterStart: 16, litterMax: 8, // al inicio el terreno está lleno; ya abierto, hasta 8
+  litterEvery: 35, repLitter: 0.5,
 };
 
 // Paleta compartida entre el mundo 3D y la interfaz

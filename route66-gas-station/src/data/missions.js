@@ -2,7 +2,12 @@
 //  on: evento que suma · if: condición · resetOn: evento que reinicia la cuenta
 //  strict: si el evento llega y no cumple "if", la cuenta vuelve a cero (rachas)
 //  unit: 'money' (suma dinero) o 'time' (suma segundos mientras se cumple "if")
+//  value: en vez de contar eventos, el avance se lee del estado (para la restauración inicial)
 export const MISSIONS = [
+  { id: 'boards', text: 'mBoards', n: 6, value: (s) => s.boards, money: 2, rep: 0 },
+  { id: 'power', text: 'mPower', n: 1, value: (s) => (s.power ? 1 : 0), money: 3, rep: 0 },
+  { id: 'cleanup', text: 'mCleanup', n: 16, value: (s) => s.litterPicked, money: 5, rep: 5 },
+  { id: 'open', text: 'mOpen', n: 1, value: (s) => (s.open ? 1 : 0), money: 0, rep: 5 },
   { id: 'serve3', text: 'mServe', n: 3, on: 'served', money: 2, rep: 2 },
   { id: 'litter4', text: 'mLitter', n: 4, on: 'litter', money: 1.5, rep: 2 },
   { id: 'perfect1', text: 'mPerfect', n: 1, on: 'served', if: (d) => d.quality === 'perfect', money: 2, rep: 2 },

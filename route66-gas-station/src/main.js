@@ -36,7 +36,7 @@ const hud = createHud();
 const state = createState();
 const toast = (key, params) => hud.toast(t(key, params));
 
-const missions = createMissions(state, (m) => { hud.toast(missions.rewardText(m)); hud.missionPop(); });
+const missions = createMissions(state, (m) => { hud.toast(missions.doneText(m)); hud.missionPop(); });
 const litter = createLitter(view.scene, state);
 function refreshHud() { hud.setStats(state); hud.setMission(missions); }
 state.onChange(refreshHud);
@@ -60,12 +60,63 @@ const customers = createCustomers(view.scene, {
   onEvent: toast,
 });
 
+// ---------- Restauración inicial: tablas, luz, basura y abrir ----------
+station.setPower(state.power);
+station.setOpen(state.open);
+function restoreItems() {
+  const boards = [];
+  for (let i = 0; i < station.boards.count; i++) {
+    const p = station.boards.spot(i);
+    boards.push({
+      id: 'board', x: p.x, y: p.y, z: p.z,
+      label: () => (station.boards.isOn(i) ? t('promptBoard') : null),
+      use: () => {
+        const wasBlocked = !canEnter();
+        station.boards.remove(i);
+        state.boards++;
+        state.emit('board');
+        state.changed();
+        if (wasBlocked && canEnter()) toast('toastDoorFree');
+      },
+    });
+  }
+  const canEnter = () => !station.boards.isOn(0) && !station.boards.isOn(1);
+  return [
+    ...boards,
+    {
+      id: 'fuse', x: LAYOUT.fuse.x, y: 1.5, z: LAYOUT.fuse.z,
+      label: () => (state.power ? null : t('promptFuse')),
+      use: () => {
+        state.power = true;
+        station.setPower(true);
+        state.emit('power');
+        state.changed();
+        toast('toastPower');
+      },
+    },
+    {
+      id: 'sign', x: LAYOUT.sign.x, y: 1.6, z: LAYOUT.sign.z,
+      label: () => (state.open ? null : t('promptOpen')),
+      use: () => {
+        if (!state.power) return toast('toastNeedPower');
+        if (litter.count > 0) return toast('toastNeedClean', { n: litter.count });
+        state.open = true;
+        station.setOpen(true);
+        state.emit('open');
+        state.changed();
+        toast('toastOpened');
+      },
+    },
+  ];
+}
+
 // Puntos de interacción: los fijos de la estación (solo muestran un mensaje) y los del servicio
 const interactions = createInteractions([
   ...station.interactables.map((it) => ({ ...it, label: () => t(it.prompt), use: () => hud.toast(t(it.toast)) })),
   ...customers.interactables(),
   ...litter.interactables(),
   { id: 'phone', x: LAYOUT.phone.x, y: 1.45, z: LAYOUT.phone.z, label: () => t('promptPhone'), use: () => order.open() },
+  ...restoreItems(),
 ]);
 hud.showFps(CFG.debugFps);
 
@@ -93,6 +144,7 @@ function play() {
   playing = true;
   started = true;
   body.classList.add('playing');
+  if (!started) setTimeout(() => { if (state.boards === 0) toast('toastIntro'); }, 900);
   $('btn-play').dataset.i18n = 'resume';
   applyDom();
   input.setEnabled(true);
@@ -182,4 +234,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // Para pruebas automáticas y depuración (no afecta al juego)
-window.__r66 = { player, input, view, traffic, interactions, colliders, customers, state, missions, order, play, pause, litterItems: () => interactions.items.filter((x) => x.id === 'litter') };
+window.__r66 = { player, input, view, traffic, interactions, colliders, customers, state, missions, order, station, litter, play, pause, litterItems: () => interactions.items.filter((x) => x.id === 'litter') };
