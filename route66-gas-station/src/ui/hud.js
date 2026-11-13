@@ -8,12 +8,12 @@ export function createHud() {
   const $ = (id) => document.getElementById(id);
   const el = {
     prompt: $('prompt'), promptText: $('prompt-text'), toast: $('toast'), fps: $('fps'), btn: $('btn-interact'),
-    money: $('money'), rep: $('rep'), fuelStock: $('fuel-stock'), sodaStock: $('soda-stock'), snackStock: $('snack-stock'),
+    money: $('money'), moneyBox: $('chip-money'), rep: $('rep'), fuelStock: $('fuel-stock'), sodaStock: $('soda-stock'), snackStock: $('snack-stock'),
     chipFuel: $('chip-fuel'), chipSoda: $('chip-soda'), chipSnack: $('chip-snack'), level: $('level'), book: $('btn-book'),
     mission: $('mission'), missionTitle: $('mission-title'), missionBar: $('mission-bar'),
     missionProgress: $('mission-progress'), missionReward: $('mission-reward'),
     cust: $('cust'), custName: $('cust-name'), custState: $('cust-state'), custBar: $('cust-bar'),
-    fuel: $('fuel'), fuelFill: $('fuel-fill'), fuelText: $('fuel-text'),
+    fuel: $('fuel'), fuelFill: $('fuel-fill'), fuelText: $('fuel-text'), fuelLabel: $('fuel-label'),
   };
   // Zona "exacta" y marca del pedido, en % del ancho de la barra (la barra llega al 112 %)
   const pct = (r) => `${(r / BAL.overfillMax) * 100}%`;
@@ -23,6 +23,41 @@ export function createHud() {
 
   const last = { fuelStock: null, soda: null, snack: null, level: '', can: null, mTitle: '', mProg: '', prompt: null, money: null, rep: null, cust: '', custBar: -1, bar: '', barOn: false, barWork: null };
   let toastTimer = 0;
+
+  // ----- Contador de dinero: cada dígito es una columna 0-9 que rueda hasta su número -----
+  const odo = { cols: [], key: '' };
+  function buildOdo(text) {
+    el.money.textContent = '';
+    odo.cols = [];
+    for (const ch of text) {
+      if (ch >= '0' && ch <= '9') {
+        const d = document.createElement('span');
+        d.className = 'd';
+        const strip = document.createElement('span');
+        for (let n = 0; n <= 9; n++) { const i = document.createElement('i'); i.textContent = n; strip.append(i); }
+        d.append(strip);
+        el.money.append(d);
+        odo.cols.push(strip);
+      } else {
+        const sp = document.createElement('span');
+        sp.className = ch === '.' ? 'd dot' : 'd';
+        sp.textContent = ch;
+        el.money.append(sp);
+        odo.cols.push(null);
+      }
+    }
+  }
+  function setOdo(value) {
+    const text = Math.abs(value).toFixed(2);
+    const shape = `${value < 0 ? '-' : ''}${text.replace(/[0-9]/g, '0')}`;
+    if (shape !== odo.key) { odo.key = shape; buildOdo(`${value < 0 ? '-' : ''}${text}`); }
+    const digits = `${value < 0 ? '-' : ''}${text}`;
+    [...digits].forEach((ch, k) => {
+      const strip = odo.cols[k];
+      if (strip) strip.style.transform = `translateY(${-Number(ch)}em)`;
+    });
+    el.moneyBox.setAttribute('aria-label', `${t('money')}: ${fmtMoney(value)}`);
+  }
   let frames = 0, acc = 0;
 
   return {
@@ -46,10 +81,19 @@ export function createHud() {
       el.toast.textContent = text;
       el.toast.classList.add('on');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.toast.classList.remove('on'), 2800);
+      toastTimer = setTimeout(() => el.toast.classList.remove('on'), 2600);
     },
     setStats(state) {
-      if (state.money !== last.money) { last.money = state.money; el.money.textContent = fmtMoney(state.money); }
+      if (state.money !== last.money) {
+        // Brinco del contador solo cuando entra dinero
+        if (last.money !== null && state.money > last.money) {
+          el.moneyBox.classList.remove('gain');
+          void el.moneyBox.offsetWidth;
+          el.moneyBox.classList.add('gain');
+        }
+        last.money = state.money;
+        setOdo(state.money);
+      }
       const rep = Math.round(state.rep);
       if (rep !== last.rep) { last.rep = rep; el.rep.textContent = rep; }
       const fuel = Math.floor(state.fuel);
@@ -121,6 +165,8 @@ export function createHud() {
       if (!visible) return;
       const work = c.kind !== 'fuel';
       if (work !== last.barWork) { last.barWork = work; el.fuel.classList.toggle('work', work); }
+      const label = c.name ? t(c.name) : '';
+      if (label !== last.barLabel) { last.barLabel = label; el.fuelLabel.textContent = label; }
       const txt = work ? `${t(c.job)} ${Math.min(100, Math.round((c.done / c.work) * 100))}%` : `${c.got.toFixed(1)} / ${c.want} gal`;
       if (txt === last.bar) return;
       last.bar = txt;
