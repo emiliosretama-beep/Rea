@@ -455,6 +455,8 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   const stools = STOOL_X.map((x) => ({ x, sh: null }));
   const cafeLine = []; // clientes esperando su café, en orden de llegada
   const brew = { kind: 'cafe', job: 'jobCoffee', done: 0, work: BAL.brewTime };
+  // Personal contratado: qué está haciendo cada uno (lo usa también la parte visual)
+  const staff = { cashier: false, barista: false, mechanic: false, cashierT: 0, washT: 0 };
   const walkers = []; // otras personas por las que frenan los autos (conserje)
   const shoppers = []; // activos
   const queue = []; // formados en la caja, en orden
@@ -705,6 +707,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   // ---------- Bahía que muestra la tarjeta y lista de marcadores ----------
 
   const api = {
+    staff,
     addWalker(w) { walkers.push(w); },
     bays,
     movers,
@@ -733,6 +736,22 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       if (state.open) {
         spawnTimer -= dt;
         if (spawnTimer <= 0) trySpawn();
+      }
+
+      // ----- Personal -----
+      // Cajero: cobra al primero de la fila después de un momento
+      staff.cashier = state.has('cashier') && !!queue[0] && queue[0].state === 'queue';
+      if (staff.cashier) { staff.cashierT += dt; if (staff.cashierT > BAL.cashierDelay) { staff.cashierT = 0; chargeShopper(); } } else staff.cashierT = 0;
+      // Barista: prepara el café a su ritmo
+      staff.barista = state.has('barista') && cafeLine.some((x) => x.state === 'cafeWait');
+      if (staff.barista) { brew.done += dt * BAL.staffSpeed; if (brew.done >= brew.work) { brew.done = 0; serveCoffee(); } }
+      // Mecánico: trabaja en el taller y arranca el autolavado
+      staff.mechanic = false;
+      if (state.has('mechanic')) {
+        const g = bays.find((b) => b.kind === 'garage');
+        if (g && api.canWork(g)) { api.workHold(g, dt * BAL.staffSpeed); staff.mechanic = true; }
+        const w = bays.find((b) => b.kind === 'wash');
+        if (w && api.canStartWash(w)) { staff.washT += dt; if (staff.washT > BAL.washAutoDelay) { staff.washT = 0; api.startWash(w); } } else staff.washT = 0;
       }
 
       const hb = helperBay();

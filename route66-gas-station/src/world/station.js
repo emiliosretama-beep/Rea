@@ -599,6 +599,7 @@ export function createStation(scene) {
   }
 
   let chase = 0;
+  let doorWasOpen = false, onDoor = null;
   // dt y lista de puntos {x, z} que abren la puerta (jugador y clientes)
   function update(dt, near) {
     for (let k = falling.length - 1; k >= 0; k--) {
@@ -616,6 +617,8 @@ export function createStation(scene) {
     // La puerta solo funciona cuando ya no tiene tablas
     let open = false;
     if (doorBlock.off) for (const p of near) if (Math.hypot(p.x - L.door.x, p.z - front) < 2.3) { open = true; break; }
+    if (open && !doorWasOpen && onDoor) onDoor();
+    doorWasOpen = open;
     const target = open ? 1.45 : 0;
     doorAngle += (target - doorAngle) * (1 - Math.exp(-7 * dt));
     door.rotation.y = doorAngle;
@@ -623,6 +626,7 @@ export function createStation(scene) {
 
   return {
     update,
+    onDoor(fn) { onDoor = fn; },
     colliders,
     interactables: [
       { id: 'drums', x: drumX + 0.5, y: 0.8, z: drumZ, prompt: 'promptDrum', toast: 'toastDrum' },
@@ -631,10 +635,13 @@ export function createStation(scene) {
       count: boardDefs.length,
       spot: (i) => ({ x: boardDefs[i].x, y: boardDefs[i].y, z: front + 0.1 }),
       isOn: (i) => boardOn[i],
+      removedList: () => boardOn.map((on, i) => (on ? -1 : i)).filter((i) => i >= 0),
       // Quita la tabla; al destapar las dos de la puerta se puede entrar
-      remove(i) {
+      // instant: sin animación (al cargar una partida)
+      remove(i, instant = false) {
+        if (!boardOn[i]) return;
         boardOn[i] = false;
-        falling.push({ i, t: 0.001 });
+        if (instant) placeBoard(i, 0); else falling.push({ i, t: 0.001 });
         doorBlock.off = !boardDefs.some((d, k) => d.door && boardOn[k]);
       },
     },

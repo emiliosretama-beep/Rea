@@ -16,10 +16,13 @@ export function createMarkers(camera) {
   for (let i = 0; i < 8; i++) {
     const el = document.createElement('div');
     el.className = 'marker';
-    el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"></svg><i><b></b></i>';
+    el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"></svg><i><b></b></i><span class="edge-arrow"></span>';
     root.append(el);
-    pool.push({ el, svg: el.firstChild, bar: el.querySelector('b'), icon: '', on: false, level: '' });
+    pool.push({ el, svg: el.firstChild, bar: el.querySelector('b'), arrow: el.querySelector('.edge-arrow'), icon: '', on: false, level: '', edge: false });
   }
+
+  const c = new THREE.Vector3();
+  const EDGE = 44; // margen de la orilla de la pantalla
 
   return {
     // list: [{ x, y, z, icon, p }] en coordenadas del mundo (p = paciencia de 0 a 1)
@@ -28,19 +31,34 @@ export function createMarkers(camera) {
       for (let i = 0; i < pool.length; i++) {
         const mk = pool[i];
         const it = list[i];
-        let show = !!it;
-        if (show) {
-          v.set(it.x, it.y, it.z).project(camera);
-          show = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.2;
-        }
+        const show = !!it;
         if (show !== mk.on) { mk.on = show; mk.el.classList.toggle('on', show); }
         if (!show) continue;
-        mk.el.style.transform = `translate3d(${((v.x + 1) / 2 * w).toFixed(1)}px, ${((1 - v.y) / 2 * h).toFixed(1)}px, 0)`;
+        v.set(it.x, it.y, it.z).project(camera);
+        const onScreen = v.z < 1 && Math.abs(v.x) < 1.0 && Math.abs(v.y) < 1.0;
+        if (onScreen !== !mk.edge) { mk.edge = !onScreen; mk.el.classList.toggle('edge', mk.edge); }
+        let sx, sy;
+        if (onScreen) {
+          sx = (v.x + 1) / 2 * w; sy = (1 - v.y) / 2 * h;
+        } else {
+          // Fuera de la vista: flecha en la orilla que apunta hacia el cliente (también si está a tus espaldas)
+          c.set(it.x, it.y, it.z).applyMatrix4(camera.matrixWorldInverse);
+          let dx = c.x, dy = -c.y * 0.35;
+          if (Math.hypot(dx, dy) < 1e-3) dy = 1;
+          const cx = w / 2, cy = h / 2;
+          // Siempre en la orilla izquierda o derecha, del lado donde está el cliente
+          sx = dx >= 0 ? w - EDGE : EDGE;
+          sy = cy + dy * ((cx - EDGE) / Math.max(Math.abs(dx), 1e-3));
+          // Franja media: lejos del dinero, la misión y el botón de interactuar
+          sy = Math.min(h - 110, Math.max(Math.max(h * 0.42, 205), sy));
+          mk.arrow.style.transform = `rotate(${Math.atan2(dy, dx).toFixed(3)}rad)`;
+        }
+        mk.el.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0)`;
         if (it.icon !== mk.icon) { mk.icon = it.icon; mk.svg.innerHTML = ICONS[it.icon]; mk.el.dataset.kind = it.icon; }
         const p = Math.max(0, it.p);
         mk.bar.style.transform = `scaleX(${p.toFixed(2)})`;
         const level = p > 0.5 ? '' : p > 0.25 ? 'warn' : 'bad';
-        if (level !== mk.level) { mk.level = level; mk.bar.className = level; }
+        if (level !== mk.level) { mk.level = level; mk.bar.className = level; mk.el.classList.toggle('urgent', level === 'bad'); }
       }
     },
     hide() { for (const mk of pool) if (mk.on) { mk.on = false; mk.el.classList.remove('on'); } },

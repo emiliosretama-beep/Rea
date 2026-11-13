@@ -3,8 +3,11 @@
 import { build } from 'esbuild';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 
+// npm run build:release -> versión para itch.io (sin ayudas de prueba) en release/index.html
+const RELEASE = process.argv.includes('--release');
 const js = await build({
   entryPoints: ['src/main.js'],
+  define: RELEASE ? { 'globalThis.R66_RELEASE': 'true' } : {},
   bundle: true,
   minify: true,
   format: 'iife',
@@ -30,6 +33,7 @@ const swap = (needle, value) => {
 swap('<link rel="stylesheet" href="styles.css">', `<style>${cssText}</style>`);
 swap('<script type="module" src="src/main.js"></script>', `<script>${jsText}</script>`);
 
-await mkdir('dist', { recursive: true });
-await writeFile('dist/index.html', html);
-console.log(`dist/index.html listo (${(html.length / 1024).toFixed(0)} KB)`);
+const outDir = RELEASE ? 'release' : 'dist';
+await mkdir(outDir, { recursive: true });
+await writeFile(`${outDir}/index.html`, html);
+console.log(`${outDir}/index.html listo (${(html.length / 1024).toFixed(0)} KB)`);

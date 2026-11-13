@@ -16,6 +16,22 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
   const circle = (x, z, r) => colliders.push({ type: 'circle', x, z, r });
   const add = (parts, mat = vertexMat) => { const m = new THREE.Mesh(merge(parts), mat); scene.add(m); return m; };
   let helper = null;
+  // Personal visible: cajero, barista y mecánico (se paran en su lugar de trabajo)
+  const staffPeople = {};
+  const STAFF_SPOTS = {
+    cashier: { x: 0.45, z: -28.45, yaw: Math.PI, shirt: PAL.red },
+    barista: { x: 11.0, z: -29.75, yaw: 0, shirt: 0xe9e0cc },
+    mechanic: { x: 22.3, z: -27.4, yaw: Math.PI / 2, shirt: 0x3d4a66 },
+  };
+  function addStaff(id) {
+    const sp = STAFF_SPOTS[id];
+    const p = buildPerson(sp.shirt);
+    p.root.position.set(sp.x, 0.08, sp.z);
+    p.root.rotation.y = sp.yaw;
+    scene.add(p.root);
+    staffPeople[id] = p;
+    circle(sp.x, sp.z, 0.3);
+  }
   let washFx = null, garageFx = null;
 
   // Letrero de texto (canvas) en un plano; dos caras si 'both'
@@ -389,6 +405,10 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       garageFx = { update(liftY) { arms.position.y = liftY; } };
     },
 
+    cashier() { addStaff('cashier'); },
+    barista() { addStaff('barista'); },
+    mechanic() { addStaff('mechanic'); },
+
     // Ayudante: persona con overol turquesa junto a su bomba
     helper() {
       helper = buildPerson(PAL.teal);
@@ -405,6 +425,15 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       builders[id]();
     },
     // Mueve al ayudante entre su lugar de descanso y la bomba
+    // Personal: brazo en movimiento cuando trabaja
+    staff(dt, time, flags) {
+      for (const id in staffPeople) {
+        const busy = flags[id];
+        const p = staffPeople[id];
+        p.pose(null, busy ? 0.7 + Math.sin(time * 7) * 0.3 : 0);
+        p.root.position.y = 0.08 + (busy ? Math.abs(Math.sin(time * 3.5)) * 0.02 : 0);
+      }
+    },
     // Animaciones de los servicios: autolavado y elevador del taller
     services(dt, washBay, garageBay) {
       if (washFx && washBay) {

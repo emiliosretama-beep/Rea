@@ -66,6 +66,7 @@ export function createState() {
     canBuyUpgrade(u) {
       if (s.has(u.id)) return 'owned';
       if (s.level() < u.level) return 'locked';
+      if (u.needs && !s.has(u.needs)) return 'needs';
       return s.money >= u.cost ? 'ok' : 'poor';
     },
     buyUpgrade(id) {

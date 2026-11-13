@@ -238,6 +238,20 @@ body.playing #markers { opacity: 1; }
   flex-direction: column; align-items: center; gap: 3px; will-change: transform;
 }
 .marker.on { display: flex; }
+/* Cliente fuera de la vista: el ícono va en la orilla con una flecha que apunta hacia él */
+.marker .edge-arrow { display: none; }
+.marker.edge { margin: -20px 0 0 -21px; }
+.marker.edge i { display: none; }
+.marker.edge .edge-arrow {
+  display: block; position: absolute; left: 50%; top: 20px; width: 0; height: 0; transform-origin: 0 0;
+}
+.marker.edge .edge-arrow::after {
+  content: ""; position: absolute; left: 22px; top: -7px;
+  border-left: 13px solid var(--cream); border-top: 8px solid transparent; border-bottom: 8px solid transparent;
+  filter: drop-shadow(0 0 2px rgba(28, 22, 38, .9));
+}
+.marker.edge.urgent svg { animation: edge-pulse .8s ease-in-out infinite; }
+@keyframes edge-pulse { 50% { transform: scale(1.18); } }
 .marker svg {
   width: 34px; height: 34px; padding: 5px; border-radius: 50%;
   background: var(--orange); border: 2.5px solid var(--night); box-shadow: 0 3px 0 rgba(28, 22, 38, .6);
@@ -344,7 +358,9 @@ h1 {
 
 /* Botones del menú */
 .menu-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: clamp(12px, 3.6vmin, 26px); }
-#btn-quality {
+/* Nueva partida: al primer toque pide confirmar */
+.menu-small.armed { border-color: #e2533a !important; color: #ffb9a8; }
+#btn-quality, .menu-small {
   min-height: 48px; padding: 0 18px; border-radius: 999px; font-weight: 800; font-size: 14px;
   background: rgba(28, 22, 38, .65); border: 1.5px solid rgba(246, 231, 200, .4);
 }

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:release": "node build.mjs --release",
     "serve": "node build.mjs && npx --yes http-server dist -p 8066 -c-1"
   },
   "dependencies": {

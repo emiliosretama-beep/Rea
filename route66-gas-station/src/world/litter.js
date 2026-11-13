@@ -52,6 +52,12 @@ export function createLitter(scene, state) {
 
   return {
     get count() { return count; },
+    // Guardado: qué lugares tienen basura
+    activeList: () => active.map((on, i) => (on ? i : -1)).filter((i) => i >= 0),
+    restore(list) {
+      for (let i = 0; i < SPOTS.length; i++) if (active[i]) set(i, false);
+      for (const i of list) if (i >= 0 && i < SPOTS.length && !active[i]) set(i, true);
+    },
     update(dt) {
       for (let k = popping.length - 1; k >= 0; k--) {
         const p = popping[k];

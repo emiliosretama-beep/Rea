@@ -1,12 +1,15 @@
 // Arranque y bucle principal.
 import { CFG, BAL } from './config.js';
 import { loadQuality, saveQuality, ORDER } from './core/quality.js';
+import { loadGame, saveGame, clearGame, applyState } from './core/save.js';
+import { createAudio } from './core/audio.js';
 import { initI18n, setLang, getLang, onLangChange, applyDom, t } from './core/i18n.js';
 import { createInput } from './core/input.js';
 import { createPlayer } from './core/player.js';
 import { createScene } from './world/scene.js';
 import { createRoad } from './world/road.js';
 import { createStation, LAYOUT, insideStore } from './world/station.js';
+const LAYOUT_DOOR = { x: LAYOUT.door.x, z: -27 };
 import { createProps } from './world/props.js';
 import { createTraffic } from './world/traffic.js';
 import { createLitter } from './world/litter.js';
@@ -48,13 +51,28 @@ const hud = createHud();
 hud.showFps(CFG.debugFps);
 const markers = createMarkers(view.camera);
 const state = createState();
+const saved = loadGame();
+if (saved) applyState(state, saved.state);
+// ---------- Sonido ----------
+const audio = createAudio();
+// Cada aviso del juego tiene su sonido (aunque el texto esté silenciado)
+const TOAST_SFX = {
+  toastArrive: 'beep', toastArriveService: 'beep', toastFuelPaid: 'coin', toastFuelPerfect: 'coin', toastFuelOver: 'coin',
+  toastHelperPaid: 'coin', toastSale: 'kaching', toastCafe: 'kaching', toastCafePie: 'kaching', toastWashed: 'coin',
+  toastRepaired: 'coin', toastPaid: 'coin', toastAngry: 'horn', toastAngryShop: 'angry', toastAngryCafe: 'angry',
+  toastShort: 'click', toastPower: 'clunk', toastOpened: 'bell', toastUpgrade: 'build', toastLevel: 'jingle',
+  toastFuelBought: 'clunkSoft', toastSodaBought: 'clunkSoft', toastSnackBought: 'clunkSoft', toastNothing: 'angry',
+};
 const QUIET = new Set([
   'toastArrive', 'toastArriveService', 'toastShopper', 'toastAtCounter', 'toastFuelPaid', 'toastSale',
   'toastCafe', 'toastCafePie', 'toastPaid', 'toastHelperPaid', 'toastWashed', 'toastRepaired',
 ]);
-const toast = (key, params) => { if (!QUIET.has(key)) hud.toast(t(key, params)); };
+const toast = (key, params) => {
+  if (TOAST_SFX[key]) audio.play(TOAST_SFX[key]);
+  if (!QUIET.has(key)) hud.toast(t(key, params));
+};
 
-const missions = createMissions(state, (m) => { hud.toast(missions.doneText(m)); hud.missionPop(); });
+const missions = createMissions(state, (m) => { hud.toast(missions.doneText(m)); hud.missionPop(); audio.play('jingle'); });
 const litter = createLitter(view.scene, state);
 const upgrades3d = createUpgradeVisuals(view.scene, { colliders, station });
 const customers = createCustomers(view.scene, { traffic, state, colliders, onEvent: toast });
@@ -78,11 +96,17 @@ state.onEvent((name, data) => { if (name === 'earn') hud.popMoney(`+${fmtMoney(d
 
 // ---------- Sombras y calidad ----------
 // Todo lo que tiene iluminación proyecta y recibe sombra; lo que brilla (MeshBasic) no.
+// Los objetos chicos (botellas, frascos, personas, llantas sueltas) no proyectan: casi no se nota y ahorra mucho.
 function applyShadowFlags() {
   view.scene.traverse((o) => {
     if (!o.isMesh || o.userData.noShadow) return;
     const lit = !o.material.isMeshBasicMaterial;
-    o.castShadow = lit && !o.userData.noCast;
+    let big = true;
+    if (!o.isInstancedMesh && o.geometry) {
+      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      big = o.geometry.boundingSphere.radius > 0.9;
+    }
+    o.castShadow = lit && big && !o.userData.noCast;
     o.receiveShadow = lit;
   });
 }
@@ -97,6 +121,13 @@ function setQuality(q) {
 
 function refreshHud() { hud.setStats(state); hud.setMission(missions); stock3d.update(state); }
 state.onChange(refreshHud);
+
+state.onEvent((name) => {
+  if (name === 'board') audio.play('wood');
+  if (name === 'litter') audio.play('pop');
+  if (name === 'washStart') audio.play('click');
+});
+station.onDoor(() => audio.play('door', LAYOUT_DOOR));
 
 // Aviso (una vez) cuando la gasolina está por acabarse
 let warnedLow = false;
@@ -125,6 +156,23 @@ const notebook = createNotebook(state, {
   onBought: toast,
   onUpgrade: (u) => toast('toastUpgrade', { u: t(`u_${u.id}`) }),
 });
+
+// ---------- Partida guardada: reconstruir el mundo ----------
+if (saved && saved.world) {
+  for (const i of saved.world.boardsOff || []) station.boards.remove(i, true);
+  if (Array.isArray(saved.world.litter)) litter.restore(saved.world.litter);
+}
+let saveWarned = false;
+function saveNow() {
+  if (!started) return;
+  const ok = saveGame(state, { boardsOff: station.boards.removedList(), litter: litter.activeList() });
+  if (!ok && !saveWarned) { saveWarned = true; toast('saveFail'); }
+}
+setInterval(saveNow, 8000);
+window.addEventListener('pagehide', saveNow);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+// Guardar también justo después de lo importante
+state.onEvent((name) => { if (['upgrade', 'level', 'order', 'open', 'power'].includes(name)) setTimeout(saveNow, 0); });
 
 // ---------- Restauración inicial: tablas, luz, basura y abrir ----------
 station.setPower(state.power);
@@ -206,9 +254,10 @@ input.onModeChange(syncMode);
 syncMode();
 
 function play() {
+  newArmed = false;
   playing = true;
   body.classList.add('playing');
-  if (!started) setTimeout(() => { if (state.boards === 0) toast('toastIntro'); }, 900);
+  if (!started && !saved) setTimeout(() => { if (state.boards === 0) toast('toastIntro'); }, 900);
   started = true;
   $('btn-play').dataset.i18n = 'resume';
   applyDom();
@@ -217,23 +266,60 @@ function play() {
 
 function pause() {
   if (!playing) return;
+  saveNow();
+  // En pausa siempre se puede empezar de nuevo
+  $('btn-new').hidden = false;
+  $('btn-new').textContent = t('newGame');
+  $('btn-new').classList.remove('armed');
+  newArmed = false;
   notebook.close();
   playing = false;
   body.classList.remove('playing');
   input.setEnabled(false);
   stopHolding();
   viewModel.hide();
+  for (const l of ['pump', 'brew', 'wash']) audio.loop(l, false);
+  audio.engine(999, 0);
   interactions.clear();
   hud.setPrompt(null);
 }
 
 $('btn-play').addEventListener('click', play);
+// El audio solo puede arrancar después de un toque (Safari)
+const unlockAudio = () => audio.unlock();
+window.addEventListener('pointerdown', unlockAudio, { capture: true });
+window.addEventListener('keydown', unlockAudio, { capture: true });
+function renderAudioButtons() {
+  $('btn-sfx').textContent = `${t('sfxLabel')}: ${t(audio.prefs.sfx ? 'on' : 'off')}`;
+  $('btn-music').textContent = `${t('musicLabel')}: ${t(audio.prefs.music ? 'on' : 'off')}`;
+}
+$('btn-sfx').addEventListener('click', () => { audio.unlock(); audio.setPref('sfx', !audio.prefs.sfx); renderAudioButtons(); audio.play('click'); });
+$('btn-music').addEventListener('click', () => { audio.unlock(); audio.setPref('music', !audio.prefs.music); renderAudioButtons(); });
+renderAudioButtons();
+// Con partida guardada: "Continuar" y "Nueva partida" (pide confirmar con un segundo toque)
+let newArmed = false;
+if (saved) {
+  $('btn-play').dataset.i18n = 'resume';
+  $('btn-new').hidden = false;
+  applyDom();
+}
+$('btn-new').addEventListener('click', () => {
+  if (!newArmed) {
+    newArmed = true;
+    $('btn-new').textContent = t('newGameConfirm');
+    $('btn-new').classList.add('armed');
+    return;
+  }
+  clearGame();
+  started = false; // que no se vuelva a guardar antes de recargar
+  location.reload();
+});
 $('btn-pause').addEventListener('click', pause);
 $('btn-book').addEventListener('click', () => { if (playing) notebook.open(); });
 $('btn-lang').addEventListener('click', () => setLang(getLang() === 'es' ? 'en' : 'es'));
 $('btn-quality').addEventListener('click', () => setQuality(ORDER[(ORDER.indexOf(quality) + 1) % ORDER.length]));
 $('btn-rotate-skip').addEventListener('click', () => body.classList.add('portrait-ok'));
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); audio.suspend(document.hidden); });
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && notebook.isOpen) { notebook.close(); return; }
   if (e.code === 'KeyP' || e.code === 'Escape') pause();
@@ -243,7 +329,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-onLangChange(() => { $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES'; refreshHud(); notebook.render(); setQuality(quality); });
+onLangChange(() => { $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES'; refreshHud(); notebook.render(); setQuality(quality); renderAudioButtons(); });
 $('btn-lang').textContent = getLang() === 'es' ? 'EN' : 'ES';
 refreshHud();
 
@@ -252,6 +338,27 @@ input.onInteract(() => {
   const it = interactions.current;
   if (it && it.use) it.use();
 });
+// Sonidos del mundo que dependen de lo que pasa en cada cuadro
+let stepT = 0, ratchetT = 0;
+function updateSounds(dt) {
+  audio.setListener(player.x, player.z);
+  // Motor del auto más cercano que se mueve
+  let best = Infinity, speed = 0;
+  for (const car of traffic.cars) if (car.active) { const d = Math.hypot(car.group.position.x - player.x, car.group.position.z - player.z); if (d < best) { best = d; speed = car.speed; } }
+  for (const m of customers.movers) if (m.mode !== 'free' && m.v > 0.3) { const d = Math.hypot(m.pos.x - player.x, m.pos.z - player.z); if (d < best) { best = d; speed = m.v; } }
+  audio.engine(best, speed);
+  // Bomba, cafetera, autolavado y taller
+  const it = holding;
+  audio.loop('pump', !!(it && it.id === 'pump' && it.bay.phase === 'fueling'));
+  audio.loop('brew', !!(it && it.id === 'coffee'));
+  const wash = customers.bays.find((b) => b.kind === 'wash');
+  const dWash = Math.hypot(LAYOUT.carwash.x - player.x, LAYOUT.carwash.z - player.z);
+  audio.loop('wash', !!wash && wash.phase === 'working', Math.max(0, 1 - dWash / 35));
+  if (it && it.id === 'service') { ratchetT -= dt; if (ratchetT <= 0) { ratchetT = 0.55; audio.play('ratchet'); } }
+  // Pasos
+  const sp = Math.hypot(player.vx, player.vz);
+  if (sp > 1) { stepT -= dt * sp; if (stepT <= 0) { stepT = 2.1; audio.play('step'); } }
+}
 let holding = null;
 function stopHolding() {
   if (holding) { holding.release(); holding = null; }
@@ -315,8 +422,10 @@ function frame(now) {
     }
     upgrades3d.update(dt, now / 1000, customers.helperBay());
     upgrades3d.services(dt, customers.bays.find((b) => b.kind === 'wash'), customers.bays.find((b) => b.kind === 'garage'));
+    upgrades3d.staff(dt, now / 1000, customers.staff);
     interactions.update(dt, player);
     updateService(dt);
+    updateSounds(dt);
     markers.update(customers.markers());
   } else if (started) {
     player.applyCamera(); // en pausa o con la libreta abierta, el juego espera
@@ -335,9 +444,9 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-// Para pruebas automáticas y depuración (no afecta al juego)
-window.__r66 = {
-  player, input, view, traffic, interactions, colliders, customers, state, missions, notebook, station, litter, upgrades3d, play, pause,
+// Para pruebas automáticas y depuración (no afecta al juego). La versión para itch.io no las incluye.
+if (!globalThis.R66_RELEASE) window.__r66 = {
+  player, input, view, traffic, interactions, colliders, customers, state, missions, notebook, station, litter, upgrades3d, audio, play, pause,
   litterItems: () => interactions.items.filter((x) => x.id === 'litter'),
   setSpeed: (n) => { debugSpeed = n; },
 };

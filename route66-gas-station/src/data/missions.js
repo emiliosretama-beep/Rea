@@ -1,3 +1,5 @@
+import { UPGRADES } from './upgrades.js';
+
 // Misiones en cadena. Cada una escucha un evento del juego y cuenta hasta "n".
 //  on: evento que suma · if: condición · resetOn: evento que reinicia la cuenta
 //  strict: si el evento llega y no cumple "if", la cuenta vuelve a cero (rachas)
@@ -28,7 +30,7 @@ export const MISSIONS = [
   { id: 'service4', text: 'mService', n: 4, on: 'service', money: 10, rep: 3 },
   { id: 'level5', text: 'mLevel', n: 5, value: (s) => s.level(), money: 15, rep: 4 },
   { id: 'vip1', text: 'mVip', n: 1, on: 'served', if: (d) => d.typeId === 'vip', money: 15, rep: 5 },
-  { id: 'all', text: 'mAll', n: 10, value: (s) => s.upgradeCount(), money: 25, rep: 5 },
+  { id: 'all', text: 'mAll', n: UPGRADES.length, value: (s) => s.upgradeCount(), money: 25, rep: 5 },
 ];
 
 // Cuando se acaba la cadena, esta se repite

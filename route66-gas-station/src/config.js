@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.9 · Etapa 4 pulida',
+  version: 'DEV 1.0 · Etapa 5a',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -56,6 +56,7 @@ export const BAL = {
   cafeChance: 0.45, cafePrice: 0.45, piePrice: 0.4, brewTime: 2.5,
   parkingPatience: 1.25,
   helperDelay: 1.5, helperSpeed: 0.55, helperPayDelay: 3,
+  staffSpeed: 0.6, cashierDelay: 2.2, washAutoDelay: 2.5, // personal: más lento que tú
   // Servicios: segundos de trabajo y pago
   jobs: {
     wash: [{ id: 'jobWash', work: 8, pay: 1.4 }], // automático: corre solo

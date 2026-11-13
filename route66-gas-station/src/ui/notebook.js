@@ -56,9 +56,10 @@ export function createNotebook(state, { onOpen, onClose, onBought, onUpgrade }) 
         r.name.textContent = t(`u_${r.u.id}`);
         r.desc.textContent = t(`u_${r.u.id}_d`);
         r.row.classList.toggle('owned', can === 'owned');
-        r.row.classList.toggle('locked', can === 'locked');
+        r.row.classList.toggle('locked', can === 'locked' || can === 'needs');
         r.btn.disabled = can !== 'ok';
-        r.btn.textContent = can === 'owned' ? t('owned') : can === 'locked' ? t('needLevel', { l: r.u.level }) : fmtMoney(r.u.cost);
+        r.btn.textContent = can === 'owned' ? t('owned') : can === 'locked' ? t('needLevel', { l: r.u.level })
+          : can === 'needs' ? t('needUpgrade', { u: t(`u_${r.u.needs}`) }) : fmtMoney(r.u.cost);
       }
     } else {
       const f = state.fuelOrder();
