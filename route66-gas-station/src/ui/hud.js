@@ -167,7 +167,8 @@ export function createHud() {
       if (work !== last.barWork) { last.barWork = work; el.fuel.classList.toggle('work', work); }
       const label = c.name ? t(c.name) : '';
       if (label !== last.barLabel) { last.barLabel = label; el.fuelLabel.textContent = label; }
-      const txt = work ? `${t(c.job)} ${Math.min(100, Math.round((c.done / c.work) * 100))}%` : `${c.got.toFixed(1)} / ${c.want} gal`;
+      const who = c.name ? `${t(c.name)} · ` : '';
+      const txt = who + (work ? `${t(c.job)} ${Math.min(100, Math.round((c.done / c.work) * 100))}%` : `${c.got.toFixed(1)} / ${c.want} gal`);
       if (txt === last.bar) return;
       last.bar = txt;
       el.fuelText.textContent = txt;

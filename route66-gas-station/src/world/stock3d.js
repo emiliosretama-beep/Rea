@@ -2,7 +2,7 @@
 // La cantidad dibujada sigue al inventario (si vendes, se vacía).
 import * as THREE from 'three';
 import { PAL } from '../config.js';
-import { LAYOUT } from './station.js';
+import { LAYOUT, SHELF_Y } from './station.js';
 
 export function createStockVisuals(scene) {
   const L = LAYOUT;
@@ -30,10 +30,11 @@ export function createStockVisuals(scene) {
   scene.add(racks);
 
   // Botanas: 2 estantes x 3 niveles x 6 cajas
-  const snackGeo = new THREE.BoxGeometry(0.3, 0.32, 0.22);
-  snackGeo.translate(0, 0.16, 0);
+  const snackGeo = new THREE.BoxGeometry(0.24, 0.28, 0.12);
+  snackGeo.translate(0, 0.14, 0);
   const snackSlots = [];
-  for (const sy of [0.73, 1.28, 1.83]) for (const sh of L.shelves) for (let i = 0; i < 6; i++) snackSlots.push([sh.x - sh.w / 2 + 0.25 + i * 0.38, sy, wallZ + 0.3]);
+  // Fila del frente de las tres repisas de abajo (la de atrás siempre está llena)
+  for (const sy of SHELF_Y.slice(0, 3)) for (const sh of L.shelves) for (let i = 0; i < 6; i++) snackSlots.push([sh.x - sh.w / 2 + 0.24 + i * 0.385, sy + 0.02, wallZ + 0.39]);
   const snacks = new THREE.InstancedMesh(snackGeo, new THREE.MeshLambertMaterial({ flatShading: true }), snackSlots.length);
   const snackColors = [0xe8b23a, PAL.red, 0x6f8fb8, PAL.cream, 0x8fa67a, 0xd3a15a];
   snackSlots.forEach(([x, y, z], i) => {

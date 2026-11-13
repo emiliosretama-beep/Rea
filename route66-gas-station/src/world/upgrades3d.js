@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { PAL } from '../config.js';
 import { box, cyl, merge, tint, vertexMat } from './geo.js';
-import { LAYOUT, pumpParts, stallLines } from './station.js';
+import { LAYOUT, pumpParts, stallLines, gondola } from './station.js';
 import { buildPerson } from './people.js';
 
 // Material sin sombreado para lo que "brilla" (neón, lámparas)
@@ -128,17 +128,8 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       add(p);
       // Estante extra al fondo a la derecha (usa el material del interior)
       const wallZ = L.building.z - L.building.d / 2 + 0.25;
-      const goods = [box(2.0, 2.1, 0.45, 0x8a6a4a, 6.3, 1.15, wallZ + 0.25)];
-      const colors = [PAL.red, PAL.teal, 0xe8b23a, PAL.cream, 0x6f8fb8, 0xd3a15a];
-      let k = 0;
-      for (const sy of [0.7, 1.25, 1.8]) {
-        goods.push(box(1.9, 0.05, 0.5, 0x6e4a32, 6.3, sy, wallZ + 0.3));
-        for (let i = 0; i < 5; i++) {
-          const h = 0.22 + ((k * 7) % 5) * 0.04;
-          goods.push(box(0.26, h, 0.26, colors[(k * 5 + i) % colors.length], 5.55 + i * 0.37, sy + 0.025 + h / 2, wallZ + 0.3));
-          k++;
-        }
-      }
+      const goods = [];
+      gondola(goods, 6.3, 2.0, wallZ, 23);
       goods.push(box(1.2, 0.5, 0.04, 0xe8b23a, 6.3, 2.6, wallZ + 0.03)); // cartel de oferta
       add(goods, station.insideMat);
       aabb(6.3, wallZ + 0.3, 2.0, 0.6);

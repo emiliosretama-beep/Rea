@@ -241,28 +241,36 @@ export function createStation(scene) {
     inside.push(cyl(0.095, 0.095, 0.04, 8, [PAL.red, 0xe8b23a, PAL.teal][i], C.x + 0.55 + i * 0.25, 1.41, C.z - 0.1));
   }
   inside.push(cyl(0.06, 0.08, 0.06, 8, BRASS, C.x - 0.05, 1.2, C.z - 0.25));
-  // Caja registradora antigua de latón: base con cajón, teclado en escalones, ventanita con banderitas y manivela
+  // Caja registradora antigua de latón. El cajero está del lado +z (el de la puerta), el cliente del lado -z.
   const rx = L.register.x, rz = L.register.z;
-  inside.push(box(0.62, 0.16, 0.5, BRASS, rx, 1.24, rz));
-  inside.push(box(0.6, 0.04, 0.02, 0x8a6a2a, rx, 1.22, rz - 0.255)); // ranura del cajón
-  inside.push(box(0.5, 0.26, 0.24, BRASS, rx, 1.43, rz + 0.08));
-  const keysBase = new THREE.BoxGeometry(0.52, 0.04, 0.3);
-  keysBase.rotateX(0.55);
-  keysBase.translate(rx, 1.42, rz - 0.13);
-  inside.push(tint(keysBase, 0x8a6a2a));
-  for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) {
-    const key = new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6);
-    key.translate(rx - 0.19 + k * 0.076, 1.36 + r * 0.06, rz - 0.22 + r * 0.075);
-    inside.push(tint(key, (r + k) % 3 === 0 ? PAL.dark : 0xf3ead6));
+  const DARK_BRASS = 0x8a6a2a;
+  inside.push(box(0.64, 0.2, 0.52, BRASS, rx, 1.26, rz)); // base con cajón
+  inside.push(box(0.58, 0.12, 0.02, DARK_BRASS, rx, 1.25, rz + 0.265)); // frente del cajón
+  inside.push(box(0.12, 0.04, 0.03, PAL.chrome, rx, 1.25, rz + 0.285)); // jaladera
+  // Cuerpo escalonado: más alto atrás, con el teclado inclinado hacia el cajero
+  inside.push(box(0.6, 0.34, 0.24, BRASS, rx, 1.53, rz - 0.13));
+  const slope = new THREE.BoxGeometry(0.6, 0.05, 0.32);
+  slope.rotateX(-0.6);
+  slope.translate(rx, 1.47, rz + 0.08);
+  inside.push(tint(slope, DARK_BRASS));
+  for (let row = 0; row < 3; row++) for (let k = 0; k < 6; k++) {
+    const key = new THREE.CylinderGeometry(0.028, 0.028, 0.05, 8);
+    key.rotateX(-0.6);
+    key.translate(rx - 0.2 + k * 0.08, 1.42 + row * 0.055, rz + 0.17 - row * 0.08);
+    inside.push(tint(key, row === 0 ? 0xf3ead6 : (k + row) % 3 === 0 ? PAL.dark : 0xf3ead6));
   }
-  inside.push(box(0.36, 0.14, 0.2, BRASS, rx, 1.63, rz + 0.08)); // caja del visor
-  inside.push(box(0.3, 0.09, 0.02, 0x23202a, rx, 1.64, rz - 0.025)); // visor
-  for (let i = 0; i < 3; i++) inside.push(box(0.07, 0.07, 0.015, i === 1 ? PAL.red : 0xf3ead6, rx - 0.09 + i * 0.09, 1.65, rz - 0.04)); // banderitas
-  const crank = new THREE.CylinderGeometry(0.07, 0.07, 0.04, 10);
+  // Remate con el visor por los dos lados y banderitas de cantidad
+  inside.push(box(0.46, 0.18, 0.2, BRASS, rx, 1.79, rz - 0.13));
+  inside.push(box(0.5, 0.05, 0.24, DARK_BRASS, rx, 1.9, rz - 0.13));
+  for (const side of [-1, 1]) {
+    inside.push(box(0.34, 0.1, 0.02, 0x23202a, rx, 1.79, rz - 0.13 + side * 0.105));
+    for (let i = 0; i < 3; i++) inside.push(box(0.07, 0.06, 0.01, i === 1 ? PAL.red : 0xf3ead6, rx - 0.09 + i * 0.09, 1.8, rz - 0.13 + side * 0.117));
+  }
+  const crank = new THREE.CylinderGeometry(0.075, 0.075, 0.04, 12);
   crank.rotateZ(Math.PI / 2);
-  crank.translate(rx + 0.33, 1.42, rz + 0.08);
+  crank.translate(rx + 0.34, 1.5, rz - 0.05);
   inside.push(tint(crank, PAL.chrome));
-  inside.push(box(0.03, 0.03, 0.14, PAL.dark, rx + 0.36, 1.42, rz + 0.01));
+  inside.push(box(0.03, 0.03, 0.12, PAL.dark, rx + 0.37, 1.5, rz + 0.02));
   aabb(C.x, C.z, C.w, C.d);
   // Refrigerador de sodas: mueble con marco; las botellas se dibujan aparte según el inventario
   const backZ = back + T; // cara interior de la pared del fondo
@@ -271,11 +279,8 @@ export function createStation(scene) {
   inside.push(box(F.w - 0.16, 1.7, 0.05, 0x2a3440, F.x, 1.25, backZ + 0.7)); // fondo oscuro de la puerta
   inside.push(box(F.w, 0.3, 0.68, PAL.red, F.x, 2.2, backZ + 0.36));
   inside.push(box(0.06, 1.7, 0.07, 0xdfe7ea, F.x, 1.25, backZ + 0.72));
-  // Estantes de comida
-  for (const sh of L.shelves) {
-    inside.push(box(sh.w, 2.1, 0.45, 0x8a6a4a, sh.x, 1.15, backZ + 0.25));
-    for (const sy of [0.7, 1.25, 1.8]) inside.push(box(sh.w - 0.1, 0.05, 0.5, 0x6e4a32, sh.x, sy, backZ + 0.3));
-  }
+  // Estantes abiertos, siempre surtidos al fondo (la fila del frente sigue al inventario)
+  for (const [k, sh] of L.shelves.entries()) gondola(inside, sh.x, sh.w, backZ, 11 + k);
   aabb((F.x - F.w / 2 + L.shelves[1].x + L.shelves[1].w / 2) / 2, backZ + 0.33, L.shelves[1].x + L.shelves[1].w / 2 - (F.x - F.w / 2), 0.7);
   // Lambrín turquesa con moldura roja en las paredes interiores
   for (const [w2, d2, x2, z2] of [[iw, 0.03, b.x, back + T + 0.04], [0.03, id, x0 + T + 0.04, b.z], [0.03, id, x1 - T - 0.04, b.z]]) {
@@ -466,12 +471,24 @@ export function createStation(scene) {
   // Pósters y letrero del fondo
   const poster = (lines, bg, fg, w2, h2, x2, y2, z2, rotY) => {
     const pc = document.createElement('canvas');
-    pc.width = 256; pc.height = Math.round(256 * h2 / w2);
+    // Lienzo con el alto suficiente; cada línea ocupa una franja proporcional a su tamaño
+    pc.width = 512; pc.height = Math.max(128, Math.round(512 * h2 / w2));
     const g = pc.getContext('2d');
     g.fillStyle = bg; g.fillRect(0, 0, pc.width, pc.height);
-    g.strokeStyle = fg; g.lineWidth = 8; g.strokeRect(10, 10, pc.width - 20, pc.height - 20);
+    const pad = pc.height * 0.1;
+    g.strokeStyle = fg; g.lineWidth = Math.max(6, pc.height * 0.04); g.strokeRect(pad * 0.5, pad * 0.5, pc.width - pad, pc.height - pad);
     g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
-    lines.forEach(([txt, size], i) => { g.font = `${size}px "Alfa Slab One", Impact, serif`; g.fillText(txt, pc.width / 2, (pc.height / (lines.length + 1)) * (i + 1)); });
+    const total = lines.reduce((acc, [, sz]) => acc + sz, 0);
+    let yy = pad;
+    lines.forEach(([txt, size]) => {
+      const band = (pc.height - pad * 2) * (size / total);
+      g.font = `${Math.round(band * 0.78)}px "Alfa Slab One", Impact, serif`;
+      // Que no se salga de lo ancho
+      const wTxt = g.measureText(txt).width, maxW = pc.width - pad * 2.4;
+      if (wTxt > maxW) g.font = `${Math.round(band * 0.78 * maxW / wTxt)}px "Alfa Slab One", Impact, serif`;
+      g.fillText(txt, pc.width / 2, yy + band / 2);
+      yy += band;
+    });
     const tex = new THREE.CanvasTexture(pc);
     tex.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w2, h2), new THREE.MeshLambertMaterial({ map: tex }));
@@ -668,6 +685,53 @@ function oilStains() {
 export function insideStore(p) {
   const b = LAYOUT.building;
   return Math.abs(p.x - b.x) < b.w / 2 - 0.2 && Math.abs(p.z - b.z) < b.d / 2 - 0.2;
+}
+
+// Altura de las repisas de los estantes de la tienda
+export const SHELF_Y = [0.42, 0.92, 1.42, 1.92];
+
+// Estante abierto de tienda: fondo, laterales, repisas y productos variados en la fila de atrás.
+// x: centro, w: ancho, wallZ: cara de la pared donde se apoya
+export function gondola(list, x, w, wallZ, seed) {
+  const WOOD = 0x8a6a4a, PLANK = 0x6e4a32;
+  const d = 0.5, cz = wallZ + d / 2;
+  list.push(box(w, 2.2, 0.04, 0x5a4232, x, 1.12, wallZ + 0.03)); // fondo
+  for (const sx of [-1, 1]) list.push(box(0.05, 2.25, d, WOOD, x + sx * (w / 2 - 0.025), 1.13, cz)); // laterales
+  list.push(box(w, 0.32, 0.05, PLANK, x, 0.18, wallZ + d - 0.03)); // zoclo
+  list.push(box(w + 0.04, 0.12, d + 0.04, PLANK, x, 2.28, cz)); // remate
+  list.push(box(w * 0.8, 0.18, 0.02, PAL.red, x, 2.12, wallZ + d + 0.005)); // tira de precios
+  for (const y of SHELF_Y) {
+    list.push(box(w - 0.1, 0.04, d, PLANK, x, y, cz));
+    list.push(box(w - 0.1, 0.06, 0.015, 0xe9dcc0, x, y - 0.01, wallZ + d + 0.008)); // etiqueta del borde
+  }
+  // Productos de atrás: latas, cajas de cereal, bolsas y botellas, siempre llenos
+  let r = seed * 9301 + 49297;
+  const rand = () => { r = (r * 9301 + 49297) % 233280; return r / 233280; };
+  const COLORS = [PAL.red, 0xe8b23a, PAL.teal, 0x6f8fb8, 0xe9e0cc, 0xd3a15a, 0x8fa67a, 0xc9584a];
+  for (const y of SHELF_Y) {
+    let px = x - w / 2 + 0.12;
+    while (px < x + w / 2 - 0.16) {
+      const kind = (rand() * 4) | 0;
+      const c = COLORS[(rand() * COLORS.length) | 0];
+      const z = wallZ + 0.16;
+      if (kind === 0) { // latas apiladas
+        for (const dz of [0, 0.1]) { list.push(cyl(0.045, 0.045, 0.13, 7, c, px + 0.05, y + 0.085, z + dz)); list.push(cyl(0.045, 0.045, 0.13, 7, c, px + 0.05, y + 0.215, z + dz)); }
+        px += 0.13;
+      } else if (kind === 1) { // caja de cereal
+        list.push(box(0.17, 0.36, 0.1, c, px + 0.09, y + 0.2, z + 0.03));
+        list.push(box(0.12, 0.08, 0.005, 0xf3ead6, px + 0.09, y + 0.27, z + 0.083));
+        px += 0.2;
+      } else if (kind === 2) { // bolsa de papas
+        list.push(box(0.2, 0.26, 0.08, c, px + 0.1, y + 0.15, z + 0.04));
+        list.push(box(0.21, 0.04, 0.085, 0xf3ead6, px + 0.1, y + 0.27, z + 0.04));
+        px += 0.22;
+      } else { // botellas
+        for (let i = 0; i < 2; i++) { list.push(cyl(0.04, 0.05, 0.24, 7, c, px + 0.05 + i * 0.1, y + 0.14, z + 0.04)); list.push(cyl(0.02, 0.02, 0.06, 6, PAL.chrome, px + 0.05 + i * 0.1, y + 0.29, z + 0.04)); }
+        px += 0.21;
+      }
+      px += 0.02;
+    }
+  }
 }
 
 // Líneas blancas de los cajones [from, to) del estacionamiento
