@@ -85,16 +85,22 @@ body.playing #hud { opacity: 1; }
 #chip-soda svg { background: var(--teal); }
 #chip-snack svg { background: #d3a15a; }
 #chip-money, #chip-rep { order: 0; }
+/* Inventario: solo aparece cuando algo se está acabando */
+.chip.stock { display: none; }
+.chip.stock.low { display: flex; }
+/* El nivel se ve en la libreta (y al subir de nivel sale un aviso) */
+#level { display: none !important; }
 .chip.low { background: #ffd3c4; border-color: var(--red); color: var(--red); }
 .chip.carry { background: #cfeee9; }
 
 /* Misión actual: boleto con encabezado rojo */
 #mission {
   position: absolute; right: calc(12px + var(--safe-r)); top: calc(68px + var(--safe-t));
-  width: min(230px, 31%); border-radius: 12px; overflow: hidden;
+  width: min(210px, 28%); border-radius: 12px; overflow: hidden;
 }
+#mission-reward { display: none; }
 #mission-label {
-  padding: 3px 11px 4px; background: var(--red); color: var(--cream);
+  padding: 2px 10px 3px; font-size: 10px !important; background: var(--red); color: var(--cream);
   font-family: var(--display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
   border-bottom: 2.5px solid var(--night);
 }
@@ -240,6 +246,7 @@ body.playing #markers { opacity: 1; }
 .marker[data-kind="pay"] svg { background: var(--teal); }
 .marker[data-kind="wash"] svg { background: #3f8fc4; }
 .marker[data-kind="garage"] svg { background: var(--night); }
+.marker[data-kind="cafe"] svg { background: #6b3a2a; }
 .marker i { display: block; width: 42px; height: 8px; border-radius: 4px; background: var(--cream); border: 2px solid var(--night); overflow: hidden; }
 .marker b { display: block; height: 100%; background: var(--teal); transform-origin: left; }
 .marker b.warn { background: #e8b23a; }

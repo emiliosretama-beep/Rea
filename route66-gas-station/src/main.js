@@ -22,6 +22,7 @@ import { createNotebook } from './ui/notebook.js';
 import { CAR_TYPES } from './data/carTypes.js';
 import { initCarFx, updateCarFx } from './world/carModels.js';
 import { createTumbleweeds } from './world/tumbleweeds.js';
+import { createJanitor } from './world/janitor.js';
 import { createPumpDisplays } from './world/pumpDisplays.js';
 import { createViewModel } from './core/viewmodel.js';
 import { fmtMoney } from './game/state.js';
@@ -47,7 +48,11 @@ const hud = createHud();
 hud.showFps(CFG.debugFps);
 const markers = createMarkers(view.camera);
 const state = createState();
-const toast = (key, params) => hud.toast(t(key, params));
+const QUIET = new Set([
+  'toastArrive', 'toastArriveService', 'toastShopper', 'toastAtCounter', 'toastFuelPaid', 'toastSale',
+  'toastCafe', 'toastCafePie', 'toastPaid', 'toastHelperPaid', 'toastWashed', 'toastRepaired',
+]);
+const toast = (key, params) => { if (!QUIET.has(key)) hud.toast(t(key, params)); };
 
 const missions = createMissions(state, (m) => { hud.toast(missions.doneText(m)); hud.missionPop(); });
 const litter = createLitter(view.scene, state);
@@ -56,6 +61,17 @@ const customers = createCustomers(view.scene, { traffic, state, colliders, onEve
 const stock3d = createStockVisuals(view.scene);
 initCarFx(view.scene); // después de crear todos los autos (tráfico y clientes)
 const tumbleweeds = createTumbleweeds(view.scene);
+// Conserje: rodea la tienda, el taller, el autolavado, la cafetería y el tanque
+const janitor = createJanitor(view.scene, litter, [
+  { minX: -8, maxX: 8, minZ: -35, maxZ: -27 },
+  { minX: 20.7, maxX: 27.3, minZ: -31.2, maxZ: -20.8 },
+  { minX: -31.5, maxX: -22.5, minZ: -32.3, maxZ: -27.7 },
+  { minX: 8.9, maxX: 15.5, minZ: -34, maxZ: -28 },
+  { minX: 34.2, maxX: 37, minZ: -31.8, maxZ: -26.2 },
+  { minX: -2.7, maxX: 2.7, minZ: -15.8, maxZ: -14.2 },
+]);
+customers.addWalker(janitor.walker);
+if (state.has('janitor')) janitor.enable();
 const pumpDisplays = createPumpDisplays(view.scene);
 const viewModel = createViewModel(view.scene, view.camera);
 state.onEvent((name, data) => { if (name === 'earn') hud.popMoney(`+${fmtMoney(data.amount)}`); });
@@ -91,7 +107,7 @@ state.onChange((s) => {
 
 // Mejoras: construir lo visual y avisar al subir de nivel
 state.onEvent((name, data) => {
-  if (name === 'upgrade') { upgrades3d.build(data.id); applyShadowFlags(); traffic.setLevel(state.level()); }
+  if (name === 'upgrade') { upgrades3d.build(data.id); if (data.id === 'janitor') janitor.enable(); applyShadowFlags(); traffic.setLevel(state.level()); }
   if (name === 'level') {
     hud.levelPop();
     const news = Object.values(CAR_TYPES).filter((T) => T.level === data.level && T.chance).map((T) => t(T.name)).join(', ');
@@ -251,8 +267,10 @@ function updateService(dt) {
   hud.setCustomer(customers.focusInfo(player, it));
   // Barra central: el lugar que tienes enfrente, si se puede trabajar en él
   const bay = it && it.bay;
+  const prog = it && it.progress ? it.progress() : null;
   const active = !!(bay && bay.c && (customers.canFuel(bay) || customers.canWork(bay)) && !bay.byHelper);
-  hud.setBar(active ? bay.c : null, active);
+  if (prog) hud.setBar(prog, true);
+  else hud.setBar(active ? bay.c : null, active);
   // Herramienta en la mano: aparece al mantener pulsado en una bomba o servicio
   const tool = holding && holding.bay && active ? (holding.bay.kind === 'fuel' ? 'fuel' : holding.bay.kind) : null;
   viewModel.update(dt, tool, !!tool);
@@ -292,9 +310,11 @@ function frame(now) {
       if (i) traffic.update(dt);
       customers.update(dt, player);
       litter.update(dt);
+      janitor.update(dt);
       missions.tick(dt);
     }
     upgrades3d.update(dt, now / 1000, customers.helperBay());
+    upgrades3d.services(dt, customers.bays.find((b) => b.kind === 'wash'), customers.bays.find((b) => b.kind === 'garage'));
     interactions.update(dt, player);
     updateService(dt);
     markers.update(customers.markers());

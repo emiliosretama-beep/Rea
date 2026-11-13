@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.8 · Etapa 4 pulida',
+  version: 'DEV 0.9 · Etapa 4 pulida',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -21,7 +21,7 @@ export const CFG = {
   // Carretera: corre a lo largo del eje X, centrada en z = 0
   road: { width: 10, length: 640, laneZ: 2.5 },
 
-  debugFps: true,
+  debugFps: false, // contador de FPS solo para desarrollo
 };
 
 // Balance del negocio (precios de los años 50)
@@ -53,12 +53,12 @@ export const BAL = {
   // Mejoras (los costos están en data/upgrades.js)
   storageMult: 2, // almacén: capacidad x2
   neonSpawn: 0.8, // neón: los clientes llegan 20 % más seguido
-  cafeChance: 0.35, cafePrice: 0.45,
+  cafeChance: 0.45, cafePrice: 0.45, piePrice: 0.4, brewTime: 2.5,
   parkingPatience: 1.25,
   helperDelay: 1.5, helperSpeed: 0.55, helperPayDelay: 3,
   // Servicios: segundos de trabajo y pago
   jobs: {
-    wash: [{ id: 'jobWash', work: 3.5, pay: 1.2 }],
+    wash: [{ id: 'jobWash', work: 8, pay: 1.4 }], // automático: corre solo
     garage: [{ id: 'jobOil', work: 5, pay: 1.8 }, { id: 'jobTires', work: 7, pay: 2.6 }],
   },
   servicePatience: 40, serviceTip: 0.3,

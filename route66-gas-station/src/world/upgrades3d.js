@@ -16,6 +16,7 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
   const circle = (x, z, r) => colliders.push({ type: 'circle', x, z, r });
   const add = (parts, mat = vertexMat) => { const m = new THREE.Mesh(merge(parts), mat); scene.add(m); return m; };
   let helper = null;
+  let washFx = null, garageFx = null;
 
   // Letrero de texto (canvas) en un plano; dos caras si 'both'
   function textSign(text, w, h, x, y, z, rotY, colors, both = false) {
@@ -41,30 +42,33 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
   const builders = {
     // Almacén: tanque grande y cajas en la franja este del terreno
     storage() {
+      // Tanque grande pegado a la barda este (el camino del autolavado pasa por x = 30)
       const p = [];
+      const tx = 35.6, tz = -29;
       const tank = new THREE.CylinderGeometry(1.25, 1.25, 5.2, 12);
       tank.rotateX(Math.PI / 2);
-      tank.translate(34.5, 1.95, -30);
+      tank.translate(tx, 1.95, tz);
       p.push(tint(tank, 0xcfc8b8));
       for (const dz of [-1.9, 1.9]) {
         const ring = new THREE.CylinderGeometry(1.28, 1.28, 0.28, 12);
         ring.rotateX(Math.PI / 2);
-        ring.translate(34.5, 1.95, -30 + dz);
+        ring.translate(tx, 1.95, tz + dz);
         p.push(tint(ring, PAL.red));
-        p.push(box(2.3, 0.8, 0.5, 0x7d7a74, 34.5, 0.4, -30 + dz * 0.8));
+        p.push(box(2.3, 0.8, 0.5, 0x7d7a74, tx, 0.4, tz + dz * 0.8));
       }
-      p.push(box(0.12, 1.5, 0.12, PAL.dark, 33.1, 0.75, -27.9));
-      p.push(box(0.5, 0.12, 0.12, PAL.red, 33.1, 1.5, -27.9));
-      p.push(box(1.0, 1.0, 1.0, PAL.wood, 31.6, 0.5, -33.6));
-      p.push(box(0.9, 0.9, 0.9, 0x80583c, 32.7, 0.45, -34.2));
-      p.push(box(0.8, 0.8, 0.8, PAL.wood, 32.0, 1.4, -33.9));
-      p.push(cyl(0.3, 0.3, 0.9, 8, PAL.teal, 31.2, 0.45, -31.8));
-      p.push(cyl(0.3, 0.3, 0.9, 8, PAL.red, 30.6, 0.45, -32.3));
+      p.push(box(0.12, 1.5, 0.12, PAL.dark, tx - 1.4, 0.75, tz + 2.1));
+      p.push(box(0.5, 0.12, 0.12, PAL.red, tx - 1.4, 1.5, tz + 2.1));
+      p.push(box(1.0, 1.0, 1.0, PAL.wood, 36.4, 0.5, -34.4));
+      p.push(box(0.9, 0.9, 0.9, 0x80583c, 37.5, 0.45, -35.1));
+      p.push(box(0.8, 0.8, 0.8, PAL.wood, 36.8, 1.4, -34.8));
+      p.push(cyl(0.3, 0.3, 0.9, 8, PAL.teal, 37.6, 0.45, -24.6));
+      p.push(cyl(0.3, 0.3, 0.9, 8, PAL.red, 37.0, 0.45, -24.1));
       add(p);
-      aabb(34.5, -30, 2.7, 5.4);
-      circle(32.1, -33.9, 1.1);
-      circle(30.9, -32.05, 0.6);
+      aabb(tx, tz, 2.7, 5.4);
+      circle(36.9, -34.8, 1.1);
+      circle(37.3, -24.35, 0.6);
     },
+
 
     // Segunda bomba, sobre la base vacía de la isla
     pump2() {
@@ -101,15 +105,15 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
     parking() {
       const p = [];
       stallLines(p, 2, 4);
-      const lx = -33, lz = -25;
+      const lx = -20.2, lz = -9.4;
       p.push(cyl(0.09, 0.12, 4.4, 6, PAL.dark, lx, 2.2, lz));
-      p.push(box(1.2, 0.08, 0.08, PAL.dark, lx + 0.5, 4.36, lz));
-      p.push(box(0.08, 2.2, 0.08, PAL.dark, -32.6, 1.1, -21.4));
+      p.push(box(1.2, 0.08, 0.08, PAL.dark, lx - 0.5, 4.36, lz));
+      p.push(box(0.08, 2.2, 0.08, PAL.dark, -21.2, 1.1, -7.6));
       add(p);
-      add([box(0.5, 0.14, 0.34, WARM, lx + 1.0, 4.28, lz)], glowMat);
-      textSign('P', 0.9, 0.9, -32.6, 2.5, -21.36, 0, ['#3f6fb0', '#f6e7c8']);
+      add([box(0.5, 0.14, 0.34, WARM, lx - 1.0, 4.28, lz)], glowMat);
+      textSign('P', 0.9, 0.9, -21.2, 2.5, -7.56, 0, ['#3f6fb0', '#f6e7c8']);
       circle(lx, lz, 0.25);
-      circle(-32.6, -21.4, 0.15);
+      circle(-21.2, -7.6, 0.15);
     },
 
     // Tienda surtida: toldo a rayas, un estante más con variedad y carteles de oferta
@@ -170,7 +174,7 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       circle(cx + 3.2, cz + 2.9, 0.2);
     },
 
-    // Autolavado (oeste): túnel que se cruza de este a oeste, con cepillos, rodillo y letrero
+    // Autolavado (fondo oeste): túnel con un pórtico que recorre el auto (rodillo y cepillos que giran, agua)
     carwash() {
       const p = [];
       const cx = L.carwash.x, z = L.carwash.z, len = 9, half = 2.25, h = 3.3;
@@ -184,53 +188,123 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
         p.push(box(len + 0.02, 0.18, 0.26, PAL.red, cx, 0.5, wz));
         for (let i = 0; i < 3; i++) p.push(box(1.6, 0.7, 0.27, 0x9fc3cf, x1 + 1.6 + i * 2.9, 1.9, wz)); // ventanitas
         aabb(cx, wz, len, 0.24);
-        // Cepillos verticales a la entrada
-        for (let k = 0; k < 3; k++) p.push(cyl(0.34, 0.34, 0.7, 8, k % 2 ? PAL.cream : PAL.teal, x2 - 1.2, 0.45 + k * 0.72, z + s * (half - 0.55)));
+        // Rieles del pórtico a lo largo de cada muro
+        p.push(box(len - 0.4, 0.1, 0.12, PAL.chrome, cx, h - 0.25, wz - s * 0.2));
       }
-      // Techo con alero en V invertida
       p.push(box(len + 1.2, 0.24, half * 2 + 1.0, 0x2f7f86, cx, h + 0.12, z));
       p.push(box(len + 1.25, 0.12, half * 2 + 1.05, PAL.cream, cx, h + 0.3, z));
-      // Arco de entrada a rayas
       // Arco de entrada: dos postes a rayas y una viga arriba (el paso queda libre)
       for (const sz of [-1, 1]) {
         for (let k = 0; k < 6; k++) p.push(box(0.34, 0.5, 0.36, k % 2 ? PAL.cream : PAL.red, x2 + 0.12, 0.25 + k * 0.5, z + sz * (half + 0.04)));
       }
       p.push(box(0.36, 0.42, half * 2 + 0.5, PAL.red, x2 + 0.12, h - 0.15, z));
-      const roller = new THREE.CylinderGeometry(0.32, 0.32, half * 2 - 0.4, 10);
-      roller.rotateX(Math.PI / 2);
-      roller.translate(cx + 1.4, 2.6, z);
-      p.push(tint(roller, PAL.red));
-      // Tablero de control afuera, junto a la entrada
+      // Botón de inicio afuera, junto a la entrada (pedestal con botón grande)
       const px = L.carwash.px, pz = L.carwash.pz;
-      p.push(box(0.12, 1.1, 0.12, PAL.dark, px, 0.55, pz));
-      p.push(box(0.5, 0.6, 0.3, PAL.dark, px, 1.3, pz));
-      p.push(box(0.16, 0.16, 0.05, PAL.red, px - 0.1, 1.35, pz + 0.16));
-      p.push(box(0.16, 0.16, 0.05, 0x3fb06a, px + 0.12, 1.35, pz + 0.16));
+      p.push(box(0.16, 1.0, 0.16, PAL.dark, px, 0.5, pz));
+      p.push(box(0.55, 0.65, 0.35, 0xe3d6b8, px, 1.3, pz));
+      p.push(box(0.5, 0.12, 0.38, PAL.teal, px, 1.66, pz));
       add(p);
       circle(px, pz, 0.3);
-      // Letrero sobre el techo: una cara hacia la carretera y otra hacia la tienda
+      const button = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x3fb06a, toneMapped: false }));
+      button.position.set(px, 1.32, pz + 0.19);
+      scene.add(button);
+      // Letrero sobre el techo: una cara hacia la carretera y otra hacia atrás
       add([box(5.4, 1.3, 0.1, PAL.dark, cx, h + 1.0, z)]);
       textSign('CAR WASH', 5.2, 1.1, cx, h + 1.0, z + 0.06, 0, ['#2f7f86', '#f6e7c8']);
       textSign('CAR WASH', 5.2, 1.1, cx, h + 1.0, z - 0.06, Math.PI, ['#2f7f86', '#f6e7c8']);
+
+      // ----- Pórtico móvil -----
+      const gantry = new THREE.Group();
+      const frame = [];
+      for (const s of [-1, 1]) frame.push(box(0.18, h - 0.35, 0.18, PAL.chrome, 0, (h - 0.35) / 2, s * (half - 0.32)));
+      frame.push(box(0.22, 0.22, half * 2 - 0.4, PAL.chrome, 0, h - 0.4, 0));
+      frame.push(box(0.12, 0.08, half * 2 - 0.7, 0x3a4a50, -0.32, h - 0.62, 0)); // barra de rociadores
+      gantry.add(new THREE.Mesh(merge(frame), vertexMat));
+      // Rodillo de arriba (gira sobre su eje a lo ancho) y cepillos verticales a los lados
+      const brushParts = (radius, length, axis) => {
+        const g = [];
+        const n = 8;
+        g.push(cyl(radius * 0.35, radius * 0.35, length, 6, PAL.chrome, 0, 0, 0));
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2;
+          g.push(box(0.09, length * 0.96, radius * 0.9, i % 2 ? 0x2f9c95 : 0xd84a3a, Math.cos(a) * radius * 0.55, 0, Math.sin(a) * radius * 0.55));
+        }
+        const m = merge(g);
+        if (axis === 'z') m.rotateX(Math.PI / 2);
+        return m;
+      };
+      const roller = new THREE.Mesh(brushParts(0.42, half * 2 - 0.9, 'z'), vertexMat);
+      roller.position.set(0.25, h - 1.15, 0);
+      gantry.add(roller);
+      const sideBrushes = [-1, 1].map((s) => {
+        const b2 = new THREE.Mesh(brushParts(0.38, 1.6, 'y'), vertexMat);
+        b2.position.set(0.25, 1.05, s * 1.5);
+        gantry.add(b2);
+        return b2;
+      });
+      gantry.position.set(x2 - 0.9, 0, z);
+      scene.add(gantry);
+      // Agua: gotas que caen de la barra de rociadores
+      const N = 140;
+      const drops = new Float32Array(N * 3);
+      const speeds = new Float32Array(N);
+      for (let i = 0; i < N; i++) { drops[i * 3] = 0; drops[i * 3 + 1] = -10; drops[i * 3 + 2] = 0; speeds[i] = 3 + Math.random() * 3; }
+      const waterGeo = new THREE.BufferGeometry();
+      waterGeo.setAttribute('position', new THREE.BufferAttribute(drops, 3));
+      const water = new THREE.Points(waterGeo, new THREE.PointsMaterial({ color: 0xbfe8ff, size: 0.07, transparent: true, opacity: 0.8, depthWrite: false }));
+      water.frustumCulled = false;
+      scene.add(water);
+      let spin = 0;
+      washFx = {
+        // active: el ciclo está corriendo · progress: 0 a 1
+        update(dt, active, progress, waiting) {
+          spin += dt * (active ? 9 : 0);
+          roller.rotation.z = spin;
+          sideBrushes[0].rotation.y = spin;
+          sideBrushes[1].rotation.y = -spin;
+          // Ida (este a oeste) y vuelta
+          const rest = x2 - 0.9, far = x1 + 1.0;
+          const k = progress < 0.5 ? progress * 2 : 2 - progress * 2;
+          const target = active ? rest + (far - rest) * k : rest;
+          gantry.position.x += (target - gantry.position.x) * (1 - Math.exp(-6 * dt));
+          // Botón verde que parpadea cuando hay un auto esperando
+          button.material.color.set(waiting ? (Math.sin(performance.now() / 180) > 0 ? 0x5dff8f : 0x2f8a4f) : active ? 0xffb347 : 0x2f6a4a);
+          // Agua
+          const arr = waterGeo.attributes.position.array;
+          for (let i = 0; i < N; i++) {
+            if (arr[i * 3 + 1] < 0.12) {
+              if (!active) { arr[i * 3 + 1] = -10; continue; }
+              arr[i * 3] = gantry.position.x - 0.32 + (Math.random() - 0.5) * 0.3;
+              arr[i * 3 + 1] = h - 0.7;
+              arr[i * 3 + 2] = z + (Math.random() - 0.5) * (half * 2 - 0.9);
+            }
+            arr[i * 3 + 1] -= speeds[i] * dt;
+          }
+          waterGeo.attributes.position.needsUpdate = true;
+        },
+      };
     },
 
-    // Taller (este): nave abierta de lado oeste, muro de ladrillo al este, techo con letrero
+    // Taller (este): nave de ladrillo con elevador hidráulico, herramientas y letreros
     garage() {
       const p = [];
+      const glow = [];
       const cx = L.garage.x, cz = L.garage.z, w = 6.6, len = 10.4, h = 3.8;
       const xw = cx - w / 2, xe = cx + w / 2, z1 = cz - len / 2, z2 = cz + len / 2;
-      const BRICK = 0x9a5a44;
+      const BRICK = 0x9a5a44, YELLOW = 0xe8b23a;
       p.push(box(w + 0.6, 0.05, len + 0.6, 0x77726b, cx, 0.09, cz)); // piso de concreto del taller
-      p.push(box(1.0, 0.02, 3.2, 0x3a3434, cx, 0.12, cz)); // fosa
-      // Muro este de ladrillo (completo) y medios muros al oeste, dejando la entrada lateral para ti
+      for (let i = 0; i < 2; i++) p.push(box(0.12, 0.02, len, YELLOW, cx + (i ? 1.55 : -1.55) + (i ? 0.45 : -0.45), 0.12, cz)); // franjas de seguridad
+      // Muro este de ladrillo con hileras y una ventana; medios muros al oeste
       p.push(box(0.3, h, len, BRICK, xe, h / 2, cz));
-      for (let i = 0; i < 4; i++) p.push(box(0.32, 0.1, len, 0x7a4636, xe, 0.6 + i * 0.85, cz));
+      for (let i = 0; i < 4; i++) p.push(box(0.32, 0.08, len, 0x7a4636, xe, 0.6 + i * 0.85, cz));
+      p.push(box(0.34, 0.9, 2.2, 0x9fc3cf, xe, 2.6, cz - 2.6));
       aabb(xe, cz, 0.3, len);
       for (const [za, zb] of [[z1, cz - 2.3], [cz + 2.3, z2]]) {
         p.push(box(0.3, 1.1, zb - za, BRICK, xw, 0.55, (za + zb) / 2));
+        p.push(box(0.34, 0.08, zb - za, 0x8f877b, xw, 1.12, (za + zb) / 2));
         aabb(xw, (za + zb) / 2, 0.3, zb - za);
       }
-      // Postes y techo inclinado de lámina
+      // Postes, techo inclinado de lámina y cortinas enrolladas arriba de cada entrada
       for (const z of [z1, cz - 2.3, cz + 2.3, z2]) { p.push(box(0.2, h, 0.2, PAL.dark, xw, h / 2, z)); circle(xw, z, 0.14); }
       const roof = new THREE.BoxGeometry(w + 1.2, 0.18, len + 1.0);
       roof.rotateZ(-0.08);
@@ -242,24 +316,86 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
         ribs.translate(cx, h + 0.32, z1 - 0.4 + i * ((len + 0.8) / 8));
         p.push(tint(ribs, 0x5a4a40));
       }
+      for (const zz of [z1, z2]) {
+        const roll = new THREE.CylinderGeometry(0.28, 0.28, w - 0.6, 10);
+        roll.rotateZ(Math.PI / 2);
+        roll.translate(cx + 0.2, h - 0.35, zz);
+        p.push(tint(roll, 0x8f877b));
+        p.push(box(w - 0.6, 0.45, 0.04, 0xb5ab9b, cx + 0.2, h - 0.8, zz)); // cortina a medio subir
+      }
       p.push(box(w + 1.3, 0.55, 0.12, PAL.cream, cx, h - 0.1, z2 + 0.5)); // fascia del frente
-      // Herramientas: banco de trabajo junto al muro, llantas, tambos y gato
+      // Elevador hidráulico: dos postes amarillos a los lados del auto
+      for (const s of [-1, 1]) {
+        p.push(box(0.26, 2.7, 0.36, YELLOW, cx + s * 1.55, 1.35, cz));
+        p.push(box(0.6, 0.06, 0.7, PAL.dark, cx + s * 1.55, 0.12, cz));
+        p.push(box(0.12, 0.25, 0.12, PAL.red, cx + s * 1.55, 2.75, cz)); // tope
+        circle(cx + s * 1.55, cz, 0.22);
+      }
+      // Tablero de herramientas en el muro y banco de trabajo
+      p.push(box(0.05, 1.3, 2.6, 0x8a6a4a, xe - 0.18, 1.9, cz + 2.8));
+      const tools = [[0.3, 0.06, PAL.chrome], [0.06, 0.4, PAL.red], [0.35, 0.05, PAL.chrome], [0.06, 0.3, 0x2f7f86], [0.25, 0.08, PAL.dark]];
+      for (let i = 0; i < 10; i++) {
+        const [tw, th, c] = tools[i % tools.length];
+        p.push(box(0.04, th, tw, c, xe - 0.22, 1.5 + (i % 2) * 0.55, cz + 1.7 + Math.floor(i / 2) * 0.5));
+      }
       p.push(box(0.7, 0.95, 2.4, PAL.wood, xe - 0.55, 0.5, cz + 2.8));
       p.push(box(0.8, 0.07, 2.5, 0x80583c, xe - 0.55, 1.0, cz + 2.8));
-      p.push(box(0.4, 0.3, 0.6, PAL.red, xe - 0.55, 1.2, cz + 2.3));
-      for (let i = 0; i < 4; i++) p.push(cyl(0.4, 0.4, 0.24, 9, PAL.dark, xe - 0.65, 0.18 + i * 0.25, cz - 3.4));
-      p.push(cyl(0.3, 0.3, 0.9, 8, 0xd2a43c, xe - 0.6, 0.51, cz - 2.2));
+      p.push(box(0.22, 0.2, 0.3, PAL.dark, xe - 0.4, 1.14, cz + 2.0)); // prensa
+      // Repisa con latas de aceite
+      p.push(box(0.4, 0.05, 1.6, 0x6e4a32, xe - 0.3, 2.95, cz + 0.2));
+      for (let i = 0; i < 6; i++) p.push(cyl(0.08, 0.08, 0.22, 8, [PAL.red, 0xe8b23a, 0x2f7f86][i % 3], xe - 0.3, 3.09, cz - 0.4 + i * 0.25));
+      // Rack de llantas, compresor de aire y tambo
+      p.push(box(0.6, 1.6, 0.06, PAL.dark, xe - 0.6, 0.8, cz - 4.4));
+      for (let i = 0; i < 4; i++) {
+        const tire = new THREE.CylinderGeometry(0.38, 0.38, 0.22, 10);
+        tire.rotateZ(Math.PI / 2);
+        tire.translate(xe - 0.6, 0.5 + (i % 2) * 0.82, cz - 4.1 + Math.floor(i / 2) * 0.5);
+        p.push(tint(tire, 0x1e1b22));
+      }
+      const tank = new THREE.CylinderGeometry(0.3, 0.3, 1.1, 10);
+      tank.rotateX(Math.PI / 2);
+      tank.translate(xe - 0.7, 0.45, cz - 2.2);
+      p.push(tint(tank, PAL.red));
+      p.push(box(0.25, 0.25, 0.25, PAL.dark, xe - 0.7, 0.85, cz - 2.4)); // motor del compresor
+      p.push(cyl(0.06, 0.06, 0.05, 8, PAL.cream, xe - 0.45, 0.85, cz - 2.4)); // manómetro
       aabb(xe - 0.55, cz + 2.8, 0.8, 2.5);
-      circle(xe - 0.65, cz - 3.4, 0.45);
-      circle(xe - 0.6, cz - 2.2, 0.35);
-      // Carrito de herramientas donde trabajas (lado oeste del auto)
+      circle(xe - 0.6, cz - 4.15, 0.5);
+      circle(xe - 0.7, cz - 2.2, 0.55);
+      // Extintor en el poste
+      p.push(cyl(0.09, 0.09, 0.45, 8, PAL.red, xw + 0.18, 1.0, cz + 2.3));
+      // Lámparas colgantes sobre el elevador
+      for (const zz of [cz - 1.6, cz + 1.6]) {
+        p.push(box(0.03, 0.6, 0.03, PAL.dark, cx, h - 0.3, zz));
+        const shade = new THREE.ConeGeometry(0.32, 0.25, 8, 1, true);
+        shade.translate(cx, h - 0.72, zz);
+        p.push(tint(shade, 0x2f7f86));
+        glow.push(box(0.16, 0.06, 0.16, WARM, cx, h - 0.86, zz));
+      }
+      // Carrito de herramientas donde trabajas (lado oeste, a la entrada del taller)
       const tx = L.garage.px, tz = L.garage.pz;
       p.push(box(0.5, 0.85, 0.7, PAL.red, tx, 0.5, tz));
       for (let i = 0; i < 3; i++) p.push(box(0.52, 0.03, 0.6, PAL.chrome, tx, 0.35 + i * 0.22, tz));
       p.push(box(0.55, 0.05, 0.75, PAL.dark, tx, 0.95, tz));
+      // Letrero redondo de servicio en un poste afuera
+      p.push(box(0.1, 3.2, 0.1, PAL.dark, xw - 0.9, 1.6, z2 + 0.6));
       add(p);
+      add(glow, glowMat);
       circle(tx, tz, 0.4);
+      circle(xw - 0.9, z2 + 0.6, 0.12);
       textSign('GARAGE', 5.6, 0.9, cx, h + 0.95, z2 + 0.58, 0, ['#23202a', '#e8b23a']);
+      const disc = textSign('SERVICE', 1.6, 1.6, xw - 0.9, 3.4, z2 + 0.67, 0, ['#c8322b', '#f6e7c8', '#f6e7c8']);
+      void disc;
+      // Brazos del elevador: suben con el auto
+      const arms = new THREE.Group();
+      const armParts = [];
+      for (const s of [-1, 1]) for (const dz of [-1.1, 1.1]) {
+        armParts.push(box(1.0, 0.08, 0.14, PAL.dark, cx + s * 1.05, 0.22, cz + dz));
+        armParts.push(box(0.2, 0.06, 0.2, PAL.red, cx + s * 0.6, 0.29, cz + dz));
+      }
+      for (const s of [-1, 1]) armParts.push(box(0.32, 0.36, 0.42, YELLOW, cx + s * 1.55, 0.25, cz)); // carros que suben por el poste
+      arms.add(new THREE.Mesh(merge(armParts), vertexMat));
+      scene.add(arms);
+      garageFx = { update(liftY) { arms.position.y = liftY; } };
     },
 
     // Ayudante: persona con overol turquesa junto a su bomba
@@ -278,6 +414,14 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       builders[id]();
     },
     // Mueve al ayudante entre su lugar de descanso y la bomba
+    // Animaciones de los servicios: autolavado y elevador del taller
+    services(dt, washBay, garageBay) {
+      if (washFx && washBay) {
+        const c = washBay.c;
+        washFx.update(dt, washBay.phase === 'working', c && c.work ? Math.min(1, c.done / c.work) : 0, washBay.phase === 'waiting');
+      }
+      if (garageFx && garageBay) garageFx.update(garageBay.liftY || 0);
+    },
     update(dt, time, bay) {
       if (!helper || !bay) return;
       const pump = L.pumps[bay.pump];

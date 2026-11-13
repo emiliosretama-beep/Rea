@@ -28,7 +28,7 @@ export const MISSIONS = [
   { id: 'service4', text: 'mService', n: 4, on: 'service', money: 10, rep: 3 },
   { id: 'level5', text: 'mLevel', n: 5, value: (s) => s.level(), money: 15, rep: 4 },
   { id: 'vip1', text: 'mVip', n: 1, on: 'served', if: (d) => d.typeId === 'vip', money: 15, rep: 5 },
-  { id: 'all', text: 'mAll', n: 9, value: (s) => s.upgradeCount(), money: 25, rep: 5 },
+  { id: 'all', text: 'mAll', n: 10, value: (s) => s.upgradeCount(), money: 25, rep: 5 },
 ];
 
 // Cuando se acaba la cadena, esta se repite

@@ -51,12 +51,15 @@ export function buildPerson(shirt, rand = Math.random) {
     root,
     shirtMat,
     // walkT: tiempo de caminata (null = quieto). reach: brazo derecho extendido (trabajando)
-    pose(walkT, reach = 0) {
+    // sit: sentado en un banco · bend: agachado (recogiendo algo)
+    pose(walkT, reach = 0, sit = false, bend = 0) {
+      body.rotation.x = 0;
       if (walkT === null) {
-        legL.rotation.x = legR.rotation.x = 0;
-        armL.rotation.x = 0;
-        armR.rotation.x = -reach * 1.2;
+        legL.rotation.x = legR.rotation.x = sit ? -1.25 : 0;
+        armL.rotation.x = sit ? -0.6 : 0;
+        armR.rotation.x = sit ? -0.9 : -reach * 1.2;
         body.position.y = 0;
+        if (bend) { body.rotation.x = bend * 0.7; body.position.y = -bend * 0.15; armR.rotation.x = -bend * 1.3; armL.rotation.x = -bend * 1.1; }
         head.rotation.y = 0;
         return;
       }
@@ -85,11 +88,11 @@ export function createPeople(scene, count) {
       }
       p.root.visible = on;
     },
-    place(i, x, z, yaw, walking) {
+    place(i, x, z, yaw, walking, sit = false) {
       const p = list[i];
-      p.root.position.set(x, 0.08, z);
+      p.root.position.set(x, sit ? 0.02 : 0.08, z);
       p.root.rotation.y = yaw;
-      p.pose(walking);
+      p.pose(walking, 0, sit);
     },
   };
 }

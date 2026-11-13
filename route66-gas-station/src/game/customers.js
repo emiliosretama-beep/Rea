@@ -19,8 +19,10 @@ const MOVERS = 8;
 // Tramo común de entrada (este) y de salida (oeste)
 const ENTRY = [[SPAWN_X, ROAD_Z], [120, ROAD_Z], [70, ROAD_Z], [48, ROAD_Z], [38, -3.3]];
 const EXIT = [[-38, -3.3], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]];
-// Salida por el lado oeste del terreno (autolavado, estacionamiento y camino de atrás)
-const WEST_EXIT = [[-35.3, -20], [-35.3, -12.5], [-37.2, -7.6], [-41, -3.7], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]];
+// Salida por el lado oeste del terreno (autolavado y camino de atrás)
+const WR = LAYOUT.westRoadX;
+const ROAD_TAIL = [[-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]];
+const WEST_EXIT = [[WR, -22], [WR, -12], [-37.6, -6.6], [-41, -3.7], ...ROAD_TAIL];
 const N = LAYOUT.lanes.north, S = LAYOUT.lanes.south;
 const G = LAYOUT.garage, W = LAYOUT.carwash;
 const BACK_Z = -37.6; // camino detrás de la tienda
@@ -31,34 +33,41 @@ const BAY_DEFS = [
   {
     id: 'pump1', kind: 'fuel', lane: 'north', stop: [LAYOUT.pumps[0].x, N], pump: 0,
     inPts: [[28, -7.2], [19, -11.6], [11, N]],
-    outPts: [[-11, N], [-19, -11.6], [-28, -7.2], ...EXIT],
+    outPts: [[-11, N], [-14.5, -10.4], [-16.6, -7], [-20, -4], [-28, -2.8], ...ROAD_TAIL],
   },
   {
     id: 'pump2', kind: 'fuel', lane: 'south', stop: [LAYOUT.pumps[1].x, S], pump: 1, needs: 'pump2',
     inPts: [[29, -7.6], [22, -12.6], [14.5, -16.6], [9, S]],
-    outPts: [[-9, S], [-13, -16.2], [-16.5, -12.6], [-21, -9.6], [-29, -7.4], ...EXIT],
+    outPts: [[-9, S], [-13, -15.4], [-15.4, -11], [-17, -7], [-20.4, -4], [-28, -2.8], ...ROAD_TAIL],
   },
   {
     // Taller (este): entra por el norte, sale por el sur y rodea por detrás de la tienda
     id: 'garage', kind: 'garage', stop: [G.x, G.z], needs: 'garage',
     inPts: [[33, -8.6], [28.5, -13], [G.x, -17.5], [G.x, -21]],
-    outPts: [[G.x, -31.5], [G.x - 0.6, -34.6], [G.x - 4, BACK_Z + 0.3], [8, BACK_Z], [-20, BACK_Z], [-31, BACK_Z + 0.2], [-34.6, -35], [-35.3, -30], ...WEST_EXIT],
+    outPts: [[G.x, -31.5], [G.x - 0.6, -34.6], [G.x - 4, BACK_Z + 0.3], [8, BACK_Z], [-20, BACK_Z], [-31, BACK_Z + 0.2], [-35, -35.6], [WR, -31], ...WEST_EXIT],
   },
   {
-    // Autolavado (oeste): carril del frente hacia el oeste y túnel de este a oeste
+    // Autolavado (fondo oeste): baja por el lado este, cruza por detrás de la tienda y entra al túnel
     id: 'wash', kind: 'wash', stop: [W.x, W.z], needs: 'carwash',
-    inPts: [[30, -7.6], [16, -9.3], [-12, -9.5], [-16.5, -10.3], [-20, -13], [-22.8, W.z]],
-    outPts: [[-33, W.z], [-35.3, -12.5], [-37.2, -7.6], [-41, -3.7], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]],
+    inPts: [[33, -8.6], [30.2, -13.6], [30, -22], [30, -32.4], [27.4, -36.7], [22, BACK_Z], [-12, BACK_Z], [-16.6, -35.4], [-20.2, -31.2], [-22.8, W.z]],
+    outPts: [[-33, W.z], [-35.6, -27.6], ...WEST_EXIT],
   },
 ];
 
 // ---------- Caminos a pie hacia y dentro de la tienda ----------
 const STZ = LAYOUT.stallZ;
 const DOOR = LAYOUT.door.x;
-const SIDEWALK_Z = -23.6; // por delante de los autos estacionados
-const TO_STORE = [[-8.8, SIDEWALK_Z], [DOOR - 0.5, -24.4], [DOOR, -25.6], [DOOR, -27.1], [DOOR, -28.6], [DOOR, -31.3]];
-const FROM_STORE = [[DOOR + 0.1, -30.7], [DOOR, -28.6], [DOOR, -27.1], [DOOR, -25.6], [DOOR - 0.5, -24.4], [-8.8, SIDEWALK_Z]];
+const AISLE_WALK = LAYOUT.aisleZ - 2.0; // del lado sur del pasillo del estacionamiento
+const SW = [[-13, -21.6], [-8.8, -23.6]]; // banqueta hacia la tienda
+const TO_STORE = [...SW, [DOOR - 0.5, -24.4], [DOOR, -25.6], [DOOR, -27.1], [DOOR, -28.6], [DOOR, -31.3]];
+const FROM_STORE = [[DOOR + 0.1, -30.7], [DOOR, -28.6], [DOOR, -27.1], [DOOR, -25.6], [DOOR - 0.5, -24.4], ...[...SW].reverse()];
 const FRIDGE_SPOT = [LAYOUT.fridge.x, -33.35];
+// Cafetería (mejora): barra al este de la tienda, cuatro bancos y la cafetera
+const CAFE = { x: 12.2, z: -31 };
+const STOOL_Z = CAFE.z + 2.75, CAFE_STAND_Z = CAFE.z + 3.4;
+const STOOL_X = [0, 1, 2, 3].map((i) => CAFE.x - 1.8 + i * 1.2);
+const MACHINE = { x: CAFE.x - 1.5, z: CAFE.z + 1.9 };
+const CAFE_WALK = [[8.6, -25.2]]; // de la banqueta de la tienda a la barra
 const SHELF_Z = -33.55;
 // Fila de la caja: el primero frente al mostrador, los demás detrás
 const QUEUE = [[-0.3, -30.45], [-0.3, -31.35], [-1.3, -32.15], [-2.4, -32.15]];
@@ -78,7 +87,7 @@ function findS(path, test) {
   return path.length;
 }
 // Punto donde el auto cede el paso antes de salir a la carretera
-const yieldTest = (p) => p.x < -25 && p.z > -8.5;
+const yieldTest = (p) => p.z > -6.8; // a punto de salir del terreno
 
 export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   // Cada auto detenido es un obstáculo para el jugador (los que se mueven frenan por él)
@@ -95,17 +104,16 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
 
   // ---------- Cajones de estacionamiento ----------
   const stalls = LAYOUT.stalls.map((sx, i) => {
-    const outPts = [[sx, STZ], [sx, -31.2], [sx - 2.2, -34]];
-    if (sx - 2.2 > -31) outPts.push([-32.6, -34.2]);
-    outPts.push([-35, -31.4], ...WEST_EXIT);
-    const outPath = makePath(outPts);
-    return { i, x: sx, shopper: null, outPath, yieldS: findS(outPath, yieldTest), carSpot: [sx + 1.3, STZ + 0.6] };
+    // Sale de frente: directo a la carretera
+    const outPath = makePath([[sx, STZ], [sx, -8.2], [sx - 1.2, -5.2], [sx - 5, -3.2], [sx - 10, ROAD_Z], ...ROAD_TAIL]);
+    return { i, x: sx, shopper: null, outPath, yieldS: findS(outPath, yieldTest), carSpot: [sx + 1.3, STZ - 0.6] };
   });
   // Camino de cada carril de bomba a cada cajón: sigue derecho al oeste y da vuelta hacia el sur
   const AISLE = LAYOUT.aisleZ;
   const stallPath = (bay, st) => {
     const z = bay.z, x = st.x;
-    return makePath([[bay.stopX, z], [bay.stopX - 3, z], [-8, z], [-12.5, AISLE + 1.2], [x + 3.8, AISLE], [x + 0.6, AISLE - 2.2], [x, AISLE - 4.4], [x, STZ]]);
+    // Sigue al oeste, baja al pasillo y entra al cajón de frente hacia la carretera
+    return makePath([[bay.stopX, z], [bay.stopX - 3, z], [-8.5, z], [-13.5, AISLE + 0.4], [x + 3.6, AISLE], [x + 0.7, AISLE + 1.2], [x, AISLE + 3], [x, STZ]]);
   };
 
   // ---------- Bahías ----------
@@ -219,6 +227,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         if (Math.hypot(px - player.x, pz - player.z) < half) return true;
         // Clientes caminando por el patio
         for (const w of shoppers) if (w.route && Math.hypot(px - w.x, pz - w.z) < half) return true;
+        for (const w of walkers) if ((w.route || w.blocking) && Math.hypot(px - w.x, pz - w.z) < half) return true;
         return false;
       });
       if (gp >= 0) { target = Math.min(target, gp < 0.9 ? 0 : Math.sqrt(2 * DECEL * (gp - 0.8))); obstacle = true; m.blockedBy = 'player'; }
@@ -270,7 +279,8 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
           snack: Math.random() < 0.6 ? 1 + Math.floor(Math.random() * (1 + big)) : 0,
           coffee: state.has('cafe') && Math.random() < BAL.cafeChance ? 1 : 0,
         };
-        if (!shop.soda && !shop.snack) shop.soda = 1;
+        if (state.has('cafe') && Math.random() < 0.25) { shop.soda = 0; shop.snack = 0; shop.coffee = 1; } // solo van por café
+        if (!shop.soda && !shop.snack && !shop.coffee) shop.soda = 1;
       }
       return {
         kind: 'fuel', typeId, name: T.name, want, got: 0, fill: T.fill || BAL.fillSeconds,
@@ -427,8 +437,9 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     state.addMoney(total, true);
     state.addRep(BAL.repOk);
     state.emit('service', { job: c.job, typeId: c.typeId });
-    onEvent('toastPaid', { m: fmtMoney(total), t: fmtMoney(tip) });
-    leave(bay);
+    onEvent(bay.kind === 'wash' ? 'toastWashed' : 'toastRepaired');
+    bay.phase = 'done';
+    bay.doneT = 0;
   }
 
   function angryBay(bay) {
@@ -441,6 +452,10 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
 
   // ---------- Compradores: estacionarse, caminar, tomar cosas y pagar en la caja ----------
   const people = createPeople(scene, stalls.length);
+  const stools = STOOL_X.map((x) => ({ x, sh: null }));
+  const cafeLine = []; // clientes esperando su café, en orden de llegada
+  const brew = { kind: 'cafe', job: 'jobCoffee', done: 0, work: BAL.brewTime };
+  const walkers = []; // otras personas por las que frenan los autos (conserje)
   const shoppers = []; // activos
   const queue = []; // formados en la caja, en orden
 
@@ -486,12 +501,12 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   function walkOut(sh) {
     leaveQueue(sh);
     const [cx, cz] = sh.st.carSpot;
-    walkTo(sh, [...FROM_STORE, [cx, SIDEWALK_Z], [cx, cz]], 'toCar');
+    walkTo(sh, [...FROM_STORE, [cx, AISLE_WALK], [cx, cz]], 'toCar');
   }
 
   function shopperTotal(sh) {
     const g = sh.got;
-    return Math.round((g.soda * BAL.sodaPrice + g.snack * BAL.snackPrice + g.coffee * BAL.cafePrice) * 100) / 100;
+    return Math.round((g.soda * BAL.sodaPrice + g.snack * BAL.snackPrice) * 100) / 100;
   }
 
   // Texto de lo que lleva: "2 refrescos, 1 botana"
@@ -551,7 +566,20 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         walkOut(sh);
       }
     }
-    people.place(sh.person, sh.x, sh.z, sh.state === 'queue' ? 0 : sh.yaw, null); // en la fila mira hacia el mostrador
+    if (sh.state === 'cafeWait') {
+      sh.patience -= dt;
+      if (sh.patience <= 0) {
+        state.lost++;
+        state.addRep(BAL.repAngry);
+        state.emit('angry');
+        onEvent('toastAngryCafe');
+        walkFromCafe(sh);
+        return;
+      }
+    }
+    const sitting = sh.state === 'cafeSit';
+    const yaw = sh.state === 'queue' ? 0 : sh.state === 'cafeWait' || sitting ? Math.PI : sh.yaw; // mira al mostrador o a la barra
+    people.place(sh.person, sh.x, sh.z, yaw, null, sitting);
   }
 
   function arrive(sh) {
@@ -565,8 +593,13 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         sh.state = 'shelf'; sh.wait = 1.2; sh.yaw = Math.PI;
         break;
       case 'toQueue':
-        if (sh.slot === 0 && sh.state !== 'queue') onEvent('toastAtCounter');
         sh.state = 'queue';
+        break;
+      case 'toCafe':
+        sh.state = 'cafeWait';
+        sh.yaw = Math.PI;
+        sh.patience = sh.patienceMax;
+        cafeLine.push(sh);
         break;
       case 'toCar': {
         // Se sube y el auto sale por la parte de atrás del estacionamiento
@@ -585,6 +618,14 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   function afterWait(sh) {
     if (sh.state === 'fridge') goShelf(sh);
     else if (sh.state === 'shelf') checkout(sh);
+    else if (sh.state === 'cafeSit') {
+      // Terminó su café: a la tienda si quiere algo más, si no, al auto
+      const sx = sh.stool.x;
+      if (sh.wants.soda || sh.wants.snack) {
+        leaveStool(sh);
+        goStore(sh, [[sx, CAFE_STAND_Z], ...CAFE_WALK, [DOOR + 0.6, -24.6], [DOOR, -25.6], [DOOR, -27.1], [DOOR, -28.6], [DOOR, -31.3]]);
+      } else walkFromCafe(sh);
+    }
   }
 
   function goShelf(sh) {
@@ -602,7 +643,6 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       walkOut(sh);
       return;
     }
-    sh.got.coffee = sh.wants.coffee;
     joinQueue(sh);
   }
 
@@ -613,14 +653,59 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const [cx, cz] = sh.st.carSpot;
     sh.x = cx; sh.z = cz;
     people.show(sh.person, true);
-    const route = [[cx, SIDEWALK_Z], ...TO_STORE];
+    // Si quiere café y hay banco libre en la cafetería, va primero ahí
+    const stool = sh.wants.coffee && state.has('cafe') ? stools.find((x) => !x.sh) : null;
+    if (stool) {
+      stool.sh = sh;
+      sh.stool = stool;
+      walkTo(sh, [[cx, AISLE_WALK], ...SW, ...CAFE_WALK, [stool.x, CAFE_STAND_Z]], 'toCafe');
+      return;
+    }
+    goStore(sh, [[cx, AISLE_WALK], ...TO_STORE]);
+  }
+
+  // A la tienda (route termina adentro de la puerta). Si no quiere nada de la tienda, regresa al auto.
+  function goStore(sh, route) {
     if (sh.wants.soda) walkTo(sh, [...route, FRIDGE_SPOT], 'toFridge');
-    else { walkTo(sh, route, 'toShelfStart'); }
+    else if (sh.wants.snack) walkTo(sh, route, 'toShelfStart');
+    else walkFromCafe(sh);
+  }
+
+  function leaveStool(sh) {
+    if (sh.stool) { sh.stool.sh = null; sh.stool = null; }
+    const i = cafeLine.indexOf(sh);
+    if (i >= 0) cafeLine.splice(i, 1);
+  }
+
+  // De la cafetería al auto
+  function walkFromCafe(sh) {
+    const sx = sh.stool ? sh.stool.x : sh.x;
+    leaveStool(sh);
+    const [cx, cz] = sh.st.carSpot;
+    walkTo(sh, [[sx, CAFE_STAND_Z], ...CAFE_WALK, ...[...SW].reverse(), [cx, AISLE_WALK], [cx, cz]], 'toCar');
+  }
+
+  // Sirves el café: paga, se sienta a tomarlo
+  function serveCoffee() {
+    const sh = cafeLine.shift();
+    if (!sh) return;
+    const pie = Math.random() < 0.5;
+    const total = Math.round((BAL.cafePrice + (pie ? BAL.piePrice : 0)) * 100) / 100;
+    sh.got.coffee = 1;
+    state.addMoney(total, true);
+    state.addRep(BAL.repOk);
+    state.emit('coffee');
+    state.emit('sale', { total, items: { coffee: 1 } });
+    onEvent(pie ? 'toastCafePie' : 'toastCafe', { m: fmtMoney(total) });
+    sh.state = 'cafeSit';
+    sh.x = sh.stool.x; sh.z = STOOL_Z;
+    sh.wait = 6;
   }
 
   // ---------- Bahía que muestra la tarjeta y lista de marcadores ----------
 
   const api = {
+    addWalker(w) { walkers.push(w); },
     bays,
     movers,
     stalls,
@@ -678,8 +763,27 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
             c.patience -= dt;
             if (c.patience <= 0) { angryBay(bay); continue; }
             break;
+          case 'working':
+            if (bay.kind === 'wash') {
+              c.done += dt;
+              if (c.done >= c.work) finishService(bay);
+            }
+            break;
+          case 'done':
+            // Escurre (autolavado) o baja del elevador (taller) y luego se va
+            bay.doneT += dt;
+            if (bay.doneT > 1.4 && (bay.liftY || 0) < 0.02) { leave(bay); continue; }
+            break;
           default:
-            break; // mientras cargas o trabajas, la paciencia no baja
+            break; // mientras cargas, la paciencia no baja
+        }
+        // Elevador del taller: sube mientras trabajas y baja al terminar
+        if (bay.kind === 'garage') {
+          const up = !!bay.c && bay.phase !== 'done' && (bay.phase === 'working' || bay.c.done > 0);
+          const target = up ? 1.15 : 0;
+          const ly = bay.liftY || 0;
+          bay.liftY = ly + Math.sign(target - ly) * Math.min(Math.abs(target - ly), 0.7 * dt);
+          if (bay.m && bay.phase !== 'inbound') bay.m.car.group.position.y = bay.liftY;
         }
         if (bay === hb && bay.c) updateHelper(bay, dt);
       }
@@ -703,14 +807,23 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       if (bay.c.got >= bay.c.want * BAL.doneMin) finishFuel(bay);
       else { bay.phase = 'waiting'; onEvent('toastShort'); }
     },
-    canWork(bay) { return bay.c && bay.c.kind !== 'fuel' && (bay.phase === 'waiting' || bay.phase === 'working'); },
+    // Taller: se trabaja manteniendo pulsado. Autolavado: se inicia con un toque y corre solo.
+    canWork(bay) { return bay.c && bay.kind === 'garage' && (bay.phase === 'waiting' || bay.phase === 'working'); },
     workHold(bay, dt) {
       if (!api.canWork(bay)) return;
       bay.phase = 'working';
+      // El elevador sube primero; se trabaja con el auto arriba
+      if ((bay.liftY || 0) < 1.0) return;
       bay.c.done += dt;
       if (bay.c.done >= bay.c.work) finishService(bay);
     },
     workRelease(bay) { if (bay.phase === 'working') bay.phase = 'waiting'; },
+    canStartWash(bay) { return bay.c && bay.kind === 'wash' && bay.phase === 'waiting'; },
+    startWash(bay) {
+      if (!api.canStartWash(bay)) return;
+      bay.phase = 'working';
+      state.emit('washStart');
+    },
     chargeShopper,
     shopperTotal,
 
@@ -718,15 +831,9 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     focusInfo(player, item) {
       const head = queue[0];
       if (item && item.id === 'register' && head) return shopperInfo(head);
+      if (item && item.id === 'coffee' && cafeLine[0]) return { key: `cafe|${cafeLine[0].person}`, title: `${t('customer')} · ${t('coffee1')}`, status: t('stCafe'), p: cafeLine[0].patience / cafeLine[0].patienceMax };
       if (item && item.bay && item.bay.c && item.bay.phase !== 'inbound') return bayInfo(item.bay);
-      if (insideStore(player) && head) return shopperInfo(head);
-      let best = null, bestD = Infinity;
-      for (const b of bays) {
-        if (!b.c || b.phase === 'inbound') continue;
-        const d = Math.hypot(b.stopX - player.x, b.z - player.z);
-        if (d < bestD) { bestD = d; best = b; }
-      }
-      return best ? bayInfo(best) : null;
+      return null; // solo se muestra la tarjeta del cliente que estás atendiendo
     },
 
     // Íconos flotantes: autos esperando servicio y clientes formados en la caja
@@ -737,6 +844,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         out.push({ x: b.m.pos.x, y: b.c.typeId === 'truck' ? 4.2 : 2.3, z: b.m.pos.z, icon: b.c.kind, p: b.c.patience / b.c.patienceMax });
       }
       for (const sh of queue) out.push({ x: sh.x, y: 2.15, z: sh.z, icon: 'pay', p: sh.patience / sh.patienceMax });
+      for (const sh of cafeLine) if (sh.state === 'cafeWait') out.push({ x: sh.x, y: 2.15, z: sh.z, icon: 'cafe', p: sh.patience / sh.patienceMax });
       return out;
     },
 
@@ -753,15 +861,33 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
             release: () => api.fuelRelease(bay),
           });
         } else {
-          const spot = bay.kind === 'wash' ? LAYOUT.carwash : LAYOUT.garage;
-          items.push({
-            id: 'service', bay, x: spot.px, y: 1.0, z: spot.pz, holdable: true,
-            label: () => (!bay.unlocked() || !api.canWork(bay) ? null : t('promptWork', { j: t(bay.c.job) })),
-            hold: (dt) => api.workHold(bay, dt),
-            release: () => api.workRelease(bay),
-          });
+          if (bay.kind === 'wash') {
+            items.push({
+              id: 'washButton', bay, x: LAYOUT.carwash.px, y: 1.3, z: LAYOUT.carwash.pz,
+              label: () => (bay.unlocked() && api.canStartWash(bay) ? t('promptWash') : null),
+              use: () => api.startWash(bay),
+            });
+          } else {
+            items.push({
+              id: 'service', bay, x: LAYOUT.garage.px, y: 1.0, z: LAYOUT.garage.pz, holdable: true,
+              label: () => (!bay.unlocked() || !api.canWork(bay) ? null : t('promptWork', { j: t(bay.c.job) })),
+              hold: (dt) => api.workHold(bay, dt),
+              release: () => api.workRelease(bay),
+            });
+          }
         }
       }
+      items.push({
+        id: 'coffee', x: MACHINE.x, y: 1.5, z: MACHINE.z, holdable: true,
+        label: () => (state.has('cafe') && cafeLine.some((x) => x.state === 'cafeWait') ? t('promptCoffee') : null),
+        hold: (dt) => {
+          if (!cafeLine.some((x) => x.state === 'cafeWait')) return;
+          brew.done += dt;
+          if (brew.done >= brew.work) { brew.done = 0; serveCoffee(); }
+        },
+        release: () => {},
+        progress: () => (cafeLine.some((x) => x.state === 'cafeWait') ? brew : null),
+      });
       items.push({
         id: 'register', x: LAYOUT.register.x, y: 1.2, z: LAYOUT.register.z, near: insideStore,
         label: () => {

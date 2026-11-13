@@ -6,8 +6,8 @@ import { t } from '../core/i18n.js';
 // Lugares posibles (lejos de la bomba, la caja y el carril de los autos)
 const SPOTS = [
   [-4, -19.4], [-11, -25.2], [-6, -24.8], [3, -23.8], [16, -24.6], [17, -26], [-14, -31], [10, -25.5],
-  [-2, -24.6], [33, -16], [-12, -33.5], [2, -25.2], [-33, -22.5], [18.5, -28], [-33, -30], [30, -24],
-  [-2, -39.3], [16, -34.6], [-30, -19.6], [31, -21],
+  [-2, -24.6], [33, -16], [-12, -33.5], [2, -25.2], [-30, -22.5], [18.5, -28], [-34, -24], [32, -24],
+  [-2, -39.3], [16, -34.6], [-17, -21.4], [33, -20],
 ];
 
 export function createLitter(scene, state) {
@@ -40,6 +40,16 @@ export function createLitter(scene, state) {
   count = 0;
   for (let i = 0; i < BAL.litterStart; i++) spawn();
 
+  function pick(i) {
+    if (!active[i] || popping.some((p) => p.i === i)) return false;
+    popping.push({ i, t: 0.001 });
+    active[i] = false; // el conteo baja cuando termina de desaparecer
+    state.litterPicked++;
+    state.addRep(BAL.repLitter);
+    state.emit('litter');
+    return true;
+  }
+
   return {
     get count() { return count; },
     update(dt) {
@@ -53,18 +63,19 @@ export function createLitter(scene, state) {
       if (!state.open) return;
       if (timer <= 0) { timer = BAL.litterEvery; if (count < BAL.litterMax) spawn(); }
     },
+    // Basura que hay ahora: [{ i, x, z }] (la usa el conserje)
+    activeSpots() {
+      const out = [];
+      for (let i = 0; i < SPOTS.length; i++) if (active[i]) out.push({ i, x: SPOTS[i][0], z: SPOTS[i][1] });
+      return out;
+    },
+    isActive: (i) => active[i],
+    pick,
     interactables() {
       return SPOTS.map(([x, z], i) => ({
         id: 'litter', x, y: 0.1, z,
         label: () => (active[i] ? t('promptLitter') : null),
-        use: () => {
-          if (!active[i] || popping.some((p) => p.i === i)) return;
-          popping.push({ i, t: 0.001 });
-          active[i] = false; // el conteo baja cuando termina de desaparecer
-          state.litterPicked++;
-          state.addRep(BAL.repLitter);
-          state.emit('litter');
-        },
+        use: () => pick(i),
       }));
     },
   };

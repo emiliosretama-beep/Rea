@@ -14,9 +14,10 @@ export const LAYOUT = {
   // Carriles donde paran los autos al cargar: norte y sur de la isla
   lanes: { north: -12.9, south: -17.1 },
   // Taller al este: los autos entran por el norte, paran adentro y salen por el sur (px, pz: carrito de herramientas)
-  garage: { x: 24, z: -26, px: 22.15, pz: -26 },
-  // Autolavado al oeste: túnel que se cruza de este a oeste (px, pz: tablero de control)
-  carwash: { x: -27, z: -15, px: -21.5, pz: -17.95 },
+  garage: { x: 24, z: -26, px: 21.35, pz: -24.3 },
+  // Autolavado al fondo oeste: túnel que se cruza de este a oeste (px, pz: botón de inicio)
+  carwash: { x: -27, z: -30, px: -21.4, pz: -27.1 },
+  westRoadX: -36.6, // camino de salida por el lado oeste del terreno
   building: { x: 0, z: -31, w: 16, d: 8, h: 4 },
   door: { x: -3, w: 1.3, h: 2.35 },
   windows: [{ x: 2.2, w: 3.0 }, { x: 5.8, w: 3.0 }],
@@ -28,10 +29,11 @@ export const LAYOUT = {
   register: { x: -1.0, z: -29.3 },
   fridge: { x: -3.4, w: 2.0 },
   shelves: [{ x: 0.2, w: 2.4 }, { x: 3.2, w: 2.4 }],
-  // Estacionamiento al fondo oeste: pasillo propio y cajones (se entra por el norte y se sale por el sur)
-  stalls: [-19, -22.5, -26, -29.5],
-  stallZ: -26.8,
-  aisleZ: -21.6,
+  // Estacionamiento al frente oeste, de cara a la carretera: se entra por el pasillo (sur)
+  // y se sale de frente directo a la carretera
+  stalls: [-22, -25.5, -29, -32.5],
+  stallZ: -12.2,
+  aisleZ: -18.6,
   phone: { x: -5.4, z: -27.35 }, // dentro de la tienda, junto a la puerta
 };
 
@@ -52,7 +54,7 @@ export function createStation(scene) {
   const Yd = L.yard;
   parts.push(box(Yd.maxX - Yd.minX, 0.024, Yd.maxZ - Yd.minZ, 0x8f8983, (Yd.minX + Yd.maxX) / 2, 0.012, (Yd.minZ + Yd.maxZ) / 2));
   // Asfalto del estacionamiento (cuatro cajones; los dos últimos se pintan con la mejora)
-  parts.push(box(15.5, 0.07, 11.9, 0x4b4753, -24.25, 0.035, -26.25));
+  parts.push(box(15.6, 0.07, 12.2, 0x4b4753, -27.25, 0.035, -14.1));
   parts.push(box(L.lot.w, 0.06, L.lot.d, PAL.concrete, L.lot.x, 0.03, L.lot.z));
   parts.push(box(9, 0.07, 6, 0x9a958d, -12, 0.035, -18));
   parts.push(box(7, 0.07, 9, 0xb7b2a9, 13, 0.035, -24));
@@ -219,18 +221,48 @@ export function createStation(scene) {
 
   // ---------- Interior ----------
   const iw = b.w - T * 2, id = b.d - T * 2;
-  inside.push(box(iw, 0.04, id, 0x7d9a92, b.x, 0.08, b.z)); // piso
+  inside.push(box(iw, 0.04, id, 0x7d9a92, b.x, 0.08, b.z)); // piso (debajo del de cuadros)
   inside.push(box(iw, 0.04, id, 0xd8ccb0, b.x, b.h - 0.02, b.z)); // techo
   inside.push(box(iw, b.h, 0.04, INNER, b.x, b.h / 2, back + T + 0.02));
   inside.push(box(0.04, b.h, id, INNER, x0 + T + 0.02, b.h / 2, b.z));
   inside.push(box(0.04, b.h, id, INNER, x1 - T - 0.02, b.h / 2, b.z));
   // Mostrador con la caja registradora, junto a la puerta
   const C = L.counter;
-  inside.push(box(C.w, 1.0, C.d, PAL.wood, C.x, 0.6, C.z));
-  inside.push(box(C.w + 0.14, 0.07, C.d + 0.14, 0x80583c, C.x, 1.13, C.z));
-  inside.push(box(0.55, 0.3, 0.42, PAL.dark, L.register.x, 1.32, L.register.z));
-  inside.push(box(0.5, 0.26, 0.3, PAL.red, L.register.x, 1.58, L.register.z + 0.05));
-  inside.push(box(0.4, 0.12, 0.05, PAL.cream, L.register.x, 1.6, L.register.z - 0.11));
+  const BRASS = 0xc9a24a;
+  // Mostrador: frente turquesa con molduras cromadas y vitrina de dulces del lado del cliente
+  inside.push(box(C.w, 1.0, C.d, PAL.teal, C.x, 0.6, C.z));
+  for (const yy of [0.3, 0.9]) inside.push(box(C.w + 0.02, 0.05, C.d + 0.02, PAL.chrome, C.x, yy, C.z));
+  inside.push(box(C.w + 0.14, 0.07, C.d + 0.14, 0xe9dcc0, C.x, 1.13, C.z));
+  inside.push(box(1.2, 0.5, 0.06, 0x9fd0e0, C.x + 0.6, 0.62, C.z - C.d / 2 - 0.03)); // vidrio de la vitrina
+  for (let i = 0; i < 8; i++) inside.push(box(0.1, 0.07, 0.08, [PAL.red, 0xe8b23a, PAL.teal, 0xe9e0cc][i % 4], C.x + 0.15 + (i % 4) * 0.27, 0.5 + Math.floor(i / 4) * 0.18, C.z - C.d / 2 + 0.05));
+  // Frascos de dulces y campana
+  for (let i = 0; i < 3; i++) {
+    inside.push(cyl(0.09, 0.09, 0.22, 8, 0xcfe6ea, C.x + 0.55 + i * 0.25, 1.28, C.z - 0.1));
+    inside.push(cyl(0.095, 0.095, 0.04, 8, [PAL.red, 0xe8b23a, PAL.teal][i], C.x + 0.55 + i * 0.25, 1.41, C.z - 0.1));
+  }
+  inside.push(cyl(0.06, 0.08, 0.06, 8, BRASS, C.x - 0.05, 1.2, C.z - 0.25));
+  // Caja registradora antigua de latón: base con cajón, teclado en escalones, ventanita con banderitas y manivela
+  const rx = L.register.x, rz = L.register.z;
+  inside.push(box(0.62, 0.16, 0.5, BRASS, rx, 1.24, rz));
+  inside.push(box(0.6, 0.04, 0.02, 0x8a6a2a, rx, 1.22, rz - 0.255)); // ranura del cajón
+  inside.push(box(0.5, 0.26, 0.24, BRASS, rx, 1.43, rz + 0.08));
+  const keysBase = new THREE.BoxGeometry(0.52, 0.04, 0.3);
+  keysBase.rotateX(0.55);
+  keysBase.translate(rx, 1.42, rz - 0.13);
+  inside.push(tint(keysBase, 0x8a6a2a));
+  for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) {
+    const key = new THREE.CylinderGeometry(0.025, 0.025, 0.05, 6);
+    key.translate(rx - 0.19 + k * 0.076, 1.36 + r * 0.06, rz - 0.22 + r * 0.075);
+    inside.push(tint(key, (r + k) % 3 === 0 ? PAL.dark : 0xf3ead6));
+  }
+  inside.push(box(0.36, 0.14, 0.2, BRASS, rx, 1.63, rz + 0.08)); // caja del visor
+  inside.push(box(0.3, 0.09, 0.02, 0x23202a, rx, 1.64, rz - 0.025)); // visor
+  for (let i = 0; i < 3; i++) inside.push(box(0.07, 0.07, 0.015, i === 1 ? PAL.red : 0xf3ead6, rx - 0.09 + i * 0.09, 1.65, rz - 0.04)); // banderitas
+  const crank = new THREE.CylinderGeometry(0.07, 0.07, 0.04, 10);
+  crank.rotateZ(Math.PI / 2);
+  crank.translate(rx + 0.33, 1.42, rz + 0.08);
+  inside.push(tint(crank, PAL.chrome));
+  inside.push(box(0.03, 0.03, 0.14, PAL.dark, rx + 0.36, 1.42, rz + 0.01));
   aabb(C.x, C.z, C.w, C.d);
   // Refrigerador de sodas: mueble con marco; las botellas se dibujan aparte según el inventario
   const backZ = back + T; // cara interior de la pared del fondo
@@ -245,6 +277,34 @@ export function createStation(scene) {
     for (const sy of [0.7, 1.25, 1.8]) inside.push(box(sh.w - 0.1, 0.05, 0.5, 0x6e4a32, sh.x, sy, backZ + 0.3));
   }
   aabb((F.x - F.w / 2 + L.shelves[1].x + L.shelves[1].w / 2) / 2, backZ + 0.33, L.shelves[1].x + L.shelves[1].w / 2 - (F.x - F.w / 2), 0.7);
+  // Lambrín turquesa con moldura roja en las paredes interiores
+  for (const [w2, d2, x2, z2] of [[iw, 0.03, b.x, back + T + 0.04], [0.03, id, x0 + T + 0.04, b.z], [0.03, id, x1 - T - 0.04, b.z]]) {
+    inside.push(box(w2, 0.9, d2, 0x3e8f88, x2, 0.55, z2));
+    inside.push(box(w2 + (d2 > 0.1 ? 0 : 0.01), 0.07, d2 + (d2 > 0.1 ? 0.01 : 0), PAL.red, x2, 1.03, z2));
+  }
+  // Rocola en la pared oeste, congelador de helados y revistero junto a la puerta
+  const jx = x0 + T + 0.45, jz = b.z + 0.9;
+  inside.push(box(0.7, 1.1, 1.0, 0x6b3a2a, jx, 0.6, jz));
+  const dome = new THREE.CylinderGeometry(0.5, 0.5, 0.7, 12, 1, false, 0, Math.PI);
+  dome.rotateZ(Math.PI / 2);
+  dome.rotateX(Math.PI / 2);
+  dome.translate(jx, 1.15, jz);
+  inside.push(tint(dome, 0x8a4a2a));
+  inside.push(box(0.72, 0.08, 1.02, PAL.chrome, jx, 0.08, jz));
+  aabb(jx, jz, 0.7, 1.0);
+  const fzx = x0 + T + 0.5, fzz = back + T + 1.5;
+  inside.push(box(0.85, 0.85, 1.3, 0xe9e2d0, fzx, 0.45, fzz));
+  inside.push(box(0.87, 0.08, 1.32, 0x9fc3cf, fzx, 0.9, fzz));
+  inside.push(box(0.02, 0.22, 0.8, PAL.teal, fzx + 0.43, 0.6, fzz));
+  aabb(fzx, fzz, 0.85, 1.3);
+  const mrx = L.door.x - 1.9, mrz = front - T - 0.7;
+  inside.push(cyl(0.04, 0.04, 1.7, 6, PAL.chrome, mrx, 0.85, mrz));
+  for (let i = 0; i < 3; i++) for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * Math.PI * 2;
+    inside.push(box(0.2, 0.26, 0.02, [PAL.red, 0xe8b23a, PAL.teal, 0x6f8fb8][(i + k) % 4], mrx + Math.cos(a) * 0.14, 0.75 + i * 0.36, mrz + Math.sin(a) * 0.14));
+  }
+  circle(mrx, mrz, 0.25);
+
   // Tapete de la entrada
   inside.push(box(1.6, 0.02, 1.0, PAL.red, L.door.x, 0.11, front - T - 0.75));
   // Caja de fusibles
@@ -292,13 +352,34 @@ export function createStation(scene) {
   scene.add(boardMesh);
 
   // Cosas abandonadas junto a la fachada
-  const drumX = -7.2, drumZ = front + 0.75;
+  const drumX = -10.6, drumZ = front + 0.75; // cosas viejas a un lado de la tienda
   const junk = [
     cyl(0.3, 0.3, 0.9, 8, PAL.teal, drumX, 0.51, drumZ),
     cyl(0.3, 0.3, 0.9, 8, 0x8a4b33, drumX + 0.7, 0.51, drumZ + 0.15),
     box(0.8, 0.8, 0.8, PAL.wood, drumX + 1.6, 0.46, drumZ - 0.05),
   ];
   for (let i = 0; i < 3; i++) junk.push(cyl(0.4, 0.4, 0.24, 9, PAL.dark, 8.9, 0.18 + i * 0.25, front + 0.8));
+  // Máquina de refrescos junto a la puerta, banca bajo las ventanas, caja de periódicos y macetas con cactus
+  const vx = L.door.x - 2.7, vz = front + 0.42;
+  junk.push(box(1.0, 1.85, 0.75, PAL.red, vx, 0.93, vz));
+  junk.push(box(0.8, 0.3, 0.04, PAL.cream, vx, 1.55, vz + 0.38));
+  junk.push(box(0.2, 0.5, 0.05, PAL.chrome, vx + 0.3, 0.95, vz + 0.38));
+  junk.push(box(0.5, 0.14, 0.06, PAL.dark, vx - 0.15, 0.45, vz + 0.38));
+  aabb(vx, vz, 1.0, 0.75);
+  const bx = 4.0, bz = front + 0.55;
+  junk.push(box(2.0, 0.08, 0.45, PAL.wood, bx, 0.48, bz));
+  junk.push(box(2.0, 0.4, 0.06, PAL.wood, bx, 0.75, bz + 0.2));
+  for (const s of [-0.85, 0.85]) junk.push(box(0.08, 0.45, 0.4, PAL.dark, bx + s, 0.25, bz));
+  aabb(bx, bz, 2.0, 0.5);
+  junk.push(box(0.5, 0.95, 0.42, 0x3f6fb0, 0.4, 0.48, front + 0.35));
+  junk.push(box(0.4, 0.3, 0.02, 0xe9e2d0, 0.4, 0.75, front + 0.57));
+  circle(0.4, front + 0.35, 0.33);
+  for (const px2 of [-0.9, 7.4]) {
+    junk.push(box(0.8, 0.5, 0.6, 0x9a5a44, px2, 0.25, front + 0.4));
+    junk.push(cyl(0.13, 0.15, 0.9, 6, PAL.cactus, px2, 0.95, front + 0.4));
+    junk.push(cyl(0.08, 0.08, 0.35, 5, PAL.cactus, px2 + 0.2, 1.1, front + 0.4));
+    aabb(px2, front + 0.4, 0.8, 0.6);
+  }
   // Letrero de carretera: base de ladrillo sobre la barda, poste, tablero, flecha con focos y placa de abierto
   const S = L.sign;
   const BRICK = 0x9a5a44;
@@ -368,6 +449,86 @@ export function createStation(scene) {
     m.rotation.y = dir * Math.PI / 2;
     scene.add(m);
   }
+  // Piso de cuadros blanco y negro (textura pequeña que se repite)
+  const ck = document.createElement('canvas');
+  ck.width = ck.height = 64;
+  const cc = ck.getContext('2d');
+  for (let yy = 0; yy < 2; yy++) for (let xx = 0; xx < 2; xx++) { cc.fillStyle = (xx + yy) % 2 ? '#2a2630' : '#ece2cc'; cc.fillRect(xx * 32, yy * 32, 32, 32); }
+  const checkTex = new THREE.CanvasTexture(ck);
+  checkTex.colorSpace = THREE.SRGBColorSpace;
+  checkTex.wrapS = checkTex.wrapT = THREE.RepeatWrapping;
+  checkTex.repeat.set(iw / 1.2, id / 1.2);
+  checkTex.magFilter = THREE.NearestFilter;
+  const floorMat = new THREE.MeshLambertMaterial({ map: checkTex });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(iw, id).rotateX(-Math.PI / 2), floorMat);
+  floor.position.set(b.x, 0.105, b.z);
+  scene.add(floor);
+  // Pósters y letrero del fondo
+  const poster = (lines, bg, fg, w2, h2, x2, y2, z2, rotY) => {
+    const pc = document.createElement('canvas');
+    pc.width = 256; pc.height = Math.round(256 * h2 / w2);
+    const g = pc.getContext('2d');
+    g.fillStyle = bg; g.fillRect(0, 0, pc.width, pc.height);
+    g.strokeStyle = fg; g.lineWidth = 8; g.strokeRect(10, 10, pc.width - 20, pc.height - 20);
+    g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+    lines.forEach(([txt, size], i) => { g.font = `${size}px "Alfa Slab One", Impact, serif`; g.fillText(txt, pc.width / 2, (pc.height / (lines.length + 1)) * (i + 1)); });
+    const tex = new THREE.CanvasTexture(pc);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w2, h2), new THREE.MeshLambertMaterial({ map: tex }));
+    m.position.set(x2, y2, z2);
+    m.rotation.y = rotY;
+    scene.add(m);
+    posterMats.push(m.material);
+  };
+  const posterMats = [floorMat];
+  poster([['GROCERIES', 40], ['SNACKS · SOUVENIRS', 22]], '#a8412f', '#f0e4c6', 4.2, 0.9, 1.7, 3.15, back + T + 0.06, 0);
+  poster([['ICE COLD', 44], ['SODA', 64], ['5¢', 54]], '#2f8a84', '#f0e4c6', 1.0, 1.4, L.fridge.x, 3.05, back + T + 0.06, 0);
+  poster([['ROUTE', 30], ['66', 96], ['MAPS', 30]], '#e3d6b8', '#2a2430', 1.1, 1.5, x0 + T + 0.06, 2.3, b.z - 1.6, Math.PI / 2);
+  poster([['MOTOR', 34], ['OIL', 60], ['QUALITY', 22]], '#23202a', '#e8b23a', 1.1, 1.5, x1 - T - 0.06, 2.3, b.z - 1.0, -Math.PI / 2);
+  poster([['FRESH', 34], ['COFFEE', 40]], '#6b3a2a', '#f0e4c6', 1.1, 1.0, x1 - T - 0.06, 2.3, b.z + 1.2, -Math.PI / 2);
+  // Ventiladores de techo (giran con la luz)
+  const fanGeo = merge([
+    cyl(0.12, 0.12, 0.12, 8, PAL.chrome, 0, 0, 0),
+    ...[0, 1, 2, 3].map((k) => { const g = new THREE.BoxGeometry(0.9, 0.02, 0.16); g.translate(0.5, -0.04, 0); g.rotateY((k * Math.PI) / 2); return tint(g, 0x6e4a32); }),
+  ]);
+  const fans = [b.x - 1.2, b.x + 5.2].map((fx2) => {
+    const f = new THREE.Mesh(fanGeo, vertexMat);
+    f.position.set(fx2, b.h - 0.45, b.z - 0.4);
+    scene.add(f);
+    return f;
+  });
+  scene.add(new THREE.Mesh(merge([b.x - 1.2, b.x + 5.2].map((fx2) => box(0.03, 0.35, 0.03, PAL.chrome, fx2, b.h - 0.22, b.z - 0.4))), vertexMat));
+  // Neón en las ventanas y luces de la rocola y la máquina de refrescos
+  const neonPlate = (txt, color, w2, h2, x2, y2, z2) => {
+    const pc = document.createElement('canvas');
+    pc.width = 256; pc.height = Math.round(256 * h2 / w2);
+    const g = pc.getContext('2d');
+    g.clearRect(0, 0, pc.width, pc.height);
+    g.font = `${Math.round(pc.height * 0.55)}px "Alfa Slab One", Impact, serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = color; g.shadowBlur = 16; g.fillStyle = color;
+    g.fillText(txt, pc.width / 2, pc.height / 2);
+    g.shadowBlur = 0; g.globalAlpha = 0.6; g.fillStyle = '#fff6e6'; g.fillText(txt, pc.width / 2, pc.height / 2);
+    const tex = new THREE.CanvasTexture(pc);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w2, h2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, depthWrite: false, color: 0x000000 }));
+    m.position.set(x2, y2, z2);
+    scene.add(m);
+    return m.material;
+  };
+  const windowNeon = [
+    neonPlate('OPEN', '#ff4a3a', 1.2, 0.5, L.windows[1].x, 2.25, front - T - 0.05),
+    neonPlate('ICE COLD', '#4fe0d2', 1.6, 0.45, L.windows[0].x, 2.3, front - T - 0.05),
+  ];
+  const storeGlow = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+  const glowParts = [
+    box(0.04, 0.6, 0.12, 0xffb347, jx + 0.36, 0.75, jz - 0.38),
+    box(0.04, 0.6, 0.12, 0xff5fa8, jx + 0.36, 0.75, jz + 0.38),
+    box(0.04, 0.18, 0.7, 0xffe2a0, jx + 0.36, 1.18, jz),
+    box(0.82, 0.32, 0.03, 0xffe9c0, vx, 1.55, vz + 0.4),
+  ];
+  const storeGlowMesh = new THREE.Mesh(merge(glowParts), storeGlow);
+  scene.add(storeGlowMesh);
   const lampMesh = new THREE.Mesh(merge(canopyLamps), new THREE.MeshBasicMaterial({ color: 0x8a8070, toneMapped: false }));
   scene.add(lampMesh);
   const roofMat = new THREE.MeshBasicMaterial({ map: art.roof });
@@ -407,10 +568,15 @@ export function createStation(scene) {
     roofMat.color.set(on || neon ? 0xffffff : 0x8a8580);
     towerMat.color.set(on ? 0xffffff : 0x8a8580);
     lampMesh.material.color.set(on ? 0xfff0c8 : 0x8a8070);
+    for (const m of posterMats) m.color.set(on ? 0xffffff : 0x4b4654);
+    storeGlow.color.set(on ? 0xffffff : 0x2a2420);
+    powered = on;
   }
+  let powered = false;
   let isOpen = false;
   function setOpen(on) {
     isOpen = on;
+    windowNeon.forEach((m) => m.color.set(on ? 0xffffff : 0x000000));
     signMat.color.set(on || neon ? 0xffffff : 0x8a8580);
     drawOpen(on);
   }
@@ -423,6 +589,8 @@ export function createStation(scene) {
       f.t += dt;
       if (f.t > 0.75) { falling.splice(k, 1); placeBoard(f.i, 0); } else placeBoard(f.i, f.t);
     }
+    // Ventiladores y luces de la rocola
+    if (powered) for (const f of fans) f.rotation.y += dt * 5;
     // Focos de la flecha: corren cuando la gasolinera está abierta
     chase += dt;
     const phase = Math.floor(chase * 3) % 2;
@@ -510,7 +678,6 @@ export function stallLines(parts, from, to) {
     const x = L.stalls[i];
     if (i === 0) parts.push(box(0.14, 0.02, 5.6, WHITE, x + 1.75, 0.08, L.stallZ));
     parts.push(box(0.14, 0.02, 5.6, WHITE, x - 1.75, 0.08, L.stallZ));
-    parts.push(box(1.4, 0.02, 0.14, WHITE, x, 0.08, L.stallZ + 2.7)); // tope de entrada
   }
 }
 

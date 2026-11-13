@@ -46,7 +46,7 @@ export function createHud() {
       el.toast.textContent = text;
       el.toast.classList.add('on');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.toast.classList.remove('on'), 3400);
+      toastTimer = setTimeout(() => el.toast.classList.remove('on'), 2800);
     },
     setStats(state) {
       if (state.money !== last.money) { last.money = state.money; el.money.textContent = fmtMoney(state.money); }
@@ -61,12 +61,12 @@ export function createHud() {
       if (state.sodas !== last.soda) {
         last.soda = state.sodas;
         el.sodaStock.textContent = state.sodas;
-        el.chipSoda.classList.toggle('low', state.sodas === 0);
+        el.chipSoda.classList.toggle('low', state.sodas <= 2);
       }
       if (state.snacks !== last.snack) {
         last.snack = state.snacks;
         el.snackStock.textContent = state.snacks;
-        el.chipSnack.classList.toggle('low', state.snacks === 0);
+        el.chipSnack.classList.toggle('low', state.snacks <= 2);
       }
       const level = t('levelN', { l: state.level() });
       if (level !== last.level) { last.level = level; el.level.textContent = level; }
