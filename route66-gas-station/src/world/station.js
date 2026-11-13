@@ -3,7 +3,7 @@
 // Las mejoras de la Etapa 4 agregarán piezas alrededor sin mover lo esencial.
 import * as THREE from 'three';
 import { PAL } from '../config.js';
-import { box, cyl, merge, tint, vertexMat, addGrain } from './geo.js';
+import { box, cyl, merge, tint, vertexMat, addGrain, extrude, shapeOf } from './geo.js';
 
 // Posiciones clave
 export const LAYOUT = {
@@ -11,24 +11,27 @@ export const LAYOUT = {
   yard: { minX: -39, maxX: 39, minZ: -40.5, maxZ: -6.2 }, // terreno cercado por la barda
   island: { x: 0, z: -15, w: 5.2, d: 1.5 },
   pumps: [{ x: -1.2, z: -15 }, { x: 1.2, z: -15 }], // la segunda es una mejora
-  // Carriles donde paran los autos: norte y sur de la isla, y uno de servicios más al sur
-  lanes: { north: -12.9, south: -17.1, service: -21.2 },
-  garage: { x: 9.5, ctrlZ: -23.7 },
-  carwash: { x: -9.5, ctrlZ: -23.5 },
+  // Carriles donde paran los autos al cargar: norte y sur de la isla
+  lanes: { north: -12.9, south: -17.1 },
+  // Taller al este: los autos entran por el norte, paran adentro y salen por el sur (px, pz: carrito de herramientas)
+  garage: { x: 24, z: -26, px: 22.15, pz: -26 },
+  // Autolavado al oeste: túnel que se cruza de este a oeste (px, pz: tablero de control)
+  carwash: { x: -27, z: -15, px: -21.5, pz: -17.95 },
   building: { x: 0, z: -31, w: 16, d: 8, h: 4 },
   door: { x: -3, w: 1.3, h: 2.35 },
   windows: [{ x: 2.2, w: 3.0 }, { x: 5.8, w: 3.0 }],
   winY: [1.1, 2.7],
   fuse: { x: -6.3, z: -34.6 },
-  sign: { x: 18, z: -8.6 },
+  sign: { x: 0, z: -6.75 }, // sobre la barda del frente, delante de las bombas
   // Dentro de la tienda: caja junto a la puerta, refrigerador y estantes al fondo
   counter: { x: -0.3, z: -29.3, w: 2.8, d: 0.8 },
   register: { x: -1.0, z: -29.3 },
   fridge: { x: -3.4, w: 2.0 },
   shelves: [{ x: 0.2, w: 2.4 }, { x: 3.2, w: 2.4 }],
-  // Cajones de estacionamiento al oeste de la tienda (los autos entran por el norte y salen por el sur)
-  stalls: [-17.5, -21, -24.5, -28],
+  // Estacionamiento al fondo oeste: pasillo propio y cajones (se entra por el norte y se sale por el sur)
+  stalls: [-19, -22.5, -26, -29.5],
   stallZ: -26.8,
+  aisleZ: -21.6,
   phone: { x: -5.4, z: -27.35 }, // dentro de la tienda, junto a la puerta
 };
 
@@ -49,7 +52,7 @@ export function createStation(scene) {
   const Yd = L.yard;
   parts.push(box(Yd.maxX - Yd.minX, 0.024, Yd.maxZ - Yd.minZ, 0x8f8983, (Yd.minX + Yd.maxX) / 2, 0.012, (Yd.minZ + Yd.maxZ) / 2));
   // Asfalto del estacionamiento (cuatro cajones; los dos últimos se pintan con la mejora)
-  parts.push(box(16, 0.07, 9.4, 0x4b4753, -22.8, 0.035, L.stallZ - 0.4));
+  parts.push(box(15.5, 0.07, 11.9, 0x4b4753, -24.25, 0.035, -26.25));
   parts.push(box(L.lot.w, 0.06, L.lot.d, PAL.concrete, L.lot.x, 0.03, L.lot.z));
   parts.push(box(9, 0.07, 6, 0x9a958d, -12, 0.035, -18));
   parts.push(box(7, 0.07, 9, 0xb7b2a9, 13, 0.035, -24));
@@ -96,12 +99,32 @@ export function createStation(scene) {
   // Base vacía donde irá la segunda bomba
   parts.push(box(0.5, 0.26, 0.4, 0x7d7a74, L.pumps[1].x, 0.39, L.pumps[1].z));
   parts.push(box(0.14, 0.2, 0.14, 0x5a4a44, L.pumps[1].x, 0.6, L.pumps[1].z));
-  parts.push(box(12, 0.35, 7, PAL.cream, ix, 4.3, iz));
-  parts.push(box(12.12, 0.14, 7.12, PAL.teal, ix, 4.16, iz));
-  for (const sx of [-2.25, 2.25]) {
-    parts.push(box(0.32, 4.0, 0.32, PAL.cream, ix + sx, 2.15, iz));
-    aabb(ix + sx, iz, 0.32, 0.32);
+  // Losa en V: baja al centro y sube hacia las puntas, con franja turquesa en las orillas
+  const slab = extrude(shapeOf([[-6.4, 4.88], [0, 4.26], [6.4, 4.88], [6.4, 4.62], [0, 4.0], [-6.4, 4.62]]), 7.2, PAL.cream);
+  slab.translate(ix, 0, iz);
+  parts.push(slab);
+  const band = (x1, y1, x2, y2, z, hex, h = 0.34, t = 0.07) => {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const g = new THREE.BoxGeometry(len, h, t);
+    g.rotateZ(Math.atan2(y2 - y1, x2 - x1));
+    g.translate((x1 + x2) / 2, (y1 + y2) / 2 + 0.12, z);
+    return tint(g, hex);
+  };
+  for (const sz of [-1, 1]) {
+    parts.push(band(ix - 6.45, 4.62, ix, 4.0, iz + sz * 3.63, PAL.teal));
+    parts.push(band(ix, 4.0, ix + 6.45, 4.62, iz + sz * 3.63, PAL.teal));
   }
+  for (const sx of [-1, 1]) parts.push(box(0.07, 0.34, 7.3, PAL.teal, ix + sx * 6.43, 4.86, iz));
+  // Columnas cónicas con anillo cromado
+  for (const sx of [-2.25, 2.25]) {
+    parts.push(cyl(0.13, 0.24, 3.98, 8, PAL.cream, ix + sx, 2.24, iz));
+    parts.push(cyl(0.26, 0.26, 0.12, 8, PAL.chrome, ix + sx, 1.2, iz));
+    parts.push(cyl(0.3, 0.3, 0.18, 8, 0x8f877b, ix + sx, 0.35, iz));
+    aabb(ix + sx, iz, 0.4, 0.4);
+  }
+  // Lámparas bajo la marquesina
+  const canopyLamps = [];
+  for (const sx of [-4.4, -1.6, 1.6, 4.4]) for (const sz of [-2, 2]) canopyLamps.push(box(0.7, 0.05, 0.22, 0xffffff, ix + sx, 3.97 + Math.abs(sx) * 0.094, iz + sz));
   const px = ix, pz = iz; // centro de la marquesina (para la sombra)
 
   // ---------- Tienda: paredes huecas con puerta y ventanas ----------
@@ -151,6 +174,30 @@ export function createStation(scene) {
   inside.push(box(0.6, 0.8, 0.06, PAL.teal, L.phone.x, 1.5, pz0 - 0.03));
   inside.push(box(0.34, 0.46, 0.14, PAL.dark, L.phone.x, 1.45, pz0 - 0.1));
   inside.push(box(0.1, 0.34, 0.1, PAL.chrome, L.phone.x - 0.24, 1.45, pz0 - 0.12));
+
+  // Techito "boomerang" sobre la puerta, con poste cromado
+  const awn = extrude(shapeOf([[0, 3.02], [2.5, 3.5], [2.5, 3.66], [0, 3.24]]), 3.2, PAL.cream);
+  awn.rotateY(-Math.PI / 2);
+  awn.translate(L.door.x + 0.2, 0, front);
+  parts.push(awn);
+  const awnBand = extrude(shapeOf([[0, 2.94], [2.56, 3.42], [2.56, 3.5], [0, 3.02]]), 3.24, PAL.teal);
+  awnBand.rotateY(-Math.PI / 2);
+  awnBand.translate(L.door.x + 0.2, 0, front);
+  parts.push(awnBand);
+  parts.push(cyl(0.06, 0.06, 3.45, 6, PAL.chrome, L.door.x + 1.55, 1.72, front + 2.25));
+  circle(L.door.x + 1.55, front + 2.25, 0.12);
+  // Torreón en la esquina del frente con una esfera "atómica" arriba
+  const tx = x1 - 0.4, tz = front - 0.9;
+  parts.push(box(0.4, 6.4, 1.9, PAL.red, tx, b.h + 3.2, tz));
+  for (let i = 0; i < 4; i++) parts.push(box(0.43, 0.14, 1.94, PAL.cream, tx, b.h + 0.8 + i * 1.6, tz));
+  const ball = new THREE.SphereGeometry(0.42, 10, 8);
+  ball.translate(tx, b.h + 6.85, tz);
+  parts.push(tint(ball, PAL.chrome));
+  for (const [ax, ay, az] of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+    const spike = new THREE.BoxGeometry(ax ? 1.6 : 0.06, ay ? 1.6 : 0.06, az ? 1.6 : 0.06);
+    spike.translate(tx, b.h + 6.85, tz);
+    parts.push(tint(spike, 0xe8b23a));
+  }
 
   aabb(b.x, back + T / 2, b.w, T);
   aabb(x0 + T / 2, b.z, T, b.d);
@@ -252,24 +299,77 @@ export function createStation(scene) {
     box(0.8, 0.8, 0.8, PAL.wood, drumX + 1.6, 0.46, drumZ - 0.05),
   ];
   for (let i = 0; i < 3; i++) junk.push(cyl(0.4, 0.4, 0.24, 9, PAL.dark, 8.9, 0.18 + i * 0.25, front + 0.8));
-  // Poste del letrero de carretera
-  junk.push(cyl(0.13, 0.16, 4.9, 6, PAL.dark, L.sign.x, 2.45, L.sign.z));
-  junk.push(box(0.16, 3.3, 3.3, PAL.dark, L.sign.x, 6.5, L.sign.z));
+  // Letrero de carretera: base de ladrillo sobre la barda, poste, tablero, flecha con focos y placa de abierto
+  const S = L.sign;
+  const BRICK = 0x9a5a44;
+  junk.push(box(1.5, 1.7, 1.5, BRICK, S.x, 0.85, Y.maxZ));
+  junk.push(box(1.7, 0.16, 1.7, 0x8f877b, S.x, 1.78, Y.maxZ));
+  junk.push(cyl(0.17, 0.22, 6.4, 8, PAL.dark, S.x, 4.9, Y.maxZ));
+  junk.push(box(0.24, 3.75, 3.75, PAL.dark, S.x, 9.0, Y.maxZ)); // marco del tablero
+  const arrow = extrude(shapeOf([[-2.6, 0.32], [0.7, 0.32], [0.7, 0.7], [1.75, 0], [0.7, -0.7], [0.7, -0.32], [-2.6, -0.32]]), 0.2, PAL.red);
+  arrow.rotateZ(-0.35);
+  arrow.rotateY(Math.PI / 2); // en el plano del letrero, apuntando hacia la estación
+  arrow.translate(S.x, 6.0, Y.maxZ - 0.3);
+  junk.push(arrow);
+  junk.push(box(0.2, 0.7, 2.0, PAL.dark, S.x, 4.2, Y.maxZ)); // placa de abierto
   scene.add(new THREE.Mesh(merge(junk), vertexMat));
+  aabb(S.x, Y.maxZ, 1.5, 1.5);
+  // Focos de la flecha: dos grupos que se encienden alternados (efecto de luces que corren)
+  const bulbs = [[], []];
+  for (let i = 0; i < 12; i++) {
+    const u = i / 11;
+    const lx = -2.4 + u * 3.9, ly = 0;
+    const c = Math.cos(-0.35), sn = Math.sin(-0.35);
+    const wy = 6.0 + lx * sn + ly * c, wz = Y.maxZ - 0.3 - (lx * c - ly * sn);
+    for (const side of [-1, 1]) bulbs[i % 2].push(box(0.08, 0.13, 0.13, 0xffffff, S.x + side * 0.13, wy, wz));
+  }
+  const bulbMats = [0, 1].map(() => new THREE.MeshBasicMaterial({ color: 0x4a3a30, toneMapped: false }));
+  bulbs.forEach((list, k) => scene.add(new THREE.Mesh(merge(list), bulbMats[k])));
+  // Placa OPEN / CLOSED
+  const openCv = document.createElement('canvas');
+  openCv.width = 256; openCv.height = 96;
+  const openTex = new THREE.CanvasTexture(openCv);
+  openTex.colorSpace = THREE.SRGBColorSpace;
+  const openMat = new THREE.MeshBasicMaterial({ map: openTex, toneMapped: false });
+  for (const dir of [1, -1]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.86, 0.6), openMat);
+    m.position.set(S.x + dir * 0.11, 4.2, Y.maxZ);
+    m.rotation.y = dir * Math.PI / 2;
+    scene.add(m);
+  }
+  function drawOpen(on) {
+    const c = openCv.getContext('2d');
+    c.fillStyle = '#17122a'; c.fillRect(0, 0, 256, 96);
+    c.font = '64px "Alfa Slab One", Impact, serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.shadowColor = on ? '#ff4a3a' : 'transparent'; c.shadowBlur = on ? 18 : 0;
+    c.fillStyle = on ? '#ff6a5a' : '#4a3a40';
+    c.fillText(on ? 'OPEN' : 'CLOSED', 128, 52);
+    openTex.needsUpdate = true;
+  }
+  drawOpen(false);
   circle(drumX + 0.35, drumZ + 0.05, 0.75);
   circle(drumX + 1.6, drumZ, 0.6);
   circle(8.9, front + 0.8, 0.55);
-  circle(L.sign.x, L.sign.z, 0.3);
 
   // Letreros con textura de canvas (apagados hasta que haya luz / se abra)
   const art = signTextures();
   const signMat = new THREE.MeshBasicMaterial({ map: art.shield });
   for (const dir of [1, -1]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 3.1), signMat);
-    p.position.set(L.sign.x + dir * 0.09, 6.5, L.sign.z);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 3.5), signMat);
+    p.position.set(S.x + dir * 0.13, 9.0, Y.maxZ);
     p.rotation.y = dir * Math.PI / 2;
     scene.add(p);
   }
+  const towerMat = new THREE.MeshBasicMaterial({ map: art.tower, toneMapped: false, color: 0x8a8580 });
+  for (const dir of [1, -1]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 5.4), towerMat);
+    m.position.set(tx + dir * 0.21, b.h + 3.3, tz);
+    m.rotation.y = dir * Math.PI / 2;
+    scene.add(m);
+  }
+  const lampMesh = new THREE.Mesh(merge(canopyLamps), new THREE.MeshBasicMaterial({ color: 0x8a8070, toneMapped: false }));
+  scene.add(lampMesh);
   const roofMat = new THREE.MeshBasicMaterial({ map: art.roof });
   const roofSign = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 1.5), roofMat);
   roofSign.position.set(b.x, b.h + 1.55, front - 0.55);
@@ -287,7 +387,7 @@ export function createStation(scene) {
   const fakeShadows = new THREE.Mesh(merge([
     flat(13, 7, px + 4.5, pz),
     flat(7, b.d + 1, b.x + b.w / 2 + 3.5, b.z),
-    flat(3.4, 3.2, L.sign.x + 5, L.sign.z),
+    flat(3.6, 3.6, S.x + 6, S.z - 1.6),
     flat(2.2, Y.maxZ - Y.minZ, Y.minX + 1.25, (Y.minZ + Y.maxZ) / 2),
   ]), shadowMat);
   scene.add(fakeShadows);
@@ -305,9 +405,17 @@ export function createStation(scene) {
     glassMat.color.set(on ? 0xffd27a : 0x1c2530);
     glassMat.opacity = on ? 0.4 : 0.55;
     roofMat.color.set(on || neon ? 0xffffff : 0x8a8580);
+    towerMat.color.set(on ? 0xffffff : 0x8a8580);
+    lampMesh.material.color.set(on ? 0xfff0c8 : 0x8a8070);
   }
-  function setOpen(on) { signMat.color.set(on || neon ? 0xffffff : 0x8a8580); }
+  let isOpen = false;
+  function setOpen(on) {
+    isOpen = on;
+    signMat.color.set(on || neon ? 0xffffff : 0x8a8580);
+    drawOpen(on);
+  }
 
+  let chase = 0;
   // dt y lista de puntos {x, z} que abren la puerta (jugador y clientes)
   function update(dt, near) {
     for (let k = falling.length - 1; k >= 0; k--) {
@@ -315,6 +423,11 @@ export function createStation(scene) {
       f.t += dt;
       if (f.t > 0.75) { falling.splice(k, 1); placeBoard(f.i, 0); } else placeBoard(f.i, f.t);
     }
+    // Focos de la flecha: corren cuando la gasolinera está abierta
+    chase += dt;
+    const phase = Math.floor(chase * 3) % 2;
+    bulbMats[0].color.set(isOpen && phase === 0 ? 0xffe9a8 : 0x4a3a30);
+    bulbMats[1].color.set(isOpen && phase === 1 ? 0xffe9a8 : 0x4a3a30);
     // La puerta solo funciona cuando ya no tiene tablas
     let open = false;
     if (doorBlock.off) for (const p of near) if (Math.hypot(p.x - L.door.x, p.z - front) < 2.3) { open = true; break; }
@@ -346,7 +459,7 @@ export function createStation(scene) {
     insideMat,
     fakeShadows,
     front,
-    redrawText: () => art.draw(neon),
+    redrawText: () => { art.draw(neon); drawOpen(isOpen); },
   };
 }
 
@@ -368,7 +481,7 @@ function oilStains() {
   // Bajo el motor de los autos que cargan (paran con el frente hacia el oeste)
   spots.push([LAYOUT.pumps[0].x - 1.4, LAYOUT.lanes.north, 1.7], [LAYOUT.pumps[1].x - 1.4, LAYOUT.lanes.south, 1.7]);
   for (const x of LAYOUT.stalls) spots.push([x, LAYOUT.stallZ - 1.2, 1.5]);
-  spots.push([LAYOUT.garage.x, LAYOUT.lanes.service, 2.4]);
+  spots.push([LAYOUT.garage.x, LAYOUT.garage.z, 2.4], [LAYOUT.carwash.x, LAYOUT.carwash.z, 2.2]);
   const geo = new THREE.PlaneGeometry(1, 1);
   geo.rotateX(-Math.PI / 2);
   const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({
@@ -423,6 +536,7 @@ function signTextures() {
   };
   const s = mk(256, 256);
   const r = mk(512, 128);
+  const tw = mk(96, 352);
   const slab = (px) => `${px}px "Alfa Slab One", Impact, serif`;
 
   function glow(c, text, x, y, font, color) {
@@ -476,7 +590,15 @@ function signTextures() {
       c.globalAlpha = 1;
     }
     r.tex.needsUpdate = true;
+
+    // Torreón: letras verticales "MARKET"
+    c = tw.ctx;
+    c.fillStyle = '#a8412f'; c.fillRect(0, 0, 96, 352);
+    c.fillStyle = '#f0e4c6';
+    c.font = slab(50); c.textAlign = 'center'; c.textBaseline = 'middle';
+    [...'MARKET'].forEach((ch, i) => c.fillText(ch, 48, 34 + i * 57));
+    tw.tex.needsUpdate = true;
   }
   draw();
-  return { shield: s.tex, roof: r.tex, draw };
+  return { shield: s.tex, roof: r.tex, tower: tw.tex, draw };
 }

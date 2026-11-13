@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 0.7 · Etapa 4 pulida',
+  version: 'DEV 0.8 · Etapa 4 pulida',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,

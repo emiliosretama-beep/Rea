@@ -19,19 +19,37 @@ const MOVERS = 8;
 // Tramo común de entrada (este) y de salida (oeste)
 const ENTRY = [[SPAWN_X, ROAD_Z], [120, ROAD_Z], [70, ROAD_Z], [48, ROAD_Z], [38, -3.3]];
 const EXIT = [[-38, -3.3], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]];
-// Curva desde el acceso hasta cada carril (la salida es el espejo)
-const LANE_IN = {
-  north: [[28, -7.2], [19, -11.6], [11, LAYOUT.lanes.north]],
-  south: [[29, -7.6], [22, -12.6], [14.5, -16.6], [9, LAYOUT.lanes.south]],
-  service: [[29, -7.8], [23.5, -13.5], [18, -19.5], [14, LAYOUT.lanes.service]],
-};
+// Salida por el lado oeste del terreno (autolavado, estacionamiento y camino de atrás)
+const WEST_EXIT = [[-35.3, -20], [-35.3, -12.5], [-37.2, -7.6], [-41, -3.7], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]];
+const N = LAYOUT.lanes.north, S = LAYOUT.lanes.south;
+const G = LAYOUT.garage, W = LAYOUT.carwash;
+const BACK_Z = -37.6; // camino detrás de la tienda
 
-// needs: mejora que la habilita (sin "needs" existe desde el inicio)
+// Cada lugar de servicio con su propio camino de entrada (termina donde para) y de salida (empieza ahí)
+// needs: mejora que lo habilita (sin "needs" existe desde el inicio)
 const BAY_DEFS = [
-  { id: 'pump1', kind: 'fuel', lane: 'north', stopX: LAYOUT.pumps[0].x, pump: 0 },
-  { id: 'pump2', kind: 'fuel', lane: 'south', stopX: LAYOUT.pumps[1].x, pump: 1, needs: 'pump2' },
-  { id: 'garage', kind: 'garage', lane: 'service', stopX: LAYOUT.garage.x, needs: 'garage' },
-  { id: 'wash', kind: 'wash', lane: 'service', stopX: LAYOUT.carwash.x, needs: 'carwash' },
+  {
+    id: 'pump1', kind: 'fuel', lane: 'north', stop: [LAYOUT.pumps[0].x, N], pump: 0,
+    inPts: [[28, -7.2], [19, -11.6], [11, N]],
+    outPts: [[-11, N], [-19, -11.6], [-28, -7.2], ...EXIT],
+  },
+  {
+    id: 'pump2', kind: 'fuel', lane: 'south', stop: [LAYOUT.pumps[1].x, S], pump: 1, needs: 'pump2',
+    inPts: [[29, -7.6], [22, -12.6], [14.5, -16.6], [9, S]],
+    outPts: [[-9, S], [-13, -16.2], [-16.5, -12.6], [-21, -9.6], [-29, -7.4], ...EXIT],
+  },
+  {
+    // Taller (este): entra por el norte, sale por el sur y rodea por detrás de la tienda
+    id: 'garage', kind: 'garage', stop: [G.x, G.z], needs: 'garage',
+    inPts: [[33, -8.6], [28.5, -13], [G.x, -17.5], [G.x, -21]],
+    outPts: [[G.x, -31.5], [G.x - 0.6, -34.6], [G.x - 4, BACK_Z + 0.3], [8, BACK_Z], [-20, BACK_Z], [-31, BACK_Z + 0.2], [-34.6, -35], [-35.3, -30], ...WEST_EXIT],
+  },
+  {
+    // Autolavado (oeste): carril del frente hacia el oeste y túnel de este a oeste
+    id: 'wash', kind: 'wash', stop: [W.x, W.z], needs: 'carwash',
+    inPts: [[30, -7.6], [16, -9.3], [-12, -9.5], [-16.5, -10.3], [-20, -13], [-22.8, W.z]],
+    outPts: [[-33, W.z], [-35.3, -12.5], [-37.2, -7.6], [-41, -3.7], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]],
+  },
 ];
 
 // ---------- Caminos a pie hacia y dentro de la tienda ----------
@@ -79,26 +97,24 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   const stalls = LAYOUT.stalls.map((sx, i) => {
     const outPts = [[sx, STZ], [sx, -31.2], [sx - 2.2, -34]];
     if (sx - 2.2 > -31) outPts.push([-32.6, -34.2]);
-    outPts.push([-35, -31.4], [-35.3, -20], [-35.5, -12.5], [-37.4, -6.8], [-41, -3.7], [-48, ROAD_Z], [-70, ROAD_Z], [-120, ROAD_Z], [-300, ROAD_Z]);
+    outPts.push([-35, -31.4], ...WEST_EXIT);
     const outPath = makePath(outPts);
     return { i, x: sx, shopper: null, outPath, yieldS: findS(outPath, yieldTest), carSpot: [sx + 1.3, STZ + 0.6] };
   });
   // Camino de cada carril de bomba a cada cajón: sigue derecho al oeste y da vuelta hacia el sur
+  const AISLE = LAYOUT.aisleZ;
   const stallPath = (bay, st) => {
     const z = bay.z, x = st.x;
-    const drop = bay.lane === 'north' ? [[x + 0.6, z - 3.2], [x, z - 6.6]] : [[x + 0.6, z - 2.8], [x, z - 5.6]];
-    return makePath([[bay.stopX, z], [bay.stopX - 3, z], [x + 4.2, z], ...drop, [x, STZ]]);
+    return makePath([[bay.stopX, z], [bay.stopX - 3, z], [-8, z], [-12.5, AISLE + 1.2], [x + 3.8, AISLE], [x + 0.6, AISLE - 2.2], [x, AISLE - 4.4], [x, STZ]]);
   };
 
   // ---------- Bahías ----------
   const bays = BAY_DEFS.map((d) => {
-    const z = LAYOUT.lanes[d.lane];
-    const laneIn = LANE_IN[d.lane];
-    const laneOut = laneIn.map(([x, pz]) => [-x, pz]).reverse();
-    const outPath = makePath([[d.stopX, z], ...laneOut, ...EXIT]);
+    const [stopX, z] = d.stop;
+    const outPath = makePath([d.stop, ...d.outPts]);
     return {
-      ...d, z,
-      inPath: makePath([...ENTRY, ...laneIn, [d.stopX, z]]),
+      ...d, stopX, z,
+      inPath: makePath([...ENTRY, ...d.inPts, d.stop]),
       outPath,
       yieldS: findS(outPath, yieldTest),
       next: null, // auto formado detrás (solo bombas)
@@ -198,7 +214,13 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     if (m.pos.z < -3.5) {
       const ahead = 2.6 + m.v * 0.45;
       // Jugador en el camino (siguiendo la curva de la ruta)
-      const gp = sweep(m, ahead, (px, pz) => Math.hypot(px - player.x, pz - player.z) < CAR_TYPES[m.car.typeId].wid / 2 + 0.55);
+      const half = CAR_TYPES[m.car.typeId].wid / 2 + 0.55;
+      const gp = sweep(m, ahead, (px, pz) => {
+        if (Math.hypot(px - player.x, pz - player.z) < half) return true;
+        // Clientes caminando por el patio
+        for (const w of shoppers) if (w.route && Math.hypot(px - w.x, pz - w.z) < half) return true;
+        return false;
+      });
       if (gp >= 0) { target = Math.min(target, gp < 0.9 ? 0 : Math.sqrt(2 * DECEL * (gp - 0.8))); obstacle = true; m.blockedBy = 'player'; }
       for (const o of movers) {
         if (o === m || !busy(o)) continue;
@@ -294,9 +316,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
   }
 
   function trySpawn() {
-    // El autolavado está después del taller en el mismo carril: no mandar a nadie a lavar si el taller está ocupado
-    const garageBusy = bays[2].phase !== 'idle';
-    const free = bays.filter((b) => b.unlocked() && b.phase === 'idle' && !(b.kind === 'wash' && garageBusy));
+    const free = bays.filter((b) => b.unlocked() && b.phase === 'idle');
     // Bombas ocupadas sin nadie formado: el siguiente puede esperar detrás
     const line = bays.filter((b) => b.kind === 'fuel' && b.unlocked() && !b.next && (b.phase === 'waiting' || b.phase === 'fueling'));
     const m = movers.find((x) => !busy(x));
@@ -735,7 +755,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         } else {
           const spot = bay.kind === 'wash' ? LAYOUT.carwash : LAYOUT.garage;
           items.push({
-            id: 'service', bay, x: spot.x, y: 1.0, z: spot.ctrlZ, holdable: true,
+            id: 'service', bay, x: spot.px, y: 1.0, z: spot.pz, holdable: true,
             label: () => (!bay.unlocked() || !api.canWork(bay) ? null : t('promptWork', { j: t(bay.c.job) })),
             hold: (dt) => api.workHold(bay, dt),
             release: () => api.workRelease(bay),

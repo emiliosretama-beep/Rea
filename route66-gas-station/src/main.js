@@ -261,8 +261,8 @@ function updateService(dt) {
 // ---------- Cámara del menú: vista fija de la estación al atardecer ----------
 function menuCamera(time) {
   const cam = view.camera;
-  cam.position.set(15 + Math.sin(time * 0.1) * 1.2, 2.3, -8.2);
-  cam.lookAt(-18, 3.6, -21);
+  cam.position.set(17 + Math.sin(time * 0.1) * 1.2, 2.4, -9.2);
+  cam.lookAt(-12, 4.6, -18);
 }
 
 // Quién puede abrir la puerta de la tienda: el jugador y los clientes que caminan
