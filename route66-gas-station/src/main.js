@@ -23,11 +23,13 @@ import { createHud } from './ui/hud.js';
 import { createMarkers } from './ui/markers.js';
 import { createNotebook } from './ui/notebook.js';
 import { CAR_TYPES } from './data/carTypes.js';
+import { STAR_PERKS } from './data/upgrades.js';
 import { initCarFx, updateCarFx } from './world/carModels.js';
 import { createTumbleweeds } from './world/tumbleweeds.js';
 import { createJanitor } from './world/janitor.js';
 import { createPumpDisplays } from './world/pumpDisplays.js';
 import { createViewModel } from './core/viewmodel.js';
+import { createFireworks } from './world/fireworks.js';
 import { fmtMoney } from './game/state.js';
 
 const $ = (id) => document.getElementById(id);
@@ -87,11 +89,13 @@ const janitor = createJanitor(view.scene, litter, [
   { minX: 8.9, maxX: 15.5, minZ: -34, maxZ: -28 },
   { minX: 34.2, maxX: 37, minZ: -31.8, maxZ: -26.2 },
   { minX: -2.7, maxX: 2.7, minZ: -15.8, maxZ: -14.2 },
-]);
+], () => state.staffMult());
 customers.addWalker(janitor.walker);
 if (state.has('janitor')) janitor.enable();
 const pumpDisplays = createPumpDisplays(view.scene);
 const viewModel = createViewModel(view.scene, view.camera);
+const fireworks = createFireworks(view.scene, () => audio.play('firework'));
+if (state.legendary) station.setLegend(true);
 state.onEvent((name, data) => { if (name === 'earn') hud.popMoney(`+${fmtMoney(data.amount)}`); });
 
 // ---------- Sombras y calidad ----------
@@ -129,6 +133,19 @@ state.onEvent((name) => {
 });
 station.onDoor(() => audio.play('door', LAYOUT_DOOR));
 
+// Estrellas: avisar al ganar o perder una, y cuando la meta final esté lista
+let lastStars = state.stars();
+let legendNotified = false;
+state.onChange((s) => {
+  const st = s.stars();
+  if (st !== lastStars) {
+    if (st > lastStars) { toast('toastStarUp', { n: st, p: STAR_PERKS[st] ? t(STAR_PERKS[st]) : '' }); audio.play('jingle'); }
+    else toast('toastStarDown', { n: st });
+    lastStars = st;
+  }
+  if (s.legendReady() && !legendNotified) { legendNotified = true; toast('toastLegendReady'); audio.play('bell'); }
+});
+
 // Aviso (una vez) cuando la gasolina está por acabarse
 let warnedLow = false;
 state.onChange((s) => {
@@ -155,6 +172,7 @@ const notebook = createNotebook(state, {
   onClose: () => { if (playing) input.setEnabled(true); },
   onBought: toast,
   onUpgrade: (u) => toast('toastUpgrade', { u: t(`u_${u.id}`) }),
+  onLegend: () => celebrate(),
 });
 
 // ---------- Partida guardada: reconstruir el mundo ----------
@@ -383,6 +401,40 @@ function updateService(dt) {
   viewModel.update(dt, tool, !!tool);
 }
 
+// ---------- Celebración final: parada legendaria ----------
+let cinematic = false, cineT = 0;
+function celebrate() {
+  if (!state.legendReady()) return;
+  state.legendary = true;
+  state.emit('legend');
+  state.changed();
+  saveNow();
+  station.setLegend(true);
+  playing = false;
+  stopHolding();
+  viewModel.hide();
+  input.setEnabled(false);
+  body.classList.remove('playing');
+  body.classList.add('legend');
+  $('legend-stats').textContent = t('legendStats', { s: state.served, m: fmtMoney(state.earned), u: state.upgradeCount() });
+  cinematic = true; cineT = 0;
+  fireworks.start();
+  audio.play('fanfare');
+}
+$('btn-legend-continue').addEventListener('click', () => {
+  cinematic = false;
+  fireworks.stop();
+  body.classList.remove('legend');
+  play();
+});
+// La cámara rodea la estación mientras dura la celebración
+function cinematicCamera(dt) {
+  cineT += dt;
+  const a = -0.6 + cineT * 0.12, r = 46;
+  view.camera.position.set(Math.sin(a) * r, 14 + Math.sin(cineT * 0.3) * 2, -22 + Math.cos(a) * r);
+  view.camera.lookAt(0, 4, -22);
+}
+
 // ---------- Cámara del menú: vista fija de la estación al atardecer ----------
 function menuCamera(time) {
   const cam = view.camera;
@@ -409,7 +461,10 @@ function frame(now) {
   if (document.hidden) return;
 
   traffic.update(dt);
-  if (playing && !notebook.isOpen) {
+  if (cinematic) {
+    cinematicCamera(dt);
+    fireworks.update(dt);
+  } else if (playing && !notebook.isOpen) {
     input.update();
     player.update(dt, input);
     // debugSpeed > 1 solo se usa en pruebas automáticas para adelantar el tiempo
@@ -418,6 +473,7 @@ function frame(now) {
       customers.update(dt, player);
       litter.update(dt);
       janitor.update(dt);
+      state.tick(dt);
       missions.tick(dt);
     }
     upgrades3d.update(dt, now / 1000, customers.helperBay());
@@ -446,7 +502,7 @@ requestAnimationFrame(frame);
 
 // Para pruebas automáticas y depuración (no afecta al juego). La versión para itch.io no las incluye.
 if (!globalThis.R66_RELEASE) window.__r66 = {
-  player, input, view, traffic, interactions, colliders, customers, state, missions, notebook, station, litter, upgrades3d, audio, play, pause,
+  player, input, view, traffic, interactions, colliders, customers, state, missions, notebook, station, litter, upgrades3d, audio, play, pause, celebrate,
   litterItems: () => interactions.items.filter((x) => x.id === 'litter'),
   setSpeed: (n) => { debugSpeed = n; },
 };

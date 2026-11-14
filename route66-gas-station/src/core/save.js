@@ -6,7 +6,7 @@ const VERSION = 1;
 // Campos del estado del negocio que se guardan tal cual
 export const SAVED_FIELDS = [
   'money', 'earned', 'rep', 'served', 'lost', 'fuel', 'sodas', 'snacks',
-  'boards', 'power', 'open', 'litterPicked', 'upgrades', 'mission', 'missionProgress',
+  'boards', 'power', 'open', 'litterPicked', 'upgrades', 'mission', 'missionProgress', 'legendary',
 ];
 
 export function loadGame() {

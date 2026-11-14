@@ -570,6 +570,35 @@ export function createStation(scene) {
   ]), shadowMat);
   scene.add(fakeShadows);
 
+  // Corona dorada "LEGENDARY" sobre el letrero de la barda (meta final)
+  let legendMesh = null;
+  function setLegend(on) {
+    if (!on || legendMesh) return;
+    const cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 160;
+    const g = cv.getContext('2d');
+    const grad = g.createLinearGradient(0, 0, 0, 160);
+    grad.addColorStop(0, '#ffe08a'); grad.addColorStop(0.5, '#e8a21a'); grad.addColorStop(1, '#b0700f');
+    g.fillStyle = '#2a1c10'; g.fillRect(0, 0, 512, 160);
+    g.fillStyle = grad; g.fillRect(8, 8, 496, 144);
+    g.fillStyle = '#2a1c10'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '30px "Alfa Slab One", Impact, serif'; g.fillText('★ ★ ★ ★ ★', 256, 42);
+    g.font = '62px "Alfa Slab One", Impact, serif'; g.fillText('LEGENDARY', 256, 108);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
+    legendMesh = new THREE.Group();
+    for (const dir of [1, -1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 1.22), mat);
+      m.position.set(S.x + dir * 0.14, 11.45, Y.maxZ);
+      m.rotation.y = dir * Math.PI / 2;
+      legendMesh.add(m);
+    }
+    const frame = new THREE.Mesh(merge([box(0.22, 1.36, 4.05, PAL.dark, S.x, 11.45, Y.maxZ), box(0.1, 0.5, 0.1, PAL.dark, S.x, 10.85, Y.maxZ)]), vertexMat);
+    legendMesh.add(frame);
+    scene.add(legendMesh);
+  }
+
   let neon = false;
   function setNeon(on) {
     neon = on;
@@ -648,6 +677,7 @@ export function createStation(scene) {
     setPower,
     setOpen,
     setNeon,
+    setLegend,
     insideMat,
     fakeShadows,
     front,

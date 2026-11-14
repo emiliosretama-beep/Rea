@@ -94,8 +94,14 @@ export function createHud() {
         last.money = state.money;
         setOdo(state.money);
       }
-      const rep = Math.round(state.rep);
-      if (rep !== last.rep) { last.rep = rep; el.rep.textContent = rep; }
+      // Reputación como estrellas (la cifra exacta va en la etiqueta para lectores de pantalla)
+      const stars = state.stars();
+      const repKey = `${stars}|${Math.round(state.rep)}`;
+      if (repKey !== last.rep) {
+        last.rep = repKey;
+        el.rep.innerHTML = [1, 2, 3, 4, 5].map((n) => `<span class="${n <= stars ? 'on' : 'off'}">★</span>`).join('');
+        el.rep.parentElement.setAttribute('aria-label', `${t('reputation')}: ${stars}/5 (${Math.round(state.rep)})`);
+      }
       const fuel = Math.floor(state.fuel);
       if (fuel !== last.fuelStock) {
         last.fuelStock = fuel;

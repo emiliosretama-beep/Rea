@@ -1,6 +1,6 @@
 // Constantes generales del juego. Cambiar números aquí, no en la lógica.
 export const CFG = {
-  version: 'DEV 1.0 · Etapa 5a',
+  version: 'DEV 1.1 · Etapa 6',
   maxPixelRatio: 2,
   fov: 70,
   fovPortrait: 86,
@@ -50,6 +50,12 @@ export const BAL = {
   counterPatience: 45, // segundos que espera en la caja
   walkSpeed: 1.7,
 
+  // Estrellas: la reputación alta baja poco a poco si no atiendes bien
+  repDecay: 0.02, // por segundo, cuando la reputación es 100 (proporcional desde 60)
+  supplyDiscount: 0.85, // con 2 estrellas
+  tipBonus: 1.3, // con 3 estrellas
+  // Mejoras por niveles
+  pumpTier: 0.22, trainingTier: 0.25, premiumTier: 0.2,
   // Mejoras (los costos están en data/upgrades.js)
   storageMult: 2, // almacén: capacidad x2
   neonSpawn: 0.8, // neón: los clientes llegan 20 % más seguido

@@ -24,13 +24,18 @@ export const MISSIONS = [
   { id: 'litter4', text: 'mLitter', n: 4, on: 'litter', money: 2, rep: 2 },
   { id: 'earn40', text: 'mEarn', n: 40, on: 'earn', unit: 'money', money: 6, rep: 2 },
   { id: 'level3', text: 'mLevel', n: 3, value: (s) => s.level(), money: 8, rep: 3 },
+  { id: 'stars3', text: 'mStars', n: 3, value: (s) => s.stars(), money: 8, rep: 0 },
   { id: 'rep65', text: 'mHoldRep', n: 60, on: 'tick', unit: 'time', if: (d, s) => s.rep >= 65, strict: true, money: 8, rep: 3 },
   { id: 'perfect3', text: 'mPerfectRow', n: 3, on: 'served', if: (d) => d.quality === 'perfect', strict: true, money: 8, rep: 3 },
   { id: 'level4', text: 'mLevel', n: 4, value: (s) => s.level(), money: 12, rep: 3 },
+  { id: 'tier1', text: 'mTier', n: 2, value: (s) => Math.max(s.tier('fastPumps'), s.tier('training'), s.tier('premium')), money: 12, rep: 2 },
+  { id: 'stars4', text: 'mStars', n: 4, value: (s) => s.stars(), money: 15, rep: 0 },
   { id: 'service4', text: 'mService', n: 4, on: 'service', money: 10, rep: 3 },
   { id: 'level5', text: 'mLevel', n: 5, value: (s) => s.level(), money: 15, rep: 4 },
   { id: 'vip1', text: 'mVip', n: 1, on: 'served', if: (d) => d.typeId === 'vip', money: 15, rep: 5 },
   { id: 'all', text: 'mAll', n: UPGRADES.length, value: (s) => s.upgradeCount(), money: 25, rep: 5 },
+  { id: 'stars5', text: 'mStars', n: 5, value: (s) => s.stars(), money: 30, rep: 0 },
+  { id: 'legend', text: 'mLegend', n: 1, value: (s) => (s.legendary ? 1 : 0), money: 50, rep: 0 },
 ];
 
 // Cuando se acaba la cadena, esta se repite

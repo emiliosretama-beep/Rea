@@ -74,6 +74,8 @@ export function createAudio() {
     angry() { tone(300, { dec: 0.25, vol: 0.18, type: 'sawtooth', glide: 0.6 }); },
     step() { noise({ filter: 'lowpass', freq: 260, dec: 0.06, vol: 0.12 }); },
     clunkSoft() { noise({ filter: 'lowpass', freq: 700, dec: 0.08, vol: 0.2 }); },
+    firework() { noise({ filter: 'lowpass', freq: 220, a: 0.01, dec: 0.7, vol: 0.5 }); for (let i = 0; i < 6; i++) noise({ t: 0.25 + i * 0.07 + Math.random() * 0.05, freq: 4000, q: 2, dec: 0.05, vol: 0.12 }); },
+    fanfare() { [[523, 0], [659, 0.15], [784, 0.3], [1046, 0.45], [784, 0.75], [1046, 0.9]].forEach(([f, tt]) => { tone(f, { t: tt, dec: 0.35, vol: 0.16, type: 'square' }); tone(f / 2, { t: tt, dec: 0.4, vol: 0.12, type: 'triangle' }); }); },
   };
 
   // Volumen según la distancia al jugador (pos = {x, z}; sin pos = sonido de interfaz)

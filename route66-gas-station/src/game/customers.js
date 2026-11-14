@@ -266,7 +266,8 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const lv = state.level();
     const patienceMult = state.has('parking') ? BAL.parkingPatience : 1;
     if (bay.kind === 'fuel') {
-      const typeId = pickType(Math.random, 'chance', (T) => T.level <= lv);
+      const stars = state.stars();
+      const typeId = pickType(Math.random, 'chance', (T) => T.level <= lv && (T.stars || 0) <= stars);
       const T = CAR_TYPES[typeId];
       const want = Math.round(T.want[0] + Math.random() * (T.want[1] - T.want[0]));
       const patience = T.patience * patienceMult;
@@ -287,7 +288,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
         patience, patienceMax: patience, tipBase: T.tip, quality: null, shop,
       };
     }
-    const typeId = pickType(Math.random, 'chance', (T) => T.service && T.level <= lv);
+    const typeId = pickType(Math.random, 'chance', (T) => T.service && T.level <= lv && (T.stars || 0) <= state.stars());
     const T = CAR_TYPES[typeId];
     const jobs = BAL.jobs[bay.kind];
     const job = jobs[(Math.random() * jobs.length) | 0];
@@ -392,7 +393,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     // El ayudante siempre deja una carga "normal": la propina doble es solo para ti
     c.quality = bay.byHelper ? 'ok' : r > BAL.perfectMax ? 'over' : r >= BAL.perfectMin ? 'perfect' : 'ok';
     const mult = c.quality === 'perfect' ? 2 : c.quality === 'ok' ? 1 : 0;
-    const tip = Math.round(c.tipBase * mult * (0.4 + 0.6 * (c.patience / c.patienceMax)) * 100) / 100;
+    const tip = Math.round(c.tipBase * mult * state.tipMult() * (0.4 + 0.6 * (c.patience / c.patienceMax)) * 100) / 100;
     const total = Math.round((Math.min(c.got, c.want) * BAL.pricePerGal + tip) * 100) / 100;
     state.served++;
     state.addMoney(total, true);
@@ -408,7 +409,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
 
   function pump(bay, dt, speed) {
     const c = bay.c;
-    const amount = Math.min((c.want / c.fill) * speed * dt, state.fuel, c.want * BAL.overfillMax - c.got);
+    const amount = Math.min((c.want / c.fill) * speed * state.pumpMult() * dt, state.fuel, c.want * BAL.overfillMax - c.got);
     c.got += amount;
     state.useFuel(amount);
   }
@@ -423,7 +424,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       if (bay.helperWait >= BAL.helperDelay) { bay.phase = 'fueling'; bay.byHelper = true; }
     } else if (bay.phase === 'fueling' && bay.byHelper) {
       if (state.fuel <= 0) { bay.phase = 'waiting'; bay.byHelper = false; return; }
-      pump(bay, dt, BAL.helperSpeed);
+      pump(bay, dt, BAL.helperSpeed * state.staffMult());
       if (bay.c.got >= bay.c.want * 0.985) finishFuel(bay);
     }
   }
@@ -508,7 +509,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
 
   function shopperTotal(sh) {
     const g = sh.got;
-    return Math.round((g.soda * BAL.sodaPrice + g.snack * BAL.snackPrice) * 100) / 100;
+    return Math.round((g.soda * BAL.sodaPrice + g.snack * BAL.snackPrice) * state.priceMult() * 100) / 100;
   }
 
   // Texto de lo que lleva: "2 refrescos, 1 botana"
@@ -692,7 +693,7 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
     const sh = cafeLine.shift();
     if (!sh) return;
     const pie = Math.random() < 0.5;
-    const total = Math.round((BAL.cafePrice + (pie ? BAL.piePrice : 0)) * 100) / 100;
+    const total = Math.round((BAL.cafePrice + (pie ? BAL.piePrice : 0)) * state.priceMult() * 100) / 100;
     sh.got.coffee = 1;
     state.addMoney(total, true);
     state.addRep(BAL.repOk);
@@ -741,15 +742,15 @@ export function createCustomers(scene, { traffic, state, colliders, onEvent }) {
       // ----- Personal -----
       // Cajero: cobra al primero de la fila después de un momento
       staff.cashier = state.has('cashier') && !!queue[0] && queue[0].state === 'queue';
-      if (staff.cashier) { staff.cashierT += dt; if (staff.cashierT > BAL.cashierDelay) { staff.cashierT = 0; chargeShopper(); } } else staff.cashierT = 0;
+      if (staff.cashier) { staff.cashierT += dt; if (staff.cashierT > BAL.cashierDelay / state.staffMult()) { staff.cashierT = 0; chargeShopper(); } } else staff.cashierT = 0;
       // Barista: prepara el café a su ritmo
       staff.barista = state.has('barista') && cafeLine.some((x) => x.state === 'cafeWait');
-      if (staff.barista) { brew.done += dt * BAL.staffSpeed; if (brew.done >= brew.work) { brew.done = 0; serveCoffee(); } }
+      if (staff.barista) { brew.done += dt * BAL.staffSpeed * state.staffMult(); if (brew.done >= brew.work) { brew.done = 0; serveCoffee(); } }
       // Mecánico: trabaja en el taller y arranca el autolavado
       staff.mechanic = false;
       if (state.has('mechanic')) {
         const g = bays.find((b) => b.kind === 'garage');
-        if (g && api.canWork(g)) { api.workHold(g, dt * BAL.staffSpeed); staff.mechanic = true; }
+        if (g && api.canWork(g)) { api.workHold(g, dt * BAL.staffSpeed * state.staffMult()); staff.mechanic = true; }
         const w = bays.find((b) => b.kind === 'wash');
         if (w && api.canStartWash(w)) { staff.washT += dt; if (staff.washT > BAL.washAutoDelay) { staff.washT = 0; api.startWash(w); } } else staff.washT = 0;
       }

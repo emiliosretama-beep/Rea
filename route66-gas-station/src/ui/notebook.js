@@ -1,9 +1,9 @@
 // Libreta del negocio: pestañas de Mejoras y Proveedor.
 import { t } from '../core/i18n.js';
 import { fmtMoney } from '../game/state.js';
-import { UPGRADES, LEVEL_AT, MAX_LEVEL } from '../data/upgrades.js';
+import { UPGRADES, LEVEL_AT, MAX_LEVEL, STAR_PERKS, tiersOf } from '../data/upgrades.js';
 
-export function createNotebook(state, { onOpen, onClose, onBought, onUpgrade }) {
+export function createNotebook(state, { onOpen, onClose, onBought, onUpgrade, onLegend }) {
   const $ = (id) => document.getElementById(id);
   const fuelBtn = $('btn-buy-fuel');
   const items = [
@@ -11,8 +11,25 @@ export function createNotebook(state, { onOpen, onClose, onBought, onUpgrade }) 
     { kind: 'snack', btn: $('btn-buy-snack'), have: $('order-snack-have'), msg: 'toastSnackBought' },
   ];
   const list = $('upgrade-list');
-  const tabs = { upgrades: $('tab-upgrades'), supplier: $('tab-supplier') };
-  const panes = { upgrades: $('pane-upgrades'), supplier: $('pane-supplier') };
+  const tabs = { upgrades: $('tab-upgrades'), supplier: $('tab-supplier'), goal: $('tab-goal') };
+  const panes = { upgrades: $('pane-upgrades'), supplier: $('pane-supplier'), goal: $('pane-goal') };
+
+  // Meta final: una fila por requisito
+  const goalRows = ['stars', 'upgrades', 'served', 'earned'].map((id) => {
+    const row = document.createElement('div');
+    row.className = 'goal-row';
+    row.innerHTML = '<i class="check">✓</i><b></b><span></span>';
+    $('goal-list').append(row);
+    return { id, row, name: row.querySelector('b'), val: row.querySelector('span') };
+  });
+  const perkRows = Object.keys(STAR_PERKS).map((n) => {
+    const row = document.createElement('div');
+    row.className = 'perk-row';
+    row.innerHTML = `<i>${'★'.repeat(Number(n))}</i><span></span>`;
+    $('perk-list').append(row);
+    return { n: Number(n), row, text: row.querySelector('span') };
+  });
+  $('btn-legend').addEventListener('click', () => { if (state.legendReady()) { api.close(); onLegend(); } });
   let open = false;
   let tab = 'upgrades';
 
@@ -53,14 +70,28 @@ export function createNotebook(state, { onOpen, onClose, onBought, onUpgrade }) 
       $('book-level').textContent = lv < MAX_LEVEL ? t('levelNext', { l: lv, n: need }) : t('levelMax', { l: lv });
       for (const r of rows) {
         const can = state.canBuyUpgrade(r.u);
-        r.name.textContent = t(`u_${r.u.id}`);
+        const tiers = tiersOf(r.u), tier = state.tier(r.u.id);
+        r.name.textContent = tiers > 1 && tier > 0 ? `${t(`u_${r.u.id}`)} · ${t('tierN', { a: tier, b: tiers })}` : t(`u_${r.u.id}`);
         r.desc.textContent = t(`u_${r.u.id}_d`);
         r.row.classList.toggle('owned', can === 'owned');
         r.row.classList.toggle('locked', can === 'locked' || can === 'needs');
         r.btn.disabled = can !== 'ok';
         r.btn.textContent = can === 'owned' ? t('owned') : can === 'locked' ? t('needLevel', { l: r.u.level })
-          : can === 'needs' ? t('needUpgrade', { u: t(`u_${r.u.needs}`) }) : fmtMoney(r.u.cost);
+          : can === 'needs' ? t('needUpgrade', { u: t(`u_${r.u.needs}`) }) : fmtMoney(state.costOf(r.u));
       }
+    } else if (tab === 'goal') {
+      const checks = state.legendChecks();
+      for (const g of goalRows) {
+        const c = checks.find((x) => x.id === g.id);
+        g.row.classList.toggle('ok', c.ok);
+        g.name.textContent = t(`goal_${g.id}`);
+        g.val.textContent = g.id === 'earned' ? `${fmtMoney(Math.min(c.have, c.need))} / ${fmtMoney(c.need)}` : `${Math.min(c.have, c.need)} / ${c.need}`;
+      }
+      $('btn-legend').hidden = !state.legendReady();
+      $('goal-done').hidden = !state.legendary;
+      const stars = state.stars();
+      $('stars-now').textContent = t('starsNow', { n: stars });
+      for (const p of perkRows) { p.row.classList.toggle('on', stars >= p.n); p.text.textContent = t(`perk${p.n}`); }
     } else {
       const f = state.fuelOrder();
       $('order-fuel-have').textContent = t('orderHave', { a: `${Math.floor(state.fuel)} ${t('unitGal')}`, b: state.fuelCap() });

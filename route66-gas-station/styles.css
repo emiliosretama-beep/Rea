@@ -424,6 +424,56 @@ body.booking #book { display: grid; }
 .book-row.locked b, .book-row.locked span { opacity: .5; }
 .book-card button:focus-visible { outline-color: var(--night); }
 
+/* Meta final en la libreta */
+.goal-intro { margin: 8px 0 4px; font-size: 13px; line-height: 1.4; }
+.goal-intro b { display: block; font-family: var(--display); font-weight: 400; font-size: 16px; margin-bottom: 2px; }
+.goal-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1.5px solid rgba(28, 22, 38, .15); }
+.goal-row:first-child { border-top: 0; }
+.goal-row .check {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  border: 2.5px solid var(--night); font-weight: 900; font-size: 14px; color: transparent;
+}
+.goal-row.ok .check { background: var(--teal); color: var(--cream); }
+.goal-row b { flex: 1; font-size: 14.5px; }
+.goal-row span { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; opacity: .8; }
+.goal-sub { margin: 14px 0 2px; font-family: var(--display); font-weight: 400; font-size: 16px; }
+.perk-row { display: flex; gap: 10px; align-items: center; padding: 6px 0; font-size: 13.5px; }
+.perk-row i { font-style: normal; flex: none; width: 54px; color: #b8a888; letter-spacing: 1px; }
+.perk-row.on i { color: #e8a21a; }
+.perk-row:not(.on) { opacity: .55; }
+#btn-legend {
+  width: 100%; min-height: 52px; margin: 10px 0 4px; border-radius: 999px;
+  font-family: var(--display); font-size: 17px; color: var(--cream);
+  background: linear-gradient(#e8b23a, #c98a1a); border: 2.5px solid var(--night); box-shadow: 0 4px 0 var(--night);
+  animation: dot-pulse 1.6s ease-in-out infinite;
+}
+#goal-done { margin: 10px 0; font-weight: 800; color: #b07a10; }
+/* Estrellas en el HUD */
+#rep { letter-spacing: 1px; font-size: .95em; }
+#rep .on { color: #e8a21a; }
+#rep .off { color: rgba(28, 22, 38, .25); }
+
+/* ---------- Celebración: parada legendaria ---------- */
+#legend {
+  position: absolute; inset: 0; z-index: 8; display: none; align-items: flex-end; justify-content: center;
+  padding: calc(14px + var(--safe-t)) calc(16px + var(--safe-r)) calc(18px + var(--safe-b)) calc(16px + var(--safe-l));
+  background: linear-gradient(0deg, rgba(28, 22, 38, .82) 0%, rgba(28, 22, 38, .2) 55%, rgba(28, 22, 38, 0) 100%);
+}
+body.legend #legend { display: flex; }
+body.legend #hud, body.legend #markers, body.legend #btn-interact, body.legend #menu { display: none !important; }
+.legend-card { max-width: 560px; text-align: center; color: var(--cream); animation: legend-in 1.2s cubic-bezier(.2, .9, .3, 1.1) both; }
+@keyframes legend-in { from { opacity: 0; transform: translateY(30px); } }
+.legend-stars { font-size: clamp(22px, 5vmin, 34px); color: #ffcf4a; letter-spacing: 6px; text-shadow: 0 0 18px rgba(255, 190, 60, .7); }
+.legend-card h2 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 8vmin, 56px); line-height: 1; margin: 6px 0 8px; text-shadow: 0 3px 0 var(--red), 0 8px 24px rgba(0, 0, 0, .5); }
+.legend-card p { font-size: clamp(13px, 2.6vmin, 17px); line-height: 1.4; font-weight: 600; margin: 4px 0; }
+#legend-stats { font-variant-numeric: tabular-nums; color: #ffd07a; }
+.legend-credits { opacity: .75; font-size: 13px !important; }
+#btn-legend-continue {
+  margin-top: 12px; min-height: 52px; padding: 0 2em; border-radius: 999px;
+  font-family: var(--display); font-size: 19px; color: var(--cream); background: var(--orange);
+  box-shadow: 0 5px 0 var(--orange-deep), 0 12px 26px rgba(0, 0, 0, .4);
+}
+
 /* ---------- Aviso de orientación ---------- */
 #rotate {
   position: absolute; inset: 0; z-index: 10; display: none;

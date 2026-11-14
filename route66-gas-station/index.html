@@ -97,6 +97,15 @@
     <div class="book-tabs" role="tablist">
       <button id="tab-upgrades" type="button" role="tab" data-i18n="tabUpgrades"></button>
       <button id="tab-supplier" type="button" role="tab" data-i18n="tabSupplier"></button>
+      <button id="tab-goal" type="button" role="tab" data-i18n="tabGoal"></button>
+    </div>
+    <div id="pane-goal" class="book-pane" hidden>
+      <p class="goal-intro"><b data-i18n="goalTitle"></b><span data-i18n="goalIntro"></span></p>
+      <div id="goal-list"></div>
+      <button id="btn-legend" type="button" hidden data-i18n="btnLegend"></button>
+      <p id="goal-done" hidden data-i18n="legendDone"></p>
+      <h3 class="goal-sub" id="stars-now"></h3>
+      <div id="perk-list"></div>
     </div>
     <div id="pane-upgrades" class="book-pane">
       <p id="book-level"></p>
@@ -116,6 +125,18 @@
         <button id="btn-buy-snack" type="button"></button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Celebración final: parada legendaria -->
+<div id="legend" role="dialog" aria-modal="true" aria-labelledby="legend-title">
+  <div class="legend-card">
+    <div class="legend-stars" aria-hidden="true">★★★★★</div>
+    <h2 id="legend-title" data-i18n="legendTitle"></h2>
+    <p data-i18n="legendText"></p>
+    <p id="legend-stats"></p>
+    <p class="legend-credits" data-i18n="legendCredits"></p>
+    <button id="btn-legend-continue" type="button" data-i18n="legendContinue"></button>
   </div>
 </div>
 

@@ -9,7 +9,7 @@ const PICK_TIME = 0.9;
 const HOME = { x: 9.4, z: -25.6 }; // junto a la cafetería, entre turnos
 
 // obstacles: rectángulos { minX, maxX, minZ, maxZ } que hay que rodear
-export function createJanitor(scene, litter, obstacles) {
+export function createJanitor(scene, litter, obstacles, speedMult = () => 1) {
   const person = buildPerson(0x6f8fb8);
   // Escoba en la mano
   const broom = new THREE.Mesh(merge([
@@ -81,7 +81,7 @@ export function createJanitor(scene, litter, obstacles) {
         if (me.target) { me.pickT = PICK_TIME; me.blocking = true; }
         else person.pose(null);
       } else {
-        const step = Math.min(d, SPEED * dt);
+        const step = Math.min(d, SPEED * speedMult() * dt);
         me.x += (dx / d) * step; me.z += (dz / d) * step;
         me.yaw = Math.atan2(dx, dz);
         me.walkT += dt;

@@ -1,7 +1,7 @@
 // Estado del negocio: datos puros, sin nada de Three.js ni del DOM.
 // (En la Etapa 5 esto es lo que se guarda en localStorage.)
 import { BAL } from '../config.js';
-import { UPGRADES, LEVEL_AT } from '../data/upgrades.js';
+import { UPGRADES, LEVEL_AT, STAR_AT, LEGEND, tiersOf } from '../data/upgrades.js';
 
 export function createState() {
   const changeFns = [];
@@ -20,7 +20,8 @@ export function createState() {
     power: false, // luz arreglada
     open: false, // gasolinera abierta al público
     litterPicked: 0,
-    upgrades: {}, // id -> true
+    upgrades: {}, // id -> nivel comprado (1, 2, 3...). Las partidas viejas guardaban true = nivel 1
+    legendary: false, // ya completó la meta final
     mission: 0, // índice de la misión actual
     missionProgress: 0,
 
@@ -53,8 +54,35 @@ export function createState() {
       return got;
     },
 
+    // ---- Estrellas de reputación ----
+    stars() {
+      let n = 1;
+      for (let i = 0; i < STAR_AT.length; i++) if (s.rep >= STAR_AT[i]) n = i + 1;
+      return n;
+    },
+    // La reputación alta baja sola, poco a poco: hay que mantenerla atendiendo bien
+    tick(dt) {
+      if (!s.open || s.rep <= 60) return;
+      s.rep = Math.max(60, s.rep - BAL.repDecay * ((s.rep - 60) / 40) * dt);
+      changed();
+    },
+    supplyMult() { return s.stars() >= 2 ? BAL.supplyDiscount : 1; },
+    tipMult() { return s.stars() >= 3 ? BAL.tipBonus : 1; },
+    // ---- Meta final ----
+    legendChecks() {
+      return [
+        { id: 'stars', ok: s.stars() >= LEGEND.stars, have: s.stars(), need: LEGEND.stars },
+        { id: 'upgrades', ok: s.upgradeCount() >= UPGRADES.length, have: s.upgradeCount(), need: UPGRADES.length },
+        { id: 'served', ok: s.served >= LEGEND.served, have: s.served, need: LEGEND.served },
+        { id: 'earned', ok: s.earned >= LEGEND.earned, have: Math.floor(s.earned), need: LEGEND.earned },
+      ];
+    },
+    legendReady() { return !s.legendary && s.legendChecks().every((c) => c.ok); },
+
     // ---- Mejoras y nivel ----
-    has(id) { return !!s.upgrades[id]; },
+    tier(id) { const v = s.upgrades[id]; return v === true ? 1 : v | 0; },
+    has(id) { return s.tier(id) >= 1; },
+    costOf(u) { return u.costs ? u.costs[Math.min(s.tier(u.id), u.costs.length - 1)] : u.cost; },
     upgradeCount() { return Object.keys(s.upgrades).length; },
     level() {
       const n = s.upgradeCount();
@@ -64,35 +92,41 @@ export function createState() {
     },
     // 'owned' | 'locked' (falta nivel) | 'poor' (falta dinero) | 'ok'
     canBuyUpgrade(u) {
-      if (s.has(u.id)) return 'owned';
+      if (s.tier(u.id) >= tiersOf(u)) return 'owned';
       if (s.level() < u.level) return 'locked';
       if (u.needs && !s.has(u.needs)) return 'needs';
-      return s.money >= u.cost ? 'ok' : 'poor';
+      return s.money >= s.costOf(u) ? 'ok' : 'poor';
     },
     buyUpgrade(id) {
       const u = UPGRADES.find((x) => x.id === id);
       if (!u || s.canBuyUpgrade(u) !== 'ok') return false;
       const before = s.level();
-      s.upgrades[id] = true;
-      s.addMoney(-u.cost);
-      s.emit('upgrade', { id });
+      const cost = s.costOf(u);
+      s.upgrades[id] = s.tier(id) + 1;
+      s.addMoney(-cost);
+      s.emit('upgrade', { id, tier: s.tier(id) });
       if (s.level() > before) s.emit('level', { level: s.level() });
       changed();
       return true;
     },
-    fuelCap() { return BAL.fuelCap * (s.has('storage') ? BAL.storageMult : 1); },
-    itemCap(kind) { return BAL[`${kind}Cap`] * (s.has('storage') ? BAL.storageMult : 1); },
+    // Almacén: nivel 1 = el doble, nivel 2 = el triple
+    storageMult() { return 1 + s.tier('storage') * (BAL.storageMult - 1); },
+    fuelCap() { return BAL.fuelCap * s.storageMult(); },
+    itemCap(kind) { return BAL[`${kind}Cap`] * s.storageMult(); },
+    pumpMult() { return 1 + s.tier('fastPumps') * BAL.pumpTier; },
+    staffMult() { return 1 + s.tier('training') * BAL.trainingTier; },
+    priceMult() { return 1 + s.tier('premium') * BAL.premiumTier; },
     shopChance() { return s.has('shop') ? BAL.shopChanceShop : BAL.shopChance; },
     stallCount() { return s.has('parking') ? 4 : 2; },
 
     // ---- Proveedor ----
     fuelOrder() {
       const gal = Math.max(0, Math.min(BAL.fuelOrder, s.fuelCap() - Math.floor(s.fuel)));
-      return { gal, cost: Math.round(gal * BAL.fuelCost * 100) / 100 };
+      return { gal, cost: Math.round(gal * BAL.fuelCost * s.supplyMult() * 100) / 100 };
     },
     itemOrder(kind) {
       const n = Math.max(0, Math.min(BAL[`${kind}Order`], s.itemCap(kind) - s.stockOf(kind)));
-      return { n, cost: Math.round(n * BAL[`${kind}Cost`] * 100) / 100 };
+      return { n, cost: Math.round(n * BAL[`${kind}Cost`] * s.supplyMult() * 100) / 100 };
     },
     // Sin dinero y casi sin gasolina se permite pedir a crédito: así nunca te quedas atorado
     canBuyFuel() {

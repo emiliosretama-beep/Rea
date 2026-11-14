@@ -2,7 +2,7 @@
 //  want: galones que pide [mín, máx] · tip: propina base · patience: segundos
 //  chance: probabilidad relativa como cliente · weight: probabilidad en el tráfico de fondo
 //  level: nivel de la estación que lo desbloquea · fill: segundos que tarda en llenarse
-//  service: puede pedir autolavado o taller
+//  service: puede pedir autolavado o taller · stars: estrellas de reputación necesarias para que llegue
 export const CAR_TYPES = {
   sedan: {
     len: 4.6, wid: 1.8, wheelR: 0.34, weight: 5, level: 1, service: true,
@@ -35,12 +35,12 @@ export const CAR_TYPES = {
     colors: [0xc8322b, 0xe8b23a, 0xf1ead8, 0x2f9c95],
   },
   classic: {
-    len: 5.4, wid: 1.9, wheelR: 0.37, weight: 1, level: 4, service: true,
+    len: 5.4, wid: 1.9, wheelR: 0.37, weight: 1, level: 4, stars: 3, service: true,
     name: 'carClassic', want: [12, 18], tip: 1.0, patience: 50, chance: 2,
     colors: [0x6a2c3a, 0x2c4a3e, 0x3a3f66, 0x8a6a3a],
   },
   vip: {
-    len: 6.8, wid: 1.9, wheelR: 0.35, weight: 0, level: 5, service: true,
+    len: 6.8, wid: 1.9, wheelR: 0.35, weight: 0, level: 5, stars: 4, service: true,
     name: 'carVip', want: [16, 22], tip: 2.5, patience: 26, chance: 1,
     colors: [0x1d1b22, 0x2a2233, 0xf1ead8],
   },
