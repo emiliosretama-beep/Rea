@@ -504,5 +504,6 @@ requestAnimationFrame(frame);
 if (!globalThis.R66_RELEASE) window.__r66 = {
   player, input, view, traffic, interactions, colliders, customers, state, missions, notebook, station, litter, upgrades3d, audio, play, pause, celebrate,
   litterItems: () => interactions.items.filter((x) => x.id === 'litter'),
+  janitorWalker: janitor.walker,
   setSpeed: (n) => { debugSpeed = n; },
 };

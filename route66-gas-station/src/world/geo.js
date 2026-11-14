@@ -164,3 +164,33 @@ export function addGrain(mat, scale = 0.35, strength = 0.16) {
 }
 
 addGrain(vertexMat, 0.4, 0.14);
+
+// ---------- Formas redondeadas (para que los objetos se reconozcan) ----------
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// Caja con esquinas redondeadas
+export function rbox(w, h, d, r, hex, x = 0, y = 0, z = 0, seg = 1) {
+  const g = new RoundedBoxGeometry(w, h, d, seg, Math.min(r, w / 2, h / 2, d / 2));
+  g.translate(x, y, z);
+  return tint(g, hex);
+}
+
+// Cápsula vertical (extremidades, botellas)
+export function capsule(r, len, hex, x = 0, y = 0, z = 0, seg = 6) {
+  const g = new THREE.CapsuleGeometry(r, len, 2, seg);
+  g.translate(x, y, z);
+  return tint(g, hex);
+}
+
+// Pieza de torno: perfil [[radio, altura], ...] girado alrededor del eje vertical
+export function lathe(profile, hex, x = 0, y = 0, z = 0, seg = 12) {
+  const g = new THREE.LatheGeometry(profile.map(([r, h]) => new THREE.Vector2(r, h)), seg);
+  g.translate(x, y, z);
+  return tint(g, hex);
+}
+
+// Tubo que sigue una curva (mangueras)
+export function tube(points, r, hex, seg = 16) {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  return tint(new THREE.TubeGeometry(curve, seg, r, 6, false), hex);
+}

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { BAL } from '../config.js';
 import { t } from '../core/i18n.js';
+import { cyl, merge, tint, vertexMat } from './geo.js';
 
 // Lugares posibles (lejos de la bomba, la caja y el carril de los autos)
 const SPOTS = [
@@ -11,9 +12,32 @@ const SPOTS = [
 ];
 
 export function createLitter(scene, state) {
-  const geo = new THREE.BoxGeometry(0.5, 0.14, 0.36);
-  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xf3ecd8 }), SPOTS.length);
-  scene.add(mesh);
+  // Tres tipos de basura que se reconocen: papel arrugado, lata de refresco tirada y vaso con popote.
+  // Una malla instanciada por tipo; cada lugar usa siempre el mismo tipo (i % 3).
+  const paper = new THREE.IcosahedronGeometry(0.21, 0);
+  { const pos = paper.attributes.position; // arrugarlo un poco
+    for (let k = 0; k < pos.count; k++) { const f = 0.75 + ((Math.sin(k * 12.9898) * 43758.5453) % 1 + 1) % 1 * 0.45; pos.setXYZ(k, pos.getX(k) * f, pos.getY(k) * f * 0.8, pos.getZ(k) * f); } }
+  const can = new THREE.CylinderGeometry(0.08, 0.08, 0.26, 10);
+  const canTop = new THREE.CylinderGeometry(0.075, 0.075, 0.02, 10); canTop.translate(0, 0.13, 0);
+  const canBand = new THREE.CylinderGeometry(0.082, 0.082, 0.08, 10);
+  const canGeo = merge([tint(can, 0xc7352b), tint(canTop, 0xc9c7c2), tint(canBand, 0xf1ead6)]);
+  canGeo.rotateZ(Math.PI / 2); canGeo.translate(0, 0.08, 0); // acostada
+  const cup = new THREE.CylinderGeometry(0.1, 0.07, 0.24, 10);
+  const lidG = new THREE.CylinderGeometry(0.105, 0.105, 0.03, 10); lidG.translate(0, 0.13, 0);
+  const straw = new THREE.CylinderGeometry(0.012, 0.012, 0.2, 5); straw.translate(0.03, 0.22, 0);
+  const cupGeo = merge([tint(cup, 0xf3ecd8), tint(lidG, 0xd8d2c4), tint(straw, 0xc7352b), cyl(0.1, 0.1, 0.05, 10, 0xc7352b, 0, 0.02, 0)]);
+  cupGeo.rotateZ(Math.PI / 2); cupGeo.translate(0, 0.1, 0);
+  const paperGeo = tint(paper, 0xffffff); paperGeo.translate(0, 0.14, 0);
+  const meshes = [paperGeo, canGeo, cupGeo].map((g) => {
+    const m = new THREE.InstancedMesh(g, vertexMat, SPOTS.length);
+    m.castShadow = false;
+    m.frustumCulled = false; // las instancias se mueven fuera de la caja original
+    scene.add(m);
+    return m;
+  });
+  // Al inicio todas las instancias escondidas (las que no son de su tipo se quedan así siempre)
+  { const z = new THREE.Matrix4().makeTranslation(0, -5, 0);
+    for (const m of meshes) for (let i = 0; i < SPOTS.length; i++) m.setMatrixAt(i, z); }
   const o = new THREE.Object3D();
   const active = SPOTS.map(() => false);
   let count = 0;
@@ -23,10 +47,11 @@ export function createLitter(scene, state) {
   function set(i, on, t = 0) {
     if (t === 0) active[i] = on;
     const up = t > 0 ? Math.sin(t * Math.PI / 0.35) * 0.45 : 0;
-    o.position.set(SPOTS[i][0], on || t > 0 ? 0.13 + up : -5, SPOTS[i][1]);
-    o.rotation.set(0.25 + t * 8, i * 1.7 + t * 6, 0.12);
-    o.scale.setScalar(t > 0 ? Math.max(0.01, 1 - t / 0.35) : 1);
+    o.position.set(SPOTS[i][0], on || t > 0 ? 0.03 + up : -5, SPOTS[i][1]);
+    o.rotation.set(t * 8, i * 1.7 + t * 6, 0);
+    o.scale.setScalar(t > 0 ? Math.max(0.01, 1.2 - t / 0.3) : 1.2); // un poco más grande para que se vea de lejos
     o.updateMatrix();
+    const mesh = meshes[i % 3];
     mesh.setMatrixAt(i, o.matrix);
     mesh.instanceMatrix.needsUpdate = true;
     if (t === 0) count += on ? 1 : -1;

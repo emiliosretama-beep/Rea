@@ -1,7 +1,7 @@
 // Lo que cada mejora construye en el mundo. Cada mejora es una o dos mallas fusionadas.
 import * as THREE from 'three';
 import { PAL } from '../config.js';
-import { box, cyl, merge, tint, vertexMat } from './geo.js';
+import { box, cyl, merge, tint, vertexMat, lathe, rbox } from './geo.js';
 import { LAYOUT, pumpParts, stallLines, gondola } from './station.js';
 import { buildPerson } from './people.js';
 
@@ -159,8 +159,22 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       p.push(box(4.8, 1.05, 0.7, PAL.cream, cx, 0.68, cz + 2.0));
       p.push(box(4.82, 0.22, 0.72, PAL.red, cx, 0.9, cz + 2.0));
       p.push(box(5.0, 0.07, 0.9, 0x80583c, cx, 1.24, cz + 2.0));
-      p.push(box(0.5, 0.55, 0.4, PAL.chrome, cx - 1.5, 1.55, cz + 1.9)); // cafetera
-      p.push(box(0.3, 0.3, 0.3, PAL.red, cx + 0.2, 1.42, cz + 1.9));
+      // Cafetera de diner: urna cromada con tapa, llave al frente y su taza debajo
+      const ux = cx - 1.5, uz = cz + 1.9;
+      p.push(lathe([[0, 0], [0.2, 0], [0.22, 0.05], [0.2, 0.1], [0.2, 0.52], [0.22, 0.56], [0.16, 0.62], [0.05, 0.66], [0.06, 0.7], [0, 0.71]], PAL.chrome, ux, 1.27, uz, 12));
+      p.push(cyl(0.205, 0.205, 0.06, 12, PAL.red, ux, 1.62, uz));
+      p.push(box(0.05, 0.05, 0.14, PAL.dark, ux, 1.42, uz + 0.25)); // llave
+      p.push(lathe([[0, 0], [0.05, 0], [0.065, 0.09], [0.055, 0.09], [0, 0.01]], 0xf3ecd8, ux, 1.28, uz + 0.32, 10)); // taza
+      // Pastelero: base, pay y campana
+      const pxx = cx + 0.2;
+      p.push(cyl(0.04, 0.08, 0.1, 8, PAL.chrome, pxx, 1.33, uz));
+      p.push(cyl(0.22, 0.22, 0.02, 12, PAL.chrome, pxx, 1.39, uz));
+      p.push(cyl(0.18, 0.17, 0.07, 12, 0xc98a4a, pxx, 1.43, uz)); // pay
+      p.push(lathe([[0.21, 0], [0.21, 0.08], [0.17, 0.2], [0.08, 0.27], [0.03, 0.28], [0.03, 0.32], [0, 0.32]], 0xdfeef2, pxx, 1.4, uz, 12)); // campana
+      // Servilletero y botellas de salsa
+      p.push(rbox(0.16, 0.12, 0.08, 0.02, PAL.chrome, cx + 1.1, 1.33, uz));
+      p.push(cyl(0.035, 0.04, 0.18, 8, PAL.red, cx + 1.35, 1.36, uz));
+      p.push(cyl(0.035, 0.04, 0.18, 8, 0xe8b23a, cx + 1.45, 1.36, uz));
       for (let i = 0; i < 7; i++) p.push(box(1.0, 0.14, 6.4, i % 2 ? PAL.cream : PAL.teal, cx - 3 + i * 1.0, 3.1, cz));
       for (const dz of [-2.7, 2.9]) p.push(box(0.14, 3.0, 0.14, PAL.dark, cx + 3.2, 1.5, cz + dz));
       for (let i = 0; i < 4; i++) {
@@ -174,7 +188,10 @@ export function createUpgradeVisuals(scene, { colliders, station }) {
       const cone = new THREE.ConeGeometry(1.4, 0.5, 8);
       cone.translate(tx, 2.45, tz);
       p.push(tint(cone, PAL.red));
-      for (const s of [-1, 1]) p.push(box(0.4, 0.45, 0.4, PAL.teal, tx + s * 0.95, 0.23, tz));
+      for (const s of [-1, 1]) {
+        p.push(cyl(0.04, 0.04, 0.42, 6, PAL.chrome, tx + s * 0.95, 0.21, tz));
+        p.push(cyl(0.2, 0.2, 0.08, 10, PAL.teal, tx + s * 0.95, 0.45, tz));
+      }
       add(p);
       aabb(cx, cz + 2.0, 5.0, 0.9);
       circle(tx, tz, 1.25);

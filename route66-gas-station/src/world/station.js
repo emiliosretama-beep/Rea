@@ -3,7 +3,7 @@
 // Las mejoras de la Etapa 4 agregarán piezas alrededor sin mover lo esencial.
 import * as THREE from 'three';
 import { PAL } from '../config.js';
-import { box, cyl, merge, tint, vertexMat, addGrain, extrude, shapeOf } from './geo.js';
+import { box, cyl, merge, tint, vertexMat, addGrain, extrude, shapeOf, rbox, capsule, lathe, tube } from './geo.js';
 
 // Posiciones clave
 export const LAYOUT = {
@@ -358,32 +358,73 @@ export function createStation(scene) {
 
   // Cosas abandonadas junto a la fachada
   const drumX = -10.6, drumZ = front + 0.75; // cosas viejas a un lado de la tienda
-  const junk = [
-    cyl(0.3, 0.3, 0.9, 8, PAL.teal, drumX, 0.51, drumZ),
-    cyl(0.3, 0.3, 0.9, 8, 0x8a4b33, drumX + 0.7, 0.51, drumZ + 0.15),
-    box(0.8, 0.8, 0.8, PAL.wood, drumX + 1.6, 0.46, drumZ - 0.05),
-  ];
-  for (let i = 0; i < 3; i++) junk.push(cyl(0.4, 0.4, 0.24, 9, PAL.dark, 8.9, 0.18 + i * 0.25, front + 0.8));
-  // Máquina de refrescos junto a la puerta, banca bajo las ventanas, caja de periódicos y macetas con cactus
+  // Barril de lámina con sus aros
+  const barrel = (hex, x, z) => lathe([[0, 0], [0.28, 0], [0.3, 0.04], [0.29, 0.14], [0.31, 0.16], [0.3, 0.44], [0.31, 0.46], [0.29, 0.74], [0.3, 0.86], [0.28, 0.9], [0.05, 0.9], [0, 0.88]], hex, x, 0.06, z, 14);
+  // Caja de madera con tablas y travesaño en diagonal
+  const crate = (out, s2, x, y, z) => {
+    out.push(box(s2, s2, s2, 0x9a6a42, x, y, z));
+    for (const sz of [-1, 1]) {
+      out.push(box(s2 + 0.02, 0.08, 0.02, PAL.wood, x, y + s2 / 2 - 0.05, z + sz * (s2 / 2 + 0.005)));
+      out.push(box(s2 + 0.02, 0.08, 0.02, PAL.wood, x, y - s2 / 2 + 0.05, z + sz * (s2 / 2 + 0.005)));
+      const diag = new THREE.BoxGeometry(s2 * 1.25, 0.08, 0.02);
+      diag.rotateZ(Math.PI / 4);
+      diag.translate(x, y, z + sz * (s2 / 2 + 0.008));
+      out.push(tint(diag, PAL.wood));
+    }
+  };
+  const junk = [barrel(PAL.teal, drumX, drumZ), barrel(0x8a4b33, drumX + 0.7, drumZ + 0.15)];
+  crate(junk, 0.8, drumX + 1.6, 0.46, drumZ - 0.05);
+  // Llantas viejas apiladas (con su rin)
+  for (let i = 0; i < 3; i++) {
+    const tire = new THREE.TorusGeometry(0.28, 0.12, 8, 16);
+    tire.rotateX(Math.PI / 2);
+    tire.translate(8.9, 0.14 + i * 0.25, front + 0.8);
+    junk.push(tint(tire, 0x1e1b22));
+  }
+  junk.push(cyl(0.18, 0.18, 0.7, 10, 0x7d7a74, 8.9, 0.4, front + 0.8));
+  // Máquina de refrescos: cuerpo redondeado, panel con la marca, ventanita con botellas y ranura
   const vx = L.door.x - 2.7, vz = front + 0.42;
-  junk.push(box(1.0, 1.85, 0.75, PAL.red, vx, 0.93, vz));
-  junk.push(box(0.8, 0.3, 0.04, PAL.cream, vx, 1.55, vz + 0.38));
-  junk.push(box(0.2, 0.5, 0.05, PAL.chrome, vx + 0.3, 0.95, vz + 0.38));
-  junk.push(box(0.5, 0.14, 0.06, PAL.dark, vx - 0.15, 0.45, vz + 0.38));
+  junk.push(rbox(1.0, 1.85, 0.75, 0.12, PAL.red, vx, 0.95, vz, 3));
+  junk.push(rbox(0.82, 0.42, 0.04, 0.08, PAL.cream, vx, 1.5, vz + 0.37));
+  const logo = new THREE.CylinderGeometry(0.16, 0.16, 0.045, 16);
+  logo.rotateX(Math.PI / 2);
+  logo.translate(vx, 1.5, vz + 0.39);
+  junk.push(tint(logo, PAL.red));
+  junk.push(box(0.5, 0.62, 0.03, 0x2a3440, vx - 0.12, 0.85, vz + 0.37)); // ventana
+  for (let i = 0; i < 4; i++) junk.push(capsule(0.045, 0.2, [0x6a2c1a, 0x2a8a84, 0x6a2c1a, 0xe8b23a][i], vx - 0.29 + i * 0.11, 0.86, vz + 0.36, 6));
+  junk.push(box(0.14, 0.26, 0.04, PAL.chrome, vx + 0.32, 0.95, vz + 0.38)); // ranura de monedas
+  junk.push(rbox(0.6, 0.16, 0.08, 0.04, PAL.dark, vx - 0.05, 0.32, vz + 0.36)); // salida de la botella
   aabb(vx, vz, 1.0, 0.75);
+  // Banca de parque: tablas, respaldo y patas de hierro curvas
   const bx = 4.0, bz = front + 0.55;
-  junk.push(box(2.0, 0.08, 0.45, PAL.wood, bx, 0.48, bz));
-  junk.push(box(2.0, 0.4, 0.06, PAL.wood, bx, 0.75, bz + 0.2));
-  for (const s of [-0.85, 0.85]) junk.push(box(0.08, 0.45, 0.4, PAL.dark, bx + s, 0.25, bz));
+  for (let i = 0; i < 3; i++) junk.push(rbox(2.0, 0.05, 0.13, 0.02, PAL.wood, bx, 0.48, bz - 0.15 + i * 0.15, 1));
+  for (let i = 0; i < 2; i++) junk.push(rbox(2.0, 0.11, 0.05, 0.02, PAL.wood, bx, 0.68 + i * 0.17, bz + 0.25, 1));
+  for (const s2 of [-0.85, 0.85]) {
+    junk.push(box(0.05, 0.46, 0.05, PAL.dark, bx + s2, 0.23, bz - 0.15));
+    junk.push(box(0.05, 0.9, 0.05, PAL.dark, bx + s2, 0.45, bz + 0.25));
+    junk.push(rbox(0.06, 0.05, 0.42, 0.02, PAL.dark, bx + s2, 0.62, bz)); // descansabrazos
+  }
   aabb(bx, bz, 2.0, 0.5);
-  junk.push(box(0.5, 0.95, 0.42, 0x3f6fb0, 0.4, 0.48, front + 0.35));
-  junk.push(box(0.4, 0.3, 0.02, 0xe9e2d0, 0.4, 0.75, front + 0.57));
-  circle(0.4, front + 0.35, 0.33);
+  // Caja de periódicos: cuerpo azul, tapa inclinada con ventana y patas
+  const nx = 0.4, nz = front + 0.35;
+  junk.push(rbox(0.5, 0.6, 0.42, 0.05, 0x3f6fb0, nx, 0.62, nz));
+  const lid = new THREE.BoxGeometry(0.52, 0.04, 0.46);
+  lid.rotateX(-0.25);
+  lid.translate(nx, 0.96, nz);
+  junk.push(tint(lid, 0x2f5a90));
+  junk.push(box(0.38, 0.24, 0.02, 0xe9e2d0, nx, 0.7, nz + 0.215)); // periódico detrás del vidrio
+  junk.push(box(0.12, 0.03, 0.03, PAL.chrome, nx, 0.86, nz + 0.23)); // jaladera
+  for (const s2 of [-1, 1]) junk.push(box(0.04, 0.32, 0.04, PAL.dark, nx + s2 * 0.2, 0.16, nz));
+  circle(nx, nz, 0.33);
+  // Macetas de barro con saguaro
   for (const px2 of [-0.9, 7.4]) {
-    junk.push(box(0.8, 0.5, 0.6, 0x9a5a44, px2, 0.25, front + 0.4));
-    junk.push(cyl(0.13, 0.15, 0.9, 6, PAL.cactus, px2, 0.95, front + 0.4));
-    junk.push(cyl(0.08, 0.08, 0.35, 5, PAL.cactus, px2 + 0.2, 1.1, front + 0.4));
-    aabb(px2, front + 0.4, 0.8, 0.6);
+    const pz2 = front + 0.4;
+    junk.push(lathe([[0, 0], [0.24, 0], [0.32, 0.4], [0.36, 0.42], [0.36, 0.5], [0, 0.5]], 0xb0603e, px2, 0, pz2, 12));
+    junk.push(capsule(0.12, 0.7, PAL.cactus, px2, 0.95, pz2, 7));
+    junk.push(capsule(0.07, 0.22, PAL.cactus, px2 + 0.2, 1.12, pz2, 6));
+    junk.push(capsule(0.07, 0.14, PAL.cactus, px2 + 0.13, 0.98, pz2, 6));
+    junk.push(capsule(0.06, 0.18, PAL.cactus, px2 - 0.17, 1.2, pz2, 6));
+    aabb(px2, pz2, 0.72, 0.72);
   }
   // Letrero de carretera: base de ladrillo sobre la barda, poste, tablero, flecha con focos y placa de abierto
   const S = L.sign;
@@ -784,15 +825,47 @@ export function stallLines(parts, from, to) {
 
 // Piezas de una bomba (se usa también para la segunda, en world/upgrades3d.js)
 export function pumpParts(parts, x, z, hex) {
-  parts.push(box(0.72, 1.45, 0.5, hex, x, 0.26 + 0.725, z));
-  parts.push(box(0.5, 0.42, 0.52, PAL.cream, x, 1.32, z));
-  parts.push(box(0.3, 0.1, 0.54, PAL.dark, x, 1.3, z));
-  parts.push(box(0.8, 0.08, 0.58, PAL.chrome, x, 1.75, z));
-  const globe = new THREE.SphereGeometry(0.24, 8, 6);
-  globe.translate(x, 2.03, z);
-  parts.push(tint(globe, 0xf2e6c4));
-  parts.push(box(0.08, 0.5, 0.08, PAL.dark, x + 0.42, 1.2, z));
+  // Cuerpo con la parte de arriba en arco (silueta clásica), sobre un zoclo
+  parts.push(rbox(0.86, 0.14, 0.6, 0.04, 0x5a5048, x, 0.33, z));
+  const body = new THREE.Shape();
+  body.moveTo(-0.37, 0); body.lineTo(0.37, 0); body.lineTo(0.37, 1.18);
+  body.absarc(0, 1.18, 0.37, 0, Math.PI, false);
+  body.closePath();
+  const g = new THREE.ExtrudeGeometry(body, { depth: 0.5, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1, curveSegments: 10 });
+  g.translate(x, 0.4, z - 0.25);
+  parts.push(tint(g, hex));
+  for (const side of [-1, 1]) {
+    const fz = z + side * 0.265;
+    // Marco crema del contador (el contador animado va encima, en pumpDisplays.js)
+    parts.push(rbox(0.5, 0.42, 0.04, 0.05, PAL.cream, x, 1.36, fz));
+    // Franja cromada y escudo redondo de la marca
+    parts.push(box(0.78, 0.05, 0.02, PAL.chrome, x, 1.0, fz + side * 0.005));
+    const emblem = new THREE.CylinderGeometry(0.16, 0.16, 0.03, 16);
+    emblem.rotateX(Math.PI / 2);
+    emblem.translate(x, 0.74, fz + side * 0.01);
+    parts.push(tint(emblem, PAL.cream));
+    const dot = new THREE.CylinderGeometry(0.1, 0.1, 0.035, 16);
+    dot.rotateX(Math.PI / 2);
+    dot.translate(x, 0.74, fz + side * 0.015);
+    parts.push(tint(dot, PAL.red));
+  }
+  // Globo de cristal arriba con su collar
+  parts.push(cyl(0.12, 0.16, 0.12, 12, PAL.chrome, x, 2.0, z));
+  // Globo en forma de disco, con la marca roja en las dos caras
+  const globe = new THREE.SphereGeometry(0.27, 14, 10); globe.scale(1, 1, 0.42); globe.translate(x, 2.32, z);
+  parts.push(tint(globe, 0xf6ecd0));
+  for (const side of [-1, 1]) {
+    const ring = new THREE.CylinderGeometry(0.17, 0.17, 0.03, 16); ring.rotateX(Math.PI / 2); ring.translate(x, 2.32, z + side * 0.1);
+    parts.push(tint(ring, PAL.red));
+    const c = new THREE.CylinderGeometry(0.1, 0.1, 0.035, 14); c.rotateX(Math.PI / 2); c.translate(x, 2.32, z + side * 0.105);
+    parts.push(tint(c, 0xf6ecd0));
+  }
+  // Manguera que cuelga del costado y pistola en su gancho
+  parts.push(tube([[x + 0.38, 1.05, z], [x + 0.52, 0.7, z], [x + 0.5, 0.42, z + 0.05], [x + 0.46, 0.75, z + 0.1], [x + 0.44, 1.12, z + 0.08]], 0.03, 0x1e1b22, 18));
+  parts.push(rbox(0.08, 0.22, 0.14, 0.03, PAL.dark, x + 0.43, 1.2, z + 0.08)); // gancho
+  parts.push(rbox(0.06, 0.08, 0.2, 0.02, PAL.chrome, x + 0.48, 1.3, z + 0.08)); // pistola
 }
+
 
 function signTextures() {
   const mk = (w, h) => {
