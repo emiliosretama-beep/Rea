@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1c1626">
+<title>Route 66 Gas Station</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="touch-layer"></div>
+<div id="markers"></div>
+
+<!-- HUD del juego -->
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="stats">
+    <div class="chip" data-i18n-aria="money" id="chip-money"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-.9-1.5-1.4-2.8-1.4-1.700 0-2.900.9-2.900 2.200 0 3 5.900 1.300 5.900 4.200 0 1.300-1.300 2.100-3 2.100-1.400 0-2.500-.6-3-1.600M12 6v12"/></svg><span id="money">$0.00</span></div>
+    <div class="chip" data-i18n-aria="reputation" id="chip-rep"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.6 5.300 5.800.8-4.200 4.100 1 5.800-5.200-2.700-5.200 2.700 1-5.800-4.200-4.100 5.800-.8z"/></svg><span id="rep">50</span></div>
+    <div class="chip stock" data-i18n-aria="fuelStock" id="chip-fuel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V6a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v14M4 20h11M7.5 7.500h4v3.500h-4zM14 10h1.500a1.500 1.500 0 0 1 1.500 1.500V16a1.500 1.500 0 0 0 3 0V9l-2.500-2.500"/></svg><span id="fuel-stock">80</span></div>
+    <div class="chip stock" data-i18n-aria="sodaStock" id="chip-soda"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v3.500c1.500 1 2 2.500 2 4.500v8a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-8c0-2 .5-3.500 2-4.500zM8 13h8"/></svg><span id="soda-stock">6</span></div>
+    <div class="chip stock" data-i18n-aria="snackStock" id="chip-snack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h12l-1 3 1 3-1 3 1 3-1 3H6l1-3-1-3 1-3-1-3 1-3zM9.5 10.5h5M9.5 13.5h5"/></svg><span id="snack-stock">6</span></div>
+  </div>
+  <div id="mission">
+    <div id="mission-label" data-i18n="mission"></div>
+    <div class="mission-body">
+      <div id="mission-title"></div>
+      <div class="bar"><div id="mission-bar"></div></div>
+      <div class="mission-foot"><span id="mission-reward"></span><span id="mission-progress"></span></div>
+    </div>
+  </div>
+  <div id="cust">
+    <div id="cust-name"></div>
+    <div class="cust-body">
+      <div id="cust-state"></div>
+      <div class="bar"><div id="cust-bar"></div></div>
+    </div>
+  </div>
+  <div id="fuel">
+    <span id="fuel-label"></span>
+    <div class="track"><div id="fuel-fill"></div><div id="fuel-zone"></div><div id="fuel-mark"></div></div>
+    <div id="fuel-text"></div>
+  </div>
+  <div id="prompt"><kbd class="pc-only">E</kbd><span id="prompt-text"></span></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="look-hint" class="pc-only" data-i18n="clickToLook"></div>
+  <div id="fps" hidden></div>
+  <div id="level" data-i18n-aria="level"></div>
+  <button id="btn-book" type="button" data-i18n-aria="bookTitle">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a1 1 0 0 1 1 1v15H8a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1zM6 17.500A2 2 0 0 1 8 16h10M10 8h5M10 11.500h5"/></svg>
+    <i id="book-dot"></i>
+  </button>
+  <button id="btn-pause" type="button" data-i18n-aria="pause">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+  </button>
+</div>
+
+<!-- Controles táctiles -->
+<div id="joy"><div id="joy-knob"></div></div>
+<button id="btn-interact" type="button" data-i18n-aria="interact">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5c0 3.6-2.4 6-6 6h-.8c-1.9 0-3.2-.7-4.3-2.2L4.6 14a1.5 1.5 0 0 1 2.4-1.8L9 14.5"/></svg>
+</button>
+
+<!-- Pantalla de inicio / pausa -->
+<div id="menu">
+  <button id="btn-lang" type="button" data-i18n-aria="language">EN</button>
+  <div class="menu-card">
+    <div class="badge" aria-hidden="true"><span>ROUTE</span><b>66</b></div>
+    <h1>Route 66<br>Gas Station</h1>
+    <p class="tagline" data-i18n="tagline"></p>
+    <div class="menu-actions">
+      <button id="btn-play" type="button" data-i18n="play"></button>
+      <button id="btn-quality" type="button"></button>
+      <button id="btn-sfx" type="button" class="menu-small"></button>
+      <button id="btn-music" type="button" class="menu-small"></button>
+      <button id="btn-new" type="button" class="menu-small" hidden data-i18n="newGame"></button>
+    </div>
+    <p class="help pc-only" data-i18n="helpPc"></p>
+    <p class="help touch-only" data-i18n="helpTouch"></p>
+  </div>
+  <div id="version"></div>
+</div>
+
+<!-- Libreta del negocio: mejoras y proveedor -->
+<div id="book" role="dialog" aria-modal="true" aria-labelledby="book-title">
+  <div class="book-card">
+    <div class="book-head">
+      <h2 id="book-title" data-i18n="bookTitle"></h2>
+      <span id="book-money"></span>
+      <button id="btn-book-close" type="button" data-i18n-aria="close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="book-tabs" role="tablist">
+      <button id="tab-upgrades" type="button" role="tab" data-i18n="tabUpgrades"></button>
+      <button id="tab-supplier" type="button" role="tab" data-i18n="tabSupplier"></button>
+      <button id="tab-goal" type="button" role="tab" data-i18n="tabGoal"></button>
+    </div>
+    <div id="pane-goal" class="book-pane" hidden>
+      <p class="goal-intro"><b data-i18n="goalTitle"></b><span data-i18n="goalIntro"></span></p>
+      <div id="goal-list"></div>
+      <button id="btn-legend" type="button" hidden data-i18n="btnLegend"></button>
+      <p id="goal-done" hidden data-i18n="legendDone"></p>
+      <h3 class="goal-sub" id="stars-now"></h3>
+      <div id="perk-list"></div>
+    </div>
+    <div id="pane-upgrades" class="book-pane">
+      <p id="book-level"></p>
+      <div id="upgrade-list"></div>
+    </div>
+    <div id="pane-supplier" class="book-pane" hidden>
+      <div class="book-row">
+        <div><b data-i18n="orderFuel"></b><span id="order-fuel-have"></span></div>
+        <button id="btn-buy-fuel" type="button"></button>
+      </div>
+      <div class="book-row">
+        <div><b data-i18n="orderSoda"></b><span id="order-soda-have"></span></div>
+        <button id="btn-buy-soda" type="button"></button>
+      </div>
+      <div class="book-row">
+        <div><b data-i18n="orderSnack"></b><span id="order-snack-have"></span></div>
+        <button id="btn-buy-snack" type="button"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Celebración final: parada legendaria -->
+<div id="legend" role="dialog" aria-modal="true" aria-labelledby="legend-title">
+  <div class="legend-card">
+    <div class="legend-stars" aria-hidden="true">★★★★★</div>
+    <h2 id="legend-title" data-i18n="legendTitle"></h2>
+    <p data-i18n="legendText"></p>
+    <p id="legend-stats"></p>
+    <p class="legend-credits" data-i18n="legendCredits"></p>
+    <button id="btn-legend-continue" type="button" data-i18n="legendContinue"></button>
+  </div>
+</div>
+
+<!-- Aviso de orientación (solo táctil en vertical) -->
+<div id="rotate">
+  <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="16" y="6" width="16" height="30" rx="3"/><path d="M8 34a16 16 0 0 0 14 9M22 43l-4-1 2-4"/></svg>
+  <p data-i18n="rotate"></p>
+  <button id="btn-rotate-skip" type="button" data-i18n="rotateSkip"></button>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
