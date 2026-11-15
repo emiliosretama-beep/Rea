@@ -95,7 +95,10 @@
         </main>
 
         <form class="composer" id="composer" autocomplete="off">
-          <p class="voice-hint" id="voiceHint" role="status" hidden></p>
+          <div class="voice-hint" id="voiceHint" hidden>
+            <p id="voiceHintText" role="status"></p>
+            <button type="button" id="voiceSettings">Cambiar voz</button>
+          </div>
           <label class="sr-only" for="input">Mensaje para Jarvis</label>
           <textarea
             id="input"
@@ -107,7 +110,7 @@
             class="round round--mic"
             id="mic"
             type="button"
-            aria-label="Hablar con Jarvis"
+            aria-label="Conversar con Jarvis por voz"
             aria-pressed="false"
             hidden
           ></button>
@@ -138,6 +141,14 @@
               aria-pressed="false"
             >
               Memoria
+            </button>
+            <button
+              type="button"
+              class="mode"
+              data-pane="voice"
+              aria-pressed="false"
+            >
+              Voz
             </button>
           </div>
           <button
@@ -200,6 +211,33 @@
           </form>
           <ul class="rows" id="memoryList"></ul>
           <p class="pane-hint">No guardes contraseñas ni datos delicados.</p>
+        </section>
+
+        <section
+          class="pane"
+          id="paneVoice"
+          data-pane-name="voice"
+          aria-labelledby="voiceTitle"
+        >
+          <div class="pane-head">
+            <h2 id="voiceTitle">Voz</h2>
+          </div>
+          <label class="check" for="voiceOn">
+            <input type="checkbox" id="voiceOn" checked />
+            <span>Contestar hablando cuando le hablo</span>
+          </label>
+          <div class="field">
+            <label for="voiceSelect">Voz de Jarvis</label>
+            <div class="field-row">
+              <select id="voiceSelect"></select>
+              <button type="button" id="voiceTest">Probar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="voiceVolume">Volumen de la voz</label>
+            <input type="range" id="voiceVolume" min="0" max="100" step="5" />
+          </div>
+          <p class="pane-hint" id="voiceNote"></p>
         </section>
       </aside>
 

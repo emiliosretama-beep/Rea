@@ -18,9 +18,9 @@ const { StoreError, createSessionStore, createStore, sortTasks } =
   await import("../public/store.js");
 const { AskError, createBackend, createRunner, splitMarkers } =
   await import("../public/backend.js");
-const { speakLines, speechChunks, speechText } =
+const { rankVoices, scoreVoice, speechChunks, speechText, voiceLabel } =
   await import("../public/voice.js");
-const { glue } = await import("../public/talk.js");
+const { glue, withoutSent } = await import("../public/talk.js");
 const { greeting, noticeFor, statusText, telemetry } =
   await import("../public/status.js");
 const { readChat, writeChat } = await import("../public/session.js");
@@ -373,20 +373,6 @@ test("backend: sin visor queda en modo demo y entiende órdenes simples", async 
   }
 });
 
-// ---------- Voz ----------
-
-test("voz: parte el texto en líneas que tts acepta y quita el código", () => {
-  const long = `${"Frase larga. ".repeat(300)}\n\n\`\`\`js\nconst a = 1;\n\`\`\`\n\nFin.`;
-  const lines = speakLines(long);
-  assert.ok(lines.length >= 3);
-  assert.ok(
-    lines.every((line) => line.text.length > 0 && line.text.length <= 2000),
-  );
-  assert.ok(lines.some((line) => line.text === "(bloque de código)"));
-  assert.ok(!lines.some((line) => line.text.includes("const a")));
-  assert.equal(lines.at(-1).text, "Fin.");
-});
-
 // ---------- Textos de estado y conversación guardada ----------
 
 test("estado: saludo por hora, resumen y avisos", () => {
@@ -548,4 +534,71 @@ test("instrucciones: una respuesta hablada pide frases cortas y sin código", ()
   assert.ok(
     buildInstructions({ ...base, spoken: true }).includes("leer en voz alta"),
   );
+});
+
+// ---------- La voz del copiloto de Born to Rally ----------
+
+const DEVICE_VOICES = [
+  { lang: "en-US", name: "Samantha" },
+  { lang: "es-MX", name: "Paulina" },
+  { lang: "es-ES", name: "Mónica" },
+  { lang: "es-MX", name: "Juan" },
+  { lang: "es-ES", name: "Jorge" },
+  { lang: "es-ES", name: "Abuelo", voiceURI: "com.apple.voice.Grandpa" },
+  { lang: "es-ES", name: "Jorge" },
+];
+
+test("voz: elige como el copiloto, hombre y de España primero, sin voces de broma", () => {
+  const ranked = rankVoices(DEVICE_VOICES).map((voice) => voice.name);
+  assert.deepEqual(ranked, ["Jorge", "Mónica", "Juan", "Paulina"]);
+  // Mismos pesos que en el juego.
+  assert.equal(scoreVoice({ lang: "es-ES", name: "Jorge" }), 62);
+  assert.equal(scoreVoice({ lang: "es-MX", name: "Paulina" }), 12);
+});
+
+test("voz: una voz mejorada del dispositivo gana a la normal", () => {
+  const ranked = rankVoices([
+    { lang: "es-ES", name: "Jorge" },
+    { lang: "es-MX", name: "Juan (mejorada)" },
+    { lang: "es-ES", name: "Eloquence Jorge" },
+  ]);
+  assert.deepEqual(
+    ranked.map((voice) => voice.name),
+    ["Jorge", "Juan (mejorada)", "Eloquence Jorge"],
+  );
+  assert.equal(scoreVoice(ranked[1]), 12 + 25 + 22);
+});
+
+test("voz: el nombre del selector es corto y marca hombre y calidad", () => {
+  assert.equal(voiceLabel({ lang: "es-ES", name: "Jorge" }), "Jorge · ES ♂");
+  assert.equal(
+    voiceLabel({ lang: "es-MX", name: "Juan (mejorada)" }),
+    "Juan · MX ♂ ★",
+  );
+  assert.equal(
+    voiceLabel({
+      lang: "es-ES",
+      name: "Microsoft Elvira Online (Natural) - Spanish (Spain)",
+    }),
+    "Elvira · ES ★",
+  );
+});
+
+test("voz: no se reenvía lo que el dictado del teclado vuelve a escribir", () => {
+  const sent = ["qué tengo pendiente", "anota comprar leche"];
+  assert.equal(
+    withoutSent("Qué tengo pendiente. Anota comprar leche y pan", sent),
+    "y pan",
+  );
+  assert.equal(
+    withoutSent("anota comprar leche, ¿y mañana?", sent),
+    "¿y mañana?",
+  );
+  assert.equal(
+    withoutSent("  otra cosa distinta ", sent),
+    "otra cosa distinta",
+  );
+  // Repetir la misma frase tal cual es un mensaje nuevo, no texto viejo.
+  assert.equal(withoutSent("anota comprar leche", sent), "anota comprar leche");
+  assert.equal(withoutSent("hola", []), "hola");
 });

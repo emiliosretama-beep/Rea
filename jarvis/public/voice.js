@@ -2,44 +2,18 @@
 // - Hablarle: la capability `dictation` (el micrófono lo abre la plataforma).
 //   En Safari y en las apps móviles no existe; ahí talk.js usa el dictado del
 //   teclado.
-// - Escucharlo: la capability `tts`. Si esta vista no la ofrece, se usa la voz
-//   del propio navegador (speechSynthesis), que sí existe en iPhone y iPad.
-//
-// Las dos voces exponen lo mismo:
-//   unlock()              llamar dentro de un toque: Safari solo deja hablar
-//                         después de uno
-//   begin(id)             empieza a leer la respuesta `id`
-//   feed(id, text, done)  texto acumulado de la respuesta; `done` al terminar
-//   toggle(id, text)      lee una respuesta entera, o calla si ya suena
-//   stop()
+// - Escucharlo: la voz del propio navegador (speechSynthesis), con el mismo
+//   sistema que el copiloto de Born to Rally: se puntúan las voces del
+//   dispositivo para elegir la mejor en español (de hombre y de alta calidad
+//   si las hay), y se puede cambiar a mano, probarla y ajustar su volumen.
 
-const SPEAK_LIMIT = 1800; // `tts` acepta hasta 2,000 caracteres por línea
-const SPEAK_MAX_LINES = 100;
-const CHUNK_LIMIT = 240; // frases cortas: la voz del navegador arranca antes
+const CHUNK_LIMIT = 240; // frases cortas: la voz arranca antes y no se corta
 const START_LIMIT_MS = 3000;
 const SENTENCE_END = ".!?…:";
-
-// Parte un texto en líneas que `tts` acepta: un párrafo por línea, sin bloques
-// de código (se sustituyen por una frase corta). La plataforma quita ella
-// misma las marcas de Markdown.
-export function speakLines(text) {
-  const prose = String(text ?? "").replace(
-    /```[\s\S]*?(?:```|$)/g,
-    "\n\n(bloque de código)\n\n",
-  );
-  const lines = [];
-  for (const paragraph of prose.split(/\n{2,}/)) {
-    let rest = paragraph.replace(/\s+/g, " ").trim();
-    while (rest.length > SPEAK_LIMIT) {
-      const cut = rest.lastIndexOf(". ", SPEAK_LIMIT);
-      const end = cut > SPEAK_LIMIT / 2 ? cut + 1 : SPEAK_LIMIT;
-      lines.push(rest.slice(0, end).trim());
-      rest = rest.slice(end).trim();
-    }
-    if (rest) lines.push(rest);
-  }
-  return lines.slice(0, SPEAK_MAX_LINES).map((line) => ({ text: line }));
-}
+const VOICE_KEY = "jarvis:voice:v1";
+const RATE = 1.1; // el copiloto canta notas a 1.28; para conversar, más calmado
+const PITCH = 0.9; // igual que el copiloto
+const SAMPLE = "Hola, Emilio. Soy Jarvis, y así voy a sonar.";
 
 // Markdown a texto que se pueda decir: sin símbolos, sin código y con los
 // enlaces por su nombre. Un bloque de código sin cerrar (streaming) se calla
@@ -68,8 +42,9 @@ function splitLong(piece) {
   while (rest.length > CHUNK_LIMIT) {
     const comma = rest.lastIndexOf(", ", CHUNK_LIMIT);
     const space = rest.lastIndexOf(" ", CHUNK_LIMIT);
-    const cut =
-      comma > CHUNK_LIMIT / 2 ? comma + 1 : space > 0 ? space : CHUNK_LIMIT;
+    let cut = CHUNK_LIMIT;
+    if (comma > CHUNK_LIMIT / 2) cut = comma + 1;
+    else if (space > 0) cut = space;
     parts.push(rest.slice(0, cut).trim());
     rest = rest.slice(cut).trim();
   }
@@ -77,8 +52,8 @@ function splitLong(piece) {
   return parts;
 }
 
-// Frases para la voz del navegador. Con `done` en false (streaming) la última
-// frase se guarda hasta que llegue completa.
+// Frases para decir. Con `done` en false (streaming) la última frase se guarda
+// hasta que llegue completa.
 export function speechChunks(markdown, done = true) {
   const plain = speechText(markdown);
   const pieces = [];
@@ -97,17 +72,302 @@ export function speechChunks(markdown, done = true) {
     .flatMap(splitLong);
 }
 
+// ---------- Elegir la voz (sistema del copiloto de Born to Rally) ----------
+
+// Nombres con los que los sistemas llaman a sus voces de hombre.
+const MALE_VOICES = new Set(
+  (
+    "jorge pablo alvaro álvaro diego enrique carlos raul raúl jordi dario darío " +
+    "jose josé arnau juan gerardo elias elías saul saúl teo andres andrés daniel " +
+    "oliver george ryan guy thomas arthur christopher eric roger andrew brian " +
+    "steffan aaron alex tom lee reed eddy rocko male hombre masculino masculina"
+  ).split(" "),
+);
+
+// Voces de broma que traen iPhone, iPad y Mac: no sirven para un asistente.
+const JOKE_VOICES = new Set(
+  (
+    "albert bahh bells campanas boing bubbles burbujas cellos chelos violonchelos " +
+    "deranged trastornado hysterical histérico histerico organ pipeorgan órgano " +
+    "organo princess princesa trinoids trinoides whisper susurro zarvox fred " +
+    "junior kathy ralph jester bufón bufon superstar superestrella wobble " +
+    "bamboleo news goodnews badnews noticias grandma grandpa abuela abuelo espeak"
+  ).split(" "),
+);
+
+const HIGH_QUALITY =
+  /natural|neural|online|premium|enhanced|mejorad|wavenet|studio/i;
+
+const voiceName = (voice) => `${voice.name ?? ""} ${voice.voiceURI ?? ""}`;
+const voiceWords = (voice) =>
+  voiceName(voice)
+    .toLowerCase()
+    .split(/[^a-záéíóúñü]+/);
+const isJokeVoice = (voice) =>
+  voiceWords(voice).some((word) => JOKE_VOICES.has(word));
+const isMaleVoice = (voice) =>
+  voiceWords(voice).some((word) => MALE_VOICES.has(word));
+
+// Preferencia: acento de España, voces de alta calidad y de hombre; las voces
+// antiguas y robóticas, al final. Son los mismos pesos que usa el copiloto.
+export function scoreVoice(voice) {
+  const name = voiceName(voice);
+  let score = 0;
+  if (/^es[-_]ES/i.test(voice.lang)) score += 40;
+  else if (/^es[-_](MX|US|419)/i.test(voice.lang)) score += 12;
+  if (HIGH_QUALITY.test(name)) score += 25;
+  if (/google/i.test(name)) score += 12;
+  if (isMaleVoice(voice)) score += 22;
+  if (/eloquence/i.test(name)) score -= 20;
+  if (voice.default) score += 3;
+  return score;
+}
+
+// Las voces en español del dispositivo, de la mejor a la peor y sin repetir.
+export function rankVoices(voices) {
+  const seen = new Set();
+  return voices
+    .filter((voice) => /^es/i.test(voice.lang ?? "") && !isJokeVoice(voice))
+    .sort((a, b) => scoreVoice(b) - scoreVoice(a))
+    .filter((voice) => !seen.has(voice.name) && seen.add(voice.name));
+}
+
+// Nombre corto para el selector: "Jorge · ES ♂ ★".
+export function voiceLabel(voice) {
+  const name =
+    (voice.name ?? "")
+      .replace(/^(Microsoft|Google|Apple)\s+/i, "")
+      .replace(/\s+-\s+.*$/, "")
+      .replace(/\s*\((?:[^()]|\([^()]*\))*\)\s*$/, "")
+      .replace(/\s+online/i, "")
+      .trim() || voice.lang;
+  const region = (voice.lang ?? "").split(/[-_]/)[1] ?? "";
+  return (
+    name +
+    (region ? ` · ${region.toUpperCase()}` : "") +
+    (isMaleVoice(voice) ? " ♂" : "") +
+    (HIGH_QUALITY.test(voiceName(voice)) ? " ★" : "")
+  );
+}
+
+// La voz elegida y su volumen se recuerdan en este dispositivo: cada aparato
+// tiene sus propias voces.
+function loadSettings() {
+  const settings = { name: "", volume: 1, muted: false };
+  try {
+    const saved = JSON.parse(localStorage.getItem(VOICE_KEY) ?? "null") ?? {};
+    if (typeof saved.name === "string") settings.name = saved.name;
+    if (Number.isFinite(saved.volume))
+      settings.volume = Math.min(1, Math.max(0, saved.volume));
+    settings.muted = saved.muted === true;
+  } catch {
+    // Sin almacenamiento: se usan los valores de fábrica.
+  }
+  return settings;
+}
+
+function saveSettings(settings) {
+  try {
+    localStorage.setItem(VOICE_KEY, JSON.stringify(settings));
+  } catch {
+    // Si no se puede guardar, el ajuste vale solo para esta visita.
+  }
+}
+
+// ---------- Hablar ----------
+
+// Lee en voz alta, frase por frase. `pick()` da la voz a usar y `settings` el
+// volumen. Avisa de su estado con handlers.onSpeechState.
+function createReader(synth, handlers, pick, settings) {
+  let session = null; // { id, queued, pending, closed, started, watchdog, poll, keep }
+
+  function end(mine) {
+    clearTimeout(mine.watchdog);
+    clearInterval(mine.poll);
+    if (session !== mine) return;
+    session = null;
+    handlers.onSpeechState?.("idle", null);
+  }
+
+  function stop() {
+    if (!session) return;
+    end(session);
+    synth.cancel();
+  }
+
+  function say(mine, chunk) {
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    const voice = pick();
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang ?? "es-ES";
+    utterance.rate = RATE;
+    utterance.pitch = PITCH;
+    utterance.volume = settings.volume;
+    utterance.onstart = () => {
+      if (session !== mine || mine.started) return;
+      mine.started = true;
+      clearTimeout(mine.watchdog);
+      handlers.onSpeechState?.("speaking", mine.id);
+    };
+    const settle = () => {
+      mine.pending -= 1;
+      if (mine.closed && mine.pending <= 0) end(mine);
+    };
+    utterance.onend = settle;
+    utterance.onerror = settle;
+    mine.keep.push(utterance); // sin referencia, el navegador puede perder "end"
+    mine.pending += 1;
+    try {
+      synth.resume(); // como el copiloto: por si la voz quedó en pausa
+    } catch {
+      // No todos los navegadores lo tienen.
+    }
+    synth.speak(utterance);
+  }
+
+  // Dos vigilancias: que la voz arranque (Safari exige un toque previo) y que
+  // no se quede "hablando" para siempre si el navegador pierde el evento final.
+  function watch(mine) {
+    if (mine.watchdog) return;
+    handlers.onSpeechState?.("starting", mine.id);
+    mine.watchdog = setTimeout(() => {
+      if (session !== mine || mine.started) return;
+      stop();
+      handlers.onNotice?.(
+        "El navegador no dejó que Jarvis hablara solo. Toca «Escuchar» en la respuesta.",
+      );
+    }, START_LIMIT_MS);
+    let quiet = 0;
+    mine.poll = setInterval(() => {
+      const silent =
+        mine.started && mine.closed && !synth.speaking && !synth.pending;
+      quiet = silent ? quiet + 1 : 0;
+      if (quiet >= 2) end(mine);
+    }, 700);
+  }
+
+  function begin(id) {
+    stop();
+    session = {
+      id,
+      queued: 0,
+      pending: 0,
+      closed: false,
+      started: false,
+      watchdog: null,
+      poll: null,
+      keep: [],
+    };
+  }
+
+  function feed(id, text, done) {
+    const mine = session;
+    if (!mine || mine.id !== id) return;
+    const chunks = speechChunks(text, done);
+    for (const chunk of chunks.slice(mine.queued)) say(mine, chunk);
+    if (chunks.length > mine.queued) watch(mine);
+    mine.queued = Math.max(mine.queued, chunks.length);
+    if (!done) return;
+    mine.closed = true;
+    if (mine.pending <= 0) end(mine);
+  }
+
+  return {
+    begin,
+    feed,
+    stop,
+    // Lee una respuesta entera, o calla si ya suena.
+    toggle(id, text) {
+      if (session?.id === id) return stop();
+      begin(id);
+      feed(id, text, true);
+    },
+    // Dice una frase suelta.
+    say(text) {
+      begin("frase");
+      feed("frase", text, true);
+    },
+  };
+}
+
+// Lo que expone la voz:
+//   unlock()              llamar dentro de un toque: Safari solo deja hablar
+//                         después de uno
+//   begin(id)             empieza a leer la respuesta `id`
+//   feed(id, text, done)  texto acumulado de la respuesta; `done` al terminar
+//   toggle(id, text)      lee una respuesta entera, o calla si ya suena
+//   say(text) / test()    dice una frase suelta / la frase de prueba
+//   stop()
+//   voices(), settings, setVoice(), setVolume(), setMuted(), onVoices()
+function setupSpeech(synth, handlers) {
+  const settings = loadSettings();
+  let primed = false;
+  let voicesChanged = null;
+
+  function ranked() {
+    try {
+      return rankVoices(synth.getVoices() ?? []);
+    } catch {
+      return [];
+    }
+  }
+  // La voz elegida a mano si sigue en el dispositivo; si no, la mejor puntuada.
+  function pick() {
+    const list = ranked();
+    return (
+      list.find((voice) => voice.name === settings.name) ?? list[0] ?? null
+    );
+  }
+  const reader = createReader(synth, handlers, pick, settings);
+
+  const notify = () => voicesChanged?.();
+  if (synth.addEventListener) synth.addEventListener("voiceschanged", notify);
+  else synth.onvoiceschanged = notify;
+
+  return {
+    ...reader,
+    unlock() {
+      if (primed) return;
+      primed = true;
+      try {
+        const silent = new SpeechSynthesisUtterance(" ");
+        silent.volume = 0;
+        synth.speak(silent);
+      } catch {
+        // Sin voz en este navegador: los botones de escuchar no harán nada.
+      }
+    },
+    test: () => reader.say(SAMPLE),
+    voices: () =>
+      ranked().map((voice) => ({ name: voice.name, label: voiceLabel(voice) })),
+    get settings() {
+      return { ...settings };
+    },
+    setVoice(name) {
+      settings.name = name;
+      saveSettings(settings);
+    },
+    setVolume(volume) {
+      settings.volume = Math.min(1, Math.max(0, volume));
+      saveSettings(settings);
+    },
+    setMuted(muted) {
+      settings.muted = muted;
+      saveSettings(settings);
+    },
+    // El dispositivo carga sus voces con retraso: avisa cuando ya están.
+    onVoices(callback) {
+      voicesChanged = callback;
+    },
+  };
+}
+
+// ---------- Escuchar (micrófono de la plataforma) ----------
+
 const DICTATION_NOTES = {
   rate_limited: "Hay demasiados dictados a la vez. Intenta en un momento.",
   upstream_error: "Falló el micrófono o el servicio de voz.",
   not_granted: "El dictado está desactivado para esta página.",
-};
-
-const SPEAK_NOTES = {
-  busy: "Termina de dictar para poder escuchar la respuesta.",
-  rate_limited: "Demasiada lectura en voz alta por ahora. Intenta más tarde.",
-  upstream_error: "Falló la lectura en voz alta.",
-  no_gesture: "Toca «Escuchar» en la respuesta para oírla.",
 };
 
 function setupDictation(dictation, handlers) {
@@ -153,199 +413,21 @@ function setupDictation(dictation, handlers) {
       }
       dictation.start(language ? { language } : undefined).catch(fail);
     },
-    // Resuelve cuando ya llegaron las últimas palabras.
     stop: () => dictation.stop().catch(() => {}),
-    active: () => dictation.active(),
-  };
-}
-
-function setupPlatformSpeech(tts, handlers) {
-  let speakingId = null;
-  let spanish = false;
-  Promise.resolve()
-    .then(() => tts.languages?.())
-    .then((languages) => {
-      spanish = Array.isArray(languages) && languages.includes("es");
-    })
-    .catch(() => {});
-
-  const drop = () => handlers.onSpeechGone?.();
-
-  tts.onState(({ state, reason }) => {
-    // "replaced": otra lectura tomó su lugar; el id nuevo ya está puesto.
-    if (state === "idle" && reason === "replaced") return;
-    handlers.onSpeechState?.(state, speakingId);
-    if (state !== "idle") return;
-    speakingId = null;
-    if (reason === "not_granted" || reason === "unavailable") drop();
-  });
-
-  function speak(id, text) {
-    const lines = speakLines(text);
-    if (lines.length === 0) return;
-    speakingId = id;
-    tts
-      .speak(lines, spanish ? { language: "es" } : undefined)
-      .catch((error) => {
-        const code = error?.code;
-        if (code === "not_granted" || code === "unavailable") drop();
-        else if (SPEAK_NOTES[code]) handlers.onNotice?.(SPEAK_NOTES[code]);
-      });
-  }
-  const stop = () => {
-    if (tts.active()) tts.stop().catch(() => {});
-  };
-
-  return {
-    kind: "platform",
-    unlock() {},
-    begin() {},
-    // La plataforma lee la respuesta entera, al terminar de llegar.
-    feed(id, text, done) {
-      if (done) speak(id, text);
-    },
-    toggle(id, text) {
-      if (speakingId === id && tts.active()) stop();
-      else speak(id, text);
-    },
-    stop,
-  };
-}
-
-// De las voces del dispositivo, la primera en español; de preferencia de México.
-function spanishVoice(synth) {
-  const order = ["es-mx", "es-us", "es-419", "es-es"];
-  const rank = (voice) => {
-    const index = order.indexOf(voice.lang.toLowerCase().replace("_", "-"));
-    return index < 0 ? order.length : index;
-  };
-  return (
-    synth
-      .getVoices()
-      .filter((voice) => /^es([-_]|$)/i.test(voice.lang))
-      .sort((a, b) => rank(a) - rank(b))[0] ?? null
-  );
-}
-
-function setupBrowserSpeech(synth, handlers) {
-  let session = null; // { id, queued, pending, closed, started, watchdog, keep }
-  let primed = false;
-
-  function end(mine) {
-    clearTimeout(mine.watchdog);
-    if (session !== mine) return;
-    session = null;
-    handlers.onSpeechState?.("idle", null);
-  }
-
-  function stop() {
-    if (!session) return;
-    const mine = session;
-    end(mine);
-    synth.cancel();
-  }
-
-  function say(mine, chunk) {
-    const utterance = new SpeechSynthesisUtterance(chunk);
-    const voice = spanishVoice(synth);
-    if (voice) utterance.voice = voice;
-    utterance.lang = voice?.lang ?? "es-MX";
-    utterance.onstart = () => {
-      if (session !== mine || mine.started) return;
-      mine.started = true;
-      clearTimeout(mine.watchdog);
-      handlers.onSpeechState?.("speaking", mine.id);
-    };
-    const settle = () => {
-      mine.pending -= 1;
-      if (mine.closed && mine.pending <= 0) end(mine);
-    };
-    utterance.onend = settle;
-    utterance.onerror = settle;
-    mine.keep.push(utterance); // sin referencia, el navegador puede perder "end"
-    mine.pending += 1;
-    synth.speak(utterance);
-  }
-
-  // Si el navegador no arranca (Safari exige un toque previo), se avisa en vez
-  // de quedarse callado sin explicación.
-  function watch(mine) {
-    if (mine.watchdog || mine.started) return;
-    mine.watchdog = setTimeout(() => {
-      if (session !== mine || mine.started) return;
-      stop();
-      handlers.onNotice?.(
-        "El navegador no dejó que Jarvis hablara solo. Toca «Escuchar» en la respuesta.",
-      );
-    }, START_LIMIT_MS);
-  }
-
-  function begin(id) {
-    stop();
-    session = {
-      id,
-      queued: 0,
-      pending: 0,
-      closed: false,
-      started: false,
-      watchdog: null,
-      keep: [],
-    };
-  }
-
-  function feed(id, text, done) {
-    const mine = session;
-    if (!mine || mine.id !== id) return;
-    const chunks = speechChunks(text, done);
-    for (const chunk of chunks.slice(mine.queued)) say(mine, chunk);
-    if (chunks.length > mine.queued) watch(mine);
-    mine.queued = Math.max(mine.queued, chunks.length);
-    if (!done) return;
-    mine.closed = true;
-    if (mine.pending <= 0) end(mine);
-  }
-
-  return {
-    kind: "browser",
-    unlock() {
-      if (primed) return;
-      primed = true;
-      try {
-        const silent = new SpeechSynthesisUtterance(" ");
-        silent.volume = 0;
-        synth.speak(silent);
-      } catch {
-        // Sin voz en este navegador: los botones de escuchar no harán nada.
-      }
-    },
-    begin,
-    feed,
-    toggle(id, text) {
-      if (session?.id === id) return stop();
-      begin(id);
-      feed(id, text, true);
-    },
-    stop,
   };
 }
 
 // Nunca lanza. `listen` es null si la vista no ofrece micrófono; `speech` es
-// null si no hay ninguna voz disponible.
+// null si el navegador no tiene voz.
 export async function createVoice(handlers = {}) {
   const claude = globalThis.window?.claude;
-  const [dictation, tts] = claude?.use
-    ? await Promise.all([
-        claude.use("dictation").catch(() => null),
-        claude.use("tts").catch(() => null),
-      ])
-    : [null, null];
+  const dictation = claude?.use
+    ? await claude.use("dictation").catch(() => null)
+    : null;
   const synth = globalThis.speechSynthesis;
-  const browserVoice = Boolean(synth && globalThis.SpeechSynthesisUtterance);
-  let speech = null;
-  if (tts) speech = setupPlatformSpeech(tts, handlers);
-  else if (browserVoice) speech = setupBrowserSpeech(synth, handlers);
+  const canSpeak = Boolean(synth && globalThis.SpeechSynthesisUtterance);
   return {
     listen: dictation ? setupDictation(dictation, handlers) : null,
-    speech,
+    speech: canSpeak ? setupSpeech(synth, handlers) : null,
   };
 }

@@ -3,7 +3,7 @@
 import { AskError, createBackend } from "./backend.js";
 import { createChatView } from "./chat.js";
 import { coreMarkup, createCore, dockCore } from "./core.js";
-import { createPanels } from "./panels.js";
+import { createPanels, storeHandlers } from "./panels.js";
 import { MODES, MODE_IDS } from "./prompt.js";
 import { readChat, writeChat } from "./session.js";
 import { greeting, noticeFor, statusText, telemetry } from "./status.js";
@@ -11,8 +11,15 @@ import { StoreError, createStore } from "./store.js";
 import { createTalk } from "./talk.js";
 import { $, copyText, createToast, el, icon, selectContents } from "./ui.js";
 import { createVoice } from "./voice.js";
+import { bindVoicePanel } from "./voicepanel.js";
 
 const INPUT_MAX_HEIGHT = 132;
+// Tras callar, Jarvis espera un instante antes de volver a escuchar: así no
+// toma como mensaje el final de su propia voz.
+const ECHO_GRACE_MS = 700;
+// Frases que cierran la conversación por voz sin pasar por la IA.
+const REST_WORDS =
+  /^(?:jarvis[,.]?\s+)?(?:descansa|eso es todo|adi[oó]s|hasta luego|ap[aá]gate)(?:[,.]?\s+jarvis)?[.!]*$/i;
 
 const state = {
   mode: "general",
@@ -38,18 +45,21 @@ const toast = createToast($("#toast"));
 const chat = createChatView({ scroller: $("#main"), log: $("#log") });
 const coarsePointer = globalThis.matchMedia("(pointer: coarse)");
 // Modo voz: dictar el mensaje y que se envíe solo tras una pausa (talk.js).
+// Conversación por voz: dictar y que cada mensaje se envíe solo (talk.js).
 const talk = createTalk({
   input,
   micButton,
   sendButton,
   hint: $("#voiceHint"),
+  hintText: $("#voiceHintText"),
   onText() {
     fitInput();
     renderSend();
   },
-  onSpoken: (text) => send(text, { spoken: true }),
+  onSpoken: heard,
   onChange: () => setPhase(state.phase),
 });
+let echoTimer = null;
 
 // ---------- Conversación guardada (ver session.js) ----------
 
@@ -124,10 +134,18 @@ function renderSend() {
   );
 }
 
+// Mientras Jarvis piensa o habla, el modo voz no escucha (se oiría a sí mismo).
+function syncTalk() {
+  clearTimeout(echoTimer);
+  if (state.phase !== "idle" || state.speakingId) talk.setDeaf(true);
+  else echoTimer = setTimeout(() => talk.setDeaf(false), ECHO_GRACE_MS);
+}
+
 function setPhase(phase) {
   state.phase = phase;
   renderSend();
   syncCore();
+  syncTalk();
   $("#status").textContent = statusText({ ...state, listening: talk.active });
 }
 
@@ -223,7 +241,7 @@ function leaveChat() {
 function newChat() {
   if (state.phase !== "idle" || state.messages.length === 0) return;
   const old = state.messages;
-  talk.cancel();
+  talk.stop();
   state.voice.speech?.stop();
   state.messages = [];
   chat.clear();
@@ -272,7 +290,8 @@ async function runTurn() {
   state.controller = controller;
   setPhase("thinking");
   // Si el mensaje se dictó, la respuesta se lee en voz alta según va llegando.
-  const speech = state.spoken ? state.voice.speech : null;
+  const voice = state.voice.speech;
+  const speech = state.spoken && !voice?.settings.muted ? voice : null;
   reply.spoken = Boolean(speech);
   speech?.begin(reply.id);
   let shown = 0;
@@ -322,7 +341,6 @@ function send(raw, { spoken = false } = {}) {
   const text = raw.trim();
   if (!text || state.phase !== "idle") return;
   state.spoken = spoken || talk.active;
-  talk.cancel();
   state.voice.speech?.stop();
   pushMessage({ role: "user", content: text });
   enterChat(true);
@@ -369,27 +387,7 @@ async function saving(change) {
 }
 
 const panels = createPanels({
-  onAddTask: async (text) =>
-    Boolean(await saving((store) => store.addTask(text))),
-  onToggleTask: (id, done) => saving((store) => store.setTaskDone(id, done)),
-  async onRemoveTask(id) {
-    const task = await saving((store) => store.removeTask(id));
-    if (!task) return;
-    toast.show("Tarea borrada", {
-      action: "Deshacer",
-      onAction: () => saving((store) => store.restoreTask(task)),
-    });
-  },
-  onAddMemory: async (text) =>
-    Boolean(await saving((store) => store.addMemory(text))),
-  async onRemoveMemory(id) {
-    const memory = await saving((store) => store.removeMemory(id));
-    if (!memory) return;
-    toast.show("Recuerdo borrado", {
-      action: "Deshacer",
-      onAction: () => saving((store) => store.restoreMemory(memory)),
-    });
-  },
+  ...storeHandlers(saving, toast),
   onRetry: () => state.store?.retry(),
 });
 
@@ -400,21 +398,24 @@ function fitInput() {
   input.style.height = `${Math.min(input.scrollHeight, INPUT_MAX_HEIGHT)}px`;
 }
 
+// Llegó un mensaje dictado. "Descansa" y parecidas cierran la conversación.
+function heard(text) {
+  if (!REST_WORDS.test(text.trim())) return send(text, { spoken: true });
+  talk.stop();
+  input.value = "";
+  fitInput();
+  renderSend();
+  const voice = state.voice.speech;
+  if (voice && !voice.settings.muted) voice.say("Aquí estaré.");
+}
+
 const voiceHandlers = {
   onNotice: (text) => toast.show(text),
   ...talk.events,
+  // "starting" cuenta como hablando: la voz ya está en camino.
   onSpeechState(speechState, id) {
     state.speakingId = speechState === "idle" ? null : id;
     chat.setSpeaking(state.speakingId);
-    repaintAll();
-    setPhase(state.phase);
-  },
-  // La plataforma retiró su voz: no se sustituye por otra.
-  onSpeechGone() {
-    state.voice = { ...state.voice, speech: null };
-    state.speakingId = null;
-    chat.setCanSpeak(false);
-    chat.setSpeaking(null);
     repaintAll();
     setPhase(state.phase);
   },
@@ -499,6 +500,9 @@ function bindEvents() {
   $("#openMemory").addEventListener("click", (event) =>
     panels.open("memory", event.currentTarget),
   );
+  $("#voiceSettings").addEventListener("click", (event) =>
+    panels.open("voice", event.currentTarget),
+  );
   $("#newChat").addEventListener("click", newChat);
   $("#log").addEventListener("click", onLogClick);
   $("#noticeButton").addEventListener("click", () => {
@@ -563,6 +567,7 @@ function boot() {
   createVoice(voiceHandlers).then((voice) => {
     state.voice = voice;
     talk.attach(voice.listen, coarsePointer.matches);
+    bindVoicePanel(voice.speech);
     chat.setCanSpeak(Boolean(voice.speech));
     repaintAll();
   });

@@ -523,7 +523,8 @@ button {
     animation: fade 1.4s ease-in-out infinite;
   }
   [data-panel="tasks"] .side,
-  [data-panel="memory"] .side {
+  [data-panel="memory"] .side,
+  [data-panel="voice"] .side {
     animation: sheet-in 0.26s var(--ease-out);
   }
   .toast {
@@ -863,11 +864,29 @@ button {
 /* Modo voz: qué hacer para hablarle, encima de la caja. */
 .voice-hint {
   flex: 0 0 100%;
-  margin: 0;
-  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
   font-size: 13px;
   line-height: 1.35;
   color: var(--amanecer);
+}
+.voice-hint p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.voice-hint button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--texto);
 }
 .composer textarea {
   flex: 1;
@@ -978,7 +997,8 @@ button {
   overscroll-behavior: contain;
 }
 [data-panel="tasks"] .side,
-[data-panel="memory"] .side {
+[data-panel="memory"] .side,
+[data-panel="voice"] .side {
   display: flex;
 }
 .side-head {
@@ -988,7 +1008,7 @@ button {
 }
 .side-tabs {
   flex: 1;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .pane {
   min-height: 0;
@@ -997,7 +1017,8 @@ button {
   gap: 12px;
 }
 [data-panel="tasks"] #paneTasks,
-[data-panel="memory"] #paneMemory {
+[data-panel="memory"] #paneMemory,
+[data-panel="voice"] #paneVoice {
   display: flex;
 }
 .pane-head {
@@ -1099,6 +1120,66 @@ label.row-main {
   background: transparent;
   color: var(--tenue);
 }
+/* Panel Voz: interruptor, selector de voz y volumen. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--era);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--tenue);
+}
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+.field select {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+  color: var(--texto);
+}
+.field button {
+  flex: none;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  font: 600 14px/1 var(--f-display);
+  letter-spacing: 0.03em;
+  color: var(--texto);
+}
+.field input[type="range"] {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--era);
+}
+.field select:disabled,
+.field button:disabled,
+.field input:disabled {
+  opacity: 0.45;
+}
 .empty,
 .pane-hint {
   margin: 0;
@@ -1173,7 +1254,8 @@ label.row-main {
     display: flex;
   }
   #openTasks,
-  #openMemory {
+  #openMemory,
+  #voiceSettings {
     display: none;
   }
 }

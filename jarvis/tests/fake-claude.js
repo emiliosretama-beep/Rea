@@ -1,10 +1,10 @@
 // Visor simulado de claude.ai para probar Jarvis sin publicarlo.
 // Imita lo que promete el contrato de las capabilities (sample, db, user,
-// dictation, tts) tal como lo leímos en sus definiciones de tipos. NO es la
+// dictation) tal como lo leímos en sus definiciones de tipos. NO es la
 // plataforma real: sirve para comprobar la lógica de la página, no a Claude.
 //
 // Se inyecta antes que los scripts de la página. La configuración va en
-// window.__JARVIS_FAKE__ = { sample, tools, db, user, dictation, tts, ... }.
+// window.__JARVIS_FAKE__ = { sample, tools, db, user, dictation, ... }.
 (() => {
   const config = {
     sample: true,
@@ -12,7 +12,6 @@
     db: true,
     user: true,
     dictation: false,
-    tts: false,
     useMs: 30,
     thinkMs: 500,
     chunkMs: 45,
@@ -20,7 +19,7 @@
     dbFail: "",
     ...window.__JARVIS_FAKE__,
   };
-  const calls = (window.__fakeCalls = { sample: [], speak: [], dictation: [] });
+  const calls = (window.__fakeCalls = { sample: [], dictation: [] });
   const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 
   // ---------- sample ----------
@@ -377,6 +376,12 @@
         }, 700),
       );
     }
+    // Las pruebas dictan más frases con window.__fakeDictate(" texto").
+    window.__fakeDictate = (text) => {
+      if (state !== "listening") return false;
+      tell(handlers.final, { text });
+      return true;
+    };
     return {
       start(options) {
         calls.dictation.push(options ?? null);
@@ -398,62 +403,11 @@
     };
   }
 
-  // ---------- tts ----------
-
-  function makeTts() {
-    let state = "idle";
-    let pending = null;
-    let timer = null;
-    const handlers = new Set();
-    const setState = (next, reason) => {
-      state = next;
-      for (const handler of handlers)
-        handler({ state: next, ...(reason && { reason }) });
-    };
-    function end(reason) {
-      clearTimeout(timer);
-      const waiting = pending;
-      pending = null;
-      if (state !== "idle") setState("idle", reason);
-      if (!waiting) return;
-      if (reason === "completed") waiting.resolve({ playedMs: 1200 });
-      else waiting.reject({ code: "stopped", message: reason, reason });
-    }
-    return {
-      speak(what, options) {
-        const lines = typeof what === "string" ? [{ text: what }] : what;
-        const valid =
-          lines.length > 0 &&
-          lines.every((line) => line.text && line.text.length <= 2000);
-        if (!valid)
-          return Promise.reject({ code: "invalid_argument", message: "lines" });
-        calls.speak.push({ lines, options: options ?? null });
-        if (pending) end("replaced");
-        setState("starting");
-        timer = setTimeout(() => {
-          setState("speaking");
-          timer = setTimeout(() => end("completed"), 1800);
-        }, 150);
-        return new Promise((resolve, rejectSpeak) => {
-          pending = { resolve, reject: rejectSpeak };
-        });
-      },
-      stop: async () => end("stopped"),
-      active: () => state !== "idle",
-      languages: async () => ["en", "es"],
-      onState(handler) {
-        handlers.add(handler);
-        return () => handlers.delete(handler);
-      },
-    };
-  }
-
   const capabilities = {
     sample: config.sample ? sample : null,
     db: config.db ? makeDb() : null,
     user: config.user ? user : null,
     dictation: config.dictation ? makeDictation() : null,
-    tts: config.tts ? makeTts() : null,
   };
 
   window.claude = {

@@ -529,7 +529,8 @@ button {
     animation: fade 1.4s ease-in-out infinite;
   }
   [data-panel="tasks"] .side,
-  [data-panel="memory"] .side {
+  [data-panel="memory"] .side,
+  [data-panel="voice"] .side {
     animation: sheet-in 0.26s var(--ease-out);
   }
   .toast {
@@ -869,11 +870,29 @@ button {
 /* Modo voz: qué hacer para hablarle, encima de la caja. */
 .voice-hint {
   flex: 0 0 100%;
-  margin: 0;
-  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
   font-size: 13px;
   line-height: 1.35;
   color: var(--amanecer);
+}
+.voice-hint p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.voice-hint button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--texto);
 }
 .composer textarea {
   flex: 1;
@@ -984,7 +1003,8 @@ button {
   overscroll-behavior: contain;
 }
 [data-panel="tasks"] .side,
-[data-panel="memory"] .side {
+[data-panel="memory"] .side,
+[data-panel="voice"] .side {
   display: flex;
 }
 .side-head {
@@ -994,7 +1014,7 @@ button {
 }
 .side-tabs {
   flex: 1;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .pane {
   min-height: 0;
@@ -1003,7 +1023,8 @@ button {
   gap: 12px;
 }
 [data-panel="tasks"] #paneTasks,
-[data-panel="memory"] #paneMemory {
+[data-panel="memory"] #paneMemory,
+[data-panel="voice"] #paneVoice {
   display: flex;
 }
 .pane-head {
@@ -1105,6 +1126,66 @@ label.row-main {
   background: transparent;
   color: var(--tenue);
 }
+/* Panel Voz: interruptor, selector de voz y volumen. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--era);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--tenue);
+}
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+.field select {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+  color: var(--texto);
+}
+.field button {
+  flex: none;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  font: 600 14px/1 var(--f-display);
+  letter-spacing: 0.03em;
+  color: var(--texto);
+}
+.field input[type="range"] {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--era);
+}
+.field select:disabled,
+.field button:disabled,
+.field input:disabled {
+  opacity: 0.45;
+}
 .empty,
 .pane-hint {
   margin: 0;
@@ -1179,7 +1260,8 @@ label.row-main {
     display: flex;
   }
   #openTasks,
-  #openMemory {
+  #openMemory,
+  #voiceSettings {
     display: none;
   }
 }
@@ -1242,7 +1324,10 @@ label.row-main {
         </main>
 
         <form class="composer" id="composer" autocomplete="off">
-          <p class="voice-hint" id="voiceHint" role="status" hidden></p>
+          <div class="voice-hint" id="voiceHint" hidden>
+            <p id="voiceHintText" role="status"></p>
+            <button type="button" id="voiceSettings">Cambiar voz</button>
+          </div>
           <label class="sr-only" for="input">Mensaje para Jarvis</label>
           <textarea
             id="input"
@@ -1254,7 +1339,7 @@ label.row-main {
             class="round round--mic"
             id="mic"
             type="button"
-            aria-label="Hablar con Jarvis"
+            aria-label="Conversar con Jarvis por voz"
             aria-pressed="false"
             hidden
           ></button>
@@ -1285,6 +1370,14 @@ label.row-main {
               aria-pressed="false"
             >
               Memoria
+            </button>
+            <button
+              type="button"
+              class="mode"
+              data-pane="voice"
+              aria-pressed="false"
+            >
+              Voz
             </button>
           </div>
           <button
@@ -1347,6 +1440,33 @@ label.row-main {
           </form>
           <ul class="rows" id="memoryList"></ul>
           <p class="pane-hint">No guardes contraseñas ni datos delicados.</p>
+        </section>
+
+        <section
+          class="pane"
+          id="paneVoice"
+          data-pane-name="voice"
+          aria-labelledby="voiceTitle"
+        >
+          <div class="pane-head">
+            <h2 id="voiceTitle">Voz</h2>
+          </div>
+          <label class="check" for="voiceOn">
+            <input type="checkbox" id="voiceOn" checked />
+            <span>Contestar hablando cuando le hablo</span>
+          </label>
+          <div class="field">
+            <label for="voiceSelect">Voz de Jarvis</label>
+            <div class="field-row">
+              <select id="voiceSelect"></select>
+              <button type="button" id="voiceTest">Probar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="voiceVolume">Volumen de la voz</label>
+            <input type="range" id="voiceVolume" min="0" max="100" step="5" />
+          </div>
+          <p class="pane-hint" id="voiceNote"></p>
         </section>
       </aside>
 
@@ -2616,44 +2736,18 @@ async function createBackend({ onGone } = {}) {
 // - Hablarle: la capability `dictation` (el micrófono lo abre la plataforma).
 //   En Safari y en las apps móviles no existe; ahí talk.js usa el dictado del
 //   teclado.
-// - Escucharlo: la capability `tts`. Si esta vista no la ofrece, se usa la voz
-//   del propio navegador (speechSynthesis), que sí existe en iPhone y iPad.
-//
-// Las dos voces exponen lo mismo:
-//   unlock()              llamar dentro de un toque: Safari solo deja hablar
-//                         después de uno
-//   begin(id)             empieza a leer la respuesta `id`
-//   feed(id, text, done)  texto acumulado de la respuesta; `done` al terminar
-//   toggle(id, text)      lee una respuesta entera, o calla si ya suena
-//   stop()
+// - Escucharlo: la voz del propio navegador (speechSynthesis), con el mismo
+//   sistema que el copiloto de Born to Rally: se puntúan las voces del
+//   dispositivo para elegir la mejor en español (de hombre y de alta calidad
+//   si las hay), y se puede cambiar a mano, probarla y ajustar su volumen.
 
-const SPEAK_LIMIT = 1800; // `tts` acepta hasta 2,000 caracteres por línea
-const SPEAK_MAX_LINES = 100;
-const CHUNK_LIMIT = 240; // frases cortas: la voz del navegador arranca antes
+const CHUNK_LIMIT = 240; // frases cortas: la voz arranca antes y no se corta
 const START_LIMIT_MS = 3000;
 const SENTENCE_END = ".!?…:";
-
-// Parte un texto en líneas que `tts` acepta: un párrafo por línea, sin bloques
-// de código (se sustituyen por una frase corta). La plataforma quita ella
-// misma las marcas de Markdown.
-function speakLines(text) {
-  const prose = String(text ?? "").replace(
-    /```[\s\S]*?(?:```|$)/g,
-    "\n\n(bloque de código)\n\n",
-  );
-  const lines = [];
-  for (const paragraph of prose.split(/\n{2,}/)) {
-    let rest = paragraph.replace(/\s+/g, " ").trim();
-    while (rest.length > SPEAK_LIMIT) {
-      const cut = rest.lastIndexOf(". ", SPEAK_LIMIT);
-      const end = cut > SPEAK_LIMIT / 2 ? cut + 1 : SPEAK_LIMIT;
-      lines.push(rest.slice(0, end).trim());
-      rest = rest.slice(end).trim();
-    }
-    if (rest) lines.push(rest);
-  }
-  return lines.slice(0, SPEAK_MAX_LINES).map((line) => ({ text: line }));
-}
+const VOICE_KEY = "jarvis:voice:v1";
+const RATE = 1.1; // el copiloto canta notas a 1.28; para conversar, más calmado
+const PITCH = 0.9; // igual que el copiloto
+const SAMPLE = "Hola, Emilio. Soy Jarvis, y así voy a sonar.";
 
 // Markdown a texto que se pueda decir: sin símbolos, sin código y con los
 // enlaces por su nombre. Un bloque de código sin cerrar (streaming) se calla
@@ -2682,8 +2776,9 @@ function splitLong(piece) {
   while (rest.length > CHUNK_LIMIT) {
     const comma = rest.lastIndexOf(", ", CHUNK_LIMIT);
     const space = rest.lastIndexOf(" ", CHUNK_LIMIT);
-    const cut =
-      comma > CHUNK_LIMIT / 2 ? comma + 1 : space > 0 ? space : CHUNK_LIMIT;
+    let cut = CHUNK_LIMIT;
+    if (comma > CHUNK_LIMIT / 2) cut = comma + 1;
+    else if (space > 0) cut = space;
     parts.push(rest.slice(0, cut).trim());
     rest = rest.slice(cut).trim();
   }
@@ -2691,8 +2786,8 @@ function splitLong(piece) {
   return parts;
 }
 
-// Frases para la voz del navegador. Con `done` en false (streaming) la última
-// frase se guarda hasta que llegue completa.
+// Frases para decir. Con `done` en false (streaming) la última frase se guarda
+// hasta que llegue completa.
 function speechChunks(markdown, done = true) {
   const plain = speechText(markdown);
   const pieces = [];
@@ -2711,17 +2806,302 @@ function speechChunks(markdown, done = true) {
     .flatMap(splitLong);
 }
 
+// ---------- Elegir la voz (sistema del copiloto de Born to Rally) ----------
+
+// Nombres con los que los sistemas llaman a sus voces de hombre.
+const MALE_VOICES = new Set(
+  (
+    "jorge pablo alvaro álvaro diego enrique carlos raul raúl jordi dario darío " +
+    "jose josé arnau juan gerardo elias elías saul saúl teo andres andrés daniel " +
+    "oliver george ryan guy thomas arthur christopher eric roger andrew brian " +
+    "steffan aaron alex tom lee reed eddy rocko male hombre masculino masculina"
+  ).split(" "),
+);
+
+// Voces de broma que traen iPhone, iPad y Mac: no sirven para un asistente.
+const JOKE_VOICES = new Set(
+  (
+    "albert bahh bells campanas boing bubbles burbujas cellos chelos violonchelos " +
+    "deranged trastornado hysterical histérico histerico organ pipeorgan órgano " +
+    "organo princess princesa trinoids trinoides whisper susurro zarvox fred " +
+    "junior kathy ralph jester bufón bufon superstar superestrella wobble " +
+    "bamboleo news goodnews badnews noticias grandma grandpa abuela abuelo espeak"
+  ).split(" "),
+);
+
+const HIGH_QUALITY =
+  /natural|neural|online|premium|enhanced|mejorad|wavenet|studio/i;
+
+const voiceName = (voice) => `${voice.name ?? ""} ${voice.voiceURI ?? ""}`;
+const voiceWords = (voice) =>
+  voiceName(voice)
+    .toLowerCase()
+    .split(/[^a-záéíóúñü]+/);
+const isJokeVoice = (voice) =>
+  voiceWords(voice).some((word) => JOKE_VOICES.has(word));
+const isMaleVoice = (voice) =>
+  voiceWords(voice).some((word) => MALE_VOICES.has(word));
+
+// Preferencia: acento de España, voces de alta calidad y de hombre; las voces
+// antiguas y robóticas, al final. Son los mismos pesos que usa el copiloto.
+function scoreVoice(voice) {
+  const name = voiceName(voice);
+  let score = 0;
+  if (/^es[-_]ES/i.test(voice.lang)) score += 40;
+  else if (/^es[-_](MX|US|419)/i.test(voice.lang)) score += 12;
+  if (HIGH_QUALITY.test(name)) score += 25;
+  if (/google/i.test(name)) score += 12;
+  if (isMaleVoice(voice)) score += 22;
+  if (/eloquence/i.test(name)) score -= 20;
+  if (voice.default) score += 3;
+  return score;
+}
+
+// Las voces en español del dispositivo, de la mejor a la peor y sin repetir.
+function rankVoices(voices) {
+  const seen = new Set();
+  return voices
+    .filter((voice) => /^es/i.test(voice.lang ?? "") && !isJokeVoice(voice))
+    .sort((a, b) => scoreVoice(b) - scoreVoice(a))
+    .filter((voice) => !seen.has(voice.name) && seen.add(voice.name));
+}
+
+// Nombre corto para el selector: "Jorge · ES ♂ ★".
+function voiceLabel(voice) {
+  const name =
+    (voice.name ?? "")
+      .replace(/^(Microsoft|Google|Apple)\s+/i, "")
+      .replace(/\s+-\s+.*$/, "")
+      .replace(/\s*\((?:[^()]|\([^()]*\))*\)\s*$/, "")
+      .replace(/\s+online/i, "")
+      .trim() || voice.lang;
+  const region = (voice.lang ?? "").split(/[-_]/)[1] ?? "";
+  return (
+    name +
+    (region ? ` · ${region.toUpperCase()}` : "") +
+    (isMaleVoice(voice) ? " ♂" : "") +
+    (HIGH_QUALITY.test(voiceName(voice)) ? " ★" : "")
+  );
+}
+
+// La voz elegida y su volumen se recuerdan en este dispositivo: cada aparato
+// tiene sus propias voces.
+function loadSettings() {
+  const settings = { name: "", volume: 1, muted: false };
+  try {
+    const saved = JSON.parse(localStorage.getItem(VOICE_KEY) ?? "null") ?? {};
+    if (typeof saved.name === "string") settings.name = saved.name;
+    if (Number.isFinite(saved.volume))
+      settings.volume = Math.min(1, Math.max(0, saved.volume));
+    settings.muted = saved.muted === true;
+  } catch {
+    // Sin almacenamiento: se usan los valores de fábrica.
+  }
+  return settings;
+}
+
+function saveSettings(settings) {
+  try {
+    localStorage.setItem(VOICE_KEY, JSON.stringify(settings));
+  } catch {
+    // Si no se puede guardar, el ajuste vale solo para esta visita.
+  }
+}
+
+// ---------- Hablar ----------
+
+// Lee en voz alta, frase por frase. `pick()` da la voz a usar y `settings` el
+// volumen. Avisa de su estado con handlers.onSpeechState.
+function createReader(synth, handlers, pick, settings) {
+  let session = null; // { id, queued, pending, closed, started, watchdog, poll, keep }
+
+  function end(mine) {
+    clearTimeout(mine.watchdog);
+    clearInterval(mine.poll);
+    if (session !== mine) return;
+    session = null;
+    handlers.onSpeechState?.("idle", null);
+  }
+
+  function stop() {
+    if (!session) return;
+    end(session);
+    synth.cancel();
+  }
+
+  function say(mine, chunk) {
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    const voice = pick();
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang ?? "es-ES";
+    utterance.rate = RATE;
+    utterance.pitch = PITCH;
+    utterance.volume = settings.volume;
+    utterance.onstart = () => {
+      if (session !== mine || mine.started) return;
+      mine.started = true;
+      clearTimeout(mine.watchdog);
+      handlers.onSpeechState?.("speaking", mine.id);
+    };
+    const settle = () => {
+      mine.pending -= 1;
+      if (mine.closed && mine.pending <= 0) end(mine);
+    };
+    utterance.onend = settle;
+    utterance.onerror = settle;
+    mine.keep.push(utterance); // sin referencia, el navegador puede perder "end"
+    mine.pending += 1;
+    try {
+      synth.resume(); // como el copiloto: por si la voz quedó en pausa
+    } catch {
+      // No todos los navegadores lo tienen.
+    }
+    synth.speak(utterance);
+  }
+
+  // Dos vigilancias: que la voz arranque (Safari exige un toque previo) y que
+  // no se quede "hablando" para siempre si el navegador pierde el evento final.
+  function watch(mine) {
+    if (mine.watchdog) return;
+    handlers.onSpeechState?.("starting", mine.id);
+    mine.watchdog = setTimeout(() => {
+      if (session !== mine || mine.started) return;
+      stop();
+      handlers.onNotice?.(
+        "El navegador no dejó que Jarvis hablara solo. Toca «Escuchar» en la respuesta.",
+      );
+    }, START_LIMIT_MS);
+    let quiet = 0;
+    mine.poll = setInterval(() => {
+      const silent =
+        mine.started && mine.closed && !synth.speaking && !synth.pending;
+      quiet = silent ? quiet + 1 : 0;
+      if (quiet >= 2) end(mine);
+    }, 700);
+  }
+
+  function begin(id) {
+    stop();
+    session = {
+      id,
+      queued: 0,
+      pending: 0,
+      closed: false,
+      started: false,
+      watchdog: null,
+      poll: null,
+      keep: [],
+    };
+  }
+
+  function feed(id, text, done) {
+    const mine = session;
+    if (!mine || mine.id !== id) return;
+    const chunks = speechChunks(text, done);
+    for (const chunk of chunks.slice(mine.queued)) say(mine, chunk);
+    if (chunks.length > mine.queued) watch(mine);
+    mine.queued = Math.max(mine.queued, chunks.length);
+    if (!done) return;
+    mine.closed = true;
+    if (mine.pending <= 0) end(mine);
+  }
+
+  return {
+    begin,
+    feed,
+    stop,
+    // Lee una respuesta entera, o calla si ya suena.
+    toggle(id, text) {
+      if (session?.id === id) return stop();
+      begin(id);
+      feed(id, text, true);
+    },
+    // Dice una frase suelta.
+    say(text) {
+      begin("frase");
+      feed("frase", text, true);
+    },
+  };
+}
+
+// Lo que expone la voz:
+//   unlock()              llamar dentro de un toque: Safari solo deja hablar
+//                         después de uno
+//   begin(id)             empieza a leer la respuesta `id`
+//   feed(id, text, done)  texto acumulado de la respuesta; `done` al terminar
+//   toggle(id, text)      lee una respuesta entera, o calla si ya suena
+//   say(text) / test()    dice una frase suelta / la frase de prueba
+//   stop()
+//   voices(), settings, setVoice(), setVolume(), setMuted(), onVoices()
+function setupSpeech(synth, handlers) {
+  const settings = loadSettings();
+  let primed = false;
+  let voicesChanged = null;
+
+  function ranked() {
+    try {
+      return rankVoices(synth.getVoices() ?? []);
+    } catch {
+      return [];
+    }
+  }
+  // La voz elegida a mano si sigue en el dispositivo; si no, la mejor puntuada.
+  function pick() {
+    const list = ranked();
+    return (
+      list.find((voice) => voice.name === settings.name) ?? list[0] ?? null
+    );
+  }
+  const reader = createReader(synth, handlers, pick, settings);
+
+  const notify = () => voicesChanged?.();
+  if (synth.addEventListener) synth.addEventListener("voiceschanged", notify);
+  else synth.onvoiceschanged = notify;
+
+  return {
+    ...reader,
+    unlock() {
+      if (primed) return;
+      primed = true;
+      try {
+        const silent = new SpeechSynthesisUtterance(" ");
+        silent.volume = 0;
+        synth.speak(silent);
+      } catch {
+        // Sin voz en este navegador: los botones de escuchar no harán nada.
+      }
+    },
+    test: () => reader.say(SAMPLE),
+    voices: () =>
+      ranked().map((voice) => ({ name: voice.name, label: voiceLabel(voice) })),
+    get settings() {
+      return { ...settings };
+    },
+    setVoice(name) {
+      settings.name = name;
+      saveSettings(settings);
+    },
+    setVolume(volume) {
+      settings.volume = Math.min(1, Math.max(0, volume));
+      saveSettings(settings);
+    },
+    setMuted(muted) {
+      settings.muted = muted;
+      saveSettings(settings);
+    },
+    // El dispositivo carga sus voces con retraso: avisa cuando ya están.
+    onVoices(callback) {
+      voicesChanged = callback;
+    },
+  };
+}
+
+// ---------- Escuchar (micrófono de la plataforma) ----------
+
 const DICTATION_NOTES = {
   rate_limited: "Hay demasiados dictados a la vez. Intenta en un momento.",
   upstream_error: "Falló el micrófono o el servicio de voz.",
   not_granted: "El dictado está desactivado para esta página.",
-};
-
-const SPEAK_NOTES = {
-  busy: "Termina de dictar para poder escuchar la respuesta.",
-  rate_limited: "Demasiada lectura en voz alta por ahora. Intenta más tarde.",
-  upstream_error: "Falló la lectura en voz alta.",
-  no_gesture: "Toca «Escuchar» en la respuesta para oírla.",
 };
 
 function setupDictation(dictation, handlers) {
@@ -2767,200 +3147,22 @@ function setupDictation(dictation, handlers) {
       }
       dictation.start(language ? { language } : undefined).catch(fail);
     },
-    // Resuelve cuando ya llegaron las últimas palabras.
     stop: () => dictation.stop().catch(() => {}),
-    active: () => dictation.active(),
-  };
-}
-
-function setupPlatformSpeech(tts, handlers) {
-  let speakingId = null;
-  let spanish = false;
-  Promise.resolve()
-    .then(() => tts.languages?.())
-    .then((languages) => {
-      spanish = Array.isArray(languages) && languages.includes("es");
-    })
-    .catch(() => {});
-
-  const drop = () => handlers.onSpeechGone?.();
-
-  tts.onState(({ state, reason }) => {
-    // "replaced": otra lectura tomó su lugar; el id nuevo ya está puesto.
-    if (state === "idle" && reason === "replaced") return;
-    handlers.onSpeechState?.(state, speakingId);
-    if (state !== "idle") return;
-    speakingId = null;
-    if (reason === "not_granted" || reason === "unavailable") drop();
-  });
-
-  function speak(id, text) {
-    const lines = speakLines(text);
-    if (lines.length === 0) return;
-    speakingId = id;
-    tts
-      .speak(lines, spanish ? { language: "es" } : undefined)
-      .catch((error) => {
-        const code = error?.code;
-        if (code === "not_granted" || code === "unavailable") drop();
-        else if (SPEAK_NOTES[code]) handlers.onNotice?.(SPEAK_NOTES[code]);
-      });
-  }
-  const stop = () => {
-    if (tts.active()) tts.stop().catch(() => {});
-  };
-
-  return {
-    kind: "platform",
-    unlock() {},
-    begin() {},
-    // La plataforma lee la respuesta entera, al terminar de llegar.
-    feed(id, text, done) {
-      if (done) speak(id, text);
-    },
-    toggle(id, text) {
-      if (speakingId === id && tts.active()) stop();
-      else speak(id, text);
-    },
-    stop,
-  };
-}
-
-// De las voces del dispositivo, la primera en español; de preferencia de México.
-function spanishVoice(synth) {
-  const order = ["es-mx", "es-us", "es-419", "es-es"];
-  const rank = (voice) => {
-    const index = order.indexOf(voice.lang.toLowerCase().replace("_", "-"));
-    return index < 0 ? order.length : index;
-  };
-  return (
-    synth
-      .getVoices()
-      .filter((voice) => /^es([-_]|$)/i.test(voice.lang))
-      .sort((a, b) => rank(a) - rank(b))[0] ?? null
-  );
-}
-
-function setupBrowserSpeech(synth, handlers) {
-  let session = null; // { id, queued, pending, closed, started, watchdog, keep }
-  let primed = false;
-
-  function end(mine) {
-    clearTimeout(mine.watchdog);
-    if (session !== mine) return;
-    session = null;
-    handlers.onSpeechState?.("idle", null);
-  }
-
-  function stop() {
-    if (!session) return;
-    const mine = session;
-    end(mine);
-    synth.cancel();
-  }
-
-  function say(mine, chunk) {
-    const utterance = new SpeechSynthesisUtterance(chunk);
-    const voice = spanishVoice(synth);
-    if (voice) utterance.voice = voice;
-    utterance.lang = voice?.lang ?? "es-MX";
-    utterance.onstart = () => {
-      if (session !== mine || mine.started) return;
-      mine.started = true;
-      clearTimeout(mine.watchdog);
-      handlers.onSpeechState?.("speaking", mine.id);
-    };
-    const settle = () => {
-      mine.pending -= 1;
-      if (mine.closed && mine.pending <= 0) end(mine);
-    };
-    utterance.onend = settle;
-    utterance.onerror = settle;
-    mine.keep.push(utterance); // sin referencia, el navegador puede perder "end"
-    mine.pending += 1;
-    synth.speak(utterance);
-  }
-
-  // Si el navegador no arranca (Safari exige un toque previo), se avisa en vez
-  // de quedarse callado sin explicación.
-  function watch(mine) {
-    if (mine.watchdog || mine.started) return;
-    mine.watchdog = setTimeout(() => {
-      if (session !== mine || mine.started) return;
-      stop();
-      handlers.onNotice?.(
-        "El navegador no dejó que Jarvis hablara solo. Toca «Escuchar» en la respuesta.",
-      );
-    }, START_LIMIT_MS);
-  }
-
-  function begin(id) {
-    stop();
-    session = {
-      id,
-      queued: 0,
-      pending: 0,
-      closed: false,
-      started: false,
-      watchdog: null,
-      keep: [],
-    };
-  }
-
-  function feed(id, text, done) {
-    const mine = session;
-    if (!mine || mine.id !== id) return;
-    const chunks = speechChunks(text, done);
-    for (const chunk of chunks.slice(mine.queued)) say(mine, chunk);
-    if (chunks.length > mine.queued) watch(mine);
-    mine.queued = Math.max(mine.queued, chunks.length);
-    if (!done) return;
-    mine.closed = true;
-    if (mine.pending <= 0) end(mine);
-  }
-
-  return {
-    kind: "browser",
-    unlock() {
-      if (primed) return;
-      primed = true;
-      try {
-        const silent = new SpeechSynthesisUtterance(" ");
-        silent.volume = 0;
-        synth.speak(silent);
-      } catch {
-        // Sin voz en este navegador: los botones de escuchar no harán nada.
-      }
-    },
-    begin,
-    feed,
-    toggle(id, text) {
-      if (session?.id === id) return stop();
-      begin(id);
-      feed(id, text, true);
-    },
-    stop,
   };
 }
 
 // Nunca lanza. `listen` es null si la vista no ofrece micrófono; `speech` es
-// null si no hay ninguna voz disponible.
+// null si el navegador no tiene voz.
 async function createVoice(handlers = {}) {
   const claude = globalThis.window?.claude;
-  const [dictation, tts] = claude?.use
-    ? await Promise.all([
-        claude.use("dictation").catch(() => null),
-        claude.use("tts").catch(() => null),
-      ])
-    : [null, null];
+  const dictation = claude?.use
+    ? await claude.use("dictation").catch(() => null)
+    : null;
   const synth = globalThis.speechSynthesis;
-  const browserVoice = Boolean(synth && globalThis.SpeechSynthesisUtterance);
-  let speech = null;
-  if (tts) speech = setupPlatformSpeech(tts, handlers);
-  else if (browserVoice) speech = setupBrowserSpeech(synth, handlers);
+  const canSpeak = Boolean(synth && globalThis.SpeechSynthesisUtterance);
   return {
     listen: dictation ? setupDictation(dictation, handlers) : null,
-    speech,
+    speech: canSpeak ? setupSpeech(synth, handlers) : null,
   };
 }
 
@@ -3079,7 +3281,7 @@ function createCore(root) {
       applyRate();
     },
     kick,
-    // Para la voz (tts), que no trae trozos de texto: pulsos sueltos.
+    // Mientras Jarvis habla en voz alta (sin trozos de texto): pulsos sueltos.
     talk(on) {
       clearInterval(talker);
       talker = on ? setInterval(() => kick(6 + Math.random() * 40), 230) : null;
@@ -3456,6 +3658,32 @@ function fill(list, rows, emptyText) {
   if (focusedId) document.getElementById(focusedId)?.focus();
 }
 
+// Los cambios hechos a mano en los paneles. `save(change)` ejecuta el cambio
+// sobre el almacén y devuelve null si falla; al borrar se ofrece deshacer.
+function storeHandlers(save, toast) {
+  const undo = (label, restore) =>
+    toast.show(label, { action: "Deshacer", onAction: restore });
+  return {
+    onAddTask: async (text) =>
+      Boolean(await save((store) => store.addTask(text))),
+    onToggleTask: (id, done) => save((store) => store.setTaskDone(id, done)),
+    async onRemoveTask(id) {
+      const task = await save((store) => store.removeTask(id));
+      if (task)
+        undo("Tarea borrada", () => save((store) => store.restoreTask(task)));
+    },
+    onAddMemory: async (text) =>
+      Boolean(await save((store) => store.addMemory(text))),
+    async onRemoveMemory(id) {
+      const memory = await save((store) => store.removeMemory(id));
+      if (memory)
+        undo("Recuerdo borrado", () =>
+          save((store) => store.restoreMemory(memory)),
+        );
+    },
+  };
+}
+
 // `handlers`: onAddTask(text), onToggleTask(id, done), onRemoveTask(id),
 // onAddMemory(text), onRemoveMemory(id), onRetry(). Los "add" resuelven true
 // si se guardó, para limpiar el campo.
@@ -3629,8 +3857,8 @@ function writeChat(mode, messages) {
 function statusText({ phase, listening, speakingId, backend }) {
   if (phase === "thinking") return "pensando…";
   if (phase === "streaming") return "respondiendo…";
-  if (listening) return "escuchando…";
   if (speakingId) return "hablando…";
+  if (listening) return "escuchando…";
   if (!backend) return "conectando…";
   return backend.mode === "cloud" ? "en línea" : "modo demo";
 }
@@ -3682,18 +3910,20 @@ function telemetry(store) {
 }
 
 // ---- public/talk.js ----
-// Hablarle a Jarvis sin escribir. Según lo que ofrezca la vista hay dos caminos:
+// Hablarle a Jarvis sin escribir: una conversación que se queda abierta turno
+// tras turno. Según lo que ofrezca la vista hay dos caminos:
 // - "platform": el micrófono de la capability `dictation` (Chrome y la app de
-//   escritorio). Un toque en el micrófono y se habla.
-// - "keyboard": en teléfonos y tabletas sin esa capability (iPhone, iPad) la
-//   página no puede abrir el micrófono; abre el teclado para usar su dictado.
-// En los dos, el mensaje se envía solo cuando se hace una pausa y Jarvis
-// contesta hablando.
+//   escritorio). Un toque lo abre y sigue escuchando hasta una hora.
+// - "keyboard": en iPhone y iPad la página no puede abrir el micrófono; abre
+//   el teclado para usar su dictado y no lo cierra entre turnos.
+// En los dos, cada mensaje se envía solo al hacer una pausa. Mientras Jarvis
+// piensa o habla la página se hace la sorda, para no oírse a sí misma.
 
 const PAUSE_PLATFORM_MS = 1600;
 const PAUSE_KEYBOARD_MS = 2200;
+const KEEP_SENT = 6;
 const HINTS = {
-  platform: "Te escucho. Envío solo cuando hagas una pausa.",
+  platform: "Te escucho. Habla y envío solo cuando hagas una pausa.",
   keyboard:
     "Toca el micrófono de tu teclado y habla. Envío solo cuando hagas una pausa.",
 };
@@ -3707,22 +3937,69 @@ function glue(base, piece) {
     : `${base} ${piece}`;
 }
 
-// `ui` trae los elementos (input, micButton, sendButton, hint) y tres avisos:
-// `onText()`: la página cambió el texto de la caja. `onSpoken(text)`: hay un
-// mensaje dictado listo para enviar. `onChange()`: empezó o terminó de escuchar.
-function createTalk(ui) {
-  const { input, micButton, sendButton, hint, onText, onSpoken, onChange } = ui;
-  let listen = null; // micrófono de la plataforma, si existe
-  let kind = null; // "platform" | "keyboard" | null
-  let canKeyboard = false;
-  let active = false;
-  let base = ""; // lo ya dictado y confirmado
-  let timer = null;
+// Palabras sin mayúsculas ni signos, para comparar lo oído con lo enviado.
+const bare = (text) =>
+  text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .split(/\s+/)
+    .filter(Boolean);
 
+// El dictado del teclado de iOS a veces vuelve a escribir todo lo dicho en la
+// sesión. Quita del principio lo que ya se envió (`sent`, de viejo a nuevo),
+// pero solo si después viene algo nuevo: repetir una frase tal cual ("sí",
+// "otra vez") es un mensaje legítimo y se envía.
+function withoutSent(text, sent) {
+  const tokens = text.trim().split(/\s+/).filter(Boolean);
+  const plain = tokens.map((token) => bare(token).join(""));
+  for (let from = 0; from < sent.length; from++) {
+    const prefix = bare(sent.slice(from).join(" "));
+    const repeats =
+      prefix.length > 0 &&
+      prefix.length < plain.length &&
+      prefix.every((word, i) => plain[i] === word);
+    if (repeats) return tokens.slice(prefix.length).join(" ");
+  }
+  return tokens.join(" ");
+}
+
+// La pausa antes de enviar. El anillo del botón de enviar muestra cuánto
+// falta; `onDone` se llama cuando se cumple.
+function createPause(sendButton, onDone) {
+  let timer = null;
   function disarm() {
     clearTimeout(timer);
     timer = null;
     sendButton.classList.remove("is-arming");
+  }
+  function arm(ms) {
+    disarm();
+    sendButton.style.setProperty("--arm", `${ms}ms`);
+    // Leer el ancho obliga a reiniciar la animación del anillo.
+    if (sendButton.offsetWidth >= 0) sendButton.classList.add("is-arming");
+    timer = setTimeout(onDone, ms);
+  }
+  return { arm, disarm };
+}
+
+// `ui` trae los elementos (input, micButton, sendButton, hint, hintText) y
+// tres avisos: `onText()`: la página cambió el texto de la caja.
+// `onSpoken(text)`: hay un mensaje dictado listo para enviar. `onChange()`:
+// la conversación se abrió o se cerró.
+function createTalk(ui) {
+  const { input, micButton, sendButton, hint, hintText } = ui;
+  let listen = null; // micrófono de la plataforma, si existe
+  let kind = null; // "platform" | "keyboard" | null
+  let canKeyboard = false;
+  let active = false; // la conversación está abierta
+  let deaf = false; // Jarvis piensa o habla: lo que se oiga no cuenta
+  let base = ""; // lo ya dictado y confirmado de este turno
+  let sent = []; // lo ya enviado en esta conversación
+  const { arm, disarm } = createPause(sendButton, () => deliver());
+
+  function show(text) {
+    input.value = text;
+    ui.onText();
   }
 
   function setActive(on) {
@@ -3731,71 +4008,70 @@ function createTalk(ui) {
     active = on;
     micButton.setAttribute("aria-pressed", String(on));
     hint.hidden = !on;
-    if (on) hint.textContent = HINTS[kind];
-    onChange();
+    if (on) hintText.textContent = HINTS[kind];
+    ui.onChange();
   }
 
-  // Termina la pausa: se envía lo dictado.
-  async function deliver() {
+  // Terminó la pausa: se envía lo dictado y la conversación sigue abierta.
+  function deliver() {
     disarm();
-    if (kind === "platform") await listen.stop();
-    const text = input.value.trim();
-    // Cerrar el teclado corta su dictado: así no se cuela la voz de Jarvis.
-    if (kind === "keyboard") input.blur();
-    setActive(false);
-    if (text) onSpoken(text);
+    const heard =
+      kind === "keyboard" ? withoutSent(input.value, sent) : input.value.trim();
+    base = "";
+    if (!heard) return show("");
+    sent = [...sent, heard].slice(-KEEP_SENT);
+    ui.onSpoken(heard);
   }
 
-  // Cuenta la pausa; el anillo del botón de enviar muestra cuánto falta.
-  function arm(ms) {
-    disarm();
-    sendButton.style.setProperty("--arm", `${ms}ms`);
-    // Leer el ancho obliga a reiniciar la animación del anillo.
-    if (sendButton.offsetWidth >= 0) sendButton.classList.add("is-arming");
-    timer = setTimeout(deliver, ms);
-  }
-
-  function show(text) {
-    input.value = text;
-    onText();
-  }
-
-  function setKind() {
+  // `platformListen`: el micrófono de voice.js o null. `touch`: hay teclado
+  // en pantalla con tecla de dictado.
+  function setKind(platformListen, touch = canKeyboard) {
+    listen = platformListen;
+    canKeyboard = touch;
     kind = listen ? "platform" : canKeyboard ? "keyboard" : null;
     micButton.hidden = !kind;
+  }
+
+  function stop() {
+    if (!active) return;
+    if (kind === "platform") listen.stop();
+    else input.blur();
+    setActive(false);
   }
 
   return {
     get active() {
       return active;
     },
-    // `platformListen`: el micrófono de voice.js o null. `touch`: hay teclado
-    // en pantalla con tecla de dictado.
-    attach(platformListen, touch) {
-      listen = platformListen;
-      canKeyboard = touch;
-      setKind();
-    },
-    // Clic en el micrófono. Debe llamarse directo desde el toque.
+    attach: setKind,
+    // Clic en el micrófono: abre o cierra la conversación. Debe llamarse
+    // directo desde el toque.
     toggle() {
       if (kind === "platform") return listen.toggle();
       if (kind !== "keyboard") return;
-      if (active) return setActive(false);
+      if (active) return stop();
       base = "";
+      sent = [];
       setActive(true);
       input.focus();
     },
-    // Enviar a mano o empezar otra cosa apaga el modo voz.
-    cancel() {
+    stop,
+    // La página avisa cuando Jarvis empieza y cuando termina de pensar o hablar.
+    setDeaf(value) {
+      if (deaf === value) return;
+      deaf = value;
       if (!active) return;
-      if (kind === "platform") listen.stop();
-      setActive(false);
+      disarm();
+      base = "";
+      // Lo que el dictado del teclado haya oído mientras Jarvis hablaba se tira.
+      if (!deaf && kind === "keyboard") show("");
     },
     // La caja cambió por el usuario o por el dictado del teclado.
     onInput() {
+      if (active && kind === "keyboard" && deaf) return show("");
       base = input.value;
       if (!active || kind !== "keyboard") return;
-      if (input.value.trim()) arm(PAUSE_KEYBOARD_MS);
+      if (withoutSent(input.value, sent)) arm(PAUSE_KEYBOARD_MS);
       else disarm();
     },
     // Eventos del micrófono de la plataforma (los entrega voice.js).
@@ -3806,21 +4082,86 @@ function createTalk(ui) {
         setActive(on);
       },
       onPartial(text) {
+        if (deaf) return;
         show(glue(base, text));
         if (text) disarm();
       },
       onFinal(text) {
+        if (deaf) return;
         base = glue(base, text);
         show(base);
         if (base.trim()) arm(PAUSE_PLATFORM_MS);
       },
       onDictationGone() {
-        listen = null;
-        setKind();
+        setKind(null);
         setActive(false);
       },
     },
   };
+}
+
+// ---- public/voicepanel.js ----
+// Panel "Voz": elegir la voz de Jarvis, probarla, ajustar su volumen y decidir
+// si contesta hablando. Las voces son las del dispositivo, ordenadas como en
+// el copiloto de Born to Rally (ver voice.js).
+
+const VOICE_NOTES = {
+  ready:
+    "Son las voces de tu dispositivo: ♂ es voz de hombre y ★ de alta calidad. Para tener más, en el iPhone: Ajustes, Accesibilidad, Contenido leído, Voces.",
+  loading:
+    "Tu dispositivo todavía no muestra voces en español. Toca «Probar» para despertarlas.",
+  none: "Este navegador no tiene voz: Jarvis contesta solo con texto.",
+};
+
+// `speech` es la voz de voice.js, o null si el navegador no tiene.
+function bindVoicePanel(speech) {
+  const select = $("#voiceSelect");
+  const volume = $("#voiceVolume");
+  const spoken = $("#voiceOn");
+  const note = $("#voiceNote");
+  if (!speech) {
+    for (const control of [select, volume, spoken, $("#voiceTest")])
+      control.disabled = true;
+    note.textContent = VOICE_NOTES.none;
+    return;
+  }
+
+  function fill() {
+    const voices = speech.voices();
+    const best = voices[0] ? `Automática (${voices[0].label})` : "Automática";
+    select.replaceChildren(
+      el("option", { value: "", text: best }),
+      ...voices.map((voice) =>
+        el("option", { value: voice.name, text: voice.label }),
+      ),
+    );
+    const chosen = speech.settings.name;
+    select.value = voices.some((voice) => voice.name === chosen) ? chosen : "";
+    note.textContent = voices.length ? VOICE_NOTES.ready : VOICE_NOTES.loading;
+  }
+
+  fill();
+  speech.onVoices(fill);
+  volume.value = String(Math.round(speech.settings.volume * 100));
+  spoken.checked = !speech.settings.muted;
+
+  // Cada cambio se oye al momento, como en las opciones del juego.
+  select.addEventListener("change", () => {
+    speech.setVoice(select.value);
+    speech.test();
+  });
+  volume.addEventListener("change", () => {
+    speech.setVolume(Number(volume.value) / 100);
+    speech.test();
+  });
+  spoken.addEventListener("change", () => {
+    speech.setMuted(!spoken.checked);
+    if (!spoken.checked) speech.stop();
+  });
+  $("#voiceTest").addEventListener("click", () => {
+    fill();
+    speech.test();
+  });
 }
 
 // ---- public/app.js ----
@@ -3837,7 +4178,14 @@ function createTalk(ui) {
 
 
 
+
 const INPUT_MAX_HEIGHT = 132;
+// Tras callar, Jarvis espera un instante antes de volver a escuchar: así no
+// toma como mensaje el final de su propia voz.
+const ECHO_GRACE_MS = 700;
+// Frases que cierran la conversación por voz sin pasar por la IA.
+const REST_WORDS =
+  /^(?:jarvis[,.]?\s+)?(?:descansa|eso es todo|adi[oó]s|hasta luego|ap[aá]gate)(?:[,.]?\s+jarvis)?[.!]*$/i;
 
 const state = {
   mode: "general",
@@ -3863,18 +4211,21 @@ const toast = createToast($("#toast"));
 const chat = createChatView({ scroller: $("#main"), log: $("#log") });
 const coarsePointer = globalThis.matchMedia("(pointer: coarse)");
 // Modo voz: dictar el mensaje y que se envíe solo tras una pausa (talk.js).
+// Conversación por voz: dictar y que cada mensaje se envíe solo (talk.js).
 const talk = createTalk({
   input,
   micButton,
   sendButton,
   hint: $("#voiceHint"),
+  hintText: $("#voiceHintText"),
   onText() {
     fitInput();
     renderSend();
   },
-  onSpoken: (text) => send(text, { spoken: true }),
+  onSpoken: heard,
   onChange: () => setPhase(state.phase),
 });
+let echoTimer = null;
 
 // ---------- Conversación guardada (ver session.js) ----------
 
@@ -3949,10 +4300,18 @@ function renderSend() {
   );
 }
 
+// Mientras Jarvis piensa o habla, el modo voz no escucha (se oiría a sí mismo).
+function syncTalk() {
+  clearTimeout(echoTimer);
+  if (state.phase !== "idle" || state.speakingId) talk.setDeaf(true);
+  else echoTimer = setTimeout(() => talk.setDeaf(false), ECHO_GRACE_MS);
+}
+
 function setPhase(phase) {
   state.phase = phase;
   renderSend();
   syncCore();
+  syncTalk();
   $("#status").textContent = statusText({ ...state, listening: talk.active });
 }
 
@@ -4048,7 +4407,7 @@ function leaveChat() {
 function newChat() {
   if (state.phase !== "idle" || state.messages.length === 0) return;
   const old = state.messages;
-  talk.cancel();
+  talk.stop();
   state.voice.speech?.stop();
   state.messages = [];
   chat.clear();
@@ -4097,7 +4456,8 @@ async function runTurn() {
   state.controller = controller;
   setPhase("thinking");
   // Si el mensaje se dictó, la respuesta se lee en voz alta según va llegando.
-  const speech = state.spoken ? state.voice.speech : null;
+  const voice = state.voice.speech;
+  const speech = state.spoken && !voice?.settings.muted ? voice : null;
   reply.spoken = Boolean(speech);
   speech?.begin(reply.id);
   let shown = 0;
@@ -4147,7 +4507,6 @@ function send(raw, { spoken = false } = {}) {
   const text = raw.trim();
   if (!text || state.phase !== "idle") return;
   state.spoken = spoken || talk.active;
-  talk.cancel();
   state.voice.speech?.stop();
   pushMessage({ role: "user", content: text });
   enterChat(true);
@@ -4194,27 +4553,7 @@ async function saving(change) {
 }
 
 const panels = createPanels({
-  onAddTask: async (text) =>
-    Boolean(await saving((store) => store.addTask(text))),
-  onToggleTask: (id, done) => saving((store) => store.setTaskDone(id, done)),
-  async onRemoveTask(id) {
-    const task = await saving((store) => store.removeTask(id));
-    if (!task) return;
-    toast.show("Tarea borrada", {
-      action: "Deshacer",
-      onAction: () => saving((store) => store.restoreTask(task)),
-    });
-  },
-  onAddMemory: async (text) =>
-    Boolean(await saving((store) => store.addMemory(text))),
-  async onRemoveMemory(id) {
-    const memory = await saving((store) => store.removeMemory(id));
-    if (!memory) return;
-    toast.show("Recuerdo borrado", {
-      action: "Deshacer",
-      onAction: () => saving((store) => store.restoreMemory(memory)),
-    });
-  },
+  ...storeHandlers(saving, toast),
   onRetry: () => state.store?.retry(),
 });
 
@@ -4225,21 +4564,24 @@ function fitInput() {
   input.style.height = `${Math.min(input.scrollHeight, INPUT_MAX_HEIGHT)}px`;
 }
 
+// Llegó un mensaje dictado. "Descansa" y parecidas cierran la conversación.
+function heard(text) {
+  if (!REST_WORDS.test(text.trim())) return send(text, { spoken: true });
+  talk.stop();
+  input.value = "";
+  fitInput();
+  renderSend();
+  const voice = state.voice.speech;
+  if (voice && !voice.settings.muted) voice.say("Aquí estaré.");
+}
+
 const voiceHandlers = {
   onNotice: (text) => toast.show(text),
   ...talk.events,
+  // "starting" cuenta como hablando: la voz ya está en camino.
   onSpeechState(speechState, id) {
     state.speakingId = speechState === "idle" ? null : id;
     chat.setSpeaking(state.speakingId);
-    repaintAll();
-    setPhase(state.phase);
-  },
-  // La plataforma retiró su voz: no se sustituye por otra.
-  onSpeechGone() {
-    state.voice = { ...state.voice, speech: null };
-    state.speakingId = null;
-    chat.setCanSpeak(false);
-    chat.setSpeaking(null);
     repaintAll();
     setPhase(state.phase);
   },
@@ -4324,6 +4666,9 @@ function bindEvents() {
   $("#openMemory").addEventListener("click", (event) =>
     panels.open("memory", event.currentTarget),
   );
+  $("#voiceSettings").addEventListener("click", (event) =>
+    panels.open("voice", event.currentTarget),
+  );
   $("#newChat").addEventListener("click", newChat);
   $("#log").addEventListener("click", onLogClick);
   $("#noticeButton").addEventListener("click", () => {
@@ -4388,6 +4733,7 @@ function boot() {
   createVoice(voiceHandlers).then((voice) => {
     state.voice = voice;
     talk.attach(voice.listen, coarsePointer.matches);
+    bindVoicePanel(voice.speech);
     chat.setCanSpeak(Boolean(voice.speech));
     repaintAll();
   });

@@ -97,6 +97,32 @@ function fill(list, rows, emptyText) {
   if (focusedId) document.getElementById(focusedId)?.focus();
 }
 
+// Los cambios hechos a mano en los paneles. `save(change)` ejecuta el cambio
+// sobre el almacén y devuelve null si falla; al borrar se ofrece deshacer.
+export function storeHandlers(save, toast) {
+  const undo = (label, restore) =>
+    toast.show(label, { action: "Deshacer", onAction: restore });
+  return {
+    onAddTask: async (text) =>
+      Boolean(await save((store) => store.addTask(text))),
+    onToggleTask: (id, done) => save((store) => store.setTaskDone(id, done)),
+    async onRemoveTask(id) {
+      const task = await save((store) => store.removeTask(id));
+      if (task)
+        undo("Tarea borrada", () => save((store) => store.restoreTask(task)));
+    },
+    onAddMemory: async (text) =>
+      Boolean(await save((store) => store.addMemory(text))),
+    async onRemoveMemory(id) {
+      const memory = await save((store) => store.removeMemory(id));
+      if (memory)
+        undo("Recuerdo borrado", () =>
+          save((store) => store.restoreMemory(memory)),
+        );
+    },
+  };
+}
+
 // `handlers`: onAddTask(text), onToggleTask(id, done), onRemoveTask(id),
 // onAddMemory(text), onRemoveMemory(id), onRetry(). Los "add" resuelven true
 // si se guardó, para limpiar el campo.

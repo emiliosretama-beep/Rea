@@ -27,6 +27,7 @@ const MODULES = [
   "public/session.js",
   "public/status.js",
   "public/talk.js",
+  "public/voicepanel.js",
   "public/app.js",
 ];
 

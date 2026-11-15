@@ -112,7 +112,7 @@ export function createCore(root) {
       applyRate();
     },
     kick,
-    // Para la voz (tts), que no trae trozos de texto: pulsos sueltos.
+    // Mientras Jarvis habla en voz alta (sin trozos de texto): pulsos sueltos.
     talk(on) {
       clearInterval(talker);
       talker = on ? setInterval(() => kick(6 + Math.random() * 40), 230) : null;

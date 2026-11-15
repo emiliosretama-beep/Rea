@@ -6,8 +6,8 @@ import { USER_NAME } from "./prompt.js";
 export function statusText({ phase, listening, speakingId, backend }) {
   if (phase === "thinking") return "pensando…";
   if (phase === "streaming") return "respondiendo…";
-  if (listening) return "escuchando…";
   if (speakingId) return "hablando…";
+  if (listening) return "escuchando…";
   if (!backend) return "conectando…";
   return backend.mode === "cloud" ? "en línea" : "modo demo";
 }

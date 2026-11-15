@@ -15,6 +15,8 @@
       this.lang = "";
       this.voice = null;
       this.volume = 1;
+      this.rate = 1;
+      this.pitch = 1;
     }
   }
 
@@ -33,18 +35,34 @@
     }, 20);
   }
 
+  // Voces como las de un iPhone: dos de España, dos de México, una de broma y
+  // una en inglés.
+  const voices = [
+    { lang: "en-US", name: "Samantha", voiceURI: "com.apple.voice.Samantha" },
+    { lang: "es-MX", name: "Paulina", voiceURI: "com.apple.voice.Paulina" },
+    { lang: "es-ES", name: "Mónica", voiceURI: "com.apple.voice.Monica" },
+    { lang: "es-MX", name: "Juan", voiceURI: "com.apple.voice.Juan" },
+    { lang: "es-ES", name: "Jorge", voiceURI: "com.apple.voice.Jorge" },
+    { lang: "es-ES", name: "Abuelo", voiceURI: "com.apple.voice.Grandpa" },
+  ];
+
   const synth = {
-    getVoices: () => [
-      { lang: "en-US", name: "Samantha" },
-      { lang: "es-ES", name: "Mónica" },
-      { lang: "es-MX", name: "Paulina" },
-    ],
+    get speaking() {
+      return Boolean(current);
+    },
+    get pending() {
+      return queue.length > 0;
+    },
+    getVoices: () => voices,
+    resume() {},
     speak(utterance) {
       spoken.push({
         text: utterance.text,
         lang: utterance.lang,
         voice: utterance.voice?.name ?? null,
         volume: utterance.volume,
+        rate: utterance.rate,
+        pitch: utterance.pitch,
       });
       queue.push(utterance);
       next();
