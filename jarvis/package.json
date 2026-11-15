@@ -1,0 +1,16 @@
+{
+  "name": "jarvis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jarvis: asistente personal de Emilio (chat, tareas y memoria), publicado como página de Claude.",
+  "type": "module",
+  "scripts": {
+    "build:online": "node scripts/build-online.mjs",
+    "test": "node --test tests/unit.test.mjs",
+    "test:browser": "node scripts/build-online.mjs && node tests/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "license": "MIT"
+}

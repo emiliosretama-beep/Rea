@@ -1,0 +1,3972 @@
+<title>Jarvis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+/* Layout: una sola pantalla tipo instrumento de cabina. Columna de chat con el
+   núcleo (el sol de ERA) como único protagonista; Tareas y Memoria van en una
+   hoja sobre el chat (teléfono) o en una columna fija a la derecha (≥ 960 px).
+   Tema oscuro único a propósito: es un HUD. */
+:root {
+  --noche: #080b1f; /* fondo (60 %) */
+  --panel: #12183a; /* burbujas, campos, hojas (30 %) */
+  --panel-alto: #1a2250;
+  --linea: #2b3570; /* trazos del HUD */
+  --texto: #eef0fa;
+  --tenue: #9aa3cc;
+  --era: #f04e23; /* naranja ERA: solo lo que está vivo (10 %) */
+  --amanecer: #ffb089; /* luz del núcleo, del degradado del logo */
+  --sobre-era: #080b1f; /* texto sobre naranja: blanco no da contraste */
+  --mal: #ff8a8a;
+  --brillo: rgba(240, 78, 35, 0.46);
+  --sombra: rgba(0, 0, 0, 0.45);
+  --f-display: "Chakra Petch", "Trebuchet MS", "Segoe UI", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-soft: cubic-bezier(0.45, 0.05, 0.25, 1);
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  --energy: 0; /* 0 a 1: lo mueve core.js con cada trozo de texto */
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* El visor ya mete el safe-area en :root; la app ocupa justo lo que queda. */
+html {
+  height: 100%;
+  background: var(--noche);
+}
+@supports (height: 100dvh) {
+  html {
+    height: 100dvh;
+  }
+}
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--noche);
+  color: var(--texto);
+  font: 400 16px/1.5 var(--f-body);
+  -webkit-text-size-adjust: 100%;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 2px solid var(--amanecer);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Estructura ---------- */
+
+.app {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.shell {
+  width: 100%;
+  max-width: 860px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  margin-inline: auto;
+  padding-left: var(--gutter-l);
+  padding-right: var(--gutter-r);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+/* Fila fija por pieza: si el aviso está oculto, las demás no se recorren. */
+.top {
+  grid-row: 1;
+}
+.modes {
+  grid-row: 2;
+}
+.notice {
+  grid-row: 3;
+}
+.main {
+  grid-row: 4;
+}
+.composer {
+  grid-row: 5;
+}
+
+/* ---------- Encabezado ---------- */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 60px;
+  padding-block: 8px 6px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.brand-text {
+  min-width: 0;
+}
+.wordmark {
+  margin: 0;
+  font: 600 17px/1 var(--f-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.status {
+  margin: 5px 0 0;
+  font: 500 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--tenue);
+  white-space: nowrap;
+}
+.top-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+.tool {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: transparent;
+  font: 600 13px/1 var(--f-display);
+  letter-spacing: 0.03em;
+  transition:
+    background-color 0.15s,
+    transform 0.15s var(--ease-out);
+}
+.tool:active {
+  background: var(--panel);
+  transform: scale(0.96);
+}
+.tool--icon {
+  padding: 0;
+}
+.tool-count {
+  color: var(--amanecer);
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+  .tool:hover,
+  .chip:hover {
+    background: var(--panel-alto);
+  }
+}
+/* En teléfono el encabezado se queda con iconos donde no cabe el texto. */
+@media (max-width: 479px) {
+  .tool-label--wide {
+    display: none;
+  }
+  #openMemory {
+    padding: 0;
+  }
+}
+@media (max-width: 379px) {
+  .tool-label--mid {
+    display: none;
+  }
+}
+
+/* ---------- Modos ---------- */
+
+.modes,
+.side-tabs {
+  display: grid;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+}
+.modes {
+  max-width: 480px; /* en iPad y escritorio no se estira a todo el ancho */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.mode {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tenue);
+  font: 600 12.5px/1 var(--f-display);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    background-color 0.18s var(--ease-out),
+    color 0.18s;
+}
+.mode[aria-pressed="true"] {
+  background: var(--era);
+  color: var(--sobre-era);
+}
+
+/* ---------- Aviso (modo demo, sin memoria) ---------- */
+
+.notice,
+.sync {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 12px;
+  border: 1px dashed var(--linea);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--tenue);
+}
+.notice {
+  margin-top: 8px;
+}
+.notice p,
+.sync p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-block: 8px;
+}
+.notice button,
+.sync button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--texto);
+}
+
+/* ---------- Zona central: inicio o conversación ---------- */
+
+.main {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linea) transparent;
+}
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-block: 16px;
+  text-align: center;
+}
+[data-view="chat"] .hero {
+  display: none;
+}
+/* Mientras el núcleo vuela al encabezado, el inicio sigue en su sitio: va
+   fijo (app.js le da su caja) para que el scroll del chat no lo recorte. */
+.is-docking .hero {
+  position: fixed;
+  z-index: 5;
+  display: flex;
+  pointer-events: none;
+}
+.is-docking .hero > :not(.core-slot) {
+  opacity: 0;
+  transition: opacity 0.16s;
+}
+.greeting {
+  margin: 14px 0 0;
+  font: 600 22px/1.2 var(--f-display);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.telemetry {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+.chips {
+  max-width: 520px;
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.chip {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 14px;
+  transition: transform 0.15s var(--ease-out);
+}
+.chip:active {
+  transform: scale(0.97);
+}
+
+/* ---------- El núcleo ---------- */
+
+.core-slot {
+  flex: none;
+  display: block;
+}
+.core-slot--hero {
+  width: clamp(96px, 22vh, 176px);
+  aspect-ratio: 1;
+}
+/* Pantallas bajas (iPhone con las barras de Safari): inicio más compacto. */
+@media (max-height: 700px) {
+  .core-slot--hero {
+    width: clamp(96px, 18vh, 128px);
+  }
+  .hero {
+    padding-block: 8px;
+  }
+  .greeting {
+    margin-top: 8px;
+    font-size: 20px;
+  }
+  .chips {
+    margin-top: 8px;
+  }
+}
+.core-slot--mini {
+  display: none;
+  width: 38px;
+  height: 38px;
+}
+[data-view="chat"] .core-slot--mini {
+  display: block;
+}
+.is-docking .core-slot--mini {
+  visibility: hidden;
+}
+.core {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+.core-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.core-glow {
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--brillo) 0%, transparent 64%);
+  opacity: 0.38;
+}
+.core-ring circle,
+.core-ticks circle,
+.core-arc circle {
+  fill: none;
+}
+.core-ring circle {
+  stroke: var(--linea);
+  stroke-width: 1;
+}
+.tick-minor {
+  stroke: var(--linea);
+  stroke-width: 7;
+}
+.tick-major {
+  stroke: var(--tenue);
+  stroke-width: 11;
+}
+.core-arc--a circle {
+  stroke: var(--era);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.core-arc--b circle {
+  stroke: var(--amanecer);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+.sun-top {
+  stop-color: var(--amanecer);
+}
+.sun-bottom {
+  stop-color: var(--era);
+}
+
+/* En el encabezado el núcleo se simplifica: sol y un arco. */
+.core--mini .core-ring,
+.core--mini .core-ticks,
+.core--mini .core-arc--b {
+  display: none;
+}
+.core--mini .core-arc--a circle {
+  stroke-width: 9;
+}
+.core--mini .core-sun {
+  scale: 1.55;
+}
+.core--mini .core-glow {
+  inset: -8%;
+}
+
+/* Estados sin movimiento: también valen con prefers-reduced-motion. */
+[data-core="thinking"] .tick-minor {
+  stroke: var(--tenue);
+}
+[data-core="thinking"] .core-arc--b circle {
+  opacity: 1;
+}
+[data-core="speaking"] .tick-major {
+  stroke: var(--amanecer);
+}
+[data-core="speaking"] .core-glow {
+  opacity: 0.6;
+}
+[data-core="listening"] .core-arc--a circle {
+  stroke: var(--amanecer);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .core-arc--a {
+    animation: core-spin 26s linear infinite;
+  }
+  .core-arc--b {
+    animation: core-spin 38s linear infinite reverse;
+  }
+  .core-sun {
+    animation: core-breathe 5.6s var(--ease-soft) infinite;
+  }
+  .core-glow {
+    animation: core-glow 5.6s var(--ease-soft) infinite;
+  }
+  .core-ticks,
+  .core-sun,
+  .core-glow {
+    transition:
+      transform 0.16s var(--ease-out),
+      opacity 0.16s var(--ease-out);
+  }
+  [data-core="thinking"] .core-sun {
+    animation: core-think 1.1s ease-in-out infinite;
+  }
+  [data-core="listening"] .core-sun {
+    animation: core-breathe 1.5s var(--ease-soft) infinite;
+  }
+  /* Hablando: las marcas se abren con cada trozo de texto que llega. */
+  [data-core="speaking"] .core-sun,
+  [data-core="speaking"] .core-glow {
+    animation: none;
+  }
+  [data-core="speaking"] .core-ticks {
+    transform: scale(calc(1 + var(--energy) * 0.1));
+  }
+  [data-core="speaking"] .core-sun {
+    transform: scale(calc(1 + var(--energy) * 0.07));
+  }
+  [data-core="speaking"] .core-glow {
+    opacity: calc(0.4 + var(--energy) * 0.5);
+  }
+  .msg--assistant[data-status="streaming"] .md > :last-child::after {
+    animation: caret 1s steps(2, jump-none) infinite;
+  }
+  .thinking {
+    animation: fade 1.4s ease-in-out infinite;
+  }
+  [data-panel="tasks"] .side,
+  [data-panel="memory"] .side {
+    animation: sheet-in 0.26s var(--ease-out);
+  }
+  .toast {
+    animation: toast-in 0.22s var(--ease-out);
+  }
+}
+/* Con "reducir movimiento" no se mueve nada: el estado se lee en texto. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@keyframes core-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes core-breathe {
+  50% {
+    transform: scale(1.035);
+  }
+}
+@keyframes core-glow {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes core-think {
+  50% {
+    transform: scale(0.94);
+    opacity: 0.7;
+  }
+}
+@keyframes caret {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes fade {
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes toast-in {
+  from {
+    transform: translate(-50%, 12px);
+    opacity: 0;
+  }
+}
+
+/* ---------- Conversación ---------- */
+
+.log {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 16px 0 20px;
+  list-style: none;
+}
+[data-view="chat"] .log {
+  display: flex;
+}
+/* Cada pregunta queda pegada a su respuesta y separada del turno anterior. */
+.msg--user:not(:first-child),
+.msg--mode:not(:first-child) {
+  margin-top: 12px;
+}
+/* El texto se desvanece en los bordes del scroll en vez de cortarse en seco. */
+[data-view="chat"] .main::before,
+[data-view="chat"] .main::after {
+  content: "";
+  position: sticky;
+  z-index: 2;
+  flex: none;
+  height: 16px;
+  pointer-events: none;
+}
+[data-view="chat"] .main::before {
+  top: 0;
+  margin-bottom: -16px;
+  background: linear-gradient(var(--noche), transparent);
+}
+[data-view="chat"] .main::after {
+  bottom: 0;
+  margin-top: -16px;
+  background: linear-gradient(transparent, var(--noche));
+}
+.msg {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.msg--user {
+  align-items: flex-end;
+}
+.msg--assistant {
+  gap: 8px;
+}
+.msg--mode {
+  align-items: center;
+}
+.msg--mode span {
+  padding: 6px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  font: 500 12px/1 var(--f-display);
+  letter-spacing: 0.08em;
+  color: var(--tenue);
+}
+.bubble {
+  max-width: min(86%, 560px);
+  padding: 10px 14px;
+  border: 1px solid var(--linea);
+  border-radius: 18px 18px 6px 18px;
+  background: var(--panel);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Texto de Jarvis (Markdown): sin burbuja, a todo el ancho de lectura. */
+.md {
+  max-width: 68ch;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.md p,
+.md ul,
+.md ol,
+.md h3,
+.md h4,
+.md blockquote {
+  margin: 0;
+}
+.md ul,
+.md ol {
+  padding-left: 1.35em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.md li > ul,
+.md li > ol,
+.md li > p,
+.md li > .code {
+  margin-top: 6px;
+}
+.md h3 {
+  font: 600 17px/1.3 var(--f-body);
+}
+.md h4 {
+  font: 600 16px/1.3 var(--f-body);
+}
+.md strong {
+  font-weight: 600;
+}
+.md a {
+  color: var(--amanecer);
+  text-underline-offset: 2px;
+}
+.md code {
+  padding: 0.12em 0.36em;
+  border-radius: 6px;
+  background: var(--panel);
+  font: 0.875em/1.4 var(--f-mono);
+}
+.md blockquote {
+  padding-left: 12px;
+  border-left: 2px solid var(--linea);
+  color: var(--tenue);
+}
+.md hr {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--linea);
+}
+.code {
+  min-width: 0;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 12px;
+  border-bottom: 1px solid var(--linea);
+  font: 500 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--tenue);
+}
+.code pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  font: 13.5px/1.5 var(--f-mono);
+  tab-size: 2;
+}
+.code pre code {
+  padding: 0;
+  background: none;
+  font: inherit;
+}
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.md table {
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.md th,
+.md td {
+  padding: 6px 10px;
+  border: 1px solid var(--linea);
+  text-align: left;
+  vertical-align: top;
+}
+.md th {
+  background: var(--panel);
+  font-weight: 600;
+}
+.thinking {
+  color: var(--tenue);
+}
+.msg--assistant[data-status="streaming"] .md > :last-child::after {
+  content: "▍";
+  margin-left: 2px;
+  color: var(--era);
+}
+.msg-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tenue);
+}
+.msg-note--error {
+  color: var(--mal);
+}
+
+/* Lo que Jarvis hizo con tareas y recuerdos durante la respuesta. */
+.acts {
+  max-width: 68ch;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  list-style: none;
+}
+.act {
+  max-width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--tenue);
+}
+.act:has(button) {
+  padding-right: 2px;
+}
+.act::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amanecer);
+}
+.act--failed::before {
+  background: var(--mal);
+}
+.act span {
+  flex: 1;
+  min-width: 0;
+  padding-block: 6px;
+  overflow-wrap: anywhere;
+}
+.msg-tools {
+  margin-left: -10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.msg-tools button,
+.act button,
+.code-copy {
+  flex: none;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--tenue);
+}
+.act button,
+.code-copy {
+  color: var(--texto);
+}
+.msg-tools button[aria-pressed="true"] {
+  color: var(--amanecer);
+}
+
+/* ---------- Caja de texto ---------- */
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-block: 8px 10px;
+}
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  max-height: 132px;
+  padding: 12px 14px;
+  border: 1px solid var(--linea);
+  border-radius: 18px;
+  background: var(--panel);
+  font: 400 16px/1.4 var(--f-body); /* 16 px: Safari no hace zoom al enfocar */
+  resize: none;
+}
+.composer textarea::placeholder,
+.add input::placeholder {
+  color: var(--tenue);
+}
+.composer textarea:focus-visible,
+.add input:focus-visible {
+  outline: none;
+  border-color: var(--amanecer);
+}
+.round {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--linea);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    transform 0.15s var(--ease-out),
+    opacity 0.15s;
+}
+.round:active {
+  transform: scale(0.94);
+}
+.round .icon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+}
+.round--send {
+  border-color: var(--era);
+  background: var(--era);
+  color: var(--sobre-era);
+}
+.round--send.is-empty {
+  opacity: 0.45;
+}
+.round--mic[aria-pressed="true"] {
+  border-color: var(--amanecer);
+  background: var(--amanecer);
+  color: var(--sobre-era);
+}
+
+/* ---------- Tareas y Memoria ---------- */
+
+/* Teléfono: hoja a pantalla completa. Al ir fija, suma ella los safe-area. */
+.side {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) var(--gutter-r)
+    calc(16px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+  background: var(--noche);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-panel="tasks"] .side,
+[data-panel="memory"] .side {
+  display: flex;
+}
+.side-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.side-tabs {
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+}
+.pane {
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-panel="tasks"] #paneTasks,
+[data-panel="memory"] #paneMemory {
+  display: flex;
+}
+.pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pane-head h2 {
+  margin: 0;
+  font: 600 13px/1 var(--f-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.pane-total {
+  font-size: 13px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+.add {
+  display: flex;
+  gap: 8px;
+}
+.add input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+}
+.add button {
+  flex: none;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  font: 600 14px/1 var(--f-display);
+  letter-spacing: 0.03em;
+}
+.rows {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-bottom: 1px solid var(--linea);
+}
+.row-main {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 13px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+label.row-main {
+  cursor: pointer;
+}
+.row-main input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  appearance: none;
+  border: 1.5px solid var(--tenue);
+  border-radius: 7px;
+  background: transparent center / 14px no-repeat;
+  cursor: pointer;
+}
+.row-main input:checked {
+  border-color: var(--era);
+  background-color: var(--era);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2.5 7.4l3 3 6-6.6' fill='none' stroke='%23080b1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.row--done .row-main span {
+  color: var(--tenue);
+  text-decoration: line-through;
+}
+.row-del {
+  flex: none;
+  width: 44px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--tenue);
+}
+.empty,
+.pane-hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--tenue);
+}
+.empty {
+  padding: 12px 0;
+}
+
+/* ---------- Aviso flotante ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  max-width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 4px 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  box-shadow: 0 10px 30px var(--sombra);
+  font-size: 14.5px;
+  line-height: 1.35;
+  transform: translateX(-50%);
+}
+.toast span {
+  padding-block: 10px;
+}
+.toast span:only-child {
+  padding-right: 12px;
+}
+.toast button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--era);
+  color: var(--sobre-era);
+  font: 600 13px/1 var(--f-display);
+  white-space: nowrap;
+}
+
+/* ---------- Pantallas anchas: los paneles quedan fijos ---------- */
+
+@media (min-width: 960px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .shell {
+    padding-right: 24px;
+  }
+  .side {
+    position: static;
+    z-index: auto;
+    display: flex;
+    gap: 26px;
+    padding: 20px var(--gutter-r) 20px 24px;
+    border-left: 1px solid var(--linea);
+    animation: none;
+  }
+  .side-head {
+    display: none;
+  }
+  .pane {
+    display: flex;
+  }
+  #openTasks,
+  #openMemory {
+    display: none;
+  }
+}
+</style>
+<div class="app" id="app" data-view="empty" data-core="idle" data-panel="">
+      <div class="shell" id="shell">
+        <header class="top">
+          <div class="brand">
+            <span class="core-slot core-slot--mini" id="miniCore"></span>
+            <div class="brand-text">
+              <h1 class="wordmark">Jarvis</h1>
+              <p class="status" id="status" role="status">conectando…</p>
+            </div>
+          </div>
+          <div class="top-actions">
+            <button
+              class="tool"
+              id="openTasks"
+              type="button"
+              aria-haspopup="dialog"
+              aria-label="Tareas"
+            >
+              <span class="tool-label tool-label--mid">Tareas</span>
+              <span class="tool-count" id="taskCount" hidden>0</span>
+            </button>
+            <button
+              class="tool"
+              id="openMemory"
+              type="button"
+              aria-haspopup="dialog"
+              aria-label="Memoria"
+            >
+              <span class="tool-label tool-label--wide">Memoria</span>
+            </button>
+            <button
+              class="tool tool--icon"
+              id="newChat"
+              type="button"
+              aria-label="Nueva conversación"
+              hidden
+            ></button>
+          </div>
+        </header>
+
+        <nav class="modes" id="modes" aria-label="Modo de Jarvis"></nav>
+
+        <div class="notice" id="notice" hidden>
+          <p id="noticeText"></p>
+          <button type="button" id="noticeButton">Entendido</button>
+        </div>
+
+        <main class="main" id="main">
+          <section class="hero" id="hero" aria-label="Inicio">
+            <span class="core-slot core-slot--hero" id="heroCore"></span>
+            <h2 class="greeting" id="greeting"></h2>
+            <p class="telemetry" id="telemetry"></p>
+            <div class="chips" id="chips"></div>
+          </section>
+          <ol class="log" id="log" aria-label="Conversación"></ol>
+        </main>
+
+        <form class="composer" id="composer" autocomplete="off">
+          <label class="sr-only" for="input">Mensaje para Jarvis</label>
+          <textarea
+            id="input"
+            rows="1"
+            maxlength="8000"
+            placeholder="Escribe o dicta…"
+          ></textarea>
+          <button
+            class="round round--mic"
+            id="mic"
+            type="button"
+            aria-label="Dictar"
+            aria-pressed="false"
+            hidden
+          ></button>
+          <button
+            class="round round--send"
+            id="send"
+            type="submit"
+            aria-label="Enviar mensaje"
+          ></button>
+        </form>
+      </div>
+
+      <aside class="side" id="side" aria-label="Tareas y memoria">
+        <div class="side-head">
+          <div class="side-tabs">
+            <button
+              type="button"
+              class="mode"
+              data-pane="tasks"
+              aria-pressed="true"
+            >
+              Tareas
+            </button>
+            <button
+              type="button"
+              class="mode"
+              data-pane="memory"
+              aria-pressed="false"
+            >
+              Memoria
+            </button>
+          </div>
+          <button
+            class="tool tool--icon"
+            id="closeSide"
+            type="button"
+            aria-label="Cerrar"
+          ></button>
+        </div>
+
+        <div class="sync" id="syncNote" hidden>
+          <p id="syncText"></p>
+          <button type="button" id="syncRetry" hidden>Reintentar</button>
+        </div>
+
+        <section
+          class="pane"
+          id="paneTasks"
+          data-pane-name="tasks"
+          aria-labelledby="tasksTitle"
+        >
+          <div class="pane-head">
+            <h2 id="tasksTitle">Tareas</h2>
+            <span class="pane-total" id="taskTotal"></span>
+          </div>
+          <form class="add" id="taskForm" autocomplete="off">
+            <label class="sr-only" for="taskInput">Nueva tarea</label>
+            <input
+              id="taskInput"
+              type="text"
+              maxlength="280"
+              placeholder="Nueva tarea"
+              enterkeyhint="done"
+            />
+            <button type="submit">Agregar</button>
+          </form>
+          <ul class="rows" id="taskList"></ul>
+        </section>
+
+        <section
+          class="pane"
+          id="paneMemory"
+          data-pane-name="memory"
+          aria-labelledby="memoryTitle"
+        >
+          <div class="pane-head">
+            <h2 id="memoryTitle">Memoria</h2>
+            <span class="pane-total" id="memoryTotal"></span>
+          </div>
+          <form class="add" id="memoryForm" autocomplete="off">
+            <label class="sr-only" for="memoryInput">Dato para recordar</label>
+            <input
+              id="memoryInput"
+              type="text"
+              maxlength="500"
+              placeholder="Dato para recordar"
+              enterkeyhint="done"
+            />
+            <button type="submit">Guardar</button>
+          </form>
+          <ul class="rows" id="memoryList"></ul>
+          <p class="pane-hint">No guardes contraseñas ni datos delicados.</p>
+        </section>
+      </aside>
+
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+<script type="module">
+// ---- public/prompt.js ----
+// Instrucciones de Jarvis y armado de lo que lee Claude.
+// `sample` no tiene system prompt ni memoria entre llamadas: en cada petición
+// la página manda estas instrucciones como primer turno de usuario, seguidas
+// del historial que ella misma guarda. El estado (tareas, recuerdos, fecha) va
+// dentro de las instrucciones para no gastar rondas de herramientas en leerlo.
+
+const USER_NAME = "Emilio";
+
+// `tier` elige el modelo: "quick" contesta casi al instante; "default" piensa
+// antes de escribir (la primera palabra puede tardar varios segundos).
+const MODES = {
+  general: {
+    name: "General",
+    tier: "quick",
+    placeholder: "Escribe o dicta…",
+    rules: [
+      "Ayuda con cualquier tema del día a día: dudas, ideas, decisiones, textos.",
+      "Si la pregunta pide una explicación larga de escuela o código de un juego, respóndela igual y menciona que el modo Escuela o Juegos piensa más a fondo.",
+    ],
+    suggestions: [
+      { label: "¿Qué puedes hacer?", text: "¿Qué puedes hacer por mí?" },
+      {
+        label: "Resume mis pendientes",
+        text: "Resume mis pendientes y dime por cuál empezar.",
+      },
+      {
+        label: "Ayúdame a decidir…",
+        text: "Ayúdame a decidir entre ",
+        fill: true,
+      },
+    ],
+  },
+  juegos: {
+    name: "Juegos",
+    tier: "default",
+    placeholder: "Pregunta sobre tu juego…",
+    rules: [
+      "Emilio hace videojuegos de navegador (HTML, CSS y JavaScript) con su estudio ERAGames y los publica en itch.io. Trabaja solo desde iPhone y iPad, sin computadora.",
+      "Actúa como programador senior y diseñador de juegos: entiende el objetivo antes de dar código y propón la solución más simple que funcione en Safari táctil.",
+      "Cuida rendimiento en móvil, controles táctiles y cómo se siente el juego, no solo que funcione.",
+      "Cuando des código, que sea completo y pegable, en bloques cortos, sin inventar APIs. Di qué debe probar en su iPhone.",
+      "Si una idea suya tiene un problema de diseño o técnico, dilo y ofrece una alternativa.",
+    ],
+    suggestions: [
+      {
+        label: "Checklist para itch.io",
+        text: "Dame un checklist corto para publicar un juego de navegador en itch.io.",
+      },
+      {
+        label: "Mi juego va lento en iPhone",
+        text: "Mi juego de navegador va lento en iPhone. ¿Qué reviso primero?",
+      },
+      {
+        label: "Quiero agregar…",
+        text: "En mi juego quiero agregar ",
+        fill: true,
+      },
+    ],
+  },
+  escuela: {
+    name: "Escuela",
+    tier: "default",
+    placeholder: "¿Qué tema o ejercicio vemos?",
+    rules: [
+      "Actúa como profesor particular. Explica paso a paso, sin saltarte operaciones, con palabras sencillas y un ejemplo.",
+      "Comprueba los resultados numéricos antes de darlos.",
+      "Si falta el enunciado completo o el nivel, pregunta una sola cosa antes de resolver.",
+      "No entregues solo la respuesta: enseña el método. Cierra con una pregunta corta o un ejercicio parecido para que Emilio compruebe que entendió.",
+    ],
+    suggestions: [
+      {
+        label: "Explícame un tema…",
+        text: "Explícame paso a paso ",
+        fill: true,
+      },
+      {
+        label: "Hazme un examen de práctica…",
+        text: "Hazme 5 preguntas de práctica sobre ",
+        fill: true,
+      },
+      {
+        label: "Revisa mi procedimiento…",
+        text: "Revisa mi procedimiento y dime dónde me equivoqué: ",
+        fill: true,
+      },
+    ],
+  },
+  organizar: {
+    name: "Organizar",
+    tier: "quick",
+    placeholder: "¿Qué tienes que hacer?",
+    rules: [
+      "Ayuda a Emilio a ordenar su día y su semana usando su lista de tareas.",
+      "Convierte lo que diga en tareas concretas: empiezan con verbo y caben en una línea.",
+      "Al priorizar, señala como máximo 3 cosas importantes para hoy y di qué puede esperar.",
+      "Si propones un plan con varias tareas nuevas, pregunta si las anotas antes de crearlas; si te pide anotar algo directo, anótalo sin preguntar.",
+    ],
+    suggestions: [
+      {
+        label: "Planea mi día",
+        text: "Ayúdame a planear mi día con lo que tengo pendiente.",
+      },
+      { label: "¿Qué hago primero?", text: "¿Qué hago primero?" },
+      { label: "Anota una tarea…", text: "Anota: ", fill: true },
+    ],
+  },
+};
+
+const MODE_IDS = Object.keys(MODES);
+
+// Con herramientas (`sample` tools) o, si la vista no las admite, con
+// marcadores de texto que la página interpreta al terminar la respuesta.
+const HOW_TO_ACT = {
+  tools: [
+    "Tienes herramientas para crear, completar y borrar tareas, y para guardar u olvidar recuerdos.",
+    "Úsalas solo cuando Emilio lo pida o cuando esté claro que quiere que algo quede anotado. No anotes cosas por tu cuenta.",
+    "Después de usarlas, confirma en una frase lo que hiciste.",
+  ],
+  markers: [
+    "Puedes actuar sobre las tareas y los recuerdos escribiendo una orden en una línea aparte, con este formato exacto. La página la ejecuta y Emilio no la ve:",
+    "[[tarea: texto de la tarea]]",
+    "[[hecha: número de la tarea]]",
+    "[[borrar: número de la tarea]]",
+    "[[recuerda: dato a recordar]]",
+    "[[olvida: número del recuerdo]]",
+    "Escribe una orden solo cuando Emilio lo pida o cuando esté claro que quiere que algo quede anotado, y confirma en una frase lo que hiciste. No expliques el formato ni lo uses como ejemplo.",
+  ],
+};
+
+const DATE_FORMAT = new Intl.DateTimeFormat("es-MX", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function numbered(items, describe, empty) {
+  if (items.length === 0) return empty;
+  return items.map((item, i) => `${i + 1}. ${describe(item)}`).join("\n");
+}
+
+// `tasks` y `memories` van numerados: Claude se refiere a ellos por número.
+function buildInstructions({
+  mode,
+  tasks,
+  memories,
+  now,
+  actMode,
+  persistent,
+}) {
+  const current = MODES[mode] ?? MODES.general;
+  const lines = [
+    `Eres Jarvis, el asistente personal de ${USER_NAME}. Estas son tus instrucciones permanentes; ${USER_NAME} no las ve.`,
+    "",
+    "Cómo hablas",
+    `- Siempre en español de México, con tono cercano y directo, como un compañero que sabe mucho. Llámalo ${USER_NAME} de vez en cuando, no en cada frase.`,
+    "- Ve al grano: breve en preguntas simples, completo cuando el tema lo pide. Sin relleno ni cortesías vacías.",
+    "- No le des la razón por compromiso: si una idea tiene un problema, dilo con respeto y propón algo mejor.",
+    "- Si no sabes algo o no puedes comprobarlo, dilo. No inventes datos, funciones ni enlaces. No puedes navegar por internet ni ver archivos.",
+    "- Formato: Markdown sencillo (párrafos, listas, negritas, bloques de código). Evita tablas anchas: te lee en un iPhone. No uses LaTeX; escribe las fórmulas en texto plano, por ejemplo x^2, raíz(9) o 3/4.",
+    "",
+    `Modo actual: ${current.name}`,
+    ...current.rules.map((rule) => `- ${rule}`),
+    "",
+    `Fecha y hora de ${USER_NAME}: ${DATE_FORMAT.format(now)}.`,
+    "",
+    `Tareas de ${USER_NAME}:`,
+    numbered(
+      tasks,
+      (task) => `[${task.done ? "hecha" : "pendiente"}] ${task.text}`,
+      "Sin tareas.",
+    ),
+    "",
+    `Lo que ${USER_NAME} te pidió recordar:`,
+    numbered(memories, (memory) => memory.text, "Nada todavía."),
+    "",
+    "Cómo actuar",
+    ...HOW_TO_ACT[actMode].map((line) =>
+      line.startsWith("[[") ? line : `- ${line}`,
+    ),
+    "- Si pide borrar algo, borra solo lo que señaló.",
+    "- No guardes contraseñas ni datos delicados como recuerdo; dile por qué.",
+  ];
+  if (!persistent)
+    lines.push(
+      `- En esta vista no hay memoria guardada: lo que anotes se pierde al cerrar la página. Avísale a ${USER_NAME} una sola vez si te pide anotar o recordar algo.`,
+    );
+  return lines.join("\n");
+}
+
+const MAX_TURNS = 30;
+const MAX_HISTORY_CHARS = 60000;
+
+// Deja las instrucciones al frente y recorta el historial por el lado viejo.
+// `turns` termina en el mensaje nuevo del usuario.
+function buildInput(instructions, turns) {
+  const recent = [];
+  let chars = 0;
+  for (let i = turns.length - 1; i >= 0 && recent.length < MAX_TURNS; i--) {
+    const turn = turns[i];
+    if (!turn.content) continue;
+    chars += turn.content.length;
+    if (chars > MAX_HISTORY_CHARS && recent.length > 0) break;
+    recent.unshift({ role: turn.role, content: turn.content });
+  }
+  return [{ role: "user", content: instructions }, ...recent];
+}
+
+// ---- public/markdown.js ----
+// Markdown mínimo y seguro para las respuestas de Jarvis.
+// Todo el texto del modelo se escapa y solo se generan etiquetas de una lista
+// fija, así que nada de lo que escriba puede colarse como HTML ejecutable.
+// Tolera texto a medias (un bloque de código sin cerrar) porque se llama en
+// cada trozo del streaming.
+
+const ESCAPES = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (ch) => ESCAPES[ch]);
+}
+
+// Marcas privadas para apartar código y enlaces mientras se aplican negritas.
+const HOLD_OPEN = "\uE000";
+const HOLD_CLOSE = "\uE001";
+const HOLD = /\uE000(\d+)\uE001/g;
+const RESERVED = /[\uE000\uE001]/g;
+
+const INLINE_TOKEN =
+  /`([^`\n]+)`|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>"'`]+)/g;
+
+function anchor(url, labelHtml) {
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${labelHtml}</a>`;
+}
+
+// Recibe texto ya escapado.
+function emphasis(text) {
+  return text
+    .replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^\w*])\*(?=\S)([^*\n]*?\S)\*(?![\w*])/g, "$1<em>$2</em>")
+    .replace(
+      /(^|[^\w_])__(?=\S)([\s\S]*?\S)__(?![\w_])/g,
+      "$1<strong>$2</strong>",
+    )
+    .replace(/(^|[^\w_])_(?=\S)([^_\n]*?\S)_(?![\w_])/g, "$1<em>$2</em>")
+    .replace(/~~(?=\S)([\s\S]*?\S)~~/g, "<del>$1</del>");
+}
+
+function renderInline(raw) {
+  const held = [];
+  const hold = (html) => `${HOLD_OPEN}${held.push(html) - 1}${HOLD_CLOSE}`;
+  const marked = raw.replace(INLINE_TOKEN, (match, ...groups) => {
+    const [code, label, href, bare] = groups;
+    if (code !== undefined) return hold(`<code>${escapeHtml(code)}</code>`);
+    if (href !== undefined)
+      return hold(anchor(href, emphasis(escapeHtml(label))));
+    const url = bare.replace(/[.,;:!?)\]]+$/, "");
+    return hold(anchor(url, escapeHtml(url))) + bare.slice(url.length);
+  });
+  return emphasis(escapeHtml(marked)).replace(
+    HOLD,
+    (_, index) => held[Number(index)],
+  );
+}
+
+const FENCE_OPEN = /^\s*(`{3,}|~{3,})\s*([^\s`]*)[^`]*$/;
+const HEADING = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/;
+const RULE = /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/;
+const QUOTE = /^\s{0,3}>\s?/;
+const LIST_ITEM = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;
+const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+
+function isTableStart(lines, i) {
+  return (
+    lines[i].includes("|") &&
+    i + 1 < lines.length &&
+    lines[i + 1].includes("-") &&
+    TABLE_DIVIDER.test(lines[i + 1])
+  );
+}
+
+function startsBlock(lines, i) {
+  const line = lines[i];
+  return (
+    FENCE_OPEN.test(line) ||
+    HEADING.test(line) ||
+    RULE.test(line) ||
+    QUOTE.test(line) ||
+    LIST_ITEM.test(line) ||
+    isTableStart(lines, i)
+  );
+}
+
+function codeBlock(lang, code) {
+  const label = lang ? escapeHtml(lang) : "código";
+  return (
+    `<div class="code"><div class="code-head"><span>${label}</span>` +
+    `<button type="button" class="code-copy" data-copy>Copiar</button></div>` +
+    `<pre><code>${escapeHtml(code)}</code></pre></div>`
+  );
+}
+
+// Devuelve [html, índiceSiguiente]. Sin cierre, el bloque llega hasta el final.
+function readFence(lines, start) {
+  const [, marker, lang] = lines[start].match(FENCE_OPEN);
+  const close = new RegExp(`^\\s*${marker[0]}{${marker.length},}\\s*$`);
+  const indent = lines[start].match(/^\s*/)[0].length;
+  const code = [];
+  let i = start + 1;
+  while (i < lines.length && !close.test(lines[i])) {
+    const line = lines[i];
+    const lead = line.match(/^\s*/)[0].length;
+    code.push(line.slice(Math.min(indent, lead)));
+    i++;
+  }
+  return [codeBlock(lang, code.join("\n")), Math.min(i + 1, lines.length)];
+}
+
+function splitRow(line) {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim().replace(/\\\|/g, "|"));
+}
+
+function readTable(lines, start) {
+  const head = splitRow(lines[start]);
+  const rows = [];
+  let i = start + 2;
+  while (i < lines.length && lines[i].trim() && lines[i].includes("|")) {
+    rows.push(splitRow(lines[i]));
+    i++;
+  }
+  const cells = (row, tag) =>
+    `<tr>${row.map((cell) => `<${tag}>${renderInline(cell)}</${tag}>`).join("")}</tr>`;
+  const html =
+    `<div class="table-wrap"><table><thead>${cells(head, "th")}</thead>` +
+    `<tbody>${rows.map((row) => cells(row, "td")).join("")}</tbody></table></div>`;
+  return [html, i];
+}
+
+function readQuote(lines, start) {
+  const inner = [];
+  let i = start;
+  while (i < lines.length && QUOTE.test(lines[i])) {
+    inner.push(lines[i].replace(QUOTE, ""));
+    i++;
+  }
+  return [`<blockquote>${renderBlocks(inner)}</blockquote>`, i];
+}
+
+function indentOf(line) {
+  return line.match(/^\s*/)[0].length;
+}
+
+// Junta las líneas de un elemento de lista: su primera línea y lo que venga
+// más sangrado (párrafos, sublistas, bloques de código).
+function readListItem(lines, start, baseIndent) {
+  const [whole, , , content] = lines[start].match(LIST_ITEM);
+  const contentIndent = whole.length - content.length;
+  const body = [content];
+  let i = start + 1;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) {
+      const next = lines.slice(i + 1).find((later) => later.trim());
+      if (next === undefined || indentOf(next) < baseIndent + 2) break;
+      body.push("");
+      i++;
+      continue;
+    }
+    const indent = indentOf(line);
+    const lazy =
+      indent <= baseIndent + 1 && body.at(-1) !== "" && !startsBlock(lines, i);
+    if (indent < baseIndent + 2 && !lazy) break;
+    body.push(line.slice(Math.min(indent, contentIndent)));
+    i++;
+  }
+  return [body, i];
+}
+
+function readList(lines, start) {
+  const [, lead, marker] = lines[start].match(LIST_ITEM);
+  const baseIndent = lead.length;
+  const ordered = /\d/.test(marker);
+  const items = [];
+  let i = start;
+  while (i < lines.length) {
+    const item = lines[i].match(LIST_ITEM);
+    if (!item || Math.abs(item[1].length - baseIndent) > 1) break;
+    if (/\d/.test(item[2]) !== ordered) break;
+    const [body, next] = readListItem(lines, i, baseIndent);
+    // Un elemento de un solo párrafo va sin <p> para que la lista quede compacta.
+    items.push(renderBlocks(body).replace(/^<p>([\s\S]*?)<\/p>/, "$1"));
+    i = next;
+    while (i < lines.length && !lines[i].trim()) i++;
+  }
+  const first = Number.parseInt(marker, 10);
+  const open = ordered
+    ? first > 1
+      ? `<ol start="${first}">`
+      : "<ol>"
+    : "<ul>";
+  const html = `${open}${items.map((item) => `<li>${item}</li>`).join("")}</${ordered ? "ol" : "ul"}>`;
+  return [html, i];
+}
+
+function readParagraph(lines, start) {
+  const text = [lines[start].trim()];
+  let i = start + 1;
+  while (i < lines.length && lines[i].trim() && !startsBlock(lines, i)) {
+    text.push(lines[i].trim());
+    i++;
+  }
+  return [`<p>${text.map(renderInline).join("<br>")}</p>`, i];
+}
+
+function readBlock(lines, i) {
+  const line = lines[i];
+  if (FENCE_OPEN.test(line)) return readFence(lines, i);
+  const heading = line.match(HEADING);
+  if (heading) {
+    const tag = heading[1].length <= 2 ? "h3" : "h4";
+    return [`<${tag}>${renderInline(heading[2])}</${tag}>`, i + 1];
+  }
+  if (RULE.test(line)) return ["<hr>", i + 1];
+  if (QUOTE.test(line)) return readQuote(lines, i);
+  if (isTableStart(lines, i)) return readTable(lines, i);
+  if (LIST_ITEM.test(line)) return readList(lines, i);
+  return readParagraph(lines, i);
+}
+
+function renderBlocks(lines) {
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!lines[i].trim()) {
+      i++;
+      continue;
+    }
+    const [html, next] = readBlock(lines, i);
+    out.push(html);
+    i = Math.max(next, i + 1);
+  }
+  return out.join("");
+}
+
+function renderMarkdown(source) {
+  const lines = String(source ?? "")
+    .replace(RESERVED, "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n");
+  return renderBlocks(lines);
+}
+
+// ---- public/store.js ----
+// Tareas y memoria de Jarvis.
+// - Con la capability `db`: cada tarea y cada recuerdo es un documento bajo
+//   data/users/<id>/jarvis/, el subárbol privado de quien abre la página. Se
+//   sincroniza en vivo entre dispositivos con onSnapshot.
+// - Sin `db`: todo vive en la memoria de la pestaña y se pierde al cerrar.
+// Las dos variantes exponen la misma interfaz.
+
+const STORE_LIMITS = {
+  taskChars: 280,
+  memoryChars: 500,
+  tasks: 200,
+  memories: 100,
+};
+
+// Error con un mensaje que se le puede mostrar a Emilio tal cual.
+class StoreError extends Error {}
+
+function cleanText(value, max) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+// Pendientes primero (las más antiguas arriba); hechas al final (la última
+// completada arriba).
+function sortTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return a.done
+      ? (b.doneAt ?? 0) - (a.doneAt ?? 0)
+      : a.createdAt - b.createdAt;
+  });
+}
+
+function sortMemories(memories) {
+  return [...memories].sort((a, b) => a.createdAt - b.createdAt);
+}
+
+function newTask(id, text) {
+  return { id, text, done: false, createdAt: Date.now(), doneAt: null };
+}
+
+function newMemory(id, text) {
+  return { id, text, createdAt: Date.now() };
+}
+
+function checkRoom(list, limit, what) {
+  if (list.length >= limit)
+    throw new StoreError(
+      `Ya hay ${limit} ${what}. Borra algunos para agregar más.`,
+    );
+}
+
+function requireText(value, max, what) {
+  const text = cleanText(value, max);
+  if (!text) throw new StoreError(`Falta el texto ${what}.`);
+  return text;
+}
+
+let localCounter = 0;
+function localId() {
+  localCounter += 1;
+  return `local-${Date.now().toString(36)}-${localCounter}`;
+}
+
+function createSessionStore(onChange = () => {}) {
+  let tasks = [];
+  let memories = [];
+  const changed = () => onChange();
+  return {
+    persistent: false,
+    get sync() {
+      return "ok";
+    },
+    get tasks() {
+      return sortTasks(tasks);
+    },
+    get memories() {
+      return sortMemories(memories);
+    },
+    async addTask(value) {
+      const text = requireText(value, STORE_LIMITS.taskChars, "de la tarea");
+      checkRoom(tasks, STORE_LIMITS.tasks, "tareas");
+      const task = newTask(localId(), text);
+      tasks.push(task);
+      changed();
+      return task;
+    },
+    async setTaskDone(id, done) {
+      const task = tasks.find((item) => item.id === id);
+      if (!task) throw new StoreError("Esa tarea ya no existe.");
+      task.done = Boolean(done);
+      task.doneAt = task.done ? Date.now() : null;
+      changed();
+      return task;
+    },
+    async removeTask(id) {
+      const task = tasks.find((item) => item.id === id);
+      if (!task) throw new StoreError("Esa tarea ya no existe.");
+      tasks = tasks.filter((item) => item.id !== id);
+      changed();
+      return task;
+    },
+    async restoreTask(task) {
+      if (!tasks.some((item) => item.id === task.id)) tasks.push({ ...task });
+      changed();
+    },
+    async addMemory(value) {
+      const text = requireText(value, STORE_LIMITS.memoryChars, "del recuerdo");
+      checkRoom(memories, STORE_LIMITS.memories, "recuerdos");
+      const memory = newMemory(localId(), text);
+      memories.push(memory);
+      changed();
+      return memory;
+    },
+    async removeMemory(id) {
+      const memory = memories.find((item) => item.id === id);
+      if (!memory) throw new StoreError("Ese recuerdo ya no existe.");
+      memories = memories.filter((item) => item.id !== id);
+      changed();
+      return memory;
+    },
+    async restoreMemory(memory) {
+      if (!memories.some((item) => item.id === memory.id))
+        memories.push({ ...memory });
+      changed();
+    },
+    retry() {},
+  };
+}
+
+const DB_MESSAGES = {
+  quota_exceeded: "La memoria está llena. Borra algo y vuelve a intentarlo.",
+  invalid_argument: "Esta vista no tiene permiso para guardar.",
+  resource_exhausted: "Demasiados cambios seguidos. Espera un momento.",
+  unavailable: "No pude conectar con la memoria. Vuelve a intentarlo.",
+};
+const DB_GONE = "Se perdió el acceso a la memoria en esta vista.";
+
+function toStoreError(error) {
+  if (error instanceof StoreError) return error;
+  return new StoreError(DB_MESSAGES[error?.code] ?? DB_GONE);
+}
+
+// Lo que llega de la base se valida campo por campo antes de mostrarlo.
+function readTask(doc) {
+  const data = doc.data() ?? {};
+  return {
+    id: doc.id,
+    text: cleanText(data.text, STORE_LIMITS.taskChars),
+    done: data.done === true,
+    createdAt: Number(data.createdAt) || 0,
+    doneAt: Number(data.doneAt) || null,
+  };
+}
+
+function readMemory(doc) {
+  const data = doc.data() ?? {};
+  return {
+    id: doc.id,
+    text: cleanText(data.text, STORE_LIMITS.memoryChars),
+    createdAt: Number(data.createdAt) || 0,
+  };
+}
+
+const LOAD_LIMIT_MS = 10000;
+
+// Una escritura a la vez por documento (regla de la capability `db`). Un
+// fallo `unavailable` es pasajero: se reintenta una sola vez tras una pausa.
+function createWriter() {
+  const chains = new Map();
+  function inOrder(id, operation) {
+    const previous = chains.get(id) ?? Promise.resolve();
+    const next = previous.catch(() => {}).then(operation);
+    chains.set(id, next);
+    next
+      .catch(() => {})
+      .finally(() => {
+        if (chains.get(id) === next) chains.delete(id);
+      });
+    return next;
+  }
+  return async function write(id, operation) {
+    try {
+      return await inOrder(id, async () => {
+        try {
+          return await operation();
+        } catch (error) {
+          if (error?.code !== "unavailable") throw error;
+          await new Promise((done) =>
+            setTimeout(done, 400 + Math.random() * 600),
+          );
+          return operation();
+        }
+      });
+    } catch (error) {
+      throw toStoreError(error);
+    }
+  };
+}
+
+// Se suscribe una sola vez a cada colección y mantiene `state` al día.
+// `sync` dice cómo va la carga: "loading", "ok", "late" (pasaron 10 s sin
+// respuesta) o "error" (el listener murió; `retry` vuelve a suscribirse).
+function watchCollections(collections, state, onChange) {
+  const keys = Object.keys(collections);
+  const confirmed = {};
+  let failed = false;
+  let late = false;
+  let timer = null;
+  let unsubscribe = [];
+  const allConfirmed = () => keys.every((key) => confirmed[key]);
+
+  function subscribe() {
+    for (const key of keys) confirmed[key] = false;
+    failed = false;
+    late = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (allConfirmed()) return;
+      late = true;
+      onChange();
+    }, LOAD_LIMIT_MS);
+    unsubscribe = keys.map((key) =>
+      collections[key].ref.onSnapshot(
+        (snapshot) => {
+          state[key] = snapshot.docs
+            .filter((doc) => doc.exists)
+            .map(collections[key].read)
+            .filter((item) => item.text);
+          if (!snapshot.metadata?.fromCache) confirmed[key] = true;
+          if (allConfirmed()) clearTimeout(timer);
+          onChange();
+        },
+        () => {
+          failed = true;
+          clearTimeout(timer);
+          onChange();
+        },
+      ),
+    );
+  }
+
+  subscribe();
+  return {
+    get sync() {
+      if (failed) return "error";
+      if (allConfirmed()) return "ok";
+      return late ? "late" : "loading";
+    },
+    retry() {
+      for (const stop of unsubscribe) stop?.();
+      subscribe();
+      onChange();
+    },
+  };
+}
+
+function createCloudStore(db, userId, onChange = () => {}) {
+  const root = db.collection(`data/users/${userId}`).doc("jarvis");
+  const collections = {
+    tasks: { ref: root.collection("tareas"), read: readTask },
+    memories: { ref: root.collection("recuerdos"), read: readMemory },
+  };
+  const state = { tasks: [], memories: [] };
+  const write = createWriter();
+  const watch = watchCollections(collections, state, onChange);
+  const taskDoc = (id) => collections.tasks.ref.doc(id);
+  const memoryDoc = (id) => collections.memories.ref.doc(id);
+
+  function find(key, id, missing) {
+    const item = state[key].find((entry) => entry.id === id);
+    if (!item) throw new StoreError(missing);
+    return item;
+  }
+
+  return {
+    persistent: true,
+    get sync() {
+      return watch.sync;
+    },
+    get tasks() {
+      return sortTasks(state.tasks);
+    },
+    get memories() {
+      return sortMemories(state.memories);
+    },
+    async addTask(value) {
+      const text = requireText(value, STORE_LIMITS.taskChars, "de la tarea");
+      checkRoom(state.tasks, STORE_LIMITS.tasks, "tareas");
+      const ref = collections.tasks.ref.doc();
+      const task = newTask(ref.id, text);
+      const { id, ...data } = task;
+      await write(id, () => ref.set(data));
+      return task;
+    },
+    async setTaskDone(id, done) {
+      const task = find("tasks", id, "Esa tarea ya no existe.");
+      const patch = { done: Boolean(done), doneAt: done ? Date.now() : null };
+      await write(id, () => taskDoc(id).update(patch));
+      return { ...task, ...patch };
+    },
+    async removeTask(id) {
+      const task = find("tasks", id, "Esa tarea ya no existe.");
+      await write(id, () => taskDoc(id).delete());
+      return task;
+    },
+    async restoreTask(task) {
+      const { id, ...data } = task;
+      await write(id, () => taskDoc(id).set(data));
+    },
+    async addMemory(value) {
+      const text = requireText(value, STORE_LIMITS.memoryChars, "del recuerdo");
+      checkRoom(state.memories, STORE_LIMITS.memories, "recuerdos");
+      const ref = collections.memories.ref.doc();
+      const memory = newMemory(ref.id, text);
+      const { id, ...data } = memory;
+      await write(id, () => ref.set(data));
+      return memory;
+    },
+    async removeMemory(id) {
+      const memory = find("memories", id, "Ese recuerdo ya no existe.");
+      await write(id, () => memoryDoc(id).delete());
+      return memory;
+    },
+    async restoreMemory(memory) {
+      const { id, ...data } = memory;
+      await write(id, () => memoryDoc(id).set(data));
+    },
+    retry: () => watch.retry(),
+  };
+}
+
+// Elige la variante según lo que esta vista permita. Nunca lanza.
+async function createStore(onChange) {
+  const claude = globalThis.window?.claude;
+  if (!claude?.use) return createSessionStore(onChange);
+  try {
+    const [db, user] = await Promise.all([
+      claude.use("db"),
+      claude.use("user"),
+    ]);
+    const userId = db && user ? await user.id() : null;
+    if (!userId) return createSessionStore(onChange);
+    return createCloudStore(db, userId, onChange);
+  } catch {
+    return createSessionStore(onChange);
+  }
+}
+
+// ---- public/demo.js ----
+// Modo demo: respuestas fijas cuando esta vista no puede usar Claude.
+// Entiende dos órdenes sencillas para que las tareas y la memoria se puedan
+// probar sin IA.
+
+const HOW_TO_UNLOCK =
+  "Para usarme completo, ábreme desde Claude y acepta el permiso.";
+
+const DEMO_REPLIES = {
+  general: [
+    `Estoy en **modo demo**, ${USER_NAME}: aquí no hay IA conectada, así que solo tengo respuestas fijas.`,
+    "Lo que sí puedes probar ahora:",
+    "- Escribe `anota comprar cartulina` para crear una tarea.",
+    "- Escribe `recuerda que mi examen es el viernes` para guardar un recuerdo.",
+    HOW_TO_UNLOCK,
+  ],
+  juegos: [
+    `En modo Juegos te ayudo con tus proyectos de ERAGames: mecánicas, controles táctiles, rendimiento en iPhone y la publicación en itch.io.`,
+    `Ahora estoy en **modo demo** y no puedo revisar tu caso. ${HOW_TO_UNLOCK}`,
+  ],
+  escuela: [
+    "En modo Escuela te explico paso a paso, compruebo los resultados y te dejo un ejercicio para confirmar que entendiste.",
+    `Ahora estoy en **modo demo** y no puedo resolver tu duda. ${HOW_TO_UNLOCK}`,
+  ],
+  organizar: [
+    "En modo Organizar convierto lo que me digas en tareas claras y te ayudo a decidir qué va primero.",
+    "En **modo demo** solo entiendo órdenes directas: prueba `anota estudiar para el examen`.",
+    HOW_TO_UNLOCK,
+  ],
+};
+
+const TASK_ORDER =
+  /^(?:anota|apunta|agrega|añade|crea)(?:\s+(?:la|una|esta))?(?:\s+tarea)?\s*:?\s+(.+)$/i;
+const MEMORY_ORDER =
+  /^(?:recuerda|acu[eé]rdate\s+de|guarda)(?:\s+que)?\s*:?\s+(.+)$/i;
+
+// `runner` ejecuta las acciones (ver backend.js). Devuelve el texto a mostrar.
+async function demoReply({ mode, text, runner }) {
+  const clean = text.trim().replace(/[.!]+$/, "");
+  const task = clean.match(TASK_ORDER);
+  if (task) {
+    await runner.createTask(task[1]);
+    return `Anotado, ${USER_NAME}. Lo ves en Tareas.`;
+  }
+  const memory = clean.match(MEMORY_ORDER);
+  if (memory) {
+    await runner.remember(memory[1]);
+    return `Listo, lo guardé en Memoria.`;
+  }
+  return (DEMO_REPLIES[mode] ?? DEMO_REPLIES.general)
+    .join("\n\n")
+    .replace(/\n\n- /g, "\n- ");
+}
+
+// ---- public/backend.js ----
+// De dónde sale la IA de Jarvis. Dos modos con la misma interfaz:
+// - "cloud": la página está publicada en claude.ai y usa la cuenta de Claude
+//   de quien la abre (capability `sample`), sin API key.
+// - "demo": esta vista no puede usar Claude; respuestas fijas.
+//
+// Jarvis actúa sobre tareas y recuerdos de dos maneras:
+// - "tools": herramientas de `sample` (si `limits().tools` lo permite).
+// - "markers": órdenes de texto tipo [[tarea: ...]] que la página interpreta.
+
+
+const ASK_ERRORS = {
+  not_granted:
+    "No diste permiso para usar Claude. Recarga la página y acéptalo para hablar conmigo.",
+  sampling_disabled: "Claude no está disponible en esta cuenta.",
+  rate_limited:
+    "Llegaste al límite de uso por ahora. Espera un poco y vuelve a intentarlo.",
+  session_expired: "Tu sesión caducó. Vuelve a iniciar sesión en Claude.",
+  prompt_too_large: "La conversación ya es demasiado larga. Empieza una nueva.",
+  refused: "No puedo responder a eso. Prueba a pedirlo de otra forma.",
+  empty_completion: "No llegó respuesta. Pídelo de otra forma.",
+  tools_unavailable:
+    "Esta vista no deja usar herramientas. Vuelve a enviar tu mensaje.",
+};
+const ASK_FALLBACK = "Se cortó la conexión con Claude. Vuelve a intentarlo.";
+
+// Errores que significan "esta vista no puede usar Claude": se pasa a demo.
+const ASK_GONE = new Set([
+  "not_granted",
+  "sampling_disabled",
+  "not_declared",
+  "capability_disabled",
+  "capability_removed",
+]);
+
+// Error con un mensaje para Emilio. `partial` es el texto que puede quedarse
+// en pantalla; `cancelled` indica que él mismo detuvo la respuesta.
+class AskError extends Error {
+  constructor(message, { code = "", partial, cancelled = false } = {}) {
+    super(message);
+    this.code = code;
+    this.partial = partial;
+    this.cancelled = cancelled;
+  }
+}
+
+// Ejecuta las acciones de Jarvis, vengan de una herramienta, de un marcador o
+// del modo demo. Claude nombra tareas y recuerdos por el número con el que
+// aparecen en sus instrucciones; `listed` conserva esa numeración.
+function createRunner({ actions, tasks, memories, onAction }) {
+  const listed = {
+    tasks: tasks.map((task) => ({ ...task })),
+    memories: memories.map((memory) => ({ ...memory })),
+  };
+  let count = 0;
+  const report = (action) => {
+    count += 1;
+    onAction?.(action);
+  };
+  const pick = (list, number, what) => {
+    const item = list[Number.parseInt(number, 10) - 1];
+    if (!item)
+      throw new Error(
+        `No existe ${what} número ${number}. Hay ${list.length}.`,
+      );
+    if (item.removed) throw new Error(`Ya se borró ${what} número ${number}.`);
+    return item;
+  };
+  return {
+    get count() {
+      return count;
+    },
+    async createTask(text) {
+      const task = await actions.addTask(text);
+      listed.tasks.push({ ...task });
+      report({ label: `Tarea creada: ${task.text}` });
+      return `Tarea ${listed.tasks.length} creada: ${task.text}`;
+    },
+    async completeTask(number, done = true) {
+      const task = pick(listed.tasks, number, "la tarea");
+      await actions.setTaskDone(task.id, done);
+      task.done = done;
+      report({
+        label: `${done ? "Tarea hecha" : "Tarea pendiente otra vez"}: ${task.text}`,
+      });
+      return `Tarea ${number} marcada como ${done ? "hecha" : "pendiente"}.`;
+    },
+    async deleteTask(number) {
+      const task = pick(listed.tasks, number, "la tarea");
+      const removed = await actions.removeTask(task.id);
+      task.removed = true;
+      report({
+        label: `Tarea borrada: ${task.text}`,
+        undo: { kind: "task", item: removed },
+      });
+      return `Tarea ${number} borrada.`;
+    },
+    async remember(text) {
+      const memory = await actions.addMemory(text);
+      listed.memories.push({ ...memory });
+      report({ label: `Recuerdo guardado: ${memory.text}` });
+      return `Guardado como recuerdo ${listed.memories.length}.`;
+    },
+    async forget(number) {
+      const memory = pick(listed.memories, number, "el recuerdo");
+      const removed = await actions.removeMemory(memory.id);
+      memory.removed = true;
+      report({
+        label: `Recuerdo borrado: ${memory.text}`,
+        undo: { kind: "memory", item: removed },
+      });
+      return `Recuerdo ${number} borrado.`;
+    },
+  };
+}
+
+const NUMBER_ARG = (what) => ({
+  type: "object",
+  properties: {
+    numero: {
+      type: "integer",
+      description: `Número ${what} en la lista de las instrucciones.`,
+    },
+  },
+  required: ["numero"],
+});
+
+// Herramientas que Claude puede llamar. Lo que devuelven (o el error que
+// lanzan) vuelve a Claude como resultado.
+function makeTools(runner) {
+  const guarded = (run) => async (input, context) => {
+    if (context?.signal?.aborted) throw new Error("Cancelado.");
+    return run(input ?? {});
+  };
+  return [
+    {
+      name: "crear_tarea",
+      description:
+        "Agrega una tarea a la lista de Emilio y devuelve el número que le tocó. Úsala cuando pida anotar algo por hacer.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          texto: {
+            type: "string",
+            description: "La tarea en una línea, empezando con verbo.",
+          },
+        },
+        required: ["texto"],
+      },
+      execute: guarded(({ texto }) => runner.createTask(String(texto ?? ""))),
+    },
+    {
+      name: "completar_tarea",
+      description:
+        "Marca una tarea como hecha, o la regresa a pendiente con hecha=false. Devuelve una confirmación.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          numero: {
+            type: "integer",
+            description: "Número de la tarea en la lista.",
+          },
+          hecha: {
+            type: "boolean",
+            description: "true (por defecto) o false para pendiente.",
+          },
+        },
+        required: ["numero"],
+      },
+      execute: guarded(({ numero, hecha }) =>
+        runner.completeTask(numero, hecha !== false),
+      ),
+    },
+    {
+      name: "borrar_tarea",
+      description:
+        "Borra una tarea de la lista. Úsala solo si Emilio pidió borrarla.",
+      inputSchema: NUMBER_ARG("de la tarea"),
+      execute: guarded(({ numero }) => runner.deleteTask(numero)),
+    },
+    {
+      name: "recordar",
+      description:
+        "Guarda un dato que Emilio pidió recordar entre conversaciones y devuelve su número.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          dato: {
+            type: "string",
+            description: "El dato, en una frase que se entienda sola.",
+          },
+        },
+        required: ["dato"],
+      },
+      execute: guarded(({ dato }) => runner.remember(String(dato ?? ""))),
+    },
+    {
+      name: "olvidar",
+      description:
+        "Borra un recuerdo guardado. Úsala solo si Emilio pidió olvidarlo.",
+      inputSchema: NUMBER_ARG("del recuerdo"),
+      execute: guarded(({ numero }) => runner.forget(numero)),
+    },
+  ];
+}
+
+const MARKER =
+  /\[\[\s*(tarea|hecha|borrar|recuerda|olvida)\s*:\s*([^\]\n]+?)\s*\]\]/gi;
+
+// Separa las órdenes [[...]] del texto que ve Emilio. También esconde una
+// orden a medio escribir, porque se llama en cada trozo del streaming.
+function splitMarkers(text) {
+  const commands = [];
+  const visible = text
+    .replace(MARKER, (_, kind, value) => {
+      commands.push({ kind: kind.toLowerCase(), value });
+      return "";
+    })
+    .replace(/\[\[[^\]\n]*$/, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { visible, commands };
+}
+
+const MARKER_RUN = {
+  tarea: (runner, value) => runner.createTask(value),
+  hecha: (runner, value) => runner.completeTask(value, true),
+  borrar: (runner, value) => runner.deleteTask(value),
+  recuerda: (runner, value) => runner.remember(value),
+  olvida: (runner, value) => runner.forget(value),
+};
+
+async function runMarkers(commands, runner, onAction) {
+  for (const { kind, value } of commands) {
+    try {
+      await MARKER_RUN[kind](runner, value);
+    } catch (error) {
+      onAction?.({ label: `No se pudo: ${error.message}`, failed: true });
+    }
+  }
+}
+
+async function typeOut(text, { signal, onText }) {
+  const step = 5;
+  for (let end = step; end < text.length + step; end += step) {
+    if (signal?.aborted)
+      throw new AskError("Detenido.", {
+        cancelled: true,
+        partial: text.slice(0, end - step),
+      });
+    onText(text.slice(0, end));
+    await new Promise((done) => setTimeout(done, 22));
+  }
+}
+
+function demoBackend() {
+  return {
+    mode: "demo",
+    acts: "demo",
+    async ask({
+      mode,
+      turns,
+      tasks,
+      memories,
+      actions,
+      signal,
+      onText,
+      onAction,
+    }) {
+      const runner = createRunner({ actions, tasks, memories, onAction });
+      await new Promise((done) => setTimeout(done, 450));
+      if (signal?.aborted) throw new AskError("Detenido.", { cancelled: true });
+      let text;
+      try {
+        text = await demoReply({
+          mode,
+          text: turns.at(-1)?.content ?? "",
+          runner,
+        });
+      } catch (error) {
+        throw new AskError(error.message);
+      }
+      await typeOut(text, { signal, onText });
+      return { text, truncated: false };
+    },
+  };
+}
+
+const TOOL_COUNT = 5;
+
+function cloudBackend(sample, limits, onGone) {
+  let acts = (limits?.tools?.maxCount ?? 0) >= TOOL_COUNT ? "tools" : "markers";
+  const tiers = limits?.modelTiers;
+  const shown = (text) =>
+    acts === "markers" ? splitMarkers(text).visible : text;
+
+  return {
+    mode: "cloud",
+    get acts() {
+      return acts;
+    },
+    async ask({
+      mode,
+      turns,
+      tasks,
+      memories,
+      persistent,
+      actions,
+      signal,
+      onText,
+      onAction,
+    }) {
+      const runner = createRunner({ actions, tasks, memories, onAction });
+      const instructions = buildInstructions({
+        mode,
+        tasks,
+        memories,
+        persistent,
+        now: new Date(),
+        actMode: acts,
+      });
+      const tier = MODES[mode]?.tier;
+      const options = {
+        signal,
+        cache: false,
+        onText: ({ text }) => onText(shown(text)),
+        ...(tier && (!tiers || tiers.includes(tier)) && { modelTier: tier }),
+        ...(acts === "tools" && { tools: makeTools(runner) }),
+      };
+      try {
+        const { text, truncated } = await sample(
+          buildInput(instructions, turns),
+          options,
+        );
+        if (acts !== "markers") return { text, truncated };
+        const { visible, commands } = splitMarkers(text);
+        await runMarkers(commands, runner, onAction);
+        return { text: visible || "Listo.", truncated };
+      } catch (error) {
+        const code = error?.code ?? "";
+        const partial =
+          typeof error?.text === "string" ? shown(error.text) : undefined;
+        if (code === "cancelled")
+          throw new AskError("Detenido.", { cancelled: true, partial });
+        // Claude usó herramientas pero no escribió nada: lo hecho, hecho está.
+        if (code === "empty_completion" && runner.count > 0)
+          return { text: "Listo.", truncated: false };
+        if (code === "tools_unavailable") acts = "markers";
+        if (ASK_GONE.has(code)) onGone();
+        throw new AskError(ASK_ERRORS[code] ?? ASK_FALLBACK, { code, partial });
+      }
+    },
+  };
+}
+
+// Nunca lanza. `onGone(demo)` avisa cuando la vista deja de poder usar Claude.
+async function createBackend({ onGone } = {}) {
+  const claude = globalThis.window?.claude;
+  const demo = demoBackend();
+  if (!claude?.use) return demo;
+  const sample = await claude.use("sample").catch(() => null);
+  if (!sample) return demo;
+  // limits() falta en visores antiguos: sin límites conocidos no se usan tools.
+  const limits = await Promise.resolve()
+    .then(() => sample.limits())
+    .catch(() => null);
+  return cloudBackend(sample, limits, () => onGone?.(demo));
+}
+
+// ---- public/voice.js ----
+// Voz de Jarvis: dictado (`dictation`) y lectura en voz alta (`tts`).
+// Las dos capabilities resuelven `null` en Safari y en las apps móviles de
+// Claude; ahí la interfaz esconde los botones y se escribe con el teclado.
+// La plataforma es la dueña del micrófono y del sonido: la página solo recibe
+// texto y estados.
+
+const SPEAK_LIMIT = 1800; // la capability acepta hasta 2,000 caracteres por línea
+const SPEAK_MAX_LINES = 100;
+
+// Parte un texto en líneas que `tts` acepta: un párrafo por línea, sin bloques
+// de código (se sustituyen por una frase corta).
+function speakLines(text) {
+  const prose = String(text ?? "").replace(
+    /```[\s\S]*?(?:```|$)/g,
+    "\n\n(bloque de código)\n\n",
+  );
+  const lines = [];
+  for (const paragraph of prose.split(/\n{2,}/)) {
+    let rest = paragraph.replace(/\s+/g, " ").trim();
+    while (rest.length > SPEAK_LIMIT) {
+      const cut = rest.lastIndexOf(". ", SPEAK_LIMIT);
+      const end = cut > SPEAK_LIMIT / 2 ? cut + 1 : SPEAK_LIMIT;
+      lines.push(rest.slice(0, end).trim());
+      rest = rest.slice(end).trim();
+    }
+    if (rest) lines.push(rest);
+  }
+  return lines.slice(0, SPEAK_MAX_LINES).map((line) => ({ text: line }));
+}
+
+const DICTATION_NOTES = {
+  rate_limited: "Hay demasiados dictados a la vez. Intenta en un momento.",
+  upstream_error: "Falló el micrófono o el servicio de voz.",
+  not_granted: "El dictado está desactivado para esta página.",
+};
+
+const SPEAK_NOTES = {
+  busy: "Termina de dictar para poder escuchar la respuesta.",
+  rate_limited: "Demasiada lectura en voz alta por ahora. Intenta más tarde.",
+  upstream_error: "Falló la lectura en voz alta.",
+  no_gesture: "Toca de nuevo para escuchar.",
+};
+
+function setupDictation(dictation, handlers) {
+  // Se pide español; si no se ofrece, el siguiente intento usa el idioma del
+  // dispositivo, y si tampoco, el botón se esconde.
+  let language = "es";
+  let listened = false;
+  const drop = () => handlers.onDictationGone?.();
+
+  dictation.onPartial(({ text }) => handlers.onPartial?.(text));
+  dictation.onFinal(({ text }) => handlers.onFinal?.(text));
+  dictation.onState(({ state, reason }) => {
+    handlers.onDictationState?.(state);
+    if (state === "listening") listened = true;
+    if (state !== "idle") return;
+    // Un arranque fallido lo atiende fail(); aquí solo lo que corta un dictado
+    // que ya estaba escuchando.
+    if (reason === "not_granted" || (listened && reason === "unavailable"))
+      drop();
+    listened = false;
+  });
+
+  function fail(error) {
+    const code = error?.code;
+    if (code === "unavailable" && language) {
+      language = null;
+      handlers.onNotice?.(
+        "No hay dictado en español aquí. Toca otra vez para usar el idioma de tu dispositivo.",
+      );
+    } else if (code === "unavailable" || code === "not_granted") {
+      handlers.onNotice?.(DICTATION_NOTES.not_granted);
+      drop();
+    } else if (DICTATION_NOTES[code])
+      handlers.onNotice?.(DICTATION_NOTES[code]);
+  }
+
+  // Debe llamarse directo desde el clic: start() exige el gesto del usuario.
+  return function toggleDictation() {
+    if (dictation.active()) {
+      dictation.stop().catch(() => {});
+      return;
+    }
+    dictation.start(language ? { language } : undefined).catch(fail);
+  };
+}
+
+function setupSpeech(tts, handlers) {
+  let speakingId = null;
+  let spanish = false;
+  Promise.resolve()
+    .then(() => tts.languages?.())
+    .then((languages) => {
+      spanish = Array.isArray(languages) && languages.includes("es");
+    })
+    .catch(() => {});
+
+  const drop = () => handlers.onSpeechGone?.();
+
+  tts.onState(({ state, reason }) => {
+    // "replaced": otra lectura tomó su lugar; el id nuevo ya está puesto.
+    if (state === "idle" && reason === "replaced") return;
+    handlers.onSpeechState?.(state, speakingId);
+    if (state !== "idle") return;
+    speakingId = null;
+    if (reason === "not_granted" || reason === "unavailable") drop();
+  });
+
+  return {
+    // Llamar desde un clic. Un segundo clic sobre lo que suena lo detiene.
+    toggle(id, text) {
+      if (speakingId === id && tts.active()) {
+        tts.stop().catch(() => {});
+        return;
+      }
+      const lines = speakLines(text);
+      if (lines.length === 0) return;
+      speakingId = id;
+      tts
+        .speak(lines, spanish ? { language: "es" } : undefined)
+        .catch((error) => {
+          const code = error?.code;
+          if (code === "not_granted" || code === "unavailable") drop();
+          else if (SPEAK_NOTES[code]) handlers.onNotice?.(SPEAK_NOTES[code]);
+        });
+    },
+    stop() {
+      if (tts.active()) tts.stop().catch(() => {});
+    },
+  };
+}
+
+// Nunca lanza. `toggleDictation` y `speech` son null cuando la vista no los ofrece.
+async function createVoice(handlers = {}) {
+  const claude = globalThis.window?.claude;
+  if (!claude?.use) return { toggleDictation: null, speech: null };
+  const [dictation, tts] = await Promise.all([
+    claude.use("dictation").catch(() => null),
+    claude.use("tts").catch(() => null),
+  ]);
+  return {
+    toggleDictation: dictation ? setupDictation(dictation, handlers) : null,
+    speech: tts ? setupSpeech(tts, handlers) : null,
+  };
+}
+
+// ---- public/core.js ----
+// El núcleo: el sol de ERA (el disco con la "E" del logo) rodeado de un anillo
+// de marcas y dos arcos. Es el único efecto animado de la página y cambia con
+// lo que hace Jarvis: reposo, escuchando, pensando o hablando.
+// Cada capa es un <svg> aparte para animar solo transform y opacity.
+
+const TAU = 2 * Math.PI;
+
+// Trazo punteado que reparte `count` marcas exactas en un círculo de radio `r`.
+function ticks(r, count, length) {
+  const period = (TAU * r) / count;
+  return `${length} ${(period - length).toFixed(4)}`;
+}
+
+// Recortes que dibujan la "E" sobre el disco, con las proporciones del logo.
+const SUN_CUTS = [
+  { x: 100, y: 83.4, width: 40, height: 9.7 },
+  { x: 100, y: 106.9, width: 40, height: 9.7 },
+  { x: 126.8, y: 92.2, width: 14, height: 15.6 },
+];
+
+const layer = (name, body) =>
+  `<svg class="core-layer ${name}" viewBox="0 0 200 200" focusable="false">${body}</svg>`;
+
+// `variant`: "hero" (grande, pantalla vacía) o "mini" (encabezado).
+function coreMarkup(variant) {
+  const id = `core-${variant}`;
+  const cuts = SUN_CUTS.map(
+    (cut) =>
+      `<rect x="${cut.x}" y="${cut.y}" width="${cut.width}" height="${cut.height}" fill="#000"/>`,
+  ).join("");
+  return (
+    `<div class="core core--${variant}" aria-hidden="true">` +
+    `<span class="core-glow"></span>` +
+    layer("core-ring", `<circle cx="100" cy="100" r="78"/>`) +
+    layer(
+      "core-ticks",
+      `<circle class="tick-minor" cx="100" cy="100" r="66" stroke-dasharray="${ticks(66, 72, 1.3)}"/>` +
+        `<circle class="tick-major" cx="100" cy="100" r="64" stroke-dasharray="${ticks(64, 12, 1.8)}"/>`,
+    ) +
+    layer(
+      "core-arc core-arc--a",
+      `<circle cx="100" cy="100" r="88" stroke-dasharray="120 ${(TAU * 88 - 120).toFixed(3)}"/>`,
+    ) +
+    layer(
+      "core-arc core-arc--b",
+      `<circle cx="100" cy="100" r="95" stroke-dasharray="46 ${((TAU * 95) / 2 - 46).toFixed(3)}"/>`,
+    ) +
+    layer(
+      "core-sun",
+      `<defs><linearGradient id="${id}-fill" x1="0" y1="0" x2="0" y2="1">` +
+        `<stop offset="0" class="sun-top"/><stop offset="1" class="sun-bottom"/></linearGradient>` +
+        `<mask id="${id}-cut"><rect width="200" height="200" fill="#fff"/>${cuts}</mask></defs>` +
+        `<circle cx="100" cy="100" r="38" fill="url(#${id}-fill)" mask="url(#${id}-cut)"/>`,
+    ) +
+    `</div>`
+  );
+}
+
+// Cuántas veces más rápido giran los arcos en cada estado.
+const ARC_RATE = { idle: 1, listening: 3, thinking: 14, speaking: 2 };
+const KICK_GAP_MS = 140;
+
+function reducedMotion() {
+  return (
+    globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+  );
+}
+
+// `root` lleva data-core="<estado>" y la variable --energy (0 a 1); el CSS
+// hace el resto. Los dos núcleos de la página reaccionan a la vez.
+function createCore(root) {
+  let state = "idle";
+  let calm = null;
+  let talker = null;
+  let lastKick = 0;
+
+  // updatePlaybackRate cambia la velocidad sin que el arco salte de ángulo.
+  function applyRate() {
+    const rate = ARC_RATE[state] ?? 1;
+    for (const arc of root.querySelectorAll(".core-arc")) {
+      for (const animation of arc.getAnimations?.() ?? []) {
+        if (animation.updatePlaybackRate) animation.updatePlaybackRate(rate);
+        else animation.playbackRate = rate;
+      }
+    }
+  }
+
+  // Un empujón de energía: las marcas se abren y vuelven. `amount` es cuánto
+  // texto acaba de llegar.
+  function kick(amount = 12) {
+    if (state !== "speaking" || reducedMotion()) return;
+    const now = Date.now();
+    if (now - lastKick < KICK_GAP_MS) return;
+    lastKick = now;
+    root.style.setProperty(
+      "--energy",
+      Math.min(1, 0.4 + amount / 60).toFixed(2),
+    );
+    clearTimeout(calm);
+    calm = setTimeout(() => root.style.setProperty("--energy", "0"), 170);
+  }
+
+  return {
+    get state() {
+      return state;
+    },
+    set(next) {
+      if (next === state) return;
+      state = next;
+      root.dataset.core = next;
+      if (next !== "speaking") root.style.setProperty("--energy", "0");
+      applyRate();
+    },
+    kick,
+    // Para la voz (tts), que no trae trozos de texto: pulsos sueltos.
+    talk(on) {
+      clearInterval(talker);
+      talker = on ? setInterval(() => kick(6 + Math.random() * 40), 230) : null;
+    },
+    // Tras mostrar u ocultar un núcleo sus animaciones se crean de nuevo.
+    refresh() {
+      requestAnimationFrame(applyRate);
+    },
+  };
+}
+
+// Vuela el núcleo grande hasta el sitio del chico (el momento en que arranca
+// la conversación). `hero` sigue visible mientras dura; resuelve al terminar.
+function dockCore(hero, mini) {
+  const from = hero.getBoundingClientRect();
+  const to = mini.getBoundingClientRect();
+  if (reducedMotion() || !hero.animate || !from.width || !to.width)
+    return Promise.resolve();
+  const scale = to.width / from.width;
+  const move = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${scale})`;
+  const flight = hero.animate([{ transform: "none" }, { transform: move }], {
+    duration: 620,
+    easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    fill: "forwards",
+  });
+  return flight.finished.catch(() => {}).then(() => flight.cancel());
+}
+
+// ---- public/ui.js ----
+// Utilidades de interfaz compartidas: crear nodos, iconos, avisos y copiar.
+
+const $ = (selector, root = document) => root.querySelector(selector);
+
+// el("li", { class: "x", text: "hola", "data-id": 3 }, hijo1, hijo2)
+// `text` se asigna con textContent; `html` solo recibe marcado propio.
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attrs)) {
+    if (value === undefined || value === null || value === false) continue;
+    if (name === "text") node.textContent = value;
+    else if (name === "html") node.innerHTML = value;
+    else node.setAttribute(name, value === true ? "" : value);
+  }
+  node.append(
+    ...children.filter((child) => child !== null && child !== undefined),
+  );
+  return node;
+}
+
+// Iconos de trazo fino, 24×24, del color del texto.
+const ICONS = {
+  tasks:
+    '<path d="M4 6.6l1.7 1.7L8.8 5"/><path d="M12 7h8"/><path d="M4 13.6l1.7 1.7 3.1-3.3"/><path d="M12 14h8"/><circle cx="6.3" cy="20" r="1.3"/><path d="M12 20h8"/>',
+  memory:
+    '<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3.5V7M14 3.5V7M10 17v3.5M14 17v3.5M3.5 10H7M3.5 14H7M17 10h3.5M17 14h3.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  send: '<path d="M12 19V6"/><path d="M6 11.5l6-6 6 6"/>',
+  stop: '<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+};
+
+function icon(name) {
+  return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
+}
+
+// Aviso breve abajo de la pantalla, con una acción opcional (p. ej. Deshacer).
+function createToast(node) {
+  let timer = null;
+  const hide = () => {
+    clearTimeout(timer);
+    node.hidden = true;
+  };
+  return {
+    show(message, { action, onAction, duration = action ? 7000 : 4000 } = {}) {
+      node.replaceChildren(el("span", { text: message }));
+      if (action) {
+        const button = el("button", { type: "button", text: action });
+        button.addEventListener("click", () => {
+          hide();
+          onAction?.();
+        });
+        node.append(button);
+      }
+      node.hidden = false;
+      clearTimeout(timer);
+      timer = setTimeout(hide, duration);
+    },
+    hide,
+  };
+}
+
+// El portapapeles solo responde dentro de un clic y puede negarse.
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Plan B de "Copiar": deja el texto seleccionado para copiarlo a mano.
+function selectContents(node) {
+  const selection = globalThis.getSelection?.();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+// ---- public/chat.js ----
+// Lista de mensajes del chat. Cada mensaje es
+// { id, role: "user" | "assistant" | "mode", content, status, error,
+//   truncated, actions: [{ label, failed, undo, undone }] }.
+// Los mensajes de Jarvis se pintan con Markdown; los de Emilio, como texto.
+
+
+const NOTES = {
+  stopped: "Detenido.",
+  truncated: "Se cortó por longitud. Pídeme que continúe.",
+};
+const STICK_DISTANCE = 96;
+// Marca de "todavía no hay texto" para no repintar el mismo estado.
+const WAITING = Symbol("pensando");
+// "Copiar" solo en respuestas largas: en una frase corta es ruido.
+const COPY_MIN_CHARS = 240;
+
+function buildRow(message) {
+  const row = el("li", {
+    class: `msg msg--${message.role}`,
+    "data-id": message.id,
+  });
+  if (message.role === "user")
+    row.append(el("div", { class: "bubble", text: message.content }));
+  else if (message.role === "mode")
+    row.append(el("span", { text: `Modo ${message.content}` }));
+  else
+    row.append(
+      el("div", { class: "md" }),
+      el("p", { class: "msg-note", hidden: true }),
+      el("ul", { class: "acts", hidden: true }),
+      el("div", { class: "msg-tools", hidden: true }),
+    );
+  return row;
+}
+
+function actionItem(action, index) {
+  const item = el("li", { class: action.failed ? "act act--failed" : "act" });
+  item.append(
+    el("span", {
+      text: action.undone ? `${action.label} (restaurado)` : action.label,
+    }),
+  );
+  if (action.undo && !action.undone)
+    item.append(
+      el("button", { type: "button", "data-undo": index, text: "Deshacer" }),
+    );
+  return item;
+}
+
+// El texto pequeño bajo una respuesta: por qué falló, se detuvo o se cortó.
+function noteFor(message) {
+  if (message.status === "error") return message.error;
+  if (message.status === "stopped") return NOTES.stopped;
+  return message.truncated ? NOTES.truncated : "";
+}
+
+function createChatView({ scroller, log }) {
+  const rows = new Map();
+  const painted = new Map();
+  let canSpeak = false;
+  let speakingId = null;
+
+  const nearBottom = () =>
+    scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <
+    STICK_DISTANCE;
+  const toBottom = () => {
+    scroller.scrollTop = scroller.scrollHeight;
+  };
+
+  function paintTools(row, message, isLast) {
+    const tools = row.querySelector(".msg-tools");
+    const settled = ["done", "stopped", "error"].includes(message.status);
+    const buttons = [];
+    if (settled && message.content.length >= COPY_MIN_CHARS)
+      buttons.push(
+        el("button", { type: "button", "data-act": "copy", text: "Copiar" }),
+      );
+    if (settled && message.content && canSpeak && message.status !== "error")
+      buttons.push(
+        el("button", {
+          type: "button",
+          "data-act": "speak",
+          "aria-pressed": speakingId === message.id ? "true" : "false",
+          text: speakingId === message.id ? "Detener voz" : "Escuchar",
+        }),
+      );
+    // Con acciones ya ejecutadas no se reintenta: se repetirían.
+    const failed = message.status === "error" || message.status === "stopped";
+    if (isLast && failed && !message.actions?.length)
+      buttons.push(
+        el("button", {
+          type: "button",
+          "data-act": "retry",
+          text: "Reintentar",
+        }),
+      );
+    tools.replaceChildren(...buttons);
+    tools.hidden = buttons.length === 0;
+  }
+
+  function paintJarvis(row, message, isLast) {
+    row.dataset.status = message.status;
+    const body = row.querySelector(".md");
+    const shown =
+      !message.content && message.status === "thinking"
+        ? WAITING
+        : message.content;
+    // El Markdown solo se vuelve a generar si el texto cambió.
+    if (painted.get(message.id) !== shown) {
+      painted.set(message.id, shown);
+      if (shown === WAITING)
+        body.replaceChildren(el("p", { class: "thinking", text: "Pensando…" }));
+      else body.innerHTML = renderMarkdown(shown);
+    }
+    const note = row.querySelector(".msg-note");
+    const noteText = noteFor(message);
+    note.textContent = noteText;
+    note.hidden = !noteText;
+    note.classList.toggle("msg-note--error", message.status === "error");
+
+    const acts = row.querySelector(".acts");
+    acts.replaceChildren(...(message.actions ?? []).map(actionItem));
+    acts.hidden = !message.actions?.length;
+    paintTools(row, message, isLast);
+  }
+
+  return {
+    // Crea o actualiza un mensaje. `isLast` decide si se ofrece "Reintentar".
+    upsert(message, { isLast = false, stick = false } = {}) {
+      const follow = stick || nearBottom();
+      let row = rows.get(message.id);
+      if (!row) {
+        row = buildRow(message);
+        rows.set(message.id, row);
+        log.append(row);
+      }
+      if (message.role === "assistant") paintJarvis(row, message, isLast);
+      if (follow) toBottom();
+    },
+    remove(id) {
+      rows.get(id)?.remove();
+      rows.delete(id);
+      painted.delete(id);
+    },
+    clear() {
+      log.replaceChildren();
+      rows.clear();
+      painted.clear();
+    },
+    toBottom,
+    setCanSpeak(value) {
+      canSpeak = value;
+    },
+    setSpeaking(id) {
+      speakingId = id;
+    },
+  };
+}
+
+// ---- public/panels.js ----
+// Paneles de Tareas y Memoria. En pantallas anchas van fijos a la derecha; en
+// el teléfono se abren como hoja sobre el chat (un panel a la vez).
+
+const WIDE = "(min-width: 960px)";
+
+const SYNC_NOTES = {
+  loading: "Cargando…",
+  late: "No alcanzo tu memoria todavía. Lo que ves puede estar desactualizado.",
+  error: "Perdí la conexión con tu memoria.",
+  session: "En esta vista nada se guarda al cerrar.",
+};
+
+const EMPTY = {
+  tasks:
+    "Sin tareas. Escribe una arriba o dile a Jarvis «anota comprar cartulina».",
+  memories:
+    "Jarvis todavía no recuerda nada. Dile «recuerda que…» o escríbelo arriba.",
+};
+
+function taskRow(task) {
+  const box = el("input", {
+    type: "checkbox",
+    id: `task-${task.id}`,
+    checked: task.done,
+  });
+  const main = el(
+    "label",
+    { class: "row-main" },
+    box,
+    el("span", { text: task.text }),
+  );
+  const remove = el("button", {
+    type: "button",
+    class: "row-del",
+    "data-del": true,
+    "aria-label": `Borrar tarea: ${task.text}`,
+    html: icon("close"),
+  });
+  return el(
+    "li",
+    { class: task.done ? "row row--done" : "row", "data-id": task.id },
+    main,
+    remove,
+  );
+}
+
+function memoryRow(memory) {
+  const remove = el("button", {
+    type: "button",
+    class: "row-del",
+    "data-del": true,
+    "aria-label": `Borrar recuerdo: ${memory.text}`,
+    html: icon("close"),
+  });
+  return el(
+    "li",
+    { class: "row", "data-id": memory.id },
+    el("p", { class: "row-main", text: memory.text }),
+    remove,
+  );
+}
+
+function bindForm(form, input, add) {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = input.value;
+    if (!value.trim()) return;
+    // El campo se vacía ya, para poder escribir la siguiente mientras se
+    // guarda; si el guardado falla, el texto vuelve.
+    input.value = "";
+    input.focus();
+    if (!(await add(value)) && !input.value) input.value = value;
+  });
+}
+
+function bindList(list, { onToggle, onRemove }) {
+  list.addEventListener("change", (event) => {
+    const row = event.target.closest(".row");
+    if (row && event.target.type === "checkbox")
+      onToggle?.(row.dataset.id, event.target.checked);
+  });
+  list.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-del]")?.closest(".row");
+    if (row) onRemove(row.dataset.id);
+  });
+}
+
+// Repinta una lista y conserva el foco si estaba en uno de sus controles.
+function fill(list, rows, emptyText) {
+  const focusedId = list.contains(document.activeElement)
+    ? document.activeElement.id
+    : "";
+  list.replaceChildren(
+    ...(rows.length ? rows : [el("li", { class: "empty", text: emptyText })]),
+  );
+  if (focusedId) document.getElementById(focusedId)?.focus();
+}
+
+// `handlers`: onAddTask(text), onToggleTask(id, done), onRemoveTask(id),
+// onAddMemory(text), onRemoveMemory(id), onRetry(). Los "add" resuelven true
+// si se guardó, para limpiar el campo.
+function createPanels(handlers) {
+  const app = $("#app");
+  const shell = $("#shell");
+  const side = $("#side");
+  const wide = globalThis.matchMedia(WIDE);
+  let opener = null;
+
+  function showPane(name) {
+    app.dataset.panel = name;
+    for (const tab of side.querySelectorAll("[data-pane]"))
+      tab.setAttribute("aria-pressed", String(tab.dataset.pane === name));
+  }
+
+  function close() {
+    if (!app.dataset.panel) return;
+    app.dataset.panel = "";
+    shell.inert = false;
+    opener?.focus();
+    opener = null;
+  }
+
+  function open(name, trigger) {
+    if (wide.matches) return;
+    opener = trigger ?? document.activeElement;
+    showPane(name);
+    shell.inert = true;
+    $("#closeSide").focus();
+  }
+
+  // En ancho el panel es una columna más; en teléfono, un diálogo.
+  function fitLayout() {
+    if (wide.matches) {
+      app.dataset.panel = "";
+      shell.inert = false;
+      side.removeAttribute("role");
+      side.removeAttribute("aria-modal");
+    } else {
+      side.setAttribute("role", "dialog");
+      side.setAttribute("aria-modal", "true");
+    }
+  }
+
+  bindForm($("#taskForm"), $("#taskInput"), handlers.onAddTask);
+  bindForm($("#memoryForm"), $("#memoryInput"), handlers.onAddMemory);
+  bindList($("#taskList"), {
+    onToggle: handlers.onToggleTask,
+    onRemove: handlers.onRemoveTask,
+  });
+  bindList($("#memoryList"), { onRemove: handlers.onRemoveMemory });
+  $("#closeSide").addEventListener("click", close);
+  $("#syncRetry").addEventListener("click", () => handlers.onRetry());
+  for (const tab of side.querySelectorAll("[data-pane]"))
+    tab.addEventListener("click", () => showPane(tab.dataset.pane));
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !app.dataset.panel) return;
+    // Sin esto, el mismo Escape también cortaría una lectura en voz alta.
+    event.preventDefault();
+    close();
+  });
+  wide.addEventListener("change", fitLayout);
+  fitLayout();
+
+  return {
+    open,
+    close,
+    // `store` es null mientras la vista todavía no responde.
+    render(store) {
+      const tasks = store?.tasks ?? [];
+      const memories = store?.memories ?? [];
+      const pending = tasks.filter((task) => !task.done).length;
+      const done = tasks.length - pending;
+      $("#taskTotal").textContent = [
+        pending && `${pending} ${pending === 1 ? "pendiente" : "pendientes"}`,
+        done && `${done} ${done === 1 ? "hecha" : "hechas"}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      $("#memoryTotal").textContent = memories.length
+        ? `${memories.length} ${memories.length === 1 ? "recuerdo" : "recuerdos"}`
+        : "";
+      const waiting =
+        !store ||
+        (store.sync === "loading" && !tasks.length && !memories.length);
+      fill(
+        $("#taskList"),
+        tasks.map(taskRow),
+        waiting ? SYNC_NOTES.loading : EMPTY.tasks,
+      );
+      fill(
+        $("#memoryList"),
+        memories.map(memoryRow),
+        waiting ? SYNC_NOTES.loading : EMPTY.memories,
+      );
+      const key = !store ? "" : !store.persistent ? "session" : store.sync;
+      const note = SYNC_NOTES[key] && key !== "loading" ? SYNC_NOTES[key] : "";
+      $("#syncNote").hidden = !note;
+      $("#syncText").textContent = note;
+      $("#syncRetry").hidden = key !== "error";
+    },
+  };
+}
+
+// ---- public/session.js ----
+// La conversación en curso se guarda solo en este dispositivo. Es una
+// comodidad: el almacenamiento puede faltar (ventana privada, datos
+// bloqueados) y la página funciona igual. Tareas y memoria viven en `db`.
+
+const CHAT_KEY = "jarvis:chat:v1";
+const KEEP_MESSAGES = 60;
+const ROLES = ["user", "assistant", "mode"];
+
+// Devuelve { mode, messages } con lo guardado (validado campo por campo), o
+// null si no hay nada que recuperar.
+function readChat() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHAT_KEY) ?? "null");
+    if (!Array.isArray(saved?.messages)) return null;
+    const messages = [];
+    for (const item of saved.messages) {
+      if (!ROLES.includes(item?.role)) continue;
+      if (typeof item.content !== "string" || !item.content) continue;
+      messages.push({
+        role: item.role,
+        content: item.content,
+        status: item.status === "stopped" ? "stopped" : "done",
+        truncated: item.truncated === true,
+        actions: Array.isArray(item.actions)
+          ? item.actions.filter((action) => typeof action?.label === "string")
+          : [],
+      });
+    }
+    return {
+      mode: MODE_IDS.includes(saved.mode) ? saved.mode : null,
+      messages,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Guarda los últimos mensajes terminados; los que fallaron no se conservan.
+function writeChat(mode, messages) {
+  try {
+    const kept = messages
+      .filter(
+        (message) => message.role !== "assistant" || message.status !== "error",
+      )
+      .filter((message) => message.content)
+      .slice(-KEEP_MESSAGES)
+      .map(({ role, content, status, truncated, actions }) => ({
+        role,
+        content,
+        status,
+        truncated,
+        actions,
+      }));
+    localStorage.setItem(CHAT_KEY, JSON.stringify({ mode, messages: kept }));
+  } catch {
+    // Si no se puede guardar, la conversación sigue en pantalla.
+  }
+}
+
+// ---- public/status.js ----
+// Textos que dependen de lo que Jarvis esté haciendo. Funciones puras:
+// reciben el estado y devuelven qué mostrar.
+
+// La línea bajo el nombre, en el encabezado.
+function statusText({ phase, listening, speakingId, backend }) {
+  if (phase === "thinking") return "pensando…";
+  if (phase === "streaming") return "respondiendo…";
+  if (listening) return "escuchando…";
+  if (speakingId) return "hablando…";
+  if (!backend) return "conectando…";
+  return backend.mode === "cloud" ? "en línea" : "modo demo";
+}
+
+// El aviso sobre lo que esta vista no puede hacer, o null si todo funciona.
+// `action` es el texto del botón cuando el aviso ofrece una salida.
+function noticeFor({ backend, store }) {
+  if (store?.sync === "error")
+    return { text: "Perdí la conexión con tu memoria.", action: "Reintentar" };
+  const demo = backend?.mode === "demo";
+  const session = Boolean(store) && !store.persistent;
+  if (demo && session)
+    return {
+      text: "Modo demo y sin memoria: respuestas fijas y nada se guarda al cerrar.",
+    };
+  if (demo)
+    return {
+      text: "Modo demo: respuestas fijas. Ábreme desde Claude para usar la IA.",
+    };
+  if (session)
+    return {
+      text: "Sin memoria en esta vista: tareas y recuerdos se pierden al cerrar.",
+    };
+  return null;
+}
+
+function greeting(now = new Date()) {
+  const hour = now.getHours();
+  let part = "Buenas noches";
+  if (hour >= 5 && hour < 12) part = "Buenos días";
+  else if (hour >= 12 && hour < 19) part = "Buenas tardes";
+  return `${part}, ${USER_NAME}`;
+}
+
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+
+// Resumen bajo el saludo: cuántas tareas quedan y cuántos recuerdos hay.
+function telemetry(store) {
+  if (!store) return "Conectando con tu memoria…";
+  const pending = store.tasks.filter((task) => !task.done).length;
+  const memories = store.memories.length;
+  const tasks = pending
+    ? plural(pending, "pendiente", "pendientes")
+    : "Sin pendientes";
+  const kept = memories
+    ? plural(memories, "recuerdo", "recuerdos")
+    : "sin recuerdos";
+  return `${tasks} · ${kept}`;
+}
+
+// ---- public/app.js ----
+// Jarvis, el asistente personal de Emilio. Este archivo une las piezas: estado
+// de la conversación, envío de mensajes, modos, voz y paneles.
+
+
+
+
+
+
+
+
+
+
+const INPUT_MAX_HEIGHT = 132;
+
+const state = {
+  mode: "general",
+  messages: [],
+  phase: "idle", // "idle" | "thinking" | "streaming"
+  controller: null,
+  backend: null, // llegan cuando la vista responde (ver boot)
+  store: null,
+  voice: { toggleDictation: null, speech: null },
+  listening: false,
+  speakingId: null,
+  dictatedBase: "",
+  dismissedNotice: "",
+  nextId: 1,
+};
+const ready = { backend: null, store: null };
+
+const app = $("#app");
+const input = $("#input");
+const sendButton = $("#send");
+const micButton = $("#mic");
+const core = createCore(app);
+const toast = createToast($("#toast"));
+const chat = createChatView({ scroller: $("#main"), log: $("#log") });
+const coarsePointer = globalThis.matchMedia("(pointer: coarse)");
+
+// ---------- Conversación guardada (ver session.js) ----------
+
+function loadChat() {
+  const saved = readChat();
+  if (!saved) return;
+  if (saved.mode) state.mode = saved.mode;
+  for (const message of saved.messages)
+    state.messages.push({ id: state.nextId++, ...message });
+}
+
+const saveChat = () => writeChat(state.mode, state.messages);
+
+// ---------- Mensajes ----------
+
+const isLast = (message) => message === state.messages.at(-1);
+const repaint = (message) => chat.upsert(message, { isLast: isLast(message) });
+
+function repaintAll() {
+  for (const message of state.messages)
+    if (message.role === "assistant") repaint(message);
+}
+
+function pushMessage(fields) {
+  const message = { id: state.nextId++, actions: [], ...fields };
+  const previous = state.messages.at(-1);
+  state.messages.push(message);
+  if (previous) repaint(previous); // deja de ser el último: ya no ofrece Reintentar
+  chat.upsert(message, { isLast: true, stick: true });
+  return message;
+}
+
+function dropMessage(message) {
+  state.messages = state.messages.filter((item) => item !== message);
+  chat.remove(message.id);
+  const last = state.messages.at(-1);
+  if (last) repaint(last);
+}
+
+function historyTurns(before) {
+  const turns = [];
+  for (const message of state.messages) {
+    if (message === before) break;
+    if (message.role !== "mode" && message.content)
+      turns.push({ role: message.role, content: message.content });
+  }
+  return turns;
+}
+
+// ---------- Estado visible ----------
+
+function syncCore() {
+  const speaking = state.phase === "streaming" || Boolean(state.speakingId);
+  if (state.phase === "thinking") core.set("thinking");
+  else if (speaking) core.set("speaking");
+  else core.set(state.listening ? "listening" : "idle");
+  core.talk(state.phase === "idle" && Boolean(state.speakingId));
+}
+
+function renderSend() {
+  const busy = state.phase !== "idle";
+  sendButton.innerHTML = icon(busy ? "stop" : "send");
+  sendButton.setAttribute(
+    "aria-label",
+    busy ? "Detener respuesta" : "Enviar mensaje",
+  );
+  sendButton.classList.toggle("is-empty", !busy && !input.value.trim());
+}
+
+function setPhase(phase) {
+  state.phase = phase;
+  renderSend();
+  syncCore();
+  $("#status").textContent = statusText(state);
+}
+
+function renderNotice() {
+  const notice = noticeFor(state);
+  const show = notice && notice.text !== state.dismissedNotice;
+  $("#notice").hidden = !show;
+  if (!show) return;
+  $("#noticeText").textContent = notice.text;
+  $("#noticeButton").textContent = notice.action ?? "Entendido";
+}
+
+function renderStore() {
+  panels.render(state.store);
+  $("#greeting").textContent = greeting();
+  $("#telemetry").textContent = telemetry(state.store);
+  const pending = state.store?.tasks.filter((task) => !task.done).length ?? 0;
+  $("#taskCount").textContent = String(pending);
+  $("#taskCount").hidden = pending === 0;
+  $("#openTasks").setAttribute(
+    "aria-label",
+    pending ? `Tareas, ${pending} pendientes` : "Tareas",
+  );
+  renderNotice();
+}
+
+function renderMode() {
+  const mode = MODES[state.mode];
+  for (const button of $("#modes").querySelectorAll("button"))
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.mode === state.mode),
+    );
+  input.placeholder = mode.placeholder;
+  const chips = mode.suggestions.map((suggestion) => {
+    const chip = el("button", {
+      type: "button",
+      class: "chip",
+      text: suggestion.label,
+    });
+    chip.addEventListener("click", () => {
+      if (!suggestion.fill) return send(suggestion.text);
+      input.value = suggestion.text;
+      fitInput();
+      renderSend();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+    return chip;
+  });
+  $("#chips").replaceChildren(...chips);
+}
+
+function setMode(mode) {
+  if (mode === state.mode || !MODES[mode]) return;
+  state.mode = mode;
+  // Un cambio de modo deja una marca en la conversación; dos seguidos, una sola.
+  const last = state.messages.at(-1);
+  if (last?.role === "mode") dropMessage(last);
+  if (state.messages.length)
+    pushMessage({ role: "mode", content: MODES[mode].name });
+  renderMode();
+  saveChat();
+}
+
+// ---------- Vista: pantalla vacía o conversación ----------
+
+function enterChat(animate) {
+  if (app.dataset.view === "chat") return;
+  const hero = $("#hero");
+  const box = hero.getBoundingClientRect();
+  app.dataset.view = "chat";
+  $("#newChat").hidden = false;
+  if (!animate) return core.refresh();
+  // El núcleo grande vuela a su sitio en el encabezado. El inicio se queda
+  // clavado donde estaba mientras dura el vuelo.
+  for (const side of ["left", "top", "width", "height"])
+    hero.style[side] = `${box[side]}px`;
+  app.classList.add("is-docking");
+  dockCore($("#heroCore .core"), $("#miniCore .core")).then(() => {
+    app.classList.remove("is-docking");
+    hero.removeAttribute("style");
+    core.refresh();
+  });
+}
+
+function leaveChat() {
+  app.dataset.view = "empty";
+  $("#newChat").hidden = true;
+  core.refresh();
+}
+
+function newChat() {
+  if (state.phase !== "idle" || state.messages.length === 0) return;
+  const old = state.messages;
+  state.voice.speech?.stop();
+  state.messages = [];
+  chat.clear();
+  leaveChat();
+  saveChat();
+  toast.show("Conversación borrada", {
+    action: "Deshacer",
+    onAction() {
+      if (state.messages.length) return;
+      state.messages = old;
+      for (const message of old)
+        chat.upsert(message, { isLast: isLast(message) });
+      enterChat(false);
+      chat.toBottom();
+      saveChat();
+    },
+  });
+}
+
+// ---------- Enviar y recibir ----------
+
+function settleFailure(reply, error) {
+  if (error?.cancelled) {
+    const kept =
+      typeof error.partial === "string" ? error.partial : reply.content;
+    if (!kept && reply.actions.length === 0) return dropMessage(reply);
+    reply.content = kept;
+    reply.status = "stopped";
+    return;
+  }
+  const known = error instanceof AskError || error instanceof StoreError;
+  if (!known) console.error(error);
+  // Sin `partial` (p. ej. "refused") el texto mostrado se retira.
+  reply.content = typeof error?.partial === "string" ? error.partial : "";
+  reply.status = "error";
+  reply.error = known ? error.message : "Algo falló. Vuelve a intentarlo.";
+}
+
+async function runTurn() {
+  const reply = pushMessage({
+    role: "assistant",
+    content: "",
+    status: "thinking",
+  });
+  const controller = new AbortController();
+  state.controller = controller;
+  setPhase("thinking");
+  let shown = 0;
+  try {
+    const store = await ready.store;
+    await ready.backend;
+    const result = await state.backend.ask({
+      mode: state.mode,
+      turns: historyTurns(reply),
+      tasks: store.tasks,
+      memories: store.memories,
+      persistent: store.persistent,
+      actions: store,
+      signal: controller.signal,
+      onText(text) {
+        if (state.phase !== "streaming") setPhase("streaming");
+        core.kick(Math.max(0, text.length - shown));
+        shown = text.length;
+        reply.content = text;
+        reply.status = "streaming";
+        repaint(reply);
+      },
+      onAction(action) {
+        reply.actions.push(action);
+        repaint(reply);
+      },
+    });
+    reply.content = result.text;
+    reply.truncated = result.truncated;
+    reply.status = "done";
+  } catch (error) {
+    settleFailure(reply, error);
+  } finally {
+    state.controller = null;
+    setPhase("idle");
+    if (state.messages.includes(reply)) repaint(reply);
+    saveChat();
+  }
+}
+
+function send(raw) {
+  const text = raw.trim();
+  if (!text || state.phase !== "idle") return;
+  state.voice.speech?.stop();
+  pushMessage({ role: "user", content: text });
+  enterChat(true);
+  input.value = "";
+  state.dictatedBase = "";
+  fitInput();
+  runTurn();
+}
+
+function retry(message) {
+  if (state.phase !== "idle" || !isLast(message)) return;
+  dropMessage(message);
+  if (state.messages.at(-1)?.role === "user") runTurn();
+}
+
+async function undoAction(message, index) {
+  const action = message.actions[index];
+  if (!action?.undo || action.undone) return;
+  try {
+    const store = await ready.store;
+    if (action.undo.kind === "task") await store.restoreTask(action.undo.item);
+    else await store.restoreMemory(action.undo.item);
+    action.undone = true;
+    repaint(message);
+    saveChat();
+  } catch (error) {
+    toast.show(
+      error instanceof StoreError ? error.message : "No se pudo deshacer.",
+    );
+  }
+}
+
+// ---------- Tareas y memoria desde los paneles ----------
+
+// Ejecuta un cambio y muestra el motivo si falla. Devuelve null en ese caso.
+async function saving(change) {
+  try {
+    return await change(await ready.store);
+  } catch (error) {
+    toast.show(
+      error instanceof StoreError ? error.message : "No se pudo guardar.",
+    );
+    return null;
+  }
+}
+
+const panels = createPanels({
+  onAddTask: async (text) =>
+    Boolean(await saving((store) => store.addTask(text))),
+  onToggleTask: (id, done) => saving((store) => store.setTaskDone(id, done)),
+  async onRemoveTask(id) {
+    const task = await saving((store) => store.removeTask(id));
+    if (!task) return;
+    toast.show("Tarea borrada", {
+      action: "Deshacer",
+      onAction: () => saving((store) => store.restoreTask(task)),
+    });
+  },
+  onAddMemory: async (text) =>
+    Boolean(await saving((store) => store.addMemory(text))),
+  async onRemoveMemory(id) {
+    const memory = await saving((store) => store.removeMemory(id));
+    if (!memory) return;
+    toast.show("Recuerdo borrado", {
+      action: "Deshacer",
+      onAction: () => saving((store) => store.restoreMemory(memory)),
+    });
+  },
+  onRetry: () => state.store?.retry(),
+});
+
+// ---------- Caja de texto ----------
+
+function fitInput() {
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, INPUT_MAX_HEIGHT)}px`;
+}
+
+// Une lo dictado con lo que ya había, sin duplicar ni comerse espacios.
+function glue(base, piece) {
+  if (!base) return piece.trimStart();
+  if (!piece) return base;
+  return /\s$/.test(base) || /^\s/.test(piece)
+    ? base + piece
+    : `${base} ${piece}`;
+}
+
+function showDictated(text) {
+  input.value = text;
+  fitInput();
+  renderSend();
+}
+
+const voiceHandlers = {
+  onNotice: (text) => toast.show(text),
+  onDictationState(dictationState) {
+    const listening = dictationState !== "idle";
+    if (listening && !state.listening) state.dictatedBase = input.value;
+    state.listening = listening;
+    micButton.setAttribute("aria-pressed", String(listening));
+    setPhase(state.phase);
+  },
+  onPartial: (text) => showDictated(glue(state.dictatedBase, text)),
+  onFinal(text) {
+    state.dictatedBase = glue(state.dictatedBase, text);
+    showDictated(state.dictatedBase);
+  },
+  onDictationGone() {
+    micButton.hidden = true;
+    state.listening = false;
+    setPhase(state.phase);
+  },
+  onSpeechState(speechState, id) {
+    state.speakingId = speechState === "idle" ? null : id;
+    chat.setSpeaking(state.speakingId);
+    repaintAll();
+    setPhase(state.phase);
+  },
+  onSpeechGone() {
+    state.speakingId = null;
+    chat.setCanSpeak(false);
+    chat.setSpeaking(null);
+    repaintAll();
+    setPhase(state.phase);
+  },
+};
+
+// ---------- Eventos ----------
+
+async function copyFrom(button, text, source) {
+  if (await copyText(text)) {
+    const label = button.textContent;
+    button.textContent = "Copiado";
+    setTimeout(() => {
+      button.textContent = label;
+    }, 1400);
+    return;
+  }
+  selectContents(source);
+  toast.show(
+    "No pude copiar solo. El texto quedó seleccionado para que lo copies.",
+  );
+}
+
+function onLogClick(event) {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const row = button.closest(".msg");
+  if (button.hasAttribute("data-copy")) {
+    const code = button.closest(".code")?.querySelector("code");
+    if (code) copyFrom(button, code.textContent, code);
+    return;
+  }
+  const message = state.messages.find(
+    (item) => String(item.id) === row?.dataset.id,
+  );
+  if (!message) return;
+  if (button.dataset.undo !== undefined)
+    undoAction(message, Number(button.dataset.undo));
+  else if (button.dataset.act === "copy")
+    copyFrom(button, message.content, row.querySelector(".md"));
+  // La voz exige que la llamada salga directo del clic.
+  else if (button.dataset.act === "speak")
+    state.voice.speech?.toggle(message.id, message.content);
+  else if (button.dataset.act === "retry") retry(message);
+}
+
+function bindEvents() {
+  $("#composer").addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (state.phase !== "idle") state.controller?.abort();
+    else send(input.value);
+  });
+  input.addEventListener("input", () => {
+    state.dictatedBase = input.value;
+    fitInput();
+    renderSend();
+  });
+  // En teclado físico Enter envía; en pantalla táctil hace salto de línea.
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    if (coarsePointer.matches) return;
+    event.preventDefault();
+    $("#composer").requestSubmit();
+  });
+  micButton.addEventListener("click", () => state.voice.toggleDictation?.());
+  $("#modes").addEventListener("click", (event) => {
+    const mode = event.target.closest("button")?.dataset.mode;
+    if (mode) setMode(mode);
+  });
+  $("#openTasks").addEventListener("click", (event) =>
+    panels.open("tasks", event.currentTarget),
+  );
+  $("#openMemory").addEventListener("click", (event) =>
+    panels.open("memory", event.currentTarget),
+  );
+  $("#newChat").addEventListener("click", newChat);
+  $("#log").addEventListener("click", onLogClick);
+  $("#noticeButton").addEventListener("click", () => {
+    const notice = noticeFor(state);
+    if (notice?.action) return state.store?.retry();
+    state.dismissedNotice = notice?.text ?? "";
+    renderNotice();
+  });
+}
+
+// ---------- Arranque ----------
+
+function boot() {
+  $("#heroCore").innerHTML = coreMarkup("hero");
+  $("#miniCore").innerHTML = coreMarkup("mini");
+  $("#openTasks").insertAdjacentHTML("afterbegin", icon("tasks"));
+  $("#openMemory").insertAdjacentHTML("afterbegin", icon("memory"));
+  $("#newChat").innerHTML = icon("plus");
+  $("#closeSide").innerHTML = icon("close");
+  micButton.innerHTML = icon("mic");
+  $("#modes").replaceChildren(
+    ...MODE_IDS.map((id) =>
+      el("button", {
+        type: "button",
+        class: "mode",
+        "data-mode": id,
+        text: MODES[id].name,
+      }),
+    ),
+  );
+
+  loadChat();
+  bindEvents();
+  renderMode();
+  renderStore();
+  setPhase("idle");
+  if (state.messages.length) {
+    for (const message of state.messages)
+      chat.upsert(message, { isLast: isLast(message) });
+    enterChat(false);
+    chat.toBottom();
+  }
+
+  // La página se pinta ya; cada capability se enciende cuando la vista responde.
+  ready.backend = createBackend({
+    onGone(demo) {
+      state.backend = demo;
+      setPhase(state.phase);
+      renderNotice();
+    },
+  }).then((backend) => {
+    state.backend = backend;
+    setPhase(state.phase);
+    renderNotice();
+    return backend;
+  });
+  ready.store = createStore(renderStore).then((store) => {
+    state.store = store;
+    renderStore();
+    return store;
+  });
+  createVoice(voiceHandlers).then((voice) => {
+    state.voice = voice;
+    micButton.hidden = !voice.toggleDictation;
+    chat.setCanSpeak(Boolean(voice.speech));
+    repaintAll();
+  });
+}
+
+boot();
+
+</script>

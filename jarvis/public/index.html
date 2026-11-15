@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Jarvis</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <meta
+      name="description"
+      content="Jarvis, el asistente personal de Emilio: chat, tareas y memoria."
+    />
+    <meta name="theme-color" content="#080b1f" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <!-- El mismo reinicio que pone el visor de claude.ai al publicar la página. -->
+    <style>
+      :root {
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      body {
+        margin: 0;
+      }
+      [hidden]:not([hidden="until-found" i]) {
+        display: none !important;
+      }
+    </style>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app" id="app" data-view="empty" data-core="idle" data-panel="">
+      <div class="shell" id="shell">
+        <header class="top">
+          <div class="brand">
+            <span class="core-slot core-slot--mini" id="miniCore"></span>
+            <div class="brand-text">
+              <h1 class="wordmark">Jarvis</h1>
+              <p class="status" id="status" role="status">conectando…</p>
+            </div>
+          </div>
+          <div class="top-actions">
+            <button
+              class="tool"
+              id="openTasks"
+              type="button"
+              aria-haspopup="dialog"
+              aria-label="Tareas"
+            >
+              <span class="tool-label tool-label--mid">Tareas</span>
+              <span class="tool-count" id="taskCount" hidden>0</span>
+            </button>
+            <button
+              class="tool"
+              id="openMemory"
+              type="button"
+              aria-haspopup="dialog"
+              aria-label="Memoria"
+            >
+              <span class="tool-label tool-label--wide">Memoria</span>
+            </button>
+            <button
+              class="tool tool--icon"
+              id="newChat"
+              type="button"
+              aria-label="Nueva conversación"
+              hidden
+            ></button>
+          </div>
+        </header>
+
+        <nav class="modes" id="modes" aria-label="Modo de Jarvis"></nav>
+
+        <div class="notice" id="notice" hidden>
+          <p id="noticeText"></p>
+          <button type="button" id="noticeButton">Entendido</button>
+        </div>
+
+        <main class="main" id="main">
+          <section class="hero" id="hero" aria-label="Inicio">
+            <span class="core-slot core-slot--hero" id="heroCore"></span>
+            <h2 class="greeting" id="greeting"></h2>
+            <p class="telemetry" id="telemetry"></p>
+            <div class="chips" id="chips"></div>
+          </section>
+          <ol class="log" id="log" aria-label="Conversación"></ol>
+        </main>
+
+        <form class="composer" id="composer" autocomplete="off">
+          <label class="sr-only" for="input">Mensaje para Jarvis</label>
+          <textarea
+            id="input"
+            rows="1"
+            maxlength="8000"
+            placeholder="Escribe o dicta…"
+          ></textarea>
+          <button
+            class="round round--mic"
+            id="mic"
+            type="button"
+            aria-label="Dictar"
+            aria-pressed="false"
+            hidden
+          ></button>
+          <button
+            class="round round--send"
+            id="send"
+            type="submit"
+            aria-label="Enviar mensaje"
+          ></button>
+        </form>
+      </div>
+
+      <aside class="side" id="side" aria-label="Tareas y memoria">
+        <div class="side-head">
+          <div class="side-tabs">
+            <button
+              type="button"
+              class="mode"
+              data-pane="tasks"
+              aria-pressed="true"
+            >
+              Tareas
+            </button>
+            <button
+              type="button"
+              class="mode"
+              data-pane="memory"
+              aria-pressed="false"
+            >
+              Memoria
+            </button>
+          </div>
+          <button
+            class="tool tool--icon"
+            id="closeSide"
+            type="button"
+            aria-label="Cerrar"
+          ></button>
+        </div>
+
+        <div class="sync" id="syncNote" hidden>
+          <p id="syncText"></p>
+          <button type="button" id="syncRetry" hidden>Reintentar</button>
+        </div>
+
+        <section
+          class="pane"
+          id="paneTasks"
+          data-pane-name="tasks"
+          aria-labelledby="tasksTitle"
+        >
+          <div class="pane-head">
+            <h2 id="tasksTitle">Tareas</h2>
+            <span class="pane-total" id="taskTotal"></span>
+          </div>
+          <form class="add" id="taskForm" autocomplete="off">
+            <label class="sr-only" for="taskInput">Nueva tarea</label>
+            <input
+              id="taskInput"
+              type="text"
+              maxlength="280"
+              placeholder="Nueva tarea"
+              enterkeyhint="done"
+            />
+            <button type="submit">Agregar</button>
+          </form>
+          <ul class="rows" id="taskList"></ul>
+        </section>
+
+        <section
+          class="pane"
+          id="paneMemory"
+          data-pane-name="memory"
+          aria-labelledby="memoryTitle"
+        >
+          <div class="pane-head">
+            <h2 id="memoryTitle">Memoria</h2>
+            <span class="pane-total" id="memoryTotal"></span>
+          </div>
+          <form class="add" id="memoryForm" autocomplete="off">
+            <label class="sr-only" for="memoryInput">Dato para recordar</label>
+            <input
+              id="memoryInput"
+              type="text"
+              maxlength="500"
+              placeholder="Dato para recordar"
+              enterkeyhint="done"
+            />
+            <button type="submit">Guardar</button>
+          </form>
+          <ul class="rows" id="memoryList"></ul>
+          <p class="pane-hint">No guardes contraseñas ni datos delicados.</p>
+        </section>
+      </aside>
+
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
