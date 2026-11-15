@@ -36,6 +36,13 @@ async function scenario(name, options, run) {
 }
 
 const text = (page, selector) => page.textContent(selector);
+// Espera a que la línea de estado diga exactamente `value`.
+const status = (page, value) =>
+  page.waitForFunction(
+    (wanted) => document.querySelector("#status").textContent === wanted,
+    value,
+  );
+const online = (page) => status(page, "en línea");
 const count = (page, selector) => page.locator(selector).count();
 const lastCall = (page) =>
   page.evaluate(() => window.__fakeCalls.sample.at(-1));
@@ -60,10 +67,8 @@ const SMALL = { width: 360, height: 640, mobile: true, scale: 2 };
 await scenario("demo-360", SMALL, async (page, shot) => {
   assert.equal(await text(page, "#status"), "modo demo");
   assert.ok(await page.isVisible("#notice"));
-  assert.ok(
-    await page.isHidden("#mic"),
-    "sin dictation el micrófono no aparece",
-  );
+  // En teléfono el micrófono siempre está: sin dictation usa el del teclado.
+  assert.ok(await page.isVisible("#mic"));
   assert.deepEqual(await smallTargets(page), []);
   await shot("01-demo-inicio-360");
   await say(page, "anota comprar cartulina");
@@ -337,16 +342,13 @@ await scenario(
   "voz-escritorio",
   { ...DESKTOP, fake: { dictation: true, tts: true } },
   async (page, shot) => {
-    await page.waitForFunction(
-      () => document.querySelector("#status").textContent === "en línea",
-    );
+    await online(page);
     await page.waitForSelector("#mic:not([hidden])");
     await page.fill("#input", "Jarvis,");
     await page.click("#mic");
-    await page.waitForFunction(
-      () => document.querySelector("#status").textContent === "escuchando…",
-    );
+    await status(page, "escuchando…");
     assert.equal(await page.getAttribute("#mic", "aria-pressed"), "true");
+    assert.match(await text(page, "#voiceHint"), /Te escucho/);
     await page.waitForFunction(
       () =>
         document.querySelector("#input").value ===
@@ -355,30 +357,124 @@ await scenario(
     assert.deepEqual(await page.evaluate(() => window.__fakeCalls.dictation), [
       { language: "es" },
     ]);
-    await page.click("#mic");
-    await page.waitForFunction(
-      () => document.querySelector("#status").textContent === "en línea",
+    // Tras la pausa se envía solo y contesta con la voz de la plataforma.
+    await page.waitForSelector(".msg--user");
+    assert.equal(
+      await text(page, ".msg--user .bubble"),
+      "Jarvis, anota comprar cartulina",
     );
-    // En teclado físico Enter envía.
-    await page.press("#input", "Enter");
-    await settled(page);
-    await page.click('.msg--assistant [data-act="speak"]');
-    await page.waitForFunction(
-      () => document.querySelector("#status").textContent === "hablando…",
+    assert.ok(await page.isHidden("#voiceHint"));
+    assert.match((await lastCall(page)).turns[0].content, /leer en voz alta/);
+    await status(page, "hablando…");
+    assert.equal(
+      await page.evaluate(() => window.__fakeCalls.speak[0].options.language),
+      "es",
     );
     assert.equal(
       await text(page, '.msg--assistant [data-act="speak"]'),
       "Detener voz",
     );
-    assert.equal(
-      await page.evaluate(() => window.__fakeCalls.speak[0].options.language),
-      "es",
-    );
     await shot("11-voz-escritorio");
     await page.click('.msg--assistant [data-act="speak"]');
-    await page.waitForFunction(
-      () => document.querySelector("#status").textContent === "en línea",
+    await online(page);
+    // Lo escrito a mano (Enter en teclado físico) no se lee en voz alta.
+    await page.fill("#input", "hola");
+    await page.press("#input", "Enter");
+    await settled(page);
+    assert.equal(await count(page, ".msg--user"), 2);
+    assert.equal(await page.evaluate(() => window.__fakeCalls.speak.length), 1);
+  },
+);
+
+const spokenTexts = (page) =>
+  page.evaluate(() => window.__spoken.filter((item) => item.text.trim()));
+
+// En iPhone y iPad no hay micrófono de la plataforma: se usa el dictado del
+// teclado (aquí simulado tecleando) y la voz del navegador.
+await scenario(
+  "voz-teclado-390",
+  { ...PHONE, fake: {} },
+  async (page, shot) => {
+    await online(page);
+    assert.ok(await page.isVisible("#mic"));
+    await page.click("#mic");
+    assert.match(await text(page, "#voiceHint"), /micrófono de tu teclado/);
+    assert.equal(await page.evaluate(() => document.activeElement.id), "input");
+    assert.equal(await text(page, "#status"), "escuchando…");
+    assert.equal(await page.getAttribute("#app", "data-core"), "listening");
+    // El toque en el micrófono desbloquea la voz con una frase muda.
+    assert.equal(await page.evaluate(() => window.__spoken[0].volume), 0);
+    await page.keyboard.type("qué tengo pendiente", { delay: 15 });
+    assert.ok(
+      await page.evaluate(() =>
+        document.querySelector("#send").classList.contains("is-arming"),
+      ),
     );
+    await shot("16-voz-teclado-390");
+    // Tras la pausa se envía solo, se cierra el teclado y Jarvis contesta hablando.
+    await page.waitForSelector(".msg--user");
+    assert.equal(await text(page, ".msg--user .bubble"), "qué tengo pendiente");
+    assert.ok(await page.isHidden("#voiceHint"));
+    assert.equal(await page.getAttribute("#mic", "aria-pressed"), "false");
+    assert.notEqual(
+      await page.evaluate(() => document.activeElement.id),
+      "input",
+    );
+    assert.match((await lastCall(page)).turns[0].content, /leer en voz alta/);
+    await status(page, "hablando…");
+    assert.equal(await page.getAttribute("#send", "aria-label"), "Detener voz");
+    await settled(page);
+    const said = await spokenTexts(page);
+    assert.equal(said[0].lang, "es-MX");
+    assert.equal(said[0].voice, "Paulina");
+    assert.match(said.map((item) => item.text).join(" "), /Respuesta simulada/);
+    await shot("17-voz-hablando-390");
+    // El botón naranja calla a Jarvis.
+    await page.click("#send");
+    await online(page);
+    // Un mensaje escrito y enviado a mano no se lee.
+    const before = (await spokenTexts(page)).length;
+    await say(page, "hola");
+    await settled(page);
+    assert.equal((await spokenTexts(page)).length, before);
+    // Apagar el modo voz sin enviar.
+    await page.click("#mic");
+    await page.click("#mic");
+    assert.ok(await page.isHidden("#voiceHint"));
+  },
+);
+
+await scenario(
+  "voz-sin-arranque-390",
+  { ...PHONE, fake: {}, speech: { mute: true } },
+  async (page) => {
+    await online(page);
+    await page.click("#mic");
+    await page.keyboard.type("hola Jarvis", { delay: 15 });
+    await page.waitForSelector(".msg--user");
+    await settled(page);
+    // Si el navegador no arranca la voz, se avisa y queda el botón Escuchar.
+    await page.waitForSelector("#toast:not([hidden])");
+    assert.match(await text(page, "#toast"), /no dejó que Jarvis hablara/);
+    assert.equal(
+      await text(page, '.msg--assistant [data-act="speak"]'),
+      "Escuchar",
+    );
+    assert.equal(await text(page, "#status"), "en línea");
+  },
+);
+
+await scenario(
+  "sin-voz-escritorio",
+  { ...DESKTOP, fake: {}, speech: null },
+  async (page) => {
+    await online(page);
+    // Sin micrófono de la plataforma ni teclado táctil no hay botón de hablar.
+    assert.ok(await page.isHidden("#mic"));
+    await say(page, "dame código para mover al jugador");
+    await settled(page);
+    assert.equal(await count(page, '[data-act="speak"]'), 0);
+    assert.equal(await count(page, '.msg--assistant [data-act="copy"]'), 1);
   },
 );
 

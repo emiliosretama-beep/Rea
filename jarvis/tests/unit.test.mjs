@@ -18,7 +18,9 @@ const { StoreError, createSessionStore, createStore, sortTasks } =
   await import("../public/store.js");
 const { AskError, createBackend, createRunner, splitMarkers } =
   await import("../public/backend.js");
-const { speakLines } = await import("../public/voice.js");
+const { speakLines, speechChunks, speechText } =
+  await import("../public/voice.js");
+const { glue } = await import("../public/talk.js");
 const { greeting, noticeFor, statusText, telemetry } =
   await import("../public/status.js");
 const { readChat, writeChat } = await import("../public/session.js");
@@ -464,4 +466,86 @@ test("conversación guardada: valida lo que lee y descarta lo que falló", () =>
   } finally {
     globalThis.localStorage = previous;
   }
+});
+
+// ---------- Modo voz ----------
+
+test("voz: el texto para decir no lleva símbolos, enlaces crudos ni código", () => {
+  const said = speechText(
+    [
+      "## Título",
+      "",
+      "Usa **`requestAnimationFrame`** y mira [la guía](https://a.com/x).",
+      "",
+      "```js",
+      "const a = 1;",
+      "```",
+      "",
+      "- uno",
+      "- dos",
+      "",
+      "2 * 3 = 6 y https://itch.io/dashboard",
+    ].join("\n"),
+  );
+  assert.ok(!/[#*`[\]]/.test(said));
+  assert.ok(said.includes("Usa requestAnimationFrame y mira la guía."));
+  assert.ok(said.includes("(bloque de código)"));
+  assert.ok(!said.includes("const a"));
+  assert.ok(said.includes("2 por 3 = 6 y enlace"));
+});
+
+test("voz: en streaming solo se dicen frases completas y lo dicho no cambia", () => {
+  assert.deepEqual(speechChunks("Hola Emilio. Estoy pens", false), [
+    "Hola Emilio.",
+  ]);
+  assert.deepEqual(speechChunks("Hola Emilio. Estoy pensando.", true), [
+    "Hola Emilio.",
+    "Estoy pensando.",
+  ]);
+  const early = speechChunks("Paso uno: abre el archivo.\nPaso dos", false);
+  const late = speechChunks("Paso uno: abre el archivo.\nPaso dos: guarda.");
+  assert.deepEqual(early, ["Paso uno:", "abre el archivo."]);
+  assert.deepEqual(late.slice(0, early.length), early);
+  // Un bloque de código a medias no se lee ni cambia lo anterior.
+  assert.deepEqual(speechChunks("Mira:\n```js\nconst a", false), ["Mira:"]);
+  assert.deepEqual(speechChunks("Mira:\n```js\nconst a = 1;\n```\nListo."), [
+    "Mira:",
+    "(bloque de código)",
+    "Listo.",
+  ]);
+  // Las horas y los decimales no cortan la frase.
+  assert.deepEqual(speechChunks("Nos vemos a las 8:30 con 3.5 puntos."), [
+    "Nos vemos a las 8:30 con 3.5 puntos.",
+  ]);
+});
+
+test("voz: las frases largas se parten y nada queda vacío", () => {
+  const chunks = speechChunks(`${"palabra ".repeat(120)}fin. --- ✓`);
+  assert.ok(chunks.length > 3);
+  assert.ok(
+    chunks.every((chunk) => chunk.length <= 240 && /\p{L}/u.test(chunk)),
+  );
+});
+
+test("voz: lo dictado se une a lo escrito sin pegar ni duplicar espacios", () => {
+  assert.equal(glue("", " hola"), "hola");
+  assert.equal(glue("Jarvis,", " anota esto"), "Jarvis, anota esto");
+  assert.equal(glue("hola", "mundo"), "hola mundo");
+  assert.equal(glue("hola ", "mundo"), "hola mundo");
+  assert.equal(glue("hola", ""), "hola");
+});
+
+test("instrucciones: una respuesta hablada pide frases cortas y sin código", () => {
+  const base = {
+    mode: "general",
+    tasks: [],
+    memories: [],
+    now: NOW,
+    actMode: "tools",
+    persistent: true,
+  };
+  assert.ok(!buildInstructions(base).includes("leer en voz alta"));
+  assert.ok(
+    buildInstructions({ ...base, spoken: true }).includes("leer en voz alta"),
+  );
 });

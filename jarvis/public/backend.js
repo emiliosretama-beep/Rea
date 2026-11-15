@@ -306,6 +306,7 @@ function cloudBackend(sample, limits, onGone) {
       tasks,
       memories,
       persistent,
+      spoken,
       actions,
       signal,
       onText,
@@ -317,6 +318,7 @@ function cloudBackend(sample, limits, onGone) {
         tasks,
         memories,
         persistent,
+        spoken,
         now: new Date(),
         actMode: acts,
       });

@@ -8,6 +8,7 @@ import { MODES, MODE_IDS } from "./prompt.js";
 import { readChat, writeChat } from "./session.js";
 import { greeting, noticeFor, statusText, telemetry } from "./status.js";
 import { StoreError, createStore } from "./store.js";
+import { createTalk } from "./talk.js";
 import { $, copyText, createToast, el, icon, selectContents } from "./ui.js";
 import { createVoice } from "./voice.js";
 
@@ -20,10 +21,9 @@ const state = {
   controller: null,
   backend: null, // llegan cuando la vista responde (ver boot)
   store: null,
-  voice: { toggleDictation: null, speech: null },
-  listening: false,
+  voice: { listen: null, speech: null }, // ver voice.js
+  spoken: false, // el último mensaje se dictó: Jarvis contesta hablando
   speakingId: null,
-  dictatedBase: "",
   dismissedNotice: "",
   nextId: 1,
 };
@@ -37,6 +37,19 @@ const core = createCore(app);
 const toast = createToast($("#toast"));
 const chat = createChatView({ scroller: $("#main"), log: $("#log") });
 const coarsePointer = globalThis.matchMedia("(pointer: coarse)");
+// Modo voz: dictar el mensaje y que se envíe solo tras una pausa (talk.js).
+const talk = createTalk({
+  input,
+  micButton,
+  sendButton,
+  hint: $("#voiceHint"),
+  onText() {
+    fitInput();
+    renderSend();
+  },
+  onSpoken: (text) => send(text, { spoken: true }),
+  onChange: () => setPhase(state.phase),
+});
 
 // ---------- Conversación guardada (ver session.js) ----------
 
@@ -92,25 +105,30 @@ function syncCore() {
   const speaking = state.phase === "streaming" || Boolean(state.speakingId);
   if (state.phase === "thinking") core.set("thinking");
   else if (speaking) core.set("speaking");
-  else core.set(state.listening ? "listening" : "idle");
+  else core.set(talk.active ? "listening" : "idle");
   core.talk(state.phase === "idle" && Boolean(state.speakingId));
 }
 
+// El botón naranja envía; mientras Jarvis contesta o habla, lo detiene.
 function renderSend() {
   const busy = state.phase !== "idle";
-  sendButton.innerHTML = icon(busy ? "stop" : "send");
-  sendButton.setAttribute(
-    "aria-label",
-    busy ? "Detener respuesta" : "Enviar mensaje",
+  const talking = !busy && Boolean(state.speakingId) && !input.value.trim();
+  sendButton.innerHTML = icon(busy || talking ? "stop" : "send");
+  let label = "Enviar mensaje";
+  if (busy) label = "Detener respuesta";
+  else if (talking) label = "Detener voz";
+  sendButton.setAttribute("aria-label", label);
+  sendButton.classList.toggle(
+    "is-empty",
+    !busy && !talking && !input.value.trim(),
   );
-  sendButton.classList.toggle("is-empty", !busy && !input.value.trim());
 }
 
 function setPhase(phase) {
   state.phase = phase;
   renderSend();
   syncCore();
-  $("#status").textContent = statusText(state);
+  $("#status").textContent = statusText({ ...state, listening: talk.active });
 }
 
 function renderNotice() {
@@ -205,6 +223,7 @@ function leaveChat() {
 function newChat() {
   if (state.phase !== "idle" || state.messages.length === 0) return;
   const old = state.messages;
+  talk.cancel();
   state.voice.speech?.stop();
   state.messages = [];
   chat.clear();
@@ -252,6 +271,10 @@ async function runTurn() {
   const controller = new AbortController();
   state.controller = controller;
   setPhase("thinking");
+  // Si el mensaje se dictó, la respuesta se lee en voz alta según va llegando.
+  const speech = state.spoken ? state.voice.speech : null;
+  reply.spoken = Boolean(speech);
+  speech?.begin(reply.id);
   let shown = 0;
   try {
     const store = await ready.store;
@@ -262,6 +285,7 @@ async function runTurn() {
       tasks: store.tasks,
       memories: store.memories,
       persistent: store.persistent,
+      spoken: Boolean(speech),
       actions: store,
       signal: controller.signal,
       onText(text) {
@@ -271,6 +295,7 @@ async function runTurn() {
         reply.content = text;
         reply.status = "streaming";
         repaint(reply);
+        speech?.feed(reply.id, text, false);
       },
       onAction(action) {
         reply.actions.push(action);
@@ -280,7 +305,9 @@ async function runTurn() {
     reply.content = result.text;
     reply.truncated = result.truncated;
     reply.status = "done";
+    speech?.feed(reply.id, reply.content, true);
   } catch (error) {
+    speech?.stop();
     settleFailure(reply, error);
   } finally {
     state.controller = null;
@@ -290,14 +317,16 @@ async function runTurn() {
   }
 }
 
-function send(raw) {
+// `spoken`: el mensaje llegó por voz, así que Jarvis también contesta hablando.
+function send(raw, { spoken = false } = {}) {
   const text = raw.trim();
   if (!text || state.phase !== "idle") return;
+  state.spoken = spoken || talk.active;
+  talk.cancel();
   state.voice.speech?.stop();
   pushMessage({ role: "user", content: text });
   enterChat(true);
   input.value = "";
-  state.dictatedBase = "";
   fitInput();
   runTurn();
 }
@@ -371,47 +400,18 @@ function fitInput() {
   input.style.height = `${Math.min(input.scrollHeight, INPUT_MAX_HEIGHT)}px`;
 }
 
-// Une lo dictado con lo que ya había, sin duplicar ni comerse espacios.
-function glue(base, piece) {
-  if (!base) return piece.trimStart();
-  if (!piece) return base;
-  return /\s$/.test(base) || /^\s/.test(piece)
-    ? base + piece
-    : `${base} ${piece}`;
-}
-
-function showDictated(text) {
-  input.value = text;
-  fitInput();
-  renderSend();
-}
-
 const voiceHandlers = {
   onNotice: (text) => toast.show(text),
-  onDictationState(dictationState) {
-    const listening = dictationState !== "idle";
-    if (listening && !state.listening) state.dictatedBase = input.value;
-    state.listening = listening;
-    micButton.setAttribute("aria-pressed", String(listening));
-    setPhase(state.phase);
-  },
-  onPartial: (text) => showDictated(glue(state.dictatedBase, text)),
-  onFinal(text) {
-    state.dictatedBase = glue(state.dictatedBase, text);
-    showDictated(state.dictatedBase);
-  },
-  onDictationGone() {
-    micButton.hidden = true;
-    state.listening = false;
-    setPhase(state.phase);
-  },
+  ...talk.events,
   onSpeechState(speechState, id) {
     state.speakingId = speechState === "idle" ? null : id;
     chat.setSpeaking(state.speakingId);
     repaintAll();
     setPhase(state.phase);
   },
+  // La plataforma retiró su voz: no se sustituye por otra.
   onSpeechGone() {
+    state.voice = { ...state.voice, speech: null };
     state.speakingId = null;
     chat.setCanSpeak(false);
     chat.setSpeaking(null);
@@ -464,21 +464,31 @@ function bindEvents() {
   $("#composer").addEventListener("submit", (event) => {
     event.preventDefault();
     if (state.phase !== "idle") state.controller?.abort();
+    else if (state.speakingId && !input.value.trim())
+      state.voice.speech?.stop();
     else send(input.value);
   });
   input.addEventListener("input", () => {
-    state.dictatedBase = input.value;
     fitInput();
     renderSend();
+    talk.onInput();
   });
   // En teclado físico Enter envía; en pantalla táctil hace salto de línea.
   input.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (coarsePointer.matches) return;
     event.preventDefault();
-    $("#composer").requestSubmit();
+    send(input.value);
   });
-  micButton.addEventListener("click", () => state.voice.toggleDictation?.());
+  // El toque en el micrófono también desbloquea la voz: Safari solo deja que
+  // Jarvis hable si antes hubo un toque.
+  micButton.addEventListener("click", () => {
+    state.voice.speech?.unlock();
+    state.voice.speech?.stop();
+    talk.toggle();
+  });
+  // Que el botón no le quite el foco a la caja (cerraría el teclado).
+  micButton.addEventListener("mousedown", (event) => event.preventDefault());
   $("#modes").addEventListener("click", (event) => {
     const mode = event.target.closest("button")?.dataset.mode;
     if (mode) setMode(mode);
@@ -552,7 +562,7 @@ function boot() {
   });
   createVoice(voiceHandlers).then((voice) => {
     state.voice = voice;
-    micButton.hidden = !voice.toggleDictation;
+    talk.attach(voice.listen, coarsePointer.matches);
     chat.setCanSpeak(Boolean(voice.speech));
     repaintAll();
   });

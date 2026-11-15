@@ -861,9 +861,19 @@ button {
 
 .composer {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
   padding-block: 8px 10px;
+}
+/* Modo voz: qué hacer para hablarle, encima de la caja. */
+.voice-hint {
+  flex: 0 0 100%;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--amanecer);
 }
 .composer textarea {
   flex: 1;
@@ -909,9 +919,44 @@ button {
   stroke-width: 2;
 }
 .round--send {
+  position: relative;
   border-color: var(--era);
   background: var(--era);
   color: var(--sobre-era);
+}
+/* Anillo que se llena mientras corre la pausa antes de enviar lo dictado. */
+@property --arm-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0turn;
+}
+.round--send.is-arming::after {
+  --arm-turn: 1turn;
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(var(--amanecer) var(--arm-turn), transparent 0);
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .round--send.is-arming::after {
+    animation: arming var(--arm, 2s) linear both;
+  }
+}
+@keyframes arming {
+  from {
+    --arm-turn: 0turn;
+  }
 }
 .round--send.is-empty {
   opacity: 0.45;
@@ -1197,6 +1242,7 @@ label.row-main {
         </main>
 
         <form class="composer" id="composer" autocomplete="off">
+          <p class="voice-hint" id="voiceHint" role="status" hidden></p>
           <label class="sr-only" for="input">Mensaje para Jarvis</label>
           <textarea
             id="input"
@@ -1208,7 +1254,7 @@ label.row-main {
             class="round round--mic"
             id="mic"
             type="button"
-            aria-label="Dictar"
+            aria-label="Hablar con Jarvis"
             aria-pressed="false"
             hidden
           ></button>
@@ -1437,6 +1483,9 @@ const HOW_TO_ACT = {
   ],
 };
 
+// Cuando Emilio habló en vez de escribir, la respuesta se lee en voz alta.
+const SPOKEN_STYLE = `- Esta respuesta se va a leer en voz alta: contesta como en una conversación hablada, con frases cortas y naturales, sin listas, tablas ni código. Si hace falta algo largo o con código, di el resumen y ofrece escribirlo.`;
+
 const DATE_FORMAT = new Intl.DateTimeFormat("es-MX", {
   weekday: "long",
   day: "numeric",
@@ -1459,6 +1508,7 @@ function buildInstructions({
   now,
   actMode,
   persistent,
+  spoken = false,
 }) {
   const current = MODES[mode] ?? MODES.general;
   const lines = [
@@ -1470,6 +1520,7 @@ function buildInstructions({
     "- No le des la razón por compromiso: si una idea tiene un problema, dilo con respeto y propón algo mejor.",
     "- Si no sabes algo o no puedes comprobarlo, dilo. No inventes datos, funciones ni enlaces. No puedes navegar por internet ni ver archivos.",
     "- Formato: Markdown sencillo (párrafos, listas, negritas, bloques de código). Evita tablas anchas: te lee en un iPhone. No uses LaTeX; escribe las fórmulas en texto plano, por ejemplo x^2, raíz(9) o 3/4.",
+    ...(spoken ? [SPOKEN_STYLE] : []),
     "",
     `Modo actual: ${current.name}`,
     ...current.rules.map((rule) => `- ${rule}`),
@@ -1633,13 +1684,23 @@ function readFence(lines, start) {
   return [codeBlock(lang, code.join("\n")), Math.min(i + 1, lines.length)];
 }
 
+// Parte una fila de tabla por "|" y respeta los "\|" escapados. Sin
+// "lookbehind" en la expresión regular: en Safari antiguo rompe toda la página.
 function splitRow(line) {
-  return line
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split(/(?<!\\)\|/)
-    .map((cell) => cell.trim().replace(/\\\|/g, "|"));
+  const text = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  const cells = [];
+  let cell = "";
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\" && text[i + 1] === "|") {
+      cell += "|";
+      i++;
+    } else if (text[i] === "|") {
+      cells.push(cell.trim());
+      cell = "";
+    } else cell += text[i];
+  }
+  cells.push(cell.trim());
+  return cells;
 }
 
 function readTable(lines, start) {
@@ -2486,6 +2547,7 @@ function cloudBackend(sample, limits, onGone) {
       tasks,
       memories,
       persistent,
+      spoken,
       actions,
       signal,
       onText,
@@ -2497,6 +2559,7 @@ function cloudBackend(sample, limits, onGone) {
         tasks,
         memories,
         persistent,
+        spoken,
         now: new Date(),
         actMode: acts,
       });
@@ -2549,17 +2612,30 @@ async function createBackend({ onGone } = {}) {
 }
 
 // ---- public/voice.js ----
-// Voz de Jarvis: dictado (`dictation`) y lectura en voz alta (`tts`).
-// Las dos capabilities resuelven `null` en Safari y en las apps móviles de
-// Claude; ahí la interfaz esconde los botones y se escribe con el teclado.
-// La plataforma es la dueña del micrófono y del sonido: la página solo recibe
-// texto y estados.
+// Voz de Jarvis: hablarle y escucharlo.
+// - Hablarle: la capability `dictation` (el micrófono lo abre la plataforma).
+//   En Safari y en las apps móviles no existe; ahí talk.js usa el dictado del
+//   teclado.
+// - Escucharlo: la capability `tts`. Si esta vista no la ofrece, se usa la voz
+//   del propio navegador (speechSynthesis), que sí existe en iPhone y iPad.
+//
+// Las dos voces exponen lo mismo:
+//   unlock()              llamar dentro de un toque: Safari solo deja hablar
+//                         después de uno
+//   begin(id)             empieza a leer la respuesta `id`
+//   feed(id, text, done)  texto acumulado de la respuesta; `done` al terminar
+//   toggle(id, text)      lee una respuesta entera, o calla si ya suena
+//   stop()
 
-const SPEAK_LIMIT = 1800; // la capability acepta hasta 2,000 caracteres por línea
+const SPEAK_LIMIT = 1800; // `tts` acepta hasta 2,000 caracteres por línea
 const SPEAK_MAX_LINES = 100;
+const CHUNK_LIMIT = 240; // frases cortas: la voz del navegador arranca antes
+const START_LIMIT_MS = 3000;
+const SENTENCE_END = ".!?…:";
 
 // Parte un texto en líneas que `tts` acepta: un párrafo por línea, sin bloques
-// de código (se sustituyen por una frase corta).
+// de código (se sustituyen por una frase corta). La plataforma quita ella
+// misma las marcas de Markdown.
 function speakLines(text) {
   const prose = String(text ?? "").replace(
     /```[\s\S]*?(?:```|$)/g,
@@ -2579,6 +2655,62 @@ function speakLines(text) {
   return lines.slice(0, SPEAK_MAX_LINES).map((line) => ({ text: line }));
 }
 
+// Markdown a texto que se pueda decir: sin símbolos, sin código y con los
+// enlaces por su nombre. Un bloque de código sin cerrar (streaming) se calla
+// hasta el final, así lo ya dicho no cambia cuando llega más texto.
+function speechText(markdown) {
+  return String(markdown ?? "")
+    .replace(/```[\s\S]*?(?:```|$)/g, "\n(bloque de código)\n")
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/\[([^\]\n]+)\]\(https?:\/\/[^\s)]*\)?/g, "$1")
+    .replace(/https?:\/\/\S+/g, "enlace")
+    .replace(/^\s*\|?[\s:|-]{3,}\|?\s*$/gm, "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/(\d)\s*\*\s*(\d)/g, "$1 por $2")
+    .replace(/\|/g, ", ")
+    .replace(/[*_~]+/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+// Corta una frase larga por una coma o un espacio cercano al límite.
+function splitLong(piece) {
+  const parts = [];
+  let rest = piece;
+  while (rest.length > CHUNK_LIMIT) {
+    const comma = rest.lastIndexOf(", ", CHUNK_LIMIT);
+    const space = rest.lastIndexOf(" ", CHUNK_LIMIT);
+    const cut =
+      comma > CHUNK_LIMIT / 2 ? comma + 1 : space > 0 ? space : CHUNK_LIMIT;
+    parts.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) parts.push(rest);
+  return parts;
+}
+
+// Frases para la voz del navegador. Con `done` en false (streaming) la última
+// frase se guarda hasta que llegue completa.
+function speechChunks(markdown, done = true) {
+  const plain = speechText(markdown);
+  const pieces = [];
+  let start = 0;
+  for (let i = 0; i < plain.length; i++) {
+    const char = plain[i];
+    const closes = SENTENCE_END.includes(char) && /\s/.test(plain[i + 1] ?? "");
+    if (char !== "\n" && !closes) continue;
+    pieces.push(plain.slice(start, i + 1));
+    start = i + 1;
+  }
+  if (done) pieces.push(plain.slice(start));
+  return pieces
+    .map((piece) => piece.trim())
+    .filter((piece) => /[\p{L}\p{N}]/u.test(piece))
+    .flatMap(splitLong);
+}
+
 const DICTATION_NOTES = {
   rate_limited: "Hay demasiados dictados a la vez. Intenta en un momento.",
   upstream_error: "Falló el micrófono o el servicio de voz.",
@@ -2589,12 +2721,12 @@ const SPEAK_NOTES = {
   busy: "Termina de dictar para poder escuchar la respuesta.",
   rate_limited: "Demasiada lectura en voz alta por ahora. Intenta más tarde.",
   upstream_error: "Falló la lectura en voz alta.",
-  no_gesture: "Toca de nuevo para escuchar.",
+  no_gesture: "Toca «Escuchar» en la respuesta para oírla.",
 };
 
 function setupDictation(dictation, handlers) {
   // Se pide español; si no se ofrece, el siguiente intento usa el idioma del
-  // dispositivo, y si tampoco, el botón se esconde.
+  // dispositivo, y si tampoco, el micrófono de la plataforma se da por perdido.
   let language = "es";
   let listened = false;
   const drop = () => handlers.onDictationGone?.();
@@ -2626,17 +2758,22 @@ function setupDictation(dictation, handlers) {
       handlers.onNotice?.(DICTATION_NOTES[code]);
   }
 
-  // Debe llamarse directo desde el clic: start() exige el gesto del usuario.
-  return function toggleDictation() {
-    if (dictation.active()) {
-      dictation.stop().catch(() => {});
-      return;
-    }
-    dictation.start(language ? { language } : undefined).catch(fail);
+  return {
+    // Debe llamarse directo desde el clic: start() exige el gesto del usuario.
+    toggle() {
+      if (dictation.active()) {
+        dictation.stop().catch(() => {});
+        return;
+      }
+      dictation.start(language ? { language } : undefined).catch(fail);
+    },
+    // Resuelve cuando ya llegaron las últimas palabras.
+    stop: () => dictation.stop().catch(() => {}),
+    active: () => dictation.active(),
   };
 }
 
-function setupSpeech(tts, handlers) {
+function setupPlatformSpeech(tts, handlers) {
   let speakingId = null;
   let spanish = false;
   Promise.resolve()
@@ -2657,41 +2794,173 @@ function setupSpeech(tts, handlers) {
     if (reason === "not_granted" || reason === "unavailable") drop();
   });
 
+  function speak(id, text) {
+    const lines = speakLines(text);
+    if (lines.length === 0) return;
+    speakingId = id;
+    tts
+      .speak(lines, spanish ? { language: "es" } : undefined)
+      .catch((error) => {
+        const code = error?.code;
+        if (code === "not_granted" || code === "unavailable") drop();
+        else if (SPEAK_NOTES[code]) handlers.onNotice?.(SPEAK_NOTES[code]);
+      });
+  }
+  const stop = () => {
+    if (tts.active()) tts.stop().catch(() => {});
+  };
+
   return {
-    // Llamar desde un clic. Un segundo clic sobre lo que suena lo detiene.
+    kind: "platform",
+    unlock() {},
+    begin() {},
+    // La plataforma lee la respuesta entera, al terminar de llegar.
+    feed(id, text, done) {
+      if (done) speak(id, text);
+    },
     toggle(id, text) {
-      if (speakingId === id && tts.active()) {
-        tts.stop().catch(() => {});
-        return;
-      }
-      const lines = speakLines(text);
-      if (lines.length === 0) return;
-      speakingId = id;
-      tts
-        .speak(lines, spanish ? { language: "es" } : undefined)
-        .catch((error) => {
-          const code = error?.code;
-          if (code === "not_granted" || code === "unavailable") drop();
-          else if (SPEAK_NOTES[code]) handlers.onNotice?.(SPEAK_NOTES[code]);
-        });
+      if (speakingId === id && tts.active()) stop();
+      else speak(id, text);
     },
-    stop() {
-      if (tts.active()) tts.stop().catch(() => {});
-    },
+    stop,
   };
 }
 
-// Nunca lanza. `toggleDictation` y `speech` son null cuando la vista no los ofrece.
+// De las voces del dispositivo, la primera en español; de preferencia de México.
+function spanishVoice(synth) {
+  const order = ["es-mx", "es-us", "es-419", "es-es"];
+  const rank = (voice) => {
+    const index = order.indexOf(voice.lang.toLowerCase().replace("_", "-"));
+    return index < 0 ? order.length : index;
+  };
+  return (
+    synth
+      .getVoices()
+      .filter((voice) => /^es([-_]|$)/i.test(voice.lang))
+      .sort((a, b) => rank(a) - rank(b))[0] ?? null
+  );
+}
+
+function setupBrowserSpeech(synth, handlers) {
+  let session = null; // { id, queued, pending, closed, started, watchdog, keep }
+  let primed = false;
+
+  function end(mine) {
+    clearTimeout(mine.watchdog);
+    if (session !== mine) return;
+    session = null;
+    handlers.onSpeechState?.("idle", null);
+  }
+
+  function stop() {
+    if (!session) return;
+    const mine = session;
+    end(mine);
+    synth.cancel();
+  }
+
+  function say(mine, chunk) {
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    const voice = spanishVoice(synth);
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang ?? "es-MX";
+    utterance.onstart = () => {
+      if (session !== mine || mine.started) return;
+      mine.started = true;
+      clearTimeout(mine.watchdog);
+      handlers.onSpeechState?.("speaking", mine.id);
+    };
+    const settle = () => {
+      mine.pending -= 1;
+      if (mine.closed && mine.pending <= 0) end(mine);
+    };
+    utterance.onend = settle;
+    utterance.onerror = settle;
+    mine.keep.push(utterance); // sin referencia, el navegador puede perder "end"
+    mine.pending += 1;
+    synth.speak(utterance);
+  }
+
+  // Si el navegador no arranca (Safari exige un toque previo), se avisa en vez
+  // de quedarse callado sin explicación.
+  function watch(mine) {
+    if (mine.watchdog || mine.started) return;
+    mine.watchdog = setTimeout(() => {
+      if (session !== mine || mine.started) return;
+      stop();
+      handlers.onNotice?.(
+        "El navegador no dejó que Jarvis hablara solo. Toca «Escuchar» en la respuesta.",
+      );
+    }, START_LIMIT_MS);
+  }
+
+  function begin(id) {
+    stop();
+    session = {
+      id,
+      queued: 0,
+      pending: 0,
+      closed: false,
+      started: false,
+      watchdog: null,
+      keep: [],
+    };
+  }
+
+  function feed(id, text, done) {
+    const mine = session;
+    if (!mine || mine.id !== id) return;
+    const chunks = speechChunks(text, done);
+    for (const chunk of chunks.slice(mine.queued)) say(mine, chunk);
+    if (chunks.length > mine.queued) watch(mine);
+    mine.queued = Math.max(mine.queued, chunks.length);
+    if (!done) return;
+    mine.closed = true;
+    if (mine.pending <= 0) end(mine);
+  }
+
+  return {
+    kind: "browser",
+    unlock() {
+      if (primed) return;
+      primed = true;
+      try {
+        const silent = new SpeechSynthesisUtterance(" ");
+        silent.volume = 0;
+        synth.speak(silent);
+      } catch {
+        // Sin voz en este navegador: los botones de escuchar no harán nada.
+      }
+    },
+    begin,
+    feed,
+    toggle(id, text) {
+      if (session?.id === id) return stop();
+      begin(id);
+      feed(id, text, true);
+    },
+    stop,
+  };
+}
+
+// Nunca lanza. `listen` es null si la vista no ofrece micrófono; `speech` es
+// null si no hay ninguna voz disponible.
 async function createVoice(handlers = {}) {
   const claude = globalThis.window?.claude;
-  if (!claude?.use) return { toggleDictation: null, speech: null };
-  const [dictation, tts] = await Promise.all([
-    claude.use("dictation").catch(() => null),
-    claude.use("tts").catch(() => null),
-  ]);
+  const [dictation, tts] = claude?.use
+    ? await Promise.all([
+        claude.use("dictation").catch(() => null),
+        claude.use("tts").catch(() => null),
+      ])
+    : [null, null];
+  const synth = globalThis.speechSynthesis;
+  const browserVoice = Boolean(synth && globalThis.SpeechSynthesisUtterance);
+  let speech = null;
+  if (tts) speech = setupPlatformSpeech(tts, handlers);
+  else if (browserVoice) speech = setupBrowserSpeech(synth, handlers);
   return {
-    toggleDictation: dictation ? setupDictation(dictation, handlers) : null,
-    speech: tts ? setupSpeech(tts, handlers) : null,
+    listen: dictation ? setupDictation(dictation, handlers) : null,
+    speech,
   };
 }
 
@@ -2937,8 +3206,8 @@ const NOTES = {
 const STICK_DISTANCE = 96;
 // Marca de "todavía no hay texto" para no repintar el mismo estado.
 const WAITING = Symbol("pensando");
-// "Copiar" solo en respuestas largas: en una frase corta es ruido.
-const COPY_MIN_CHARS = 240;
+// "Copiar" y "Escuchar" solo en respuestas largas: en una frase corta son ruido.
+const LONG_REPLY_CHARS = 240;
 
 function buildRow(message) {
   const row = el("li", {
@@ -2997,17 +3266,22 @@ function createChatView({ scroller, log }) {
     const tools = row.querySelector(".msg-tools");
     const settled = ["done", "stopped", "error"].includes(message.status);
     const buttons = [];
-    if (settled && message.content.length >= COPY_MIN_CHARS)
+    const long = message.content.length >= LONG_REPLY_CHARS;
+    const speaking = speakingId === message.id;
+    if (settled && long)
       buttons.push(
         el("button", { type: "button", "data-act": "copy", text: "Copiar" }),
       );
-    if (settled && message.content && canSpeak && message.status !== "error")
+    // Escuchar: en respuestas largas y en las que debían sonar (por si la voz
+    // no arrancó sola). Mientras suena, el mismo botón la calla.
+    const hearable = long || speaking || message.spoken;
+    if (settled && canSpeak && hearable && message.status !== "error")
       buttons.push(
         el("button", {
           type: "button",
           "data-act": "speak",
-          "aria-pressed": speakingId === message.id ? "true" : "false",
-          text: speakingId === message.id ? "Detener voz" : "Escuchar",
+          "aria-pressed": String(speaking),
+          text: speaking ? "Detener voz" : "Escuchar",
         }),
       );
     // Con acciones ya ejecutadas no se reintenta: se repetirían.
@@ -3407,9 +3681,152 @@ function telemetry(store) {
   return `${tasks} · ${kept}`;
 }
 
+// ---- public/talk.js ----
+// Hablarle a Jarvis sin escribir. Según lo que ofrezca la vista hay dos caminos:
+// - "platform": el micrófono de la capability `dictation` (Chrome y la app de
+//   escritorio). Un toque en el micrófono y se habla.
+// - "keyboard": en teléfonos y tabletas sin esa capability (iPhone, iPad) la
+//   página no puede abrir el micrófono; abre el teclado para usar su dictado.
+// En los dos, el mensaje se envía solo cuando se hace una pausa y Jarvis
+// contesta hablando.
+
+const PAUSE_PLATFORM_MS = 1600;
+const PAUSE_KEYBOARD_MS = 2200;
+const HINTS = {
+  platform: "Te escucho. Envío solo cuando hagas una pausa.",
+  keyboard:
+    "Toca el micrófono de tu teclado y habla. Envío solo cuando hagas una pausa.",
+};
+
+// Une lo dictado con lo que ya había, sin duplicar ni comerse espacios.
+function glue(base, piece) {
+  if (!base) return piece.trimStart();
+  if (!piece) return base;
+  return /\s$/.test(base) || /^\s/.test(piece)
+    ? base + piece
+    : `${base} ${piece}`;
+}
+
+// `ui` trae los elementos (input, micButton, sendButton, hint) y tres avisos:
+// `onText()`: la página cambió el texto de la caja. `onSpoken(text)`: hay un
+// mensaje dictado listo para enviar. `onChange()`: empezó o terminó de escuchar.
+function createTalk(ui) {
+  const { input, micButton, sendButton, hint, onText, onSpoken, onChange } = ui;
+  let listen = null; // micrófono de la plataforma, si existe
+  let kind = null; // "platform" | "keyboard" | null
+  let canKeyboard = false;
+  let active = false;
+  let base = ""; // lo ya dictado y confirmado
+  let timer = null;
+
+  function disarm() {
+    clearTimeout(timer);
+    timer = null;
+    sendButton.classList.remove("is-arming");
+  }
+
+  function setActive(on) {
+    if (!on) disarm();
+    if (active === on) return;
+    active = on;
+    micButton.setAttribute("aria-pressed", String(on));
+    hint.hidden = !on;
+    if (on) hint.textContent = HINTS[kind];
+    onChange();
+  }
+
+  // Termina la pausa: se envía lo dictado.
+  async function deliver() {
+    disarm();
+    if (kind === "platform") await listen.stop();
+    const text = input.value.trim();
+    // Cerrar el teclado corta su dictado: así no se cuela la voz de Jarvis.
+    if (kind === "keyboard") input.blur();
+    setActive(false);
+    if (text) onSpoken(text);
+  }
+
+  // Cuenta la pausa; el anillo del botón de enviar muestra cuánto falta.
+  function arm(ms) {
+    disarm();
+    sendButton.style.setProperty("--arm", `${ms}ms`);
+    // Leer el ancho obliga a reiniciar la animación del anillo.
+    if (sendButton.offsetWidth >= 0) sendButton.classList.add("is-arming");
+    timer = setTimeout(deliver, ms);
+  }
+
+  function show(text) {
+    input.value = text;
+    onText();
+  }
+
+  function setKind() {
+    kind = listen ? "platform" : canKeyboard ? "keyboard" : null;
+    micButton.hidden = !kind;
+  }
+
+  return {
+    get active() {
+      return active;
+    },
+    // `platformListen`: el micrófono de voice.js o null. `touch`: hay teclado
+    // en pantalla con tecla de dictado.
+    attach(platformListen, touch) {
+      listen = platformListen;
+      canKeyboard = touch;
+      setKind();
+    },
+    // Clic en el micrófono. Debe llamarse directo desde el toque.
+    toggle() {
+      if (kind === "platform") return listen.toggle();
+      if (kind !== "keyboard") return;
+      if (active) return setActive(false);
+      base = "";
+      setActive(true);
+      input.focus();
+    },
+    // Enviar a mano o empezar otra cosa apaga el modo voz.
+    cancel() {
+      if (!active) return;
+      if (kind === "platform") listen.stop();
+      setActive(false);
+    },
+    // La caja cambió por el usuario o por el dictado del teclado.
+    onInput() {
+      base = input.value;
+      if (!active || kind !== "keyboard") return;
+      if (input.value.trim()) arm(PAUSE_KEYBOARD_MS);
+      else disarm();
+    },
+    // Eventos del micrófono de la plataforma (los entrega voice.js).
+    events: {
+      onDictationState(dictationState) {
+        const on = dictationState !== "idle";
+        if (on && !active) base = input.value;
+        setActive(on);
+      },
+      onPartial(text) {
+        show(glue(base, text));
+        if (text) disarm();
+      },
+      onFinal(text) {
+        base = glue(base, text);
+        show(base);
+        if (base.trim()) arm(PAUSE_PLATFORM_MS);
+      },
+      onDictationGone() {
+        listen = null;
+        setKind();
+        setActive(false);
+      },
+    },
+  };
+}
+
 // ---- public/app.js ----
 // Jarvis, el asistente personal de Emilio. Este archivo une las piezas: estado
 // de la conversación, envío de mensajes, modos, voz y paneles.
+
 
 
 
@@ -3429,10 +3846,9 @@ const state = {
   controller: null,
   backend: null, // llegan cuando la vista responde (ver boot)
   store: null,
-  voice: { toggleDictation: null, speech: null },
-  listening: false,
+  voice: { listen: null, speech: null }, // ver voice.js
+  spoken: false, // el último mensaje se dictó: Jarvis contesta hablando
   speakingId: null,
-  dictatedBase: "",
   dismissedNotice: "",
   nextId: 1,
 };
@@ -3446,6 +3862,19 @@ const core = createCore(app);
 const toast = createToast($("#toast"));
 const chat = createChatView({ scroller: $("#main"), log: $("#log") });
 const coarsePointer = globalThis.matchMedia("(pointer: coarse)");
+// Modo voz: dictar el mensaje y que se envíe solo tras una pausa (talk.js).
+const talk = createTalk({
+  input,
+  micButton,
+  sendButton,
+  hint: $("#voiceHint"),
+  onText() {
+    fitInput();
+    renderSend();
+  },
+  onSpoken: (text) => send(text, { spoken: true }),
+  onChange: () => setPhase(state.phase),
+});
 
 // ---------- Conversación guardada (ver session.js) ----------
 
@@ -3501,25 +3930,30 @@ function syncCore() {
   const speaking = state.phase === "streaming" || Boolean(state.speakingId);
   if (state.phase === "thinking") core.set("thinking");
   else if (speaking) core.set("speaking");
-  else core.set(state.listening ? "listening" : "idle");
+  else core.set(talk.active ? "listening" : "idle");
   core.talk(state.phase === "idle" && Boolean(state.speakingId));
 }
 
+// El botón naranja envía; mientras Jarvis contesta o habla, lo detiene.
 function renderSend() {
   const busy = state.phase !== "idle";
-  sendButton.innerHTML = icon(busy ? "stop" : "send");
-  sendButton.setAttribute(
-    "aria-label",
-    busy ? "Detener respuesta" : "Enviar mensaje",
+  const talking = !busy && Boolean(state.speakingId) && !input.value.trim();
+  sendButton.innerHTML = icon(busy || talking ? "stop" : "send");
+  let label = "Enviar mensaje";
+  if (busy) label = "Detener respuesta";
+  else if (talking) label = "Detener voz";
+  sendButton.setAttribute("aria-label", label);
+  sendButton.classList.toggle(
+    "is-empty",
+    !busy && !talking && !input.value.trim(),
   );
-  sendButton.classList.toggle("is-empty", !busy && !input.value.trim());
 }
 
 function setPhase(phase) {
   state.phase = phase;
   renderSend();
   syncCore();
-  $("#status").textContent = statusText(state);
+  $("#status").textContent = statusText({ ...state, listening: talk.active });
 }
 
 function renderNotice() {
@@ -3614,6 +4048,7 @@ function leaveChat() {
 function newChat() {
   if (state.phase !== "idle" || state.messages.length === 0) return;
   const old = state.messages;
+  talk.cancel();
   state.voice.speech?.stop();
   state.messages = [];
   chat.clear();
@@ -3661,6 +4096,10 @@ async function runTurn() {
   const controller = new AbortController();
   state.controller = controller;
   setPhase("thinking");
+  // Si el mensaje se dictó, la respuesta se lee en voz alta según va llegando.
+  const speech = state.spoken ? state.voice.speech : null;
+  reply.spoken = Boolean(speech);
+  speech?.begin(reply.id);
   let shown = 0;
   try {
     const store = await ready.store;
@@ -3671,6 +4110,7 @@ async function runTurn() {
       tasks: store.tasks,
       memories: store.memories,
       persistent: store.persistent,
+      spoken: Boolean(speech),
       actions: store,
       signal: controller.signal,
       onText(text) {
@@ -3680,6 +4120,7 @@ async function runTurn() {
         reply.content = text;
         reply.status = "streaming";
         repaint(reply);
+        speech?.feed(reply.id, text, false);
       },
       onAction(action) {
         reply.actions.push(action);
@@ -3689,7 +4130,9 @@ async function runTurn() {
     reply.content = result.text;
     reply.truncated = result.truncated;
     reply.status = "done";
+    speech?.feed(reply.id, reply.content, true);
   } catch (error) {
+    speech?.stop();
     settleFailure(reply, error);
   } finally {
     state.controller = null;
@@ -3699,14 +4142,16 @@ async function runTurn() {
   }
 }
 
-function send(raw) {
+// `spoken`: el mensaje llegó por voz, así que Jarvis también contesta hablando.
+function send(raw, { spoken = false } = {}) {
   const text = raw.trim();
   if (!text || state.phase !== "idle") return;
+  state.spoken = spoken || talk.active;
+  talk.cancel();
   state.voice.speech?.stop();
   pushMessage({ role: "user", content: text });
   enterChat(true);
   input.value = "";
-  state.dictatedBase = "";
   fitInput();
   runTurn();
 }
@@ -3780,47 +4225,18 @@ function fitInput() {
   input.style.height = `${Math.min(input.scrollHeight, INPUT_MAX_HEIGHT)}px`;
 }
 
-// Une lo dictado con lo que ya había, sin duplicar ni comerse espacios.
-function glue(base, piece) {
-  if (!base) return piece.trimStart();
-  if (!piece) return base;
-  return /\s$/.test(base) || /^\s/.test(piece)
-    ? base + piece
-    : `${base} ${piece}`;
-}
-
-function showDictated(text) {
-  input.value = text;
-  fitInput();
-  renderSend();
-}
-
 const voiceHandlers = {
   onNotice: (text) => toast.show(text),
-  onDictationState(dictationState) {
-    const listening = dictationState !== "idle";
-    if (listening && !state.listening) state.dictatedBase = input.value;
-    state.listening = listening;
-    micButton.setAttribute("aria-pressed", String(listening));
-    setPhase(state.phase);
-  },
-  onPartial: (text) => showDictated(glue(state.dictatedBase, text)),
-  onFinal(text) {
-    state.dictatedBase = glue(state.dictatedBase, text);
-    showDictated(state.dictatedBase);
-  },
-  onDictationGone() {
-    micButton.hidden = true;
-    state.listening = false;
-    setPhase(state.phase);
-  },
+  ...talk.events,
   onSpeechState(speechState, id) {
     state.speakingId = speechState === "idle" ? null : id;
     chat.setSpeaking(state.speakingId);
     repaintAll();
     setPhase(state.phase);
   },
+  // La plataforma retiró su voz: no se sustituye por otra.
   onSpeechGone() {
+    state.voice = { ...state.voice, speech: null };
     state.speakingId = null;
     chat.setCanSpeak(false);
     chat.setSpeaking(null);
@@ -3873,21 +4289,31 @@ function bindEvents() {
   $("#composer").addEventListener("submit", (event) => {
     event.preventDefault();
     if (state.phase !== "idle") state.controller?.abort();
+    else if (state.speakingId && !input.value.trim())
+      state.voice.speech?.stop();
     else send(input.value);
   });
   input.addEventListener("input", () => {
-    state.dictatedBase = input.value;
     fitInput();
     renderSend();
+    talk.onInput();
   });
   // En teclado físico Enter envía; en pantalla táctil hace salto de línea.
   input.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
     if (coarsePointer.matches) return;
     event.preventDefault();
-    $("#composer").requestSubmit();
+    send(input.value);
   });
-  micButton.addEventListener("click", () => state.voice.toggleDictation?.());
+  // El toque en el micrófono también desbloquea la voz: Safari solo deja que
+  // Jarvis hable si antes hubo un toque.
+  micButton.addEventListener("click", () => {
+    state.voice.speech?.unlock();
+    state.voice.speech?.stop();
+    talk.toggle();
+  });
+  // Que el botón no le quite el foco a la caja (cerraría el teclado).
+  micButton.addEventListener("mousedown", (event) => event.preventDefault());
   $("#modes").addEventListener("click", (event) => {
     const mode = event.target.closest("button")?.dataset.mode;
     if (mode) setMode(mode);
@@ -3961,7 +4387,7 @@ function boot() {
   });
   createVoice(voiceHandlers).then((voice) => {
     state.voice = voice;
-    micButton.hidden = !voice.toggleDictation;
+    talk.attach(voice.listen, coarsePointer.matches);
     chat.setCanSpeak(Boolean(voice.speech));
     repaintAll();
   });

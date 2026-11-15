@@ -59,6 +59,7 @@ export async function launch() {
     width,
     height,
     fake = null,
+    speech = {},
     mobile = false,
     scale = 1,
     reducedMotion,
@@ -79,6 +80,17 @@ export async function launch() {
     await context.route(`${ORIGIN}/favicon.ico`, (route) =>
       route.fulfill({ status: 204 }),
     );
+    // `speech`: voz simulada del navegador, o null para que no haya ninguna.
+    if (speech) {
+      await context.addInitScript(
+        `window.__JARVIS_SPEECH__ = ${JSON.stringify(speech)};`,
+      );
+      await context.addInitScript({ path: join(here, "fake-speech.js") });
+    } else {
+      await context.addInitScript(
+        `Object.defineProperty(window, "speechSynthesis", { value: undefined });`,
+      );
+    }
     if (fake) {
       await context.addInitScript(
         `window.__JARVIS_FAKE__ = ${JSON.stringify(fake)};`,

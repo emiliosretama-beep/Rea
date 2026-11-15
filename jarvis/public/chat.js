@@ -12,8 +12,8 @@ const NOTES = {
 const STICK_DISTANCE = 96;
 // Marca de "todavía no hay texto" para no repintar el mismo estado.
 const WAITING = Symbol("pensando");
-// "Copiar" solo en respuestas largas: en una frase corta es ruido.
-const COPY_MIN_CHARS = 240;
+// "Copiar" y "Escuchar" solo en respuestas largas: en una frase corta son ruido.
+const LONG_REPLY_CHARS = 240;
 
 function buildRow(message) {
   const row = el("li", {
@@ -72,17 +72,22 @@ export function createChatView({ scroller, log }) {
     const tools = row.querySelector(".msg-tools");
     const settled = ["done", "stopped", "error"].includes(message.status);
     const buttons = [];
-    if (settled && message.content.length >= COPY_MIN_CHARS)
+    const long = message.content.length >= LONG_REPLY_CHARS;
+    const speaking = speakingId === message.id;
+    if (settled && long)
       buttons.push(
         el("button", { type: "button", "data-act": "copy", text: "Copiar" }),
       );
-    if (settled && message.content && canSpeak && message.status !== "error")
+    // Escuchar: en respuestas largas y en las que debían sonar (por si la voz
+    // no arrancó sola). Mientras suena, el mismo botón la calla.
+    const hearable = long || speaking || message.spoken;
+    if (settled && canSpeak && hearable && message.status !== "error")
       buttons.push(
         el("button", {
           type: "button",
           "data-act": "speak",
-          "aria-pressed": speakingId === message.id ? "true" : "false",
-          text: speakingId === message.id ? "Detener voz" : "Escuchar",
+          "aria-pressed": String(speaking),
+          text: speaking ? "Detener voz" : "Escuchar",
         }),
       );
     // Con acciones ya ejecutadas no se reintenta: se repetirían.

@@ -112,13 +112,23 @@ function readFence(lines, start) {
   return [codeBlock(lang, code.join("\n")), Math.min(i + 1, lines.length)];
 }
 
+// Parte una fila de tabla por "|" y respeta los "\|" escapados. Sin
+// "lookbehind" en la expresión regular: en Safari antiguo rompe toda la página.
 function splitRow(line) {
-  return line
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split(/(?<!\\)\|/)
-    .map((cell) => cell.trim().replace(/\\\|/g, "|"));
+  const text = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  const cells = [];
+  let cell = "";
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\" && text[i + 1] === "|") {
+      cell += "|";
+      i++;
+    } else if (text[i] === "|") {
+      cells.push(cell.trim());
+      cell = "";
+    } else cell += text[i];
+  }
+  cells.push(cell.trim());
+  return cells;
 }
 
 function readTable(lines, start) {

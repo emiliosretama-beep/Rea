@@ -855,9 +855,19 @@ button {
 
 .composer {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
   padding-block: 8px 10px;
+}
+/* Modo voz: qué hacer para hablarle, encima de la caja. */
+.voice-hint {
+  flex: 0 0 100%;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--amanecer);
 }
 .composer textarea {
   flex: 1;
@@ -903,9 +913,44 @@ button {
   stroke-width: 2;
 }
 .round--send {
+  position: relative;
   border-color: var(--era);
   background: var(--era);
   color: var(--sobre-era);
+}
+/* Anillo que se llena mientras corre la pausa antes de enviar lo dictado. */
+@property --arm-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0turn;
+}
+.round--send.is-arming::after {
+  --arm-turn: 1turn;
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(var(--amanecer) var(--arm-turn), transparent 0);
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .round--send.is-arming::after {
+    animation: arming var(--arm, 2s) linear both;
+  }
+}
+@keyframes arming {
+  from {
+    --arm-turn: 0turn;
+  }
 }
 .round--send.is-empty {
   opacity: 0.45;

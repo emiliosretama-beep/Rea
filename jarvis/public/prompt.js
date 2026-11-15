@@ -127,6 +127,9 @@ const HOW_TO_ACT = {
   ],
 };
 
+// Cuando Emilio habló en vez de escribir, la respuesta se lee en voz alta.
+const SPOKEN_STYLE = `- Esta respuesta se va a leer en voz alta: contesta como en una conversación hablada, con frases cortas y naturales, sin listas, tablas ni código. Si hace falta algo largo o con código, di el resumen y ofrece escribirlo.`;
+
 const DATE_FORMAT = new Intl.DateTimeFormat("es-MX", {
   weekday: "long",
   day: "numeric",
@@ -149,6 +152,7 @@ export function buildInstructions({
   now,
   actMode,
   persistent,
+  spoken = false,
 }) {
   const current = MODES[mode] ?? MODES.general;
   const lines = [
@@ -160,6 +164,7 @@ export function buildInstructions({
     "- No le des la razón por compromiso: si una idea tiene un problema, dilo con respeto y propón algo mejor.",
     "- Si no sabes algo o no puedes comprobarlo, dilo. No inventes datos, funciones ni enlaces. No puedes navegar por internet ni ver archivos.",
     "- Formato: Markdown sencillo (párrafos, listas, negritas, bloques de código). Evita tablas anchas: te lee en un iPhone. No uses LaTeX; escribe las fórmulas en texto plano, por ejemplo x^2, raíz(9) o 3/4.",
+    ...(spoken ? [SPOKEN_STYLE] : []),
     "",
     `Modo actual: ${current.name}`,
     ...current.rules.map((rule) => `- ${rule}`),
