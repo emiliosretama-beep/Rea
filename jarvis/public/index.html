@@ -241,6 +241,25 @@
         </section>
       </aside>
 
+      <div class="gate" id="keyGate" hidden>
+        <form class="gate-card" id="keyForm" autocomplete="off">
+          <h2>Clave de Jarvis</h2>
+          <p>
+            Es la contraseña que pusiste en Cloudflare como JARVIS_CLAVE. Se
+            guarda en este dispositivo.
+          </p>
+          <label class="sr-only" for="keyInput">Clave de Jarvis</label>
+          <input
+            id="keyInput"
+            type="password"
+            autocomplete="current-password"
+            enterkeyhint="go"
+          />
+          <p class="gate-error" id="keyError" role="status"></p>
+          <button type="submit">Entrar</button>
+        </form>
+      </div>
+
       <div class="toast" id="toast" role="status" hidden></div>
     </div>
     <script type="module" src="app.js"></script>

@@ -231,7 +231,7 @@ const MARKER_RUN = {
   olvida: (runner, value) => runner.forget(value),
 };
 
-async function runMarkers(commands, runner, onAction) {
+export async function runMarkers(commands, runner, onAction) {
   for (const { kind, value } of commands) {
     try {
       await MARKER_RUN[kind](runner, value);

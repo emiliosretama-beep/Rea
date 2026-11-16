@@ -2,15 +2,25 @@
   "name": "jarvis",
   "version": "1.0.0",
   "private": true,
-  "description": "Jarvis: asistente personal de Emilio (chat, tareas y memoria), publicado como página de Claude.",
+  "description": "Jarvis: asistente personal de Emilio. Versión para Claude (artifact) y versión independiente con manos libres (Cloudflare Worker).",
   "type": "module",
   "scripts": {
     "build:online": "node scripts/build-online.mjs",
     "test": "node --test tests/unit.test.mjs",
-    "test:browser": "node scripts/build-online.mjs && node tests/smoke.mjs"
+    "test:browser": "node scripts/build-online.mjs && node tests/smoke.mjs",
+    "test:worker": "node scripts/build-online.mjs && node --test tests/worker.test.mjs",
+    "test:site": "node scripts/build-online.mjs && node tests/site.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "engines": {
     "node": ">=22.9.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.156.1"
+  }
 }

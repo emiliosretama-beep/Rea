@@ -27,7 +27,7 @@ const SKELETON =
 // Las fuentes de Google se sirven desde una carpeta local si JARVIS_FONTS la
 // señala (fonts.css + los .woff2 con "/" cambiado por "_"); si no, se bloquean
 // y la página usa sus fuentes de respaldo.
-async function routeFonts(context) {
+export async function routeFonts(context) {
   const dir = process.env.JARVIS_FONTS;
   const css = dir
     ? await readFile(join(dir, "fonts.css"), "utf8").catch(() => null)

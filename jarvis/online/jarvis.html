@@ -1197,6 +1197,61 @@ label.row-main {
   padding: 12px 0;
 }
 
+/* ---------- Clave de Jarvis (versión independiente) ---------- */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter-r)
+    calc(16px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+  background: var(--noche);
+}
+.gate-card {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gate-card h2 {
+  margin: 0;
+  font: 600 20px/1.2 var(--f-display);
+  letter-spacing: 0.04em;
+}
+.gate-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--tenue);
+}
+.gate-card input {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+}
+.gate-card input:focus-visible {
+  outline: none;
+  border-color: var(--amanecer);
+}
+.gate-card .gate-error {
+  min-height: 1.4em;
+  color: var(--mal);
+}
+.gate-card button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--era);
+  color: var(--sobre-era);
+  font: 600 15px/1 var(--f-display);
+  letter-spacing: 0.04em;
+}
+
 /* ---------- Aviso flotante ---------- */
 
 .toast {
@@ -1469,6 +1524,25 @@ label.row-main {
           <p class="pane-hint" id="voiceNote"></p>
         </section>
       </aside>
+
+      <div class="gate" id="keyGate" hidden>
+        <form class="gate-card" id="keyForm" autocomplete="off">
+          <h2>Clave de Jarvis</h2>
+          <p>
+            Es la contraseña que pusiste en Cloudflare como JARVIS_CLAVE. Se
+            guarda en este dispositivo.
+          </p>
+          <label class="sr-only" for="keyInput">Clave de Jarvis</label>
+          <input
+            id="keyInput"
+            type="password"
+            autocomplete="current-password"
+            enterkeyhint="go"
+          />
+          <p class="gate-error" id="keyError" role="status"></p>
+          <button type="submit">Entrar</button>
+        </form>
+      </div>
 
       <div class="toast" id="toast" role="status" hidden></div>
     </div>
@@ -2083,6 +2157,16 @@ function createSessionStore(onChange = () => {}) {
       changed();
     },
     retry() {},
+    // Para la versión con servidor (sitestore.js): todo el estado de una vez.
+    snapshot: () => ({
+      tasks: tasks.map((task) => ({ ...task })),
+      memories: memories.map((memory) => ({ ...memory })),
+    }),
+    replace(state) {
+      tasks = state.tasks.map((task) => ({ ...task }));
+      memories = state.memories.map((memory) => ({ ...memory }));
+      changed();
+    },
   };
 }
 
@@ -2731,6 +2815,293 @@ async function createBackend({ onGone } = {}) {
   return cloudBackend(sample, limits, () => onGone?.(demo));
 }
 
+// ---- public/site.js ----
+// Jarvis en su propia página (fuera de Claude). La IA y la memoria salen del
+// Worker de Cloudflare que sirve la página (ver worker/index.js). El Worker
+// pide una clave que solo conoce Emilio; aquí se guarda en el dispositivo y
+// viaja en cada petición.
+
+const KEY = "jarvis:clave:v1";
+
+// El build marca la versión independiente con window.JARVIS_SITE.
+const isSite = () => globalThis.JARVIS_SITE === true;
+
+function loadClave() {
+  try {
+    return localStorage.getItem(KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+let clave = loadClave();
+let onLocked = () => {};
+
+function saveClave(value) {
+  clave = value;
+  try {
+    if (value) localStorage.setItem(KEY, value);
+    else localStorage.removeItem(KEY);
+  } catch {
+    // Sin almacenamiento la clave vale solo para esta visita.
+  }
+}
+
+// Error de la API del Worker con un mensaje para Emilio. `locked`: la clave
+// falta o no es correcta.
+class SiteError extends Error {
+  constructor(message, { locked = false } = {}) {
+    super(message);
+    this.locked = locked;
+  }
+}
+
+async function api(path, { method = "GET", body, signal } = {}) {
+  const init = {
+    method,
+    signal,
+    headers: { authorization: `Bearer ${clave}` },
+  };
+  if (body !== undefined) {
+    init.headers["content-type"] = "application/json";
+    init.body = JSON.stringify(body);
+  }
+  let response;
+  try {
+    response = await fetch(path, init);
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    throw new SiteError("No hay conexión con Jarvis. Revisa tu internet.");
+  }
+  if (response.status === 401) {
+    saveClave("");
+    onLocked();
+    throw new SiteError("Escribe la clave de Jarvis para continuar.", {
+      locked: true,
+    });
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new SiteError(data.error || `Jarvis respondió ${response.status}.`);
+  }
+  return response;
+}
+
+// El formulario de la clave. `ready()` resuelve cuando hay una clave que el
+// Worker acepta; si más tarde deja de aceptarla, el formulario vuelve.
+function createGate({ gate, form, input, error, onUnlock }) {
+  let waiting = [];
+
+  function show(message = "") {
+    gate.hidden = false;
+    error.textContent = message;
+    input.value = "";
+    input.focus();
+  }
+
+  function unlock() {
+    gate.hidden = true;
+    const resolve = waiting;
+    waiting = [];
+    for (const done of resolve) done();
+    onUnlock?.();
+  }
+
+  onLocked = () =>
+    show("La clave no es correcta o cambió. Escríbela otra vez.");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = input.value.trim();
+    if (!value) return;
+    saveClave(value);
+    error.textContent = "Comprobando…";
+    try {
+      await api("/api/data");
+      unlock();
+    } catch (failure) {
+      error.textContent = failure.locked
+        ? "Esa clave no es la de Jarvis."
+        : failure.message;
+    }
+  });
+
+  return {
+    ready() {
+      if (clave && gate.hidden) return Promise.resolve();
+      if (gate.hidden) show();
+      return new Promise((resolve) => waiting.push(resolve));
+    },
+  };
+}
+
+// ---- public/siteservices.js ----
+// La IA y la memoria de la versión independiente de Jarvis, a través del
+// Worker (ver site.js y worker/index.js). Exponen la misma interfaz que las de
+// la página de Claude (backend.js y store.js), así que app.js no distingue.
+
+
+
+
+// "quick" contesta casi al instante; "default" piensa más a fondo.
+const EFFORT = { quick: "low", default: "medium" };
+
+// Lee la respuesta SSE del Worker: `delta` {text}, `error` {message}, `done`.
+async function readEvents(response, onEvent) {
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buffer += value;
+    let cut;
+    while ((cut = buffer.indexOf("\n\n")) >= 0) {
+      const raw = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      const event = raw.match(/^event: (.*)$/m)?.[1];
+      const data = raw.match(/^data: (.*)$/m)?.[1];
+      if (event) onEvent(event, data ? JSON.parse(data) : {});
+    }
+  }
+}
+
+// Jarvis actúa sobre tareas y memoria con órdenes de texto ([[tarea: …]]),
+// como en la página de Claude cuando no hay herramientas.
+function createSiteBackend() {
+  return {
+    mode: "server",
+    acts: "markers",
+    async ask(request) {
+      const { mode, turns, tasks, memories, spoken, actions, signal } = request;
+      const runner = createRunner({
+        actions,
+        tasks,
+        memories,
+        onAction: request.onAction,
+      });
+      const system = buildInstructions({
+        mode,
+        tasks,
+        memories,
+        spoken,
+        persistent: true,
+        now: new Date(),
+        actMode: "markers",
+      });
+      let text = "";
+      let failure = null;
+      let truncated = false;
+      try {
+        const response = await api("/api/chat", {
+          method: "POST",
+          signal,
+          body: {
+            effort: EFFORT[MODES[mode]?.tier] ?? "low",
+            system,
+            messages: buildInput(system, turns).slice(1),
+          },
+        });
+        await readEvents(response, (event, data) => {
+          if (event === "delta") {
+            text += data.text ?? "";
+            request.onText(splitMarkers(text).visible);
+          } else if (event === "error") failure = data;
+          else if (event === "done") truncated = data.truncated === true;
+        });
+      } catch (error) {
+        const partial = splitMarkers(text).visible || undefined;
+        if (error?.name === "AbortError")
+          throw new AskError("Detenido.", { cancelled: true, partial });
+        throw new AskError(
+          error instanceof SiteError
+            ? error.message
+            : "Se cortó la conexión con Jarvis. Vuelve a intentarlo.",
+          { partial },
+        );
+      }
+      const { visible, commands } = splitMarkers(text);
+      if (failure)
+        throw new AskError(failure.message, {
+          code: failure.code ?? "",
+          partial:
+            failure.code === "refused" ? undefined : visible || undefined,
+        });
+      await runMarkers(commands, runner, request.onAction);
+      return { text: visible || "Listo.", truncated };
+    },
+  };
+}
+
+// Tareas y memoria guardadas en el Worker. Por dentro es el almacén de sesión;
+// tras cada cambio se manda el estado completo, uno a la vez, y al volver a la
+// página se recarga lo que haya cambiado en otro dispositivo.
+function createSiteStore(onChange = () => {}) {
+  let sync = "loading";
+  let loaded = false;
+  let saving = Promise.resolve();
+  let pendingSaves = 0;
+
+  const store = createSessionStore(() => {
+    onChange();
+    if (loaded) queueSave();
+  });
+
+  function queueSave() {
+    pendingSaves += 1;
+    saving = saving
+      .then(() => api("/api/data", { method: "PUT", body: store.snapshot() }))
+      .then(() => {
+        if (sync === "error") sync = "ok";
+      })
+      .catch((error) => {
+        if (!error?.locked) sync = "error";
+        onChange();
+      })
+      .finally(() => {
+        pendingSaves -= 1;
+      });
+  }
+
+  async function load() {
+    try {
+      const response = await api("/api/data");
+      const state = await response.json();
+      // No pisar un cambio propio que todavía va de camino.
+      if (pendingSaves > 0) return;
+      loaded = false;
+      store.replace({
+        tasks: Array.isArray(state.tasks) ? state.tasks : [],
+        memories: Array.isArray(state.memories) ? state.memories : [],
+      });
+      loaded = true;
+      sync = "ok";
+    } catch (error) {
+      if (!loaded && !error?.locked) sync = "error";
+    }
+    onChange();
+  }
+
+  load();
+  globalThis.document?.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") load();
+  });
+
+  return {
+    ...store,
+    persistent: true,
+    get sync() {
+      return sync;
+    },
+    get tasks() {
+      return store.tasks;
+    },
+    get memories() {
+      return store.memories;
+    },
+    retry: load,
+  };
+}
+
 // ---- public/voice.js ----
 // Voz de Jarvis: hablarle y escucharlo.
 // - Hablarle: la capability `dictation` (el micrófono lo abre la plataforma).
@@ -3151,17 +3522,171 @@ function setupDictation(dictation, handlers) {
   };
 }
 
+// ---------- Escuchar (micrófono del navegador) ----------
+
+const RESTART_MS = 250;
+const MAX_FAILED_STARTS = 4;
+const BLOCKED = new Set(["not-allowed", "service-not-allowed"]);
+const RECOGNITION_NOTES = {
+  blocked:
+    "El navegador no deja usar el micrófono. Permítelo en los ajustes de Safari para este sitio.",
+  gesture: "Toca la pantalla para que Jarvis siga escuchando.",
+  "audio-capture": "No encuentro el micrófono.",
+  network: "El reconocimiento de voz necesita internet.",
+};
+
+// El reconocimiento de voz del propio navegador (Web Speech API), para la
+// versión independiente: en una página normal Safari sí deja escuchar. Escucha
+// frase por frase y se vuelve a encender solo; mientras Jarvis habla se apaga
+// (pause/resume) para no oírse a sí mismo. Entrega los mismos eventos que el
+// micrófono de la plataforma. `handsFree`: no hace falta tocar nada entre
+// turnos (talk.js usa la palabra «Jarvis»).
+function setupRecognition(Recognition, handlers) {
+  let recognition = null;
+  let wanted = false; // Emilio quiere que escuche
+  let paused = false; // Jarvis está hablando
+  let failedStarts = 0;
+  let restartTimer = null;
+  let fromGesture = false;
+
+  function notice(key) {
+    handlers.onNotice?.(RECOGNITION_NOTES[key] ?? RECOGNITION_NOTES.network);
+  }
+
+  // Sin permiso: se deja de intentar. Si el intento no vino de un toque,
+  // probablemente Safari solo pide uno: se espera el siguiente toque.
+  function blocked() {
+    const needsGesture = !fromGesture;
+    wanted = false;
+    handlers.onDictationState?.("idle");
+    if (needsGesture) handlers.onNeedsGesture?.();
+    else notice("blocked");
+  }
+
+  function create() {
+    const next = new Recognition();
+    next.lang = "es-MX";
+    next.continuous = false; // una frase por vez: en iPhone es lo más estable
+    next.interimResults = true;
+    next.maxAlternatives = 1;
+    next.onstart = () => {
+      failedStarts = 0;
+      handlers.onDictationState?.("listening");
+    };
+    next.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const text = result[0]?.transcript ?? "";
+        if (result.isFinal) handlers.onFinal?.(` ${text.trim()}`);
+        else interim += text;
+      }
+      handlers.onPartial?.(interim.trim());
+    };
+    next.onerror = (event) => {
+      if (BLOCKED.has(event.error)) return blocked();
+      if (event.error === "audio-capture" || event.error === "network") {
+        wanted = false;
+        notice(event.error);
+      }
+      // "no-speech" y "aborted" son normales: se vuelve a escuchar.
+    };
+    next.onend = () => {
+      if (recognition === next) recognition = null;
+      if (wanted && !paused) scheduleRestart();
+      else if (!wanted) handlers.onDictationState?.("idle");
+    };
+    return next;
+  }
+
+  function begin() {
+    clearTimeout(restartTimer);
+    if (recognition || !wanted || paused) return;
+    recognition = create();
+    try {
+      recognition.start();
+    } catch {
+      recognition = null;
+      scheduleRestart();
+    }
+  }
+
+  function scheduleRestart() {
+    failedStarts += 1;
+    if (failedStarts > MAX_FAILED_STARTS) {
+      wanted = false;
+      handlers.onDictationState?.("idle");
+      handlers.onNeedsGesture?.();
+      return notice("gesture");
+    }
+    clearTimeout(restartTimer);
+    restartTimer = setTimeout(begin, RESTART_MS);
+  }
+
+  function halt() {
+    clearTimeout(restartTimer);
+    const current = recognition;
+    recognition = null;
+    try {
+      current?.abort();
+    } catch {
+      // Ya estaba apagado.
+    }
+  }
+
+  return {
+    handsFree: true,
+    // `gesture`: la llamada viene directo de un toque de Emilio.
+    start(gesture = false) {
+      fromGesture = gesture;
+      wanted = true;
+      paused = false;
+      failedStarts = 0;
+      begin();
+    },
+    stop() {
+      wanted = false;
+      halt();
+      handlers.onDictationState?.("idle");
+    },
+    toggle() {
+      if (wanted) this.stop();
+      else this.start(true);
+    },
+    pause() {
+      paused = true;
+      halt();
+    },
+    resume() {
+      if (!paused) return;
+      paused = false;
+      failedStarts = 0;
+      begin();
+    },
+    get wanted() {
+      return wanted;
+    },
+  };
+}
+
 // Nunca lanza. `listen` es null si la vista no ofrece micrófono; `speech` es
-// null si el navegador no tiene voz.
-async function createVoice(handlers = {}) {
+// null si el navegador no tiene voz. `site`: la versión independiente, donde
+// el micrófono del navegador sí está permitido.
+async function createVoice(handlers = {}, { site = false } = {}) {
   const claude = globalThis.window?.claude;
   const dictation = claude?.use
     ? await claude.use("dictation").catch(() => null)
     : null;
+  const Recognition =
+    globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition;
+  let listen = null;
+  if (dictation) listen = setupDictation(dictation, handlers);
+  else if (site && Recognition)
+    listen = setupRecognition(Recognition, handlers);
   const synth = globalThis.speechSynthesis;
   const canSpeak = Boolean(synth && globalThis.SpeechSynthesisUtterance);
   return {
-    listen: dictation ? setupDictation(dictation, handlers) : null,
+    listen,
     speech: canSpeak ? setupSpeech(synth, handlers) : null,
   };
 }
@@ -3854,13 +4379,13 @@ function writeChat(mode, messages) {
 // reciben el estado y devuelven qué mostrar.
 
 // La línea bajo el nombre, en el encabezado.
-function statusText({ phase, listening, speakingId, backend }) {
+function statusText({ phase, listening, asleep, speakingId, backend }) {
   if (phase === "thinking") return "pensando…";
   if (phase === "streaming") return "respondiendo…";
   if (speakingId) return "hablando…";
-  if (listening) return "escuchando…";
+  if (listening) return asleep ? "esperando «Jarvis»" : "escuchando…";
   if (!backend) return "conectando…";
-  return backend.mode === "cloud" ? "en línea" : "modo demo";
+  return backend.mode === "demo" ? "modo demo" : "en línea";
 }
 
 // El aviso sobre lo que esta vista no puede hacer, o null si todo funciona.
@@ -3916,17 +4441,34 @@ function telemetry(store) {
 //   escritorio). Un toque lo abre y sigue escuchando hasta una hora.
 // - "keyboard": en iPhone y iPad la página no puede abrir el micrófono; abre
 //   el teclado para usar su dictado y no lo cierra entre turnos.
-// En los dos, cada mensaje se envía solo al hacer una pausa. Mientras Jarvis
+// - "platform" con el micrófono del navegador (versión independiente): manos
+//   libres. Escucha siempre; tras unos segundos sin hablar se duerme y se
+//   despierta al oír «Jarvis».
+// En todos, cada mensaje se envía solo al hacer una pausa. Mientras Jarvis
 // piensa o habla la página se hace la sorda, para no oírse a sí misma.
 
 const PAUSE_PLATFORM_MS = 1600;
+const PAUSE_HANDS_FREE_MS = 900; // el navegador ya espera el final de la frase
 const PAUSE_KEYBOARD_MS = 2200;
+const FOLLOW_UP_MS = 15000; // tiempo para seguir hablando sin decir «Jarvis»
 const KEEP_SENT = 6;
 const HINTS = {
   platform: "Te escucho. Habla y envío solo cuando hagas una pausa.",
   keyboard:
     "Toca el micrófono de tu teclado y habla. Envío solo cuando hagas una pausa.",
+  awake: "Te escucho. Habla y envío solo cuando hagas una pausa.",
+  asleep: "Di «Jarvis» y lo que necesites.",
 };
+
+// Cómo suele escribir el reconocedor la palabra «Jarvis».
+const WAKE_WORD =
+  /\b(?:jarvis|j[aá]rvis|jarbis|yarvis|yarbis|llarvis|harvis|garvis)\b[\s,.:;!?¡¿]*/i;
+
+// Lo dicho después de «Jarvis», o null si no lo dijo.
+function afterWakeWord(text) {
+  const found = WAKE_WORD.exec(text);
+  return found ? text.slice(found.index + found[0].length).trim() : null;
+}
 
 // Une lo dictado con lo que ya había, sin duplicar ni comerse espacios.
 function glue(base, piece) {
@@ -3995,7 +4537,26 @@ function createTalk(ui) {
   let deaf = false; // Jarvis piensa o habla: lo que se oiga no cuenta
   let base = ""; // lo ya dictado y confirmado de este turno
   let sent = []; // lo ya enviado en esta conversación
+  let awake = true; // manos libres: escucha sin esperar «Jarvis»
+  let followTimer = null;
+  let replying = false; // Jarvis contesta un mensaje dictado
   const { arm, disarm } = createPause(sendButton, () => deliver());
+  const handsFree = () => kind === "platform" && Boolean(listen?.handsFree);
+
+  function refreshHint() {
+    if (!active) return;
+    if (!handsFree()) hintText.textContent = HINTS[kind];
+    else hintText.textContent = awake ? HINTS.awake : HINTS.asleep;
+  }
+
+  function wake(on) {
+    clearTimeout(followTimer);
+    awake = on;
+    if (on && handsFree())
+      followTimer = setTimeout(() => wake(false), FOLLOW_UP_MS);
+    refreshHint();
+    ui.onChange();
+  }
 
   function show(text) {
     input.value = text;
@@ -4008,7 +4569,7 @@ function createTalk(ui) {
     active = on;
     micButton.setAttribute("aria-pressed", String(on));
     hint.hidden = !on;
-    if (on) hintText.textContent = HINTS[kind];
+    refreshHint();
     ui.onChange();
   }
 
@@ -4020,6 +4581,7 @@ function createTalk(ui) {
     base = "";
     if (!heard) return show("");
     sent = [...sent, heard].slice(-KEEP_SENT);
+    replying = true;
     ui.onSpoken(heard);
   }
 
@@ -4033,6 +4595,7 @@ function createTalk(ui) {
   }
 
   function stop() {
+    clearTimeout(followTimer);
     if (!active) return;
     if (kind === "platform") listen.stop();
     else input.blur();
@@ -4043,11 +4606,33 @@ function createTalk(ui) {
     get active() {
       return active;
     },
+    get handsFree() {
+      return active && handsFree();
+    },
+    // Deja de escuchar mensajes hasta oír «Jarvis» (solo manos libres).
+    sleep() {
+      replying = false;
+      wake(false);
+    },
+    // Manos libres y dormido: espera a oír «Jarvis».
+    get asleep() {
+      return active && handsFree() && !awake;
+    },
+    // Empieza a escuchar sin abrir el teclado (solo con micrófono propio).
+    // `gesture`: viene de un toque; `awake`: no hace falta decir «Jarvis».
+    start({ gesture = false, awake: startAwake = true } = {}) {
+      if (kind !== "platform" || !listen.start) return;
+      wake(startAwake);
+      listen.start(gesture);
+    },
     attach: setKind,
     // Clic en el micrófono: abre o cierra la conversación. Debe llamarse
     // directo desde el toque.
     toggle() {
-      if (kind === "platform") return listen.toggle();
+      if (kind === "platform") {
+        wake(true);
+        return listen.toggle();
+      }
       if (kind !== "keyboard") return;
       if (active) return stop();
       base = "";
@@ -4063,6 +4648,16 @@ function createTalk(ui) {
       if (!active) return;
       disarm();
       base = "";
+      // El micrófono del navegador se apaga mientras Jarvis habla; al callar
+      // se vuelve a encender y hay unos segundos para seguir sin «Jarvis».
+      if (kind === "platform") {
+        if (deaf) listen.pause?.();
+        else listen.resume?.();
+        // Tras contestar (o si ya estaba despierto) hay unos segundos para
+        // seguir sin «Jarvis»; tras una frase suelta, como «Aquí estaré», no.
+        if (!deaf && handsFree() && (replying || awake)) wake(true);
+        if (!deaf) replying = false;
+      }
       // Lo que el dictado del teclado haya oído mientras Jarvis hablaba se tira.
       if (!deaf && kind === "keyboard") show("");
     },
@@ -4082,15 +4677,27 @@ function createTalk(ui) {
         setActive(on);
       },
       onPartial(text) {
-        if (deaf) return;
+        if (deaf || (handsFree() && !awake)) return;
         show(glue(base, text));
-        if (text) disarm();
+        if (!text) return;
+        disarm();
+        clearTimeout(followTimer); // está hablando: no dormirse a media frase
       },
       onFinal(text) {
         if (deaf) return;
-        base = glue(base, text);
+        let heard = text;
+        if (handsFree() && !awake) {
+          heard = afterWakeWord(text);
+          if (heard === null) return; // no era para Jarvis
+          wake(true);
+          if (!heard) return ui.onWake?.();
+          heard = ` ${heard}`;
+        }
+        clearTimeout(followTimer);
+        base = glue(base, heard);
         show(base);
-        if (base.trim()) arm(PAUSE_PLATFORM_MS);
+        if (base.trim())
+          arm(handsFree() ? PAUSE_HANDS_FREE_MS : PAUSE_PLATFORM_MS);
       },
       onDictationGone() {
         setKind(null);
@@ -4164,9 +4771,80 @@ function bindVoicePanel(speech) {
   });
 }
 
+// ---- public/handsfree.js ----
+// Manos libres en la versión independiente: Jarvis empieza a escuchar solo al
+// abrir la página. Si el navegador exige un toque antes (Safari suele hacerlo),
+// el primer toque en cualquier parte de la pantalla lo enciende. Si Emilio
+// apaga el micrófono, se recuerda y ya no arranca solo.
+
+const PREF_KEY = "jarvis:manos-libres:v1";
+
+function readOn() {
+  try {
+    return localStorage.getItem(PREF_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function saveOn(on) {
+  try {
+    localStorage.setItem(PREF_KEY, on ? "on" : "off");
+  } catch {
+    // Si no se puede guardar, vale solo para esta visita.
+  }
+}
+
+// `talk`: talk.js. `speech`: la voz (para desbloquearla con el mismo toque).
+// `skip(target)`: toques que no deben encender el micrófono (el propio botón).
+function setupHandsFree({ talk, speech, toast, skip }) {
+  let waitingTouch = false;
+
+  function onTouch(event) {
+    if (skip(event.target) || talk.active) return;
+    waitingTouch = false;
+    document.removeEventListener("pointerdown", onTouch, true);
+    speech?.unlock();
+    talk.start({ gesture: true, awake: true });
+  }
+
+  function waitForTouch() {
+    if (waitingTouch || !readOn()) return;
+    waitingTouch = true;
+    document.addEventListener("pointerdown", onTouch, true);
+  }
+
+  // Al abrir: intenta escuchar ya (dormido, a la espera de «Jarvis») y deja
+  // preparado el primer toque por si el navegador no lo permite sin uno.
+  if (readOn()) {
+    talk.start({ gesture: false, awake: false });
+    waitForTouch();
+  }
+
+  return {
+    // El navegador pidió un toque para seguir escuchando.
+    needsGesture() {
+      if (!readOn()) return;
+      waitForTouch();
+      toast.show("Toca la pantalla para que Jarvis te escuche.");
+    },
+    // Emilio tocó el micrófono: guarda si lo quiere encendido.
+    remember(on) {
+      saveOn(on);
+      if (!on) {
+        waitingTouch = false;
+        document.removeEventListener("pointerdown", onTouch, true);
+      }
+    },
+  };
+}
+
 // ---- public/app.js ----
 // Jarvis, el asistente personal de Emilio. Este archivo une las piezas: estado
 // de la conversación, envío de mensajes, modos, voz y paneles.
+
+
+
 
 
 
@@ -4224,8 +4902,14 @@ const talk = createTalk({
   },
   onSpoken: heard,
   onChange: () => setPhase(state.phase),
+  // Lo llamaron por su nombre sin decir nada más.
+  onWake() {
+    const voice = state.voice.speech;
+    if (voice && !voice.settings.muted) voice.say("Dime.");
+  },
 });
 let echoTimer = null;
+let handsFree = null; // versión independiente con micrófono propio (handsfree.js)
 
 // ---------- Conversación guardada (ver session.js) ----------
 
@@ -4281,7 +4965,7 @@ function syncCore() {
   const speaking = state.phase === "streaming" || Boolean(state.speakingId);
   if (state.phase === "thinking") core.set("thinking");
   else if (speaking) core.set("speaking");
-  else core.set(talk.active ? "listening" : "idle");
+  else core.set(talk.active && !talk.asleep ? "listening" : "idle");
   core.talk(state.phase === "idle" && Boolean(state.speakingId));
 }
 
@@ -4312,7 +4996,11 @@ function setPhase(phase) {
   renderSend();
   syncCore();
   syncTalk();
-  $("#status").textContent = statusText({ ...state, listening: talk.active });
+  $("#status").textContent = statusText({
+    ...state,
+    listening: talk.active,
+    asleep: talk.asleep,
+  });
 }
 
 function renderNotice() {
@@ -4567,7 +5255,9 @@ function fitInput() {
 // Llegó un mensaje dictado. "Descansa" y parecidas cierran la conversación.
 function heard(text) {
   if (!REST_WORDS.test(text.trim())) return send(text, { spoken: true });
-  talk.stop();
+  // Manos libres: solo se duerme hasta volver a oír «Jarvis».
+  if (talk.handsFree) talk.sleep();
+  else talk.stop();
   input.value = "";
   fitInput();
   renderSend();
@@ -4578,6 +5268,7 @@ function heard(text) {
 const voiceHandlers = {
   onNotice: (text) => toast.show(text),
   ...talk.events,
+  onNeedsGesture: () => handsFree?.needsGesture(),
   // "starting" cuenta como hablando: la voz ya está en camino.
   onSpeechState(speechState, id) {
     state.speakingId = speechState === "idle" ? null : id;
@@ -4652,7 +5343,9 @@ function bindEvents() {
   micButton.addEventListener("click", () => {
     state.voice.speech?.unlock();
     state.voice.speech?.stop();
+    const wasOn = talk.active;
     talk.toggle();
+    handsFree?.remember(!wasOn);
   });
   // Que el botón no le quite el foco a la caja (cerraría el teclado).
   micButton.addEventListener("mousedown", (event) => event.preventDefault());
@@ -4713,30 +5406,59 @@ function boot() {
   }
 
   // La página se pinta ya; cada capability se enciende cuando la vista responde.
-  ready.backend = createBackend({
-    onGone(demo) {
-      state.backend = demo;
-      setPhase(state.phase);
-      renderNotice();
-    },
-  }).then((backend) => {
-    state.backend = backend;
-    setPhase(state.phase);
-    renderNotice();
-    return backend;
-  });
-  ready.store = createStore(renderStore).then((store) => {
-    state.store = store;
-    renderStore();
-    return store;
-  });
-  createVoice(voiceHandlers).then((voice) => {
+  const site = isSite();
+  if (site) startSite();
+  else {
+    ready.backend = createBackend({
+      onGone(demo) {
+        state.backend = demo;
+        setPhase(state.phase);
+        renderNotice();
+      },
+    }).then(useBackend);
+    ready.store = createStore(renderStore).then(useStore);
+  }
+  createVoice(voiceHandlers, { site }).then((voice) => {
     state.voice = voice;
     talk.attach(voice.listen, coarsePointer.matches);
     bindVoicePanel(voice.speech);
     chat.setCanSpeak(Boolean(voice.speech));
     repaintAll();
+    if (site && voice.listen?.handsFree)
+      handsFree = setupHandsFree({
+        talk,
+        speech: voice.speech,
+        toast,
+        skip: (target) => Boolean(target.closest?.("#mic, #keyGate")),
+      });
   });
+}
+
+function useBackend(backend) {
+  state.backend = backend;
+  setPhase(state.phase);
+  renderNotice();
+  return backend;
+}
+
+function useStore(store) {
+  state.store = store;
+  renderStore();
+  return store;
+}
+
+// Versión independiente: la IA y la memoria salen del Worker, que pide la
+// clave de Jarvis (site.js).
+function startSite() {
+  const gate = createGate({
+    gate: $("#keyGate"),
+    form: $("#keyForm"),
+    input: $("#keyInput"),
+    error: $("#keyError"),
+    onUnlock: () => state.store?.retry(),
+  });
+  ready.backend = Promise.resolve(useBackend(createSiteBackend()));
+  ready.store = gate.ready().then(() => useStore(createSiteStore(renderStore)));
 }
 
 boot();

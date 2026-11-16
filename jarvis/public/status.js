@@ -3,13 +3,13 @@
 import { USER_NAME } from "./prompt.js";
 
 // La línea bajo el nombre, en el encabezado.
-export function statusText({ phase, listening, speakingId, backend }) {
+export function statusText({ phase, listening, asleep, speakingId, backend }) {
   if (phase === "thinking") return "pensando…";
   if (phase === "streaming") return "respondiendo…";
   if (speakingId) return "hablando…";
-  if (listening) return "escuchando…";
+  if (listening) return asleep ? "esperando «Jarvis»" : "escuchando…";
   if (!backend) return "conectando…";
-  return backend.mode === "cloud" ? "en línea" : "modo demo";
+  return backend.mode === "demo" ? "modo demo" : "en línea";
 }
 
 // El aviso sobre lo que esta vista no puede hacer, o null si todo funciona.

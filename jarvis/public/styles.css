@@ -1191,6 +1191,61 @@ label.row-main {
   padding: 12px 0;
 }
 
+/* ---------- Clave de Jarvis (versión independiente) ---------- */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter-r)
+    calc(16px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+  background: var(--noche);
+}
+.gate-card {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gate-card h2 {
+  margin: 0;
+  font: 600 20px/1.2 var(--f-display);
+  letter-spacing: 0.04em;
+}
+.gate-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--tenue);
+}
+.gate-card input {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+}
+.gate-card input:focus-visible {
+  outline: none;
+  border-color: var(--amanecer);
+}
+.gate-card .gate-error {
+  min-height: 1.4em;
+  color: var(--mal);
+}
+.gate-card button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--era);
+  color: var(--sobre-era);
+  font: 600 15px/1 var(--f-display);
+  letter-spacing: 0.04em;
+}
+
 /* ---------- Aviso flotante ---------- */
 
 .toast {

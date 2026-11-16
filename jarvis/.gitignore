@@ -1,2 +1,6 @@
 # Capturas de las pruebas en navegador
 tests/.shots/
+# Dependencias y estado local de wrangler
+node_modules/
+.wrangler/
+.dev.vars

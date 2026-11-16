@@ -4,17 +4,34 @@
 //   escritorio). Un toque lo abre y sigue escuchando hasta una hora.
 // - "keyboard": en iPhone y iPad la página no puede abrir el micrófono; abre
 //   el teclado para usar su dictado y no lo cierra entre turnos.
-// En los dos, cada mensaje se envía solo al hacer una pausa. Mientras Jarvis
+// - "platform" con el micrófono del navegador (versión independiente): manos
+//   libres. Escucha siempre; tras unos segundos sin hablar se duerme y se
+//   despierta al oír «Jarvis».
+// En todos, cada mensaje se envía solo al hacer una pausa. Mientras Jarvis
 // piensa o habla la página se hace la sorda, para no oírse a sí misma.
 
 const PAUSE_PLATFORM_MS = 1600;
+const PAUSE_HANDS_FREE_MS = 900; // el navegador ya espera el final de la frase
 const PAUSE_KEYBOARD_MS = 2200;
+const FOLLOW_UP_MS = 15000; // tiempo para seguir hablando sin decir «Jarvis»
 const KEEP_SENT = 6;
 const HINTS = {
   platform: "Te escucho. Habla y envío solo cuando hagas una pausa.",
   keyboard:
     "Toca el micrófono de tu teclado y habla. Envío solo cuando hagas una pausa.",
+  awake: "Te escucho. Habla y envío solo cuando hagas una pausa.",
+  asleep: "Di «Jarvis» y lo que necesites.",
 };
+
+// Cómo suele escribir el reconocedor la palabra «Jarvis».
+const WAKE_WORD =
+  /\b(?:jarvis|j[aá]rvis|jarbis|yarvis|yarbis|llarvis|harvis|garvis)\b[\s,.:;!?¡¿]*/i;
+
+// Lo dicho después de «Jarvis», o null si no lo dijo.
+export function afterWakeWord(text) {
+  const found = WAKE_WORD.exec(text);
+  return found ? text.slice(found.index + found[0].length).trim() : null;
+}
 
 // Une lo dictado con lo que ya había, sin duplicar ni comerse espacios.
 export function glue(base, piece) {
@@ -83,7 +100,26 @@ export function createTalk(ui) {
   let deaf = false; // Jarvis piensa o habla: lo que se oiga no cuenta
   let base = ""; // lo ya dictado y confirmado de este turno
   let sent = []; // lo ya enviado en esta conversación
+  let awake = true; // manos libres: escucha sin esperar «Jarvis»
+  let followTimer = null;
+  let replying = false; // Jarvis contesta un mensaje dictado
   const { arm, disarm } = createPause(sendButton, () => deliver());
+  const handsFree = () => kind === "platform" && Boolean(listen?.handsFree);
+
+  function refreshHint() {
+    if (!active) return;
+    if (!handsFree()) hintText.textContent = HINTS[kind];
+    else hintText.textContent = awake ? HINTS.awake : HINTS.asleep;
+  }
+
+  function wake(on) {
+    clearTimeout(followTimer);
+    awake = on;
+    if (on && handsFree())
+      followTimer = setTimeout(() => wake(false), FOLLOW_UP_MS);
+    refreshHint();
+    ui.onChange();
+  }
 
   function show(text) {
     input.value = text;
@@ -96,7 +132,7 @@ export function createTalk(ui) {
     active = on;
     micButton.setAttribute("aria-pressed", String(on));
     hint.hidden = !on;
-    if (on) hintText.textContent = HINTS[kind];
+    refreshHint();
     ui.onChange();
   }
 
@@ -108,6 +144,7 @@ export function createTalk(ui) {
     base = "";
     if (!heard) return show("");
     sent = [...sent, heard].slice(-KEEP_SENT);
+    replying = true;
     ui.onSpoken(heard);
   }
 
@@ -121,6 +158,7 @@ export function createTalk(ui) {
   }
 
   function stop() {
+    clearTimeout(followTimer);
     if (!active) return;
     if (kind === "platform") listen.stop();
     else input.blur();
@@ -131,11 +169,33 @@ export function createTalk(ui) {
     get active() {
       return active;
     },
+    get handsFree() {
+      return active && handsFree();
+    },
+    // Deja de escuchar mensajes hasta oír «Jarvis» (solo manos libres).
+    sleep() {
+      replying = false;
+      wake(false);
+    },
+    // Manos libres y dormido: espera a oír «Jarvis».
+    get asleep() {
+      return active && handsFree() && !awake;
+    },
+    // Empieza a escuchar sin abrir el teclado (solo con micrófono propio).
+    // `gesture`: viene de un toque; `awake`: no hace falta decir «Jarvis».
+    start({ gesture = false, awake: startAwake = true } = {}) {
+      if (kind !== "platform" || !listen.start) return;
+      wake(startAwake);
+      listen.start(gesture);
+    },
     attach: setKind,
     // Clic en el micrófono: abre o cierra la conversación. Debe llamarse
     // directo desde el toque.
     toggle() {
-      if (kind === "platform") return listen.toggle();
+      if (kind === "platform") {
+        wake(true);
+        return listen.toggle();
+      }
       if (kind !== "keyboard") return;
       if (active) return stop();
       base = "";
@@ -151,6 +211,16 @@ export function createTalk(ui) {
       if (!active) return;
       disarm();
       base = "";
+      // El micrófono del navegador se apaga mientras Jarvis habla; al callar
+      // se vuelve a encender y hay unos segundos para seguir sin «Jarvis».
+      if (kind === "platform") {
+        if (deaf) listen.pause?.();
+        else listen.resume?.();
+        // Tras contestar (o si ya estaba despierto) hay unos segundos para
+        // seguir sin «Jarvis»; tras una frase suelta, como «Aquí estaré», no.
+        if (!deaf && handsFree() && (replying || awake)) wake(true);
+        if (!deaf) replying = false;
+      }
       // Lo que el dictado del teclado haya oído mientras Jarvis hablaba se tira.
       if (!deaf && kind === "keyboard") show("");
     },
@@ -170,15 +240,27 @@ export function createTalk(ui) {
         setActive(on);
       },
       onPartial(text) {
-        if (deaf) return;
+        if (deaf || (handsFree() && !awake)) return;
         show(glue(base, text));
-        if (text) disarm();
+        if (!text) return;
+        disarm();
+        clearTimeout(followTimer); // está hablando: no dormirse a media frase
       },
       onFinal(text) {
         if (deaf) return;
-        base = glue(base, text);
+        let heard = text;
+        if (handsFree() && !awake) {
+          heard = afterWakeWord(text);
+          if (heard === null) return; // no era para Jarvis
+          wake(true);
+          if (!heard) return ui.onWake?.();
+          heard = ` ${heard}`;
+        }
+        clearTimeout(followTimer);
+        base = glue(base, heard);
         show(base);
-        if (base.trim()) arm(PAUSE_PLATFORM_MS);
+        if (base.trim())
+          arm(handsFree() ? PAUSE_HANDS_FREE_MS : PAUSE_PLATFORM_MS);
       },
       onDictationGone() {
         setKind(null);

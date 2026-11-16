@@ -417,17 +417,171 @@ function setupDictation(dictation, handlers) {
   };
 }
 
+// ---------- Escuchar (micrófono del navegador) ----------
+
+const RESTART_MS = 250;
+const MAX_FAILED_STARTS = 4;
+const BLOCKED = new Set(["not-allowed", "service-not-allowed"]);
+const RECOGNITION_NOTES = {
+  blocked:
+    "El navegador no deja usar el micrófono. Permítelo en los ajustes de Safari para este sitio.",
+  gesture: "Toca la pantalla para que Jarvis siga escuchando.",
+  "audio-capture": "No encuentro el micrófono.",
+  network: "El reconocimiento de voz necesita internet.",
+};
+
+// El reconocimiento de voz del propio navegador (Web Speech API), para la
+// versión independiente: en una página normal Safari sí deja escuchar. Escucha
+// frase por frase y se vuelve a encender solo; mientras Jarvis habla se apaga
+// (pause/resume) para no oírse a sí mismo. Entrega los mismos eventos que el
+// micrófono de la plataforma. `handsFree`: no hace falta tocar nada entre
+// turnos (talk.js usa la palabra «Jarvis»).
+function setupRecognition(Recognition, handlers) {
+  let recognition = null;
+  let wanted = false; // Emilio quiere que escuche
+  let paused = false; // Jarvis está hablando
+  let failedStarts = 0;
+  let restartTimer = null;
+  let fromGesture = false;
+
+  function notice(key) {
+    handlers.onNotice?.(RECOGNITION_NOTES[key] ?? RECOGNITION_NOTES.network);
+  }
+
+  // Sin permiso: se deja de intentar. Si el intento no vino de un toque,
+  // probablemente Safari solo pide uno: se espera el siguiente toque.
+  function blocked() {
+    const needsGesture = !fromGesture;
+    wanted = false;
+    handlers.onDictationState?.("idle");
+    if (needsGesture) handlers.onNeedsGesture?.();
+    else notice("blocked");
+  }
+
+  function create() {
+    const next = new Recognition();
+    next.lang = "es-MX";
+    next.continuous = false; // una frase por vez: en iPhone es lo más estable
+    next.interimResults = true;
+    next.maxAlternatives = 1;
+    next.onstart = () => {
+      failedStarts = 0;
+      handlers.onDictationState?.("listening");
+    };
+    next.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const text = result[0]?.transcript ?? "";
+        if (result.isFinal) handlers.onFinal?.(` ${text.trim()}`);
+        else interim += text;
+      }
+      handlers.onPartial?.(interim.trim());
+    };
+    next.onerror = (event) => {
+      if (BLOCKED.has(event.error)) return blocked();
+      if (event.error === "audio-capture" || event.error === "network") {
+        wanted = false;
+        notice(event.error);
+      }
+      // "no-speech" y "aborted" son normales: se vuelve a escuchar.
+    };
+    next.onend = () => {
+      if (recognition === next) recognition = null;
+      if (wanted && !paused) scheduleRestart();
+      else if (!wanted) handlers.onDictationState?.("idle");
+    };
+    return next;
+  }
+
+  function begin() {
+    clearTimeout(restartTimer);
+    if (recognition || !wanted || paused) return;
+    recognition = create();
+    try {
+      recognition.start();
+    } catch {
+      recognition = null;
+      scheduleRestart();
+    }
+  }
+
+  function scheduleRestart() {
+    failedStarts += 1;
+    if (failedStarts > MAX_FAILED_STARTS) {
+      wanted = false;
+      handlers.onDictationState?.("idle");
+      handlers.onNeedsGesture?.();
+      return notice("gesture");
+    }
+    clearTimeout(restartTimer);
+    restartTimer = setTimeout(begin, RESTART_MS);
+  }
+
+  function halt() {
+    clearTimeout(restartTimer);
+    const current = recognition;
+    recognition = null;
+    try {
+      current?.abort();
+    } catch {
+      // Ya estaba apagado.
+    }
+  }
+
+  return {
+    handsFree: true,
+    // `gesture`: la llamada viene directo de un toque de Emilio.
+    start(gesture = false) {
+      fromGesture = gesture;
+      wanted = true;
+      paused = false;
+      failedStarts = 0;
+      begin();
+    },
+    stop() {
+      wanted = false;
+      halt();
+      handlers.onDictationState?.("idle");
+    },
+    toggle() {
+      if (wanted) this.stop();
+      else this.start(true);
+    },
+    pause() {
+      paused = true;
+      halt();
+    },
+    resume() {
+      if (!paused) return;
+      paused = false;
+      failedStarts = 0;
+      begin();
+    },
+    get wanted() {
+      return wanted;
+    },
+  };
+}
+
 // Nunca lanza. `listen` es null si la vista no ofrece micrófono; `speech` es
-// null si el navegador no tiene voz.
-export async function createVoice(handlers = {}) {
+// null si el navegador no tiene voz. `site`: la versión independiente, donde
+// el micrófono del navegador sí está permitido.
+export async function createVoice(handlers = {}, { site = false } = {}) {
   const claude = globalThis.window?.claude;
   const dictation = claude?.use
     ? await claude.use("dictation").catch(() => null)
     : null;
+  const Recognition =
+    globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition;
+  let listen = null;
+  if (dictation) listen = setupDictation(dictation, handlers);
+  else if (site && Recognition)
+    listen = setupRecognition(Recognition, handlers);
   const synth = globalThis.speechSynthesis;
   const canSpeak = Boolean(synth && globalThis.SpeechSynthesisUtterance);
   return {
-    listen: dictation ? setupDictation(dictation, handlers) : null,
+    listen,
     speech: canSpeak ? setupSpeech(synth, handlers) : null,
   };
 }

@@ -81,6 +81,62 @@ que el copiloto de Born to Rally (`voice.js`):
   sirve para eso. Si aun así la voz no arranca, la página lo avisa y deja el
   botón «Escuchar» en la respuesta.
 
+## Versión independiente: manos libres
+
+En una página de Claude el iPhone no deja usar el micrófono. Por eso hay una
+segunda versión, la misma app, servida por un Worker de Cloudflare propio. En
+una página normal Safari sí deja escuchar, así que Jarvis funciona sin el
+dictado del teclado:
+
+- Al abrirla escucha sola, dormida: lo que digas no se envía hasta que
+  empiece con «Jarvis» («Jarvis, ¿qué tengo pendiente?»). Solo «Jarvis»
+  contesta «Dime.» y espera la orden.
+- Tras cada respuesta hay 15 s para seguir hablando sin decir «Jarvis».
+  «Descansa» la vuelve a dormir.
+- Mientras habla, el micrófono se apaga para no oírse.
+- Si Safari exige un toque antes de escuchar, basta tocar la pantalla en
+  cualquier parte, una vez por visita. El botón del micrófono la apaga y lo
+  recuerda.
+
+Cómo funciona:
+
+- `worker/index.js` sirve `site/index.html`, habla con Claude por la API
+  (librería oficial `@anthropic-ai/sdk`, en streaming) y guarda tareas y
+  memoria en un Durable Object. La clave de la API vive en Cloudflare como
+  secreto y nunca llega al navegador.
+- Todo `/api` pide la clave de Jarvis (`JARVIS_CLAVE`), que la página pregunta
+  una vez y guarda en el dispositivo.
+- El modelo es `claude-opus-5-5` (en `wrangler.toml`), con `effort` bajo en
+  General y Organizar y medio en Juegos y Escuela. Si un filtro de seguridad
+  rechaza una respuesta, la API la repite con otro modelo (`fallbacks`).
+- Jarvis anota tareas y recuerdos con órdenes de texto (`[[tarea: …]]`), igual
+  que en Claude cuando no hay herramientas.
+
+### Ponerlo en marcha (todo desde el navegador)
+
+1. **Clave de la API.** En <https://console.anthropic.com>: carga saldo, pon
+   un límite de gasto mensual y crea una API key.
+2. **Cloudflare.** Crea una cuenta gratis en <https://dash.cloudflare.com>. En
+   Workers & Pages crea una aplicación importando el repositorio `Rea` de
+   GitHub, con la rama `jarvis-v1`, la carpeta raíz `jarvis` y el comando de
+   despliegue `npx wrangler deploy`.
+3. **Secretos.** En el Worker, en sus ajustes de variables y secretos, agrega
+   dos de tipo secreto: `ANTHROPIC_API_KEY` (la clave del paso 1) y
+   `JARVIS_CLAVE` (una contraseña larga que inventes).
+4. **Abrirlo.** Entra a la dirección `…workers.dev` del Worker en Safari,
+   escribe la clave de Jarvis y permite el micrófono.
+
+Cada vez que se sube un cambio a la rama, Cloudflare vuelve a desplegar solo.
+
+### Cuánto cuesta
+
+La API se paga por uso, aparte de la suscripción de Claude. Con Claude Opus 5.5
+($4 por millón de tokens de entrada y $20 de salida) una respuesta corta cuesta
+del orden de 1 a 3 centavos de dólar, y más en conversaciones largas porque se
+reenvía el historial. Es una estimación, no una medida: revisa el uso real en
+la consola de Anthropic. Para gastar menos se puede cambiar `MODEL` en
+`wrangler.toml` por un modelo más barato.
+
 ## Estructura
 
 ```
@@ -102,9 +158,15 @@ jarvis/
 │   ├── session.js      # Conversación guardada en el dispositivo
 │   ├── status.js       # Textos de estado
 │   ├── demo.js         # Respuestas del modo demo
+│   ├── site.js         # Versión independiente: clave y llamadas al Worker
+│   ├── siteservices.js # Versión independiente: IA y memoria vía el Worker
+│   ├── handsfree.js    # Versión independiente: escuchar al abrir
 │   └── ui.js           # Utilidades de interfaz
-├── scripts/build-online.mjs   # Une todo en un solo HTML
-├── online/jarvis.html         # Resultado: lo que se publica (no editar a mano)
+├── scripts/build-online.mjs   # Genera las dos versiones a partir de public/
+├── online/jarvis.html         # Versión para Claude (no editar a mano)
+├── site/index.html            # Versión independiente (no editar a mano)
+├── worker/index.js            # Worker de Cloudflare: API de Claude y datos
+├── wrangler.toml              # Configuración del Worker
 └── tests/              # Pruebas (ver abajo)
 ```
 
@@ -119,8 +181,14 @@ jarvis/
 
 ```bash
 npm test               # lógica: Markdown, instrucciones, tareas, acciones, voz
-npm run test:browser   # flujos completos en Chromium, con capturas
+npm run test:browser   # versión para Claude en Chromium, con capturas
+npm run test:worker    # el Worker con el motor real de Cloudflare (local)
+npm run test:site      # versión independiente de punta a punta, manos libres
 ```
+
+`test:worker` y `test:site` levantan el Worker con `wrangler dev` y un Claude
+simulado (`tests/localworker.mjs`): no usan internet ni gastan saldo. El
+micrófono del navegador se simula con `tests/fake-recognition.js`.
 
 `test:browser` necesita Playwright instalado en el entorno (las sesiones de
 Claude Code en la nube ya lo traen). Usa dos simuladores: `tests/fake-claude.js`
@@ -136,3 +204,6 @@ Qué **no** cubren las pruebas, y hay que revisar a mano en el dispositivo:
   herramientas.
 - El micrófono real de la plataforma (solo existe en navegadores Chromium y en
   la app de escritorio).
+- En la versión independiente: si Safari en iPhone deja reconocer voz y
+  volver a escuchar sin un toque tras cada respuesta, cómo convive el
+  micrófono con la voz de Jarvis, y el despliegue real en Cloudflare.

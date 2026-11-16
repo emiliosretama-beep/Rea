@@ -1,4 +1,7 @@
-// Arma la versión online de Jarvis: un único HTML para publicar en claude.ai.
+// Arma las dos versiones de Jarvis a partir de public/:
+// - online/jarvis.html: un único HTML para publicar en claude.ai.
+// - site/index.html: la versión independiente que sirve el Worker de
+//   Cloudflare (ver wrangler.toml), con micrófono propio.
 // Junta index.html, styles.css y los módulos JS de public/ en un solo archivo,
 // sin cambiar la lógica (backend.js y store.js detectan que corren online).
 //   node scripts/build-online.mjs  ->  online/jarvis.html
@@ -19,6 +22,8 @@ const MODULES = [
   "public/store.js",
   "public/demo.js",
   "public/backend.js",
+  "public/site.js",
+  "public/siteservices.js",
   "public/voice.js",
   "public/core.js",
   "public/ui.js",
@@ -28,6 +33,7 @@ const MODULES = [
   "public/status.js",
   "public/talk.js",
   "public/voicepanel.js",
+  "public/handsfree.js",
   "public/app.js",
 ];
 
@@ -81,25 +87,62 @@ const js = modules
   .join("\n");
 await checkSyntax(js);
 
+const fontLinks = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+${fonts[0].replace(/\s+/g, " ")}`;
+// Un "</script" literal dentro del código cerraría la etiqueta embebida.
+const appScript = `<script type="module">
+${js.replaceAll("</script", "<\\/script")}
+</script>`;
+
+// Para claude.ai: un fragmento (sin <html> ni <head>); el visor lo envuelve
+// en su propio esqueleto al publicarlo.
 const html = `${title}
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-${fonts[0].replace(/\s+/g, " ")}
+${fontLinks}
 <style>
 ${css.trim()}
 </style>
 ${body.trim()}
-<script type="module">
-${
-  // Un "</script" literal dentro del código cerraría la etiqueta embebida.
-  js.replaceAll("</script", "<\\/script")
-}
-</script>
+${appScript}
 `;
 
-await mkdir(new URL("online/", root), { recursive: true });
-await writeFile(new URL("online/jarvis.html", root), html);
-console.log(
-  `online/jarvis.html · ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`,
-);
+// Para el Worker: un documento completo. JARVIS_SITE le dice a la app que la
+// IA y la memoria salen del Worker y que puede usar el micrófono.
+const reset = head.match(/<style>[\s\S]*?<\/style>/)[0];
+const meta = [
+  ...head.matchAll(/<meta\s+name="(?:description|theme-color)"[^>]*>/g),
+].map((found) => found[0].replace(/\s+/g, " "));
+const favicon = `data:image/svg+xml,${encodeURIComponent((await read("public/favicon.svg")).trim())}`;
+const site = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+${title}
+${meta.join("\n")}
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<link rel="icon" href="${favicon}" type="image/svg+xml">
+${fontLinks}
+${reset.replace(/\s+/g, " ")}
+<style>
+${css.trim()}
+</style>
+<script>window.JARVIS_SITE = true;</script>
+</head>
+<body>
+${body.trim()}
+${appScript}
+</body>
+</html>
+`;
+
+const outputs = [
+  ["online/jarvis.html", html],
+  ["site/index.html", site],
+];
+for (const [path, content] of outputs) {
+  await mkdir(new URL(path.split("/")[0] + "/", root), { recursive: true });
+  await writeFile(new URL(path, root), content);
+  console.log(`${path} · ${(Buffer.byteLength(content) / 1024).toFixed(1)} KB`);
+}

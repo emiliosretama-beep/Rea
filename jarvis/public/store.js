@@ -127,6 +127,16 @@ export function createSessionStore(onChange = () => {}) {
       changed();
     },
     retry() {},
+    // Para la versión con servidor (sitestore.js): todo el estado de una vez.
+    snapshot: () => ({
+      tasks: tasks.map((task) => ({ ...task })),
+      memories: memories.map((memory) => ({ ...memory })),
+    }),
+    replace(state) {
+      tasks = state.tasks.map((task) => ({ ...task }));
+      memories = state.memories.map((memory) => ({ ...memory }));
+      changed();
+    },
   };
 }
 

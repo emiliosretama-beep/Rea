@@ -20,7 +20,7 @@ const { AskError, createBackend, createRunner, splitMarkers } =
   await import("../public/backend.js");
 const { rankVoices, scoreVoice, speechChunks, speechText, voiceLabel } =
   await import("../public/voice.js");
-const { glue, withoutSent } = await import("../public/talk.js");
+const { afterWakeWord, glue, withoutSent } = await import("../public/talk.js");
 const { greeting, noticeFor, statusText, telemetry } =
   await import("../public/status.js");
 const { readChat, writeChat } = await import("../public/session.js");
@@ -601,4 +601,16 @@ test("voz: no se reenvía lo que el dictado del teclado vuelve a escribir", () =
   // Repetir la misma frase tal cual es un mensaje nuevo, no texto viejo.
   assert.equal(withoutSent("anota comprar leche", sent), "anota comprar leche");
   assert.equal(withoutSent("hola", []), "hola");
+});
+
+test("manos libres: solo cuenta lo que viene después de «Jarvis»", () => {
+  assert.equal(
+    afterWakeWord("Jarvis, qué tengo pendiente"),
+    "qué tengo pendiente",
+  );
+  assert.equal(afterWakeWord("oye jarvis anota leche"), "anota leche");
+  assert.equal(afterWakeWord("Yarvis ¿qué hora es?"), "qué hora es?");
+  assert.equal(afterWakeWord("Jarbis."), "");
+  assert.equal(afterWakeWord("hola a todos"), null);
+  assert.equal(afterWakeWord("jarvisito"), null);
 });

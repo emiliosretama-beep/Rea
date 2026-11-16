@@ -8,6 +8,9 @@ import { MODES, MODE_IDS } from "./prompt.js";
 import { readChat, writeChat } from "./session.js";
 import { greeting, noticeFor, statusText, telemetry } from "./status.js";
 import { StoreError, createStore } from "./store.js";
+import { setupHandsFree } from "./handsfree.js";
+import { createGate, isSite } from "./site.js";
+import { createSiteBackend, createSiteStore } from "./siteservices.js";
 import { createTalk } from "./talk.js";
 import { $, copyText, createToast, el, icon, selectContents } from "./ui.js";
 import { createVoice } from "./voice.js";
@@ -58,8 +61,14 @@ const talk = createTalk({
   },
   onSpoken: heard,
   onChange: () => setPhase(state.phase),
+  // Lo llamaron por su nombre sin decir nada más.
+  onWake() {
+    const voice = state.voice.speech;
+    if (voice && !voice.settings.muted) voice.say("Dime.");
+  },
 });
 let echoTimer = null;
+let handsFree = null; // versión independiente con micrófono propio (handsfree.js)
 
 // ---------- Conversación guardada (ver session.js) ----------
 
@@ -115,7 +124,7 @@ function syncCore() {
   const speaking = state.phase === "streaming" || Boolean(state.speakingId);
   if (state.phase === "thinking") core.set("thinking");
   else if (speaking) core.set("speaking");
-  else core.set(talk.active ? "listening" : "idle");
+  else core.set(talk.active && !talk.asleep ? "listening" : "idle");
   core.talk(state.phase === "idle" && Boolean(state.speakingId));
 }
 
@@ -146,7 +155,11 @@ function setPhase(phase) {
   renderSend();
   syncCore();
   syncTalk();
-  $("#status").textContent = statusText({ ...state, listening: talk.active });
+  $("#status").textContent = statusText({
+    ...state,
+    listening: talk.active,
+    asleep: talk.asleep,
+  });
 }
 
 function renderNotice() {
@@ -401,7 +414,9 @@ function fitInput() {
 // Llegó un mensaje dictado. "Descansa" y parecidas cierran la conversación.
 function heard(text) {
   if (!REST_WORDS.test(text.trim())) return send(text, { spoken: true });
-  talk.stop();
+  // Manos libres: solo se duerme hasta volver a oír «Jarvis».
+  if (talk.handsFree) talk.sleep();
+  else talk.stop();
   input.value = "";
   fitInput();
   renderSend();
@@ -412,6 +427,7 @@ function heard(text) {
 const voiceHandlers = {
   onNotice: (text) => toast.show(text),
   ...talk.events,
+  onNeedsGesture: () => handsFree?.needsGesture(),
   // "starting" cuenta como hablando: la voz ya está en camino.
   onSpeechState(speechState, id) {
     state.speakingId = speechState === "idle" ? null : id;
@@ -486,7 +502,9 @@ function bindEvents() {
   micButton.addEventListener("click", () => {
     state.voice.speech?.unlock();
     state.voice.speech?.stop();
+    const wasOn = talk.active;
     talk.toggle();
+    handsFree?.remember(!wasOn);
   });
   // Que el botón no le quite el foco a la caja (cerraría el teclado).
   micButton.addEventListener("mousedown", (event) => event.preventDefault());
@@ -547,30 +565,59 @@ function boot() {
   }
 
   // La página se pinta ya; cada capability se enciende cuando la vista responde.
-  ready.backend = createBackend({
-    onGone(demo) {
-      state.backend = demo;
-      setPhase(state.phase);
-      renderNotice();
-    },
-  }).then((backend) => {
-    state.backend = backend;
-    setPhase(state.phase);
-    renderNotice();
-    return backend;
-  });
-  ready.store = createStore(renderStore).then((store) => {
-    state.store = store;
-    renderStore();
-    return store;
-  });
-  createVoice(voiceHandlers).then((voice) => {
+  const site = isSite();
+  if (site) startSite();
+  else {
+    ready.backend = createBackend({
+      onGone(demo) {
+        state.backend = demo;
+        setPhase(state.phase);
+        renderNotice();
+      },
+    }).then(useBackend);
+    ready.store = createStore(renderStore).then(useStore);
+  }
+  createVoice(voiceHandlers, { site }).then((voice) => {
     state.voice = voice;
     talk.attach(voice.listen, coarsePointer.matches);
     bindVoicePanel(voice.speech);
     chat.setCanSpeak(Boolean(voice.speech));
     repaintAll();
+    if (site && voice.listen?.handsFree)
+      handsFree = setupHandsFree({
+        talk,
+        speech: voice.speech,
+        toast,
+        skip: (target) => Boolean(target.closest?.("#mic, #keyGate")),
+      });
   });
+}
+
+function useBackend(backend) {
+  state.backend = backend;
+  setPhase(state.phase);
+  renderNotice();
+  return backend;
+}
+
+function useStore(store) {
+  state.store = store;
+  renderStore();
+  return store;
+}
+
+// Versión independiente: la IA y la memoria salen del Worker, que pide la
+// clave de Jarvis (site.js).
+function startSite() {
+  const gate = createGate({
+    gate: $("#keyGate"),
+    form: $("#keyForm"),
+    input: $("#keyInput"),
+    error: $("#keyError"),
+    onUnlock: () => state.store?.retry(),
+  });
+  ready.backend = Promise.resolve(useBackend(createSiteBackend()));
+  ready.store = gate.ready().then(() => useStore(createSiteStore(renderStore)));
 }
 
 boot();
