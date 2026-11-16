@@ -31,7 +31,7 @@ const Lienzo: React.FC<{children: React.ReactNode; exposicion?: number}> = ({chi
   // Espera a que carguen texturas y cielo antes de capturar el cuadro
   const [handle] = React.useState(() => delayRender('Cargando escena 3D', {timeoutInMilliseconds: 120000}));
   return (
-    <ThreeCanvas width={width} height={height} shadows camera={{fov: 38}}
+    <ThreeCanvas width={width} height={height} shadows camera={{fov: 38}} dpr={0.72}
       gl={{antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: exposicion, preserveDrawingBuffer: true}}>
       <React.Suspense fallback={null}>
         {children}
@@ -128,7 +128,7 @@ export const EscenaArena: React.FC = () => {
   const bailando = f >= T.baile && f < T.emperador;
   const haciaPalco = interpolate(f, [T.emperador - 10, T.emperador + 5], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const gol = (o: number) => (pelea ? Math.sin(f / 4 + o) * 0.5 + 0.5 : 0);
-  const laurelY = interpolate(spring({frame: f - T.laurel, fps, config: {damping: 14, mass: 1.4}}), [0, 1], [9, 2.07]);
+  const laurelY = interpolate(spring({frame: f - T.laurel, fps, config: {damping: 14, mass: 1.4}}), [0, 1], [9, 1.74]);
   const animo = bailando ? 1 : f > T.laurel + 20 ? 1 : f > T.aparece ? 0.15 : 0.6;
   const yeyoRot = Math.PI * haciaPalco * 0; // ya mira al palco (+z)
   return (
@@ -154,7 +154,7 @@ export const EscenaArena: React.FC = () => {
             guitarra={bailando} laurel={f > T.laurel + 22 ? 1 : 0} />
         </group>
       )}
-      {f >= T.laurel && f <= T.laurel + 22 && <group position={[0, laurelY + 0.11, 1.6 - 0.02]} rotation={[0, f / 4, 0]}><Laurel s={1.4} /></group>}
+      {f >= T.laurel && f <= T.laurel + 22 && <group position={[0, laurelY + 0.11, 1.6 - 0.02]} rotation={[0, f / 4, 0]}><Laurel s={1.2} /></group>}
       {/* emperador en el palco */}
       <group position={[PALCO.x, PALCO.y + 0.6, PALCO.z - 0.4]} rotation={[0, Math.PI, 0]}>
         <Romano pose={{brazoD: f >= T.emperador && f < T.laurel + 10 ? 0.8 : 0, boca: boca(f, T.emperador + 4, T.emperador + 112), t: f}} toga="#f4efe4" banda="#5a1a6a" laurel />

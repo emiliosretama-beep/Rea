@@ -1,5 +1,6 @@
 import React from 'react';
 import * as THREE from 'three';
+import {random} from 'remotion';
 
 // Personajes 3D hechos con formas (estilo plastilina). Nadie es la cara real de una persona.
 type Pose = {
@@ -17,33 +18,53 @@ const Cap: React.FC<{r: number; l: number; c: string; p?: [number, number, numbe
   <mesh position={p} scale={s} castShadow receiveShadow><capsuleGeometry args={[r, l, 6, 16]} />{M(c, rough)}</mesh>
 );
 
-const Cabeza: React.FC<{piel: string; pelo: string; boca: number; bigote?: boolean}> = ({piel, pelo, boca, bigote}) => (
+const Lentes: React.FC = () => (
+  <group position={[0, 0.03, 0]}>
+    <mesh scale={[1.04, 1, 1]}><cylinderGeometry args={[0.152, 0.148, 0.055, 40, 1, true, -1.45, 2.9]} /><meshStandardMaterial color="#050505" metalness={0.7} roughness={0.06} side={THREE.DoubleSide} /></mesh>
+    <mesh position={[0, 0.028, 0]} scale={[1.04, 1, 1]}><cylinderGeometry args={[0.154, 0.154, 0.008, 40, 1, true, -1.45, 2.9]} /><meshStandardMaterial color="#1a1a1a" metalness={0.5} roughness={0.3} side={THREE.DoubleSide} /></mesh>
+  </group>
+);
+
+const Rizos: React.FC<{color: string}> = ({color}) => (
   <group>
-    <mesh castShadow scale={[1, 1.12, 1.02]}><sphereGeometry args={[0.13, 32, 24]} />{M(piel, 0.5)}</mesh>
+    <mesh position={[0, 0.02, -0.01]} scale={[1.1, 1.0, 1.08]}><sphereGeometry args={[0.138, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.52]} />{M(color, 0.95)}</mesh>
+    {Array.from({length: 46}).map((_, i) => {
+      const a = i * 2.39996, h = 0.35 + (i / 46) * 0.62;
+      const r = Math.sqrt(1 - h * h);
+      return <mesh key={i} position={[Math.cos(a) * r * 0.15, 0.03 + h * 0.13, Math.sin(a) * r * 0.15 - 0.005]}><sphereGeometry args={[0.032, 8, 6]} />{M(color, 0.95)}</mesh>;
+    })}
+  </group>
+);
+
+const Cabeza: React.FC<{piel: string; pelo: string; boca: number; bigote?: boolean; lentes?: boolean; rizos?: boolean; cachetes?: boolean}> = ({piel, pelo, boca, bigote, lentes, rizos, cachetes}) => (
+  <group>
+    <mesh castShadow scale={cachetes ? [1.14, 1.1, 1.06] : [1, 1.12, 1.02]}><sphereGeometry args={[0.13, 32, 24]} />{M(piel, 0.5)}</mesh>
+    {cachetes && <mesh position={[0, -0.075, 0.03]} scale={[1.25, 0.6, 1]}><sphereGeometry args={[0.1, 20, 14]} />{M(piel, 0.5)}</mesh>}
+    {lentes && <Lentes />}
     {/* orejas */}
     <mesh position={[0.128, 0, 0]} scale={[0.4, 1, 0.7]}><sphereGeometry args={[0.04, 12, 10]} />{M(piel, 0.5)}</mesh>
     <mesh position={[-0.128, 0, 0]} scale={[0.4, 1, 0.7]}><sphereGeometry args={[0.04, 12, 10]} />{M(piel, 0.5)}</mesh>
     {/* nariz */}
     <mesh position={[0, -0.01, 0.13]} scale={[0.8, 1, 1]}><sphereGeometry args={[0.028, 12, 10]} />{M(piel, 0.45)}</mesh>
     {/* ojos */}
-    {[-0.045, 0.045].map((x) => (
+    {!lentes && [-0.045, 0.045].map((x) => (
       <group key={x} position={[x, 0.03, 0.112]}>
         <mesh scale={[1, 1, 0.5]}><sphereGeometry args={[0.022, 14, 10]} />{M('#ffffff', 0.2)}</mesh>
         <mesh position={[0, 0, 0.01]}><sphereGeometry args={[0.012, 12, 10]} />{M('#1a120c', 0.1)}</mesh>
       </group>
     ))}
     {/* cejas */}
-    {[-0.045, 0.045].map((x) => <mesh key={x} position={[x, 0.07, 0.118]} rotation={[0, 0, x > 0 ? -0.12 : 0.12]}><boxGeometry args={[0.05, 0.012, 0.012]} />{M(pelo, 0.8)}</mesh>)}
+    {!lentes && [-0.045, 0.045].map((x) => <mesh key={x} position={[x, 0.07, 0.118]} rotation={[0, 0, x > 0 ? -0.12 : 0.12]}><boxGeometry args={[0.05, 0.012, 0.012]} />{M(pelo, 0.8)}</mesh>)}
     {/* boca */}
     <mesh position={[0, -0.065, 0.112]} scale={[1, 0.25 + boca * 0.9, 0.5]}><sphereGeometry args={[0.03, 14, 10]} />{M('#4a1414', 0.5)}</mesh>
     {bigote && <mesh position={[0, -0.04, 0.122]} scale={[1.6, 0.35, 0.6]}><sphereGeometry args={[0.028, 12, 8]} />{M(pelo, 0.9)}</mesh>}
     {/* pelo */}
-    <mesh position={[0, 0.03, -0.015]} scale={[1.05, 1.0, 1.05]}><sphereGeometry args={[0.135, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.5]} />{M(pelo, 0.9)}</mesh>
+    {rizos ? <Rizos color={pelo} /> : <mesh position={[0, 0.03, -0.015]} scale={[1.05, 1.0, 1.05]}><sphereGeometry args={[0.135, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.5]} />{M(pelo, 0.9)}</mesh>}
   </group>
 );
 
 // Esqueleto común: piernas, torso, brazos, cabeza. "ropa" define colores.
-const Cuerpo: React.FC<{pose: Pose; piel: string; torso: string; piernas: string; botas: string; mangas?: string; children?: React.ReactNode; cabeza?: React.ReactNode; manoD?: React.ReactNode; manoI?: React.ReactNode; falda?: React.ReactNode}> = ({pose, piel, torso, piernas, botas, mangas, children, cabeza, manoD, manoI, falda}) => {
+const Cuerpo: React.FC<{pose: Pose; piel: string; torso: string; piernas: string; botas: string; mangas?: string; children?: React.ReactNode; cabeza?: React.ReactNode; manoD?: React.ReactNode; manoI?: React.ReactNode; falda?: React.ReactNode; ancho?: number; torsoMat?: THREE.Material; mangaCorta?: boolean; shorts?: boolean}> = ({pose, piel, torso, piernas, botas, mangas, children, cabeza, manoD, manoI, falda, ancho = 1, torsoMat, mangaCorta, shorts}) => {
   const {paso = 0, brazoD = 0, brazoI = 0, baile = 0, t = 0, sentado} = pose;
   const sw = Math.sin(paso) * 0.6;
   const rebote = baile * Math.abs(Math.sin(t / 5)) * 0.08;
@@ -53,8 +74,11 @@ const Cuerpo: React.FC<{pose: Pose; piel: string; torso: string; piernas: string
     <group position={[0, rebote + (sentado ? -0.45 : 0), 0]} rotation={[0, giro, baile * Math.sin(t / 5) * 0.06]}>
       {/* piernas */}
       {[-1, 1].map((lado) => (
-        <group key={lado} position={[lado * 0.09, 0.95, 0]} rotation={[piernaR(lado * sw), 0, 0]}>
-          <Cap r={0.075} l={0.72} c={piernas} p={[0, -0.43, 0]} rough={0.9} />
+        <group key={lado} position={[lado * 0.09 * ancho, 0.95, 0]} rotation={[piernaR(lado * sw), 0, 0]}>
+          {shorts ? <>
+            <Cap r={0.105} l={0.28} c={piernas} p={[0, -0.2, 0]} rough={0.9} />
+            <Cap r={0.072} l={0.5} c={piel} p={[0, -0.58, 0]} rough={0.5} />
+          </> : <Cap r={0.075} l={0.72} c={piernas} p={[0, -0.43, 0]} rough={0.9} />}
           <group position={[0, -0.86, sentado ? 0 : 0.04]} rotation={[sentado ? 1.45 : 0, 0, 0]}>
             <mesh castShadow position={[0, -0.03, 0.04]}><boxGeometry args={[0.13, 0.09, 0.28]} />{M(botas, 0.5)}</mesh>
           </group>
@@ -62,7 +86,7 @@ const Cuerpo: React.FC<{pose: Pose; piel: string; torso: string; piernas: string
       ))}
       {falda}
       {/* torso */}
-      <Cap r={0.17} l={0.36} c={torso} p={[0, 1.26, 0]} s={[1.18, 1, 0.78]} rough={0.85} />
+      <mesh position={[0, 1.26, 0]} scale={[1.18 * ancho, 1, 0.78 * ancho]} castShadow receiveShadow material={torsoMat}><capsuleGeometry args={[0.17, 0.36, 6, 16]} />{!torsoMat && M(torso, 0.85)}</mesh>
       {children}
       {/* brazos */}
       {[-1, 1].map((lado) => {
@@ -70,15 +94,16 @@ const Cuerpo: React.FC<{pose: Pose; piel: string; torso: string; piernas: string
         const rx = -lado * sw * 0.8 * (1 - sube) - sube * 2.6 + baile * Math.sin(t / 5 + lado) * 0.5;
         const rz = lado * (0.12 + sube * 0.35);
         return (
-          <group key={lado} position={[lado * 0.25, 1.48, 0]} rotation={[rx, 0, rz]}>
-            <Cap r={0.062} l={0.5} c={mangas ?? torso} p={[0, -0.3, 0]} rough={0.85} />
+          <group key={lado} position={[lado * (0.25 + (ancho - 1) * 0.2), 1.48, 0]} rotation={[rx, 0, rz]}>
+            <Cap r={0.062 * (ancho > 1 ? 1.25 : 1)} l={0.5} c={mangaCorta ? piel : mangas ?? torso} p={[0, -0.3, 0]} rough={mangaCorta ? 0.5 : 0.85} />
+            {mangaCorta && <mesh position={[0, -0.1, 0]} castShadow material={torsoMat}><capsuleGeometry args={[0.092, 0.14, 4, 14]} />{!torsoMat && M(torso, 0.85)}</mesh>}
             <mesh position={[0, -0.62, 0]} castShadow><sphereGeometry args={[0.065, 16, 12]} />{M(piel, 0.5)}</mesh>
             <group position={[0, -0.66, 0.02]}>{lado > 0 ? manoD : manoI}</group>
           </group>
         );
       })}
       {/* cuello y cabeza */}
-      <mesh position={[0, 1.6, 0]} castShadow><cylinderGeometry args={[0.055, 0.065, 0.12, 14]} />{M(piel, 0.5)}</mesh>
+      <mesh position={[0, 1.6, 0]} castShadow><cylinderGeometry args={[0.055 * ancho, 0.065 * ancho, 0.12, 14]} />{M(piel, 0.5)}</mesh>
       <group position={[0, 1.76, 0]} rotation={[0, giro * 0.5, 0]}>{cabeza}</group>
     </group>
   );
@@ -114,17 +139,48 @@ export const Guitarra: React.FC = () => (
   </group>
 );
 
-export const Yeyo: React.FC<{pose: Pose; laurel?: number; guitarra?: boolean; uvas?: boolean}> = ({pose, laurel = 0, guitarra, uvas}) => (
-  <Cuerpo pose={pose} piel="#c68a5e" torso="#3f6aa6" piernas="#22385e" botas="#5a3418" mangas="#3f6aa6"
-    cabeza={<><Cabeza piel="#c68a5e" pelo="#1a120c" boca={pose.boca ?? 0} bigote /><Tejana laurel={laurel} /></>}
-    manoI={uvas ? <Uvas /> : undefined}>
-    {/* camisa blanca, cinturón y hebilla */}
-    <mesh position={[0, 1.44, 0.118]} rotation={[0.12, 0, Math.PI]} scale={[1, 1, 0.3]}><coneGeometry args={[0.08, 0.26, 3]} />{M('#f2efe8', 0.8)}</mesh>
-    <mesh position={[0, 1.02, 0]} scale={[1.17, 1, 0.8]}><cylinderGeometry args={[0.19, 0.19, 0.06, 24]} />{M('#3b2412', 0.5)}</mesh>
-    <mesh position={[0, 1.02, 0.155]}><boxGeometry args={[0.1, 0.07, 0.02]} />{M('#e8c15a', 0.25, 0.9)}</mesh>
-    {guitarra && <group position={[0, 1.15, 0.1]}><Guitarra /></group>}
-  </Cuerpo>
-);
+// Tela de camuflaje rosa/rojo dibujada por código (sin logos de marcas)
+const useCamo = () => React.useMemo(() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#f7eef0'; g.fillRect(0, 0, 512, 512);
+  const cols = ['#f4b3c2', '#e8667e', '#d6303f', '#f9d3dc', '#ee8a9c'];
+  for (let i = 0; i < 90; i++) {
+    g.fillStyle = cols[i % cols.length];
+    const x = random(`cx${i}`) * 512, y = random(`cy${i}`) * 512;
+    for (let k = 0; k < 4; k++) {
+      const r = 14 + random(`r${i}-${k}`) * 26;
+      const dx = (random(`dx${i}-${k}`) - 0.5) * 50, dy = (random(`dy${i}-${k}`) - 0.5) * 36;
+      for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) {
+        g.beginPath(); g.ellipse(x + dx + ox, y + dy + oy, r * 1.3, r, random(`a${i}`) * 3, 0, Math.PI * 2); g.fill();
+      }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1.6, 1.6);
+  return new THREE.MeshStandardMaterial({map: t, roughness: 0.85});
+}, []);
+
+export const Yeyo: React.FC<{pose: Pose; laurel?: number; guitarra?: boolean; uvas?: boolean}> = ({pose, laurel = 0, guitarra, uvas}) => {
+  const camo = useCamo();
+  return (
+    <Cuerpo pose={pose} piel="#d9a77f" torso="#f4b3c2" piernas="#141414" botas="#f2f2f2" ancho={1.38} torsoMat={camo} mangaCorta shorts
+      cabeza={<><Cabeza piel="#d9a77f" pelo="#120c08" boca={pose.boca ?? 0} lentes rizos cachetes />{laurel > 0 && <Laurel y={0.09} s={1.2 * laurel} />}</>}
+      manoI={uvas ? <Uvas /> : undefined}>
+      {/* panza */}
+      <mesh position={[0, 1.13, 0.07]} scale={[1.5, 1.05, 1.12]} castShadow material={camo}><sphereGeometry args={[0.17, 28, 20]} /></mesh>
+      {/* cuello blanco del polo */}
+      <mesh position={[0, 1.555, 0.005]} rotation={[Math.PI / 2 - 0.15, 0, 0]}><torusGeometry args={[0.085, 0.028, 10, 28]} />{M('#ffffff', 0.7)}</mesh>
+      <mesh position={[0, 1.47, 0.155]} rotation={[0.25, 0, 0]}><boxGeometry args={[0.05, 0.13, 0.012]} />{M('#ffffff', 0.7)}</mesh>
+      {/* shorts negros */}
+      <mesh position={[0, 0.96, 0]} scale={[1.45, 1, 1.02]} castShadow><cylinderGeometry args={[0.19, 0.2, 0.16, 28]} />{M('#141414', 0.9)}</mesh>
+      {guitarra && <group position={[0, 1.15, 0.2]}><Guitarra /></group>}
+    </Cuerpo>
+  );
+};
 
 export const Uvas: React.FC = () => (
   <group position={[0, -0.05, 0.05]}>

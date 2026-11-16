@@ -148,8 +148,8 @@ export const Publico: React.FC<{animo: number}> = ({animo}) => {
   });
   return (
     <>
-      <instancedMesh ref={cuerpo} args={[geoC, mat, n]} castShadow receiveShadow />
-      <instancedMesh ref={cabeza} args={[geoH, matH, n]} castShadow />
+      <instancedMesh ref={cuerpo} args={[geoC, mat, n]} receiveShadow />
+      <instancedMesh ref={cabeza} args={[geoH, matH, n]} />
     </>
   );
 };
