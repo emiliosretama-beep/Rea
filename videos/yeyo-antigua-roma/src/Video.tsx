@@ -87,7 +87,7 @@ const SFX: React.FC<{src: string; at: number[]; vol?: number; dur?: number}> = (
   <>{at.map((a) => <Sequence key={a} from={a} durationInFrames={dur}><Audio src={staticFile(`sfx/${src}.wav`)} volume={vol} /></Sequence>)}</>
 );
 
-export const YeyoAntiguaRoma: React.FC = () => (
+export const YeyoAntiguaRoma: React.FC<{conMusica?: boolean}> = ({conMusica = true}) => (
   <AbsoluteFill style={{background: '#000'}}>
     <Sequence from={0} durationInFrames={90}><EscenaAerea dur={90} /></Sequence>
     <Sequence from={90} durationInFrames={780}><EscenaArena /></Sequence>
@@ -103,7 +103,7 @@ export const YeyoAntiguaRoma: React.FC = () => (
     {/* voces */}
     {DIALOGO.map((d) => <Sequence key={d.id} from={d.from} durationInFrames={d.dur + 10}><Audio src={staticFile(`voz/${d.id}.wav`)} volume={1} /></Sequence>)}
     {/* música (baja cuando hay voz) y ambiente */}
-    <Audio src={staticFile('sfx/musica.wav')} volume={(f) => interpolate(f, [0, 480, 492, 600, 615, 1380, 1410], [0.09, 0.09, 0.32, 0.32, 0.1, 0.1, 0], {extrapolateRight: 'clamp'})} />
+    {conMusica && <Audio src={staticFile('sfx/musica.wav')} volume={(f) => interpolate(f, [0, 480, 492, 600, 615, 1380, 1410], [0.09, 0.09, 0.32, 0.32, 0.1, 0.1, 0], {extrapolateRight: 'clamp'})} />}
     <Sequence from={90} durationInFrames={780}><Audio src={staticFile('sfx/multitud.wav')} volume={(f) => interpolate(f, [0, 20, 130, 140, 400, 410, 560, 690, 700, 780], [0, 0.5, 0.5, 0.12, 0.12, 0.55, 0.2, 0.2, 0.6, 0.3], {extrapolateRight: 'clamp'})} /></Sequence>
     <SFX src="whoosh" at={[0, 86, 866, 1046, 1241]} vol={0.5} />
     <SFX src="espada" at={[100, 112, 124, 136, 148, 160, 172, 184, 196, 208, 220]} vol={0.35} dur={15} />
