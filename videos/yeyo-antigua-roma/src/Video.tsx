@@ -100,6 +100,13 @@ export const YeyoAntiguaRoma: React.FC<{conMusica?: boolean}> = ({conMusica = tr
     <Subtitulos />
     <Sequence from={1320}><Cierre /></Sequence>
 
+    <Pista conMusica={conMusica} />
+  </AbsoluteFill>
+);
+
+// Toda la pista de audio (voces, música y efectos). Se usa sola para exportar el audio sin música.
+export const Pista: React.FC<{conMusica?: boolean}> = ({conMusica = true}) => (
+  <>
     {/* voces */}
     {DIALOGO.map((d) => <Sequence key={d.id} from={d.from} durationInFrames={d.dur + 10}><Audio src={staticFile(`voz/${d.id}.wav`)} volume={1} /></Sequence>)}
     {/* música (baja cuando hay voz) y ambiente */}
@@ -111,5 +118,5 @@ export const YeyoAntiguaRoma: React.FC<{conMusica?: boolean}> = ({conMusica = tr
     <SFX src="campana" at={[765, 787]} vol={0.5} dur={45} />
     <Sequence from={870} durationInFrames={180}><Audio src={staticFile('sfx/galope.wav')} volume={0.45} /></Sequence>
     <SFX src="pop" at={[1320]} vol={0.7} dur={20} />
-  </AbsoluteFill>
+  </>
 );
