@@ -1,0 +1,1316 @@
+/* Layout: una sola pantalla tipo instrumento de cabina. Columna de chat con el
+   núcleo (el sol de ERA) como único protagonista; Tareas y Memoria van en una
+   hoja sobre el chat (teléfono) o en una columna fija a la derecha (≥ 960 px).
+   Tema oscuro único a propósito: es un HUD. */
+:root {
+  --noche: #080b1f; /* fondo (60 %) */
+  --panel: #12183a; /* burbujas, campos, hojas (30 %) */
+  --panel-alto: #1a2250;
+  --linea: #2b3570; /* trazos del HUD */
+  --texto: #eef0fa;
+  --tenue: #9aa3cc;
+  --era: #f04e23; /* naranja ERA: solo lo que está vivo (10 %) */
+  --amanecer: #ffb089; /* luz del núcleo, del degradado del logo */
+  --sobre-era: #080b1f; /* texto sobre naranja: blanco no da contraste */
+  --mal: #ff8a8a;
+  --brillo: rgba(240, 78, 35, 0.46);
+  --sombra: rgba(0, 0, 0, 0.45);
+  --f-display: "Chakra Petch", "Trebuchet MS", "Segoe UI", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-soft: cubic-bezier(0.45, 0.05, 0.25, 1);
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  --energy: 0; /* 0 a 1: lo mueve core.js con cada trozo de texto */
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* El visor ya mete el safe-area en :root; la app ocupa justo lo que queda. */
+html {
+  height: 100%;
+  background: var(--noche);
+}
+@supports (height: 100dvh) {
+  html {
+    height: 100dvh;
+  }
+}
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--noche);
+  color: var(--texto);
+  font: 400 16px/1.5 var(--f-body);
+  -webkit-text-size-adjust: 100%;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 2px solid var(--amanecer);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Estructura ---------- */
+
+.app {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.shell {
+  width: 100%;
+  max-width: 860px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  margin-inline: auto;
+  padding-left: var(--gutter-l);
+  padding-right: var(--gutter-r);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+/* Fila fija por pieza: si el aviso está oculto, las demás no se recorren. */
+.top {
+  grid-row: 1;
+}
+.modes {
+  grid-row: 2;
+}
+.notice {
+  grid-row: 3;
+}
+.main {
+  grid-row: 4;
+}
+.composer {
+  grid-row: 5;
+}
+
+/* ---------- Encabezado ---------- */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 60px;
+  padding-block: 8px 6px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.brand-text {
+  min-width: 0;
+}
+.wordmark {
+  margin: 0;
+  font: 600 17px/1 var(--f-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.status {
+  margin: 5px 0 0;
+  font: 500 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--tenue);
+  white-space: nowrap;
+}
+.top-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+.tool {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: transparent;
+  font: 600 13px/1 var(--f-display);
+  letter-spacing: 0.03em;
+  transition:
+    background-color 0.15s,
+    transform 0.15s var(--ease-out);
+}
+.tool:active {
+  background: var(--panel);
+  transform: scale(0.96);
+}
+.tool--icon {
+  padding: 0;
+}
+.tool-count {
+  color: var(--amanecer);
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+  .tool:hover,
+  .chip:hover {
+    background: var(--panel-alto);
+  }
+}
+/* En teléfono el encabezado se queda con iconos donde no cabe el texto. */
+@media (max-width: 479px) {
+  .tool-label--wide {
+    display: none;
+  }
+  #openMemory {
+    padding: 0;
+  }
+}
+@media (max-width: 379px) {
+  .tool-label--mid {
+    display: none;
+  }
+}
+
+/* ---------- Modos ---------- */
+
+.modes,
+.side-tabs {
+  display: grid;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+}
+.modes {
+  max-width: 480px; /* en iPad y escritorio no se estira a todo el ancho */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.mode {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tenue);
+  font: 600 12.5px/1 var(--f-display);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    background-color 0.18s var(--ease-out),
+    color 0.18s;
+}
+.mode[aria-pressed="true"] {
+  background: var(--era);
+  color: var(--sobre-era);
+}
+
+/* ---------- Aviso (modo demo, sin memoria) ---------- */
+
+.notice,
+.sync {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 12px;
+  border: 1px dashed var(--linea);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--tenue);
+}
+.notice {
+  margin-top: 8px;
+}
+.notice p,
+.sync p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-block: 8px;
+}
+.notice button,
+.sync button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--texto);
+}
+
+/* ---------- Zona central: inicio o conversación ---------- */
+
+.main {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linea) transparent;
+}
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-block: 16px;
+  text-align: center;
+}
+[data-view="chat"] .hero {
+  display: none;
+}
+/* Mientras el núcleo vuela al encabezado, el inicio sigue en su sitio: va
+   fijo (app.js le da su caja) para que el scroll del chat no lo recorte. */
+.is-docking .hero {
+  position: fixed;
+  z-index: 5;
+  display: flex;
+  pointer-events: none;
+}
+.is-docking .hero > :not(.core-slot) {
+  opacity: 0;
+  transition: opacity 0.16s;
+}
+.greeting {
+  margin: 14px 0 0;
+  font: 600 22px/1.2 var(--f-display);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.telemetry {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+.chips {
+  max-width: 520px;
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.chip {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 14px;
+  transition: transform 0.15s var(--ease-out);
+}
+.chip:active {
+  transform: scale(0.97);
+}
+
+/* ---------- El núcleo ---------- */
+
+.core-slot {
+  flex: none;
+  display: block;
+}
+.core-slot--hero {
+  width: clamp(96px, 22vh, 176px);
+  aspect-ratio: 1;
+}
+/* Pantallas bajas (iPhone con las barras de Safari): inicio más compacto. */
+@media (max-height: 700px) {
+  .core-slot--hero {
+    width: clamp(96px, 18vh, 128px);
+  }
+  .hero {
+    padding-block: 8px;
+  }
+  .greeting {
+    margin-top: 8px;
+    font-size: 20px;
+  }
+  .chips {
+    margin-top: 8px;
+  }
+}
+.core-slot--mini {
+  display: none;
+  width: 38px;
+  height: 38px;
+}
+[data-view="chat"] .core-slot--mini {
+  display: block;
+}
+.is-docking .core-slot--mini {
+  visibility: hidden;
+}
+.core {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+.core-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.core-glow {
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--brillo) 0%, transparent 64%);
+  opacity: 0.38;
+}
+.core-ring circle,
+.core-ticks circle,
+.core-arc circle {
+  fill: none;
+}
+.core-ring circle {
+  stroke: var(--linea);
+  stroke-width: 1;
+}
+.tick-minor {
+  stroke: var(--linea);
+  stroke-width: 7;
+}
+.tick-major {
+  stroke: var(--tenue);
+  stroke-width: 11;
+}
+.core-arc--a circle {
+  stroke: var(--era);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.core-arc--b circle {
+  stroke: var(--amanecer);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+.sun-top {
+  stop-color: var(--amanecer);
+}
+.sun-bottom {
+  stop-color: var(--era);
+}
+
+/* En el encabezado el núcleo se simplifica: sol y un arco. */
+.core--mini .core-ring,
+.core--mini .core-ticks,
+.core--mini .core-arc--b {
+  display: none;
+}
+.core--mini .core-arc--a circle {
+  stroke-width: 9;
+}
+.core--mini .core-sun {
+  scale: 1.55;
+}
+.core--mini .core-glow {
+  inset: -8%;
+}
+
+/* Estados sin movimiento: también valen con prefers-reduced-motion. */
+[data-core="thinking"] .tick-minor {
+  stroke: var(--tenue);
+}
+[data-core="thinking"] .core-arc--b circle {
+  opacity: 1;
+}
+[data-core="speaking"] .tick-major {
+  stroke: var(--amanecer);
+}
+[data-core="speaking"] .core-glow {
+  opacity: 0.6;
+}
+[data-core="listening"] .core-arc--a circle {
+  stroke: var(--amanecer);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .core-arc--a {
+    animation: core-spin 26s linear infinite;
+  }
+  .core-arc--b {
+    animation: core-spin 38s linear infinite reverse;
+  }
+  .core-sun {
+    animation: core-breathe 5.6s var(--ease-soft) infinite;
+  }
+  .core-glow {
+    animation: core-glow 5.6s var(--ease-soft) infinite;
+  }
+  .core-ticks,
+  .core-sun,
+  .core-glow {
+    transition:
+      transform 0.16s var(--ease-out),
+      opacity 0.16s var(--ease-out);
+  }
+  [data-core="thinking"] .core-sun {
+    animation: core-think 1.1s ease-in-out infinite;
+  }
+  [data-core="listening"] .core-sun {
+    animation: core-breathe 1.5s var(--ease-soft) infinite;
+  }
+  /* Hablando: las marcas se abren con cada trozo de texto que llega. */
+  [data-core="speaking"] .core-sun,
+  [data-core="speaking"] .core-glow {
+    animation: none;
+  }
+  [data-core="speaking"] .core-ticks {
+    transform: scale(calc(1 + var(--energy) * 0.1));
+  }
+  [data-core="speaking"] .core-sun {
+    transform: scale(calc(1 + var(--energy) * 0.07));
+  }
+  [data-core="speaking"] .core-glow {
+    opacity: calc(0.4 + var(--energy) * 0.5);
+  }
+  .msg--assistant[data-status="streaming"] .md > :last-child::after {
+    animation: caret 1s steps(2, jump-none) infinite;
+  }
+  .thinking {
+    animation: fade 1.4s ease-in-out infinite;
+  }
+  [data-panel="tasks"] .side,
+  [data-panel="memory"] .side,
+  [data-panel="voice"] .side {
+    animation: sheet-in 0.26s var(--ease-out);
+  }
+  .toast {
+    animation: toast-in 0.22s var(--ease-out);
+  }
+}
+/* Con "reducir movimiento" no se mueve nada: el estado se lee en texto. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@keyframes core-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes core-breathe {
+  50% {
+    transform: scale(1.035);
+  }
+}
+@keyframes core-glow {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes core-think {
+  50% {
+    transform: scale(0.94);
+    opacity: 0.7;
+  }
+}
+@keyframes caret {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes fade {
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes toast-in {
+  from {
+    transform: translate(-50%, 12px);
+    opacity: 0;
+  }
+}
+
+/* ---------- Conversación ---------- */
+
+.log {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 16px 0 20px;
+  list-style: none;
+}
+[data-view="chat"] .log {
+  display: flex;
+}
+/* Cada pregunta queda pegada a su respuesta y separada del turno anterior. */
+.msg--user:not(:first-child),
+.msg--mode:not(:first-child) {
+  margin-top: 12px;
+}
+/* El texto se desvanece en los bordes del scroll en vez de cortarse en seco. */
+[data-view="chat"] .main::before,
+[data-view="chat"] .main::after {
+  content: "";
+  position: sticky;
+  z-index: 2;
+  flex: none;
+  height: 16px;
+  pointer-events: none;
+}
+[data-view="chat"] .main::before {
+  top: 0;
+  margin-bottom: -16px;
+  background: linear-gradient(var(--noche), transparent);
+}
+[data-view="chat"] .main::after {
+  bottom: 0;
+  margin-top: -16px;
+  background: linear-gradient(transparent, var(--noche));
+}
+.msg {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.msg--user {
+  align-items: flex-end;
+}
+.msg--assistant {
+  gap: 8px;
+}
+.msg--mode {
+  align-items: center;
+}
+.msg--mode span {
+  padding: 6px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  font: 500 12px/1 var(--f-display);
+  letter-spacing: 0.08em;
+  color: var(--tenue);
+}
+.bubble {
+  max-width: min(86%, 560px);
+  padding: 10px 14px;
+  border: 1px solid var(--linea);
+  border-radius: 18px 18px 6px 18px;
+  background: var(--panel);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Texto de Jarvis (Markdown): sin burbuja, a todo el ancho de lectura. */
+.md {
+  max-width: 68ch;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.md p,
+.md ul,
+.md ol,
+.md h3,
+.md h4,
+.md blockquote {
+  margin: 0;
+}
+.md ul,
+.md ol {
+  padding-left: 1.35em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.md li > ul,
+.md li > ol,
+.md li > p,
+.md li > .code {
+  margin-top: 6px;
+}
+.md h3 {
+  font: 600 17px/1.3 var(--f-body);
+}
+.md h4 {
+  font: 600 16px/1.3 var(--f-body);
+}
+.md strong {
+  font-weight: 600;
+}
+.md a {
+  color: var(--amanecer);
+  text-underline-offset: 2px;
+}
+.md code {
+  padding: 0.12em 0.36em;
+  border-radius: 6px;
+  background: var(--panel);
+  font: 0.875em/1.4 var(--f-mono);
+}
+.md blockquote {
+  padding-left: 12px;
+  border-left: 2px solid var(--linea);
+  color: var(--tenue);
+}
+.md hr {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--linea);
+}
+.code {
+  min-width: 0;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 12px;
+  border-bottom: 1px solid var(--linea);
+  font: 500 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--tenue);
+}
+.code pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  font: 13.5px/1.5 var(--f-mono);
+  tab-size: 2;
+}
+.code pre code {
+  padding: 0;
+  background: none;
+  font: inherit;
+}
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.md table {
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.md th,
+.md td {
+  padding: 6px 10px;
+  border: 1px solid var(--linea);
+  text-align: left;
+  vertical-align: top;
+}
+.md th {
+  background: var(--panel);
+  font-weight: 600;
+}
+.thinking {
+  color: var(--tenue);
+}
+.msg--assistant[data-status="streaming"] .md > :last-child::after {
+  content: "▍";
+  margin-left: 2px;
+  color: var(--era);
+}
+.msg-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tenue);
+}
+.msg-note--error {
+  color: var(--mal);
+}
+
+/* Lo que Jarvis hizo con tareas y recuerdos durante la respuesta. */
+.acts {
+  max-width: 68ch;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  list-style: none;
+}
+.act {
+  max-width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--tenue);
+}
+.act:has(button) {
+  padding-right: 2px;
+}
+.act::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amanecer);
+}
+.act--failed::before {
+  background: var(--mal);
+}
+.act span {
+  flex: 1;
+  min-width: 0;
+  padding-block: 6px;
+  overflow-wrap: anywhere;
+}
+.msg-tools {
+  margin-left: -10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.msg-tools button,
+.act button,
+.code-copy {
+  flex: none;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--tenue);
+}
+.act button,
+.code-copy {
+  color: var(--texto);
+}
+.msg-tools button[aria-pressed="true"] {
+  color: var(--amanecer);
+}
+
+/* ---------- Caja de texto ---------- */
+
+.composer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding-block: 8px 10px;
+}
+/* Modo voz: qué hacer para hablarle, encima de la caja. */
+.voice-hint {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--amanecer);
+}
+.voice-hint p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.voice-hint button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: 600 12px/1 var(--f-display);
+  letter-spacing: 0.04em;
+  color: var(--texto);
+}
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  max-height: 132px;
+  padding: 12px 14px;
+  border: 1px solid var(--linea);
+  border-radius: 18px;
+  background: var(--panel);
+  font: 400 16px/1.4 var(--f-body); /* 16 px: Safari no hace zoom al enfocar */
+  resize: none;
+}
+.composer textarea::placeholder,
+.add input::placeholder {
+  color: var(--tenue);
+}
+.composer textarea:focus-visible,
+.add input:focus-visible {
+  outline: none;
+  border-color: var(--amanecer);
+}
+.round {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--linea);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    transform 0.15s var(--ease-out),
+    opacity 0.15s;
+}
+.round:active {
+  transform: scale(0.94);
+}
+.round .icon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+}
+.round--send {
+  position: relative;
+  border-color: var(--era);
+  background: var(--era);
+  color: var(--sobre-era);
+}
+/* Anillo que se llena mientras corre la pausa antes de enviar lo dictado. */
+@property --arm-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0turn;
+}
+.round--send.is-arming::after {
+  --arm-turn: 1turn;
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(var(--amanecer) var(--arm-turn), transparent 0);
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 3px)
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .round--send.is-arming::after {
+    animation: arming var(--arm, 2s) linear both;
+  }
+}
+@keyframes arming {
+  from {
+    --arm-turn: 0turn;
+  }
+}
+.round--send.is-empty {
+  opacity: 0.45;
+}
+.round--mic[aria-pressed="true"] {
+  border-color: var(--amanecer);
+  background: var(--amanecer);
+  color: var(--sobre-era);
+}
+
+/* ---------- Tareas y Memoria ---------- */
+
+/* Teléfono: hoja a pantalla completa. Al ir fija, suma ella los safe-area. */
+.side {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) var(--gutter-r)
+    calc(16px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+  background: var(--noche);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-panel="tasks"] .side,
+[data-panel="memory"] .side,
+[data-panel="voice"] .side {
+  display: flex;
+}
+.side-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.side-tabs {
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.pane {
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+[data-panel="tasks"] #paneTasks,
+[data-panel="memory"] #paneMemory,
+[data-panel="voice"] #paneVoice {
+  display: flex;
+}
+.pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pane-head h2 {
+  margin: 0;
+  font: 600 13px/1 var(--f-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.pane-total {
+  font-size: 13px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+.add {
+  display: flex;
+  gap: 8px;
+}
+.add input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+}
+.add button {
+  flex: none;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  font: 600 14px/1 var(--f-display);
+  letter-spacing: 0.03em;
+}
+.rows {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-bottom: 1px solid var(--linea);
+}
+.row-main {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 13px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+label.row-main {
+  cursor: pointer;
+}
+.row-main input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  appearance: none;
+  border: 1.5px solid var(--tenue);
+  border-radius: 7px;
+  background: transparent center / 14px no-repeat;
+  cursor: pointer;
+}
+.row-main input:checked {
+  border-color: var(--era);
+  background-color: var(--era);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2.5 7.4l3 3 6-6.6' fill='none' stroke='%23080b1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.row--done .row-main span {
+  color: var(--tenue);
+  text-decoration: line-through;
+}
+.row-del {
+  flex: none;
+  width: 44px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--tenue);
+}
+/* Panel Voz: interruptor, selector de voz y volumen. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--era);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--tenue);
+}
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+.field select {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+  color: var(--texto);
+}
+.field button {
+  flex: none;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  font: 600 14px/1 var(--f-display);
+  letter-spacing: 0.03em;
+  color: var(--texto);
+}
+.field input[type="range"] {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--era);
+}
+.field select:disabled,
+.field button:disabled,
+.field input:disabled {
+  opacity: 0.45;
+}
+.empty,
+.pane-hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--tenue);
+}
+.empty {
+  padding: 12px 0;
+}
+
+/* ---------- Clave de Jarvis (versión independiente) ---------- */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter-r)
+    calc(16px + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+  background: var(--noche);
+}
+.gate-card {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gate-card h2 {
+  margin: 0;
+  font: 600 20px/1.2 var(--f-display);
+  letter-spacing: 0.04em;
+}
+.gate-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--tenue);
+}
+.gate-card input {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  font-size: 16px;
+}
+.gate-card input:focus-visible {
+  outline: none;
+  border-color: var(--amanecer);
+}
+.gate-card .gate-error {
+  min-height: 1.4em;
+  color: var(--mal);
+}
+.gate-card button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--era);
+  color: var(--sobre-era);
+  font: 600 15px/1 var(--f-display);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Aviso flotante ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  max-width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 4px 16px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel-alto);
+  box-shadow: 0 10px 30px var(--sombra);
+  font-size: 14.5px;
+  line-height: 1.35;
+  transform: translateX(-50%);
+}
+.toast span {
+  padding-block: 10px;
+}
+.toast span:only-child {
+  padding-right: 12px;
+}
+.toast button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--era);
+  color: var(--sobre-era);
+  font: 600 13px/1 var(--f-display);
+  white-space: nowrap;
+}
+
+/* ---------- Pantallas anchas: los paneles quedan fijos ---------- */
+
+@media (min-width: 960px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .shell {
+    padding-right: 24px;
+  }
+  .side {
+    position: static;
+    z-index: auto;
+    display: flex;
+    gap: 26px;
+    padding: 20px var(--gutter-r) 20px 24px;
+    border-left: 1px solid var(--linea);
+    animation: none;
+  }
+  .side-head {
+    display: none;
+  }
+  .pane {
+    display: flex;
+  }
+  #openTasks,
+  #openMemory,
+  #voiceSettings {
+    display: none;
+  }
+}

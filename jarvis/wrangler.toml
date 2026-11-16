@@ -1,0 +1,25 @@
+# Jarvis en su propia página: un Worker de Cloudflare que sirve site/ y
+# guarda la clave de la API. Se despliega solo desde GitHub (Workers Builds)
+# con la carpeta raíz "jarvis" y el comando `npx wrangler deploy`.
+# Secretos (se ponen en el panel de Cloudflare, nunca aquí):
+#   ANTHROPIC_API_KEY  clave de la API de Anthropic
+#   JARVIS_CLAVE       contraseña para entrar a Jarvis
+name = "jarvis"
+main = "worker/index.js"
+compatibility_date = "2026-10-15"
+
+[vars]
+# Modelo de Claude. Cámbialo aquí si quieres otro (por ejemplo, uno más barato).
+MODEL = "claude-opus-5-5"
+
+[assets]
+directory = "./site"
+binding = "ASSETS"
+
+[[durable_objects.bindings]]
+name = "DATA"
+class_name = "JarvisData"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["JarvisData"]
