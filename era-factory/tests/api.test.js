@@ -29,7 +29,8 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
 
   const status = await api("GET", "/api/status");
   assert.equal(status.data.agents.length, 7);
-  assert.equal(status.data.agents.filter((a) => a.implemented).length, 3);
+  assert.equal(status.data.agents.filter((a) => a.implemented).length, 4);
+  assert.equal(status.data.tts.ok, true);
   assert.equal(JSON.stringify(status.data).includes("apiKey"), false);
 
   const bad = await api("POST", "/api/channels", { name: "x" });
@@ -78,11 +79,18 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
   assert.equal(again.status, 409);
 
   await factory.orchestrator.idle();
+  const narration = (await api("GET", `/api/productions/${production.id}`)).data.tasks.find((x) => x.agentId === "narrator");
+  assert.equal(narration.status, "awaiting_approval");
+  assert.equal((await api("POST", `/api/tasks/${narration.id}/approve`, {})).data.status, "done");
+  await factory.orchestrator.idle();
   const list = (await api("GET", "/api/productions")).data;
   assert.equal(list[0].status, "completed");
   assert.equal(list[0].channelName, CHANNEL.name);
 
   assert.equal((await api("GET", "/api/productions/nope")).status, 404);
+  const voices = (await api("GET", "/api/voices")).data;
+  assert.ok(voices.voices.some((v) => v.id === "em_alex" && v.language === "es"));
   assert.equal((await api("DELETE", `/api/channels/${channel.id}`)).data.ok, true);
+  assert.deepEqual(factory.services.tts.removed, [production.id], "el audio se borra con su producción");
   assert.equal((await api("GET", "/api/productions")).data.length, 0);
 });

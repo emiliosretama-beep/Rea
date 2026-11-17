@@ -3,12 +3,14 @@
 import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast } from "../lib.js";
 import { agentName, debounce, store } from "../store.js";
 import { logList } from "./common.js";
+import { bindNarration, loadVoices, narrationHtml, narrationUnavailableHtml, revoice } from "./narration.js";
 
 const WORDS_PER_MINUTE = 150; // mismo ritmo que usa el guionista en el servidor
 const TABS = [
   { id: "trend-researcher", label: "Investigación" },
   { id: "audience-analyst", label: "Audiencia" },
   { id: "scriptwriter", label: "Guion" },
+  { id: "narrator", label: "Voz" },
   { id: "log", label: "Registro" },
 ];
 
@@ -64,7 +66,11 @@ function lineHtml() {
     .map((a) => {
       const task = taskOf(a.id);
       const status = task ? task.status : "planned";
-      const sub = task ? STATUS_LABEL[status] + (task.attempt > 1 && status !== "done" ? ` · intento ${task.attempt}` : "") : `Fase ${a.phase}`;
+      const sub = task
+        ? STATUS_LABEL[status] + (task.attempt > 1 && status !== "done" ? ` · intento ${task.attempt}` : "")
+        : a.unavailableReason
+          ? "Solo con servidor"
+          : `Fase ${a.phase}`;
       const tab = TABS.some((t) => t.id === a.id);
       const current = state.tab === a.id ? ' aria-current="step"' : "";
       const inner = `<div class="avatar">${icon(a.id)}</div><div class="grow"><div class="name">${esc(a.name)}</div><div class="sub">${esc(sub)}</div></div>`;
@@ -80,8 +86,13 @@ function plannedSummary(agents) {
   const planned = agents.filter((a) => !a.implemented);
   if (!planned.length) return "";
   return `<a class="node planned summary" href="#agentes"><div class="avatar">${icon("plus")}</div>
-    <div class="grow"><div class="name">${planned.length} agentes más en camino</div>
-    <div class="sub">${esc(planned.map((a) => a.name).join(", "))}</div></div></a>`;
+    <div class="grow"><div class="name">${planned.length} agentes más</div>
+    <div class="sub">${esc(planned.map((a) => a.name + (a.unavailableReason ? " (solo con servidor)" : "")).join(", "))}</div></div></a>`;
+}
+
+// La pestaña elegida siempre a la vista (en el iPhone la fila se desplaza).
+function revealTab() {
+  state.root?.querySelector('.tabs [aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function tabsHtml() {
@@ -254,7 +265,11 @@ function scriptReadOnly(task) {
   return `
     ${warningsBlock(task)}
     <div class="banner info">${icon("check")}<div><strong>Guion aprobado${task.editedByUser ? " con tus cambios" : ""}.</strong>
-      <p>La siguiente parada es el narrador (fase 2), que aún no está programado.</p></div></div>
+      <p>${
+        taskOf("narrator")
+          ? "Siguiente parada: el narrador lo convierte en voz (pestaña Voz)."
+          : "La voz solo funciona en la versión con servidor."
+      }</p></div></div>
     <section class="card"><div class="core"><div class="stats">${statsHtml(s)}</div>
       <h2 style="margin-top:14px">Gancho</h2><p class="prose">${esc(s.hook)}</p>
       ${s.sections.map((sec, i) => `<h3 style="margin-top:16px">${i + 1}. ${esc(sec.heading)}</h3><p class="prose">${esc(sec.narration)}</p><p class="src">En pantalla: ${esc(sec.visualNotes)}</p>`).join("")}
@@ -339,9 +354,18 @@ function bindEditor() {
 function panelHtml() {
   if (state.tab === "log")
     return `<section class="card"><div class="core"><h2>Registro de la producción</h2>${logList(state.detail.logs.slice().reverse(), { tall: true })}</div></section>`;
+  if (state.tab === "narrator") {
+    const agent = store.status?.agents.find((a) => a.id === "narrator");
+    if (!agent?.implemented) return narrationUnavailableHtml(agent?.unavailableReason);
+  }
   const task = taskOf(state.tab);
-  if (!task) return `<div class="empty">Este agente no forma parte de esta producción.</div>`;
+  if (!task)
+    return `<div class="card"><div class="core empty"><strong>Este agente no forma parte de esta producción.</strong>Se creó antes de que existiera. Lanza un video nuevo para usarlo.</div></div>`;
   const block = taskStatusBlock(task);
+  if (task.agentId === "narrator") {
+    if (["pending", "running"].includes(task.status)) return block;
+    return block + narrationHtml(task, { productionId: state.id, current: state.detail.narration ?? {} });
+  }
   if (!task.output || ["pending", "running"].includes(task.status)) return block;
   // Fallidas con resultado: se muestra el error y debajo lo que produjo.
   const content =
@@ -365,11 +389,13 @@ function drawPanel() {
   const panel = state.root.querySelector("#panel");
   panel.innerHTML = panelHtml();
   if (state.draft && task?.status === "awaiting_approval" && task.agentId === "scriptwriter") bindEditor();
+  if (state.tab === "narrator") bindNarration(panel);
 }
 
 function drawAll() {
   state.root.innerHTML = `${headerHtml()}<div id="line">${lineHtml()}</div><div id="tabs">${tabsHtml()}</div><div id="panel"></div>`;
   drawPanel();
+  revealTab();
 }
 
 async function selectTab(tab) {
@@ -382,6 +408,7 @@ async function selectTab(tab) {
   state.tab = tab;
   state.root.querySelector("#line").innerHTML = lineHtml();
   state.root.querySelector("#tabs").innerHTML = tabsHtml();
+  revealTab();
   drawPanel();
 }
 
@@ -406,6 +433,7 @@ const refresh = debounce(async () => {
   if (state.follow && !state.dirty && defaultTab() !== state.tab) {
     state.tab = defaultTab();
     state.root.querySelector("#tabs").innerHTML = tabsHtml();
+    revealTab();
   }
   state.root.querySelector("#line").innerHTML = lineHtml();
   const task = taskOf(state.tab);
@@ -437,12 +465,15 @@ async function act(button) {
       state.dirty = false;
       drawPanel();
       return;
+    } else if (action === "revoice") {
+      await revoice(state.root, state.id, taskId);
+      toast("Generando la narración con la nueva voz…");
     } else if (action === "approve") {
       const body = state.dirty ? { output: state.draft } : {};
       await api("POST", `/api/tasks/${taskId}/approve`, body);
       state.draft = null;
       state.dirty = false;
-      toast("Guion aprobado.");
+      toast(taskOf("narrator")?.id === taskId ? "Narración aprobada." : "Guion aprobado.");
     }
     await load();
     drawAll();
@@ -457,7 +488,7 @@ async function act(button) {
 export const productionView = {
   async render(root, [id]) {
     Object.assign(state, { root, id, detail: null, draft: null, dirty: false, tab: null, follow: true });
-    await load();
+    await Promise.all([load(), store.status?.tts?.ok ? loadVoices() : null]);
     state.tab = defaultTab();
     drawAll();
     root.onclick = (e) => {

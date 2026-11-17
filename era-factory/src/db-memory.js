@@ -119,6 +119,7 @@ export function openMemoryDatabase(initial = {}) {
         title,
         topicHint: topicHint ?? null,
         material: material ?? null,
+        settings: {},
         status: "queued",
         createdAt: ts,
         updatedAt: ts,
@@ -144,7 +145,10 @@ export function openMemoryDatabase(initial = {}) {
       changed("productions", production.id);
       return clone(production);
     },
-    getProduction: (id) => clone(record(id)?.production) ?? null,
+    getProduction: (id) => {
+      const p = record(id)?.production;
+      return p ? clone({ settings: {}, ...p }) : null; // documentos guardados antes de la fase 2 no tienen settings
+    },
     listProductions({ channelId } = {}) {
       return [...productions.values()]
         .map((r) => r.production)
@@ -152,11 +156,12 @@ export function openMemoryDatabase(initial = {}) {
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map(clone);
     },
-    updateProduction(id, { status, title }) {
+    updateProduction(id, { status, title, settings }) {
       const rec = record(id);
       if (!rec) return null;
       if (status !== undefined) rec.production.status = status;
       if (title !== undefined) rec.production.title = title;
+      if (settings !== undefined) rec.production.settings = clone(settings);
       rec.production.updatedAt = now();
       changed("productions", id);
       return clone(rec.production);

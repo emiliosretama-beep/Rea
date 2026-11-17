@@ -1,3 +1,5 @@
+import { LANGUAGES, VOICES, resolveNarration, voiceById } from "./voices.js";
+
 // Rutas de la API, sin nada de Node: el servidor las expone por HTTP y la
 // versión online las llama directamente en el navegador. Una sola lógica.
 
@@ -18,6 +20,7 @@ export function publicStatus(config, services) {
       webSearch: Boolean(services.llm.webSearch),
     },
     youtube: { connected: Boolean(services.youtube.connected), region: config.youtube.regionCode },
+    tts: services.tts ? services.tts.availability() : { ok: false, reason: "La voz necesita la versión con servidor." },
   };
 }
 
@@ -50,12 +53,18 @@ function parseChannel(body) {
 export function createRoutes(factory) {
   const { db, orchestrator, registry, config, services } = factory;
 
+  // El audio generado vive fuera de la base de datos: se borra con su producción.
+  const removeMedia = (id) => Promise.resolve(services.tts?.removeProduction?.(id)).catch(() => {});
+
   const productionDetail = (id) => {
     const production = db.getProduction(id);
     if (!production) throw new HttpError(404, "Producción no encontrada.");
+    const channel = db.getChannel(production.channelId);
     return {
       production,
-      channel: db.getChannel(production.channelId),
+      channel,
+      // Voz que usará (o usó) el narrador: lo elegido o lo que toca por idioma del canal.
+      narration: resolveNarration(channel?.language, production.settings?.narration),
       tasks: db.listTasks(id),
       logs: db.listLogs({ productionId: id, limit: 300 }),
     };
@@ -82,6 +91,7 @@ export function createRoutes(factory) {
       activity: orchestrator.activity(),
       summary: summary(),
     })],
+    ["GET", /^\/api\/voices$/, () => ({ languages: LANGUAGES, voices: VOICES })],
     ["GET", /^\/api\/channels$/, () => db.listChannels()],
     ["POST", /^\/api\/channels$/, (_, body) => db.createChannel(parseChannel(body))],
     ["PUT", /^\/api\/channels\/([\w-]+)$/, ([id], body) => {
@@ -89,9 +99,10 @@ export function createRoutes(factory) {
       return db.updateChannel(id, parseChannel(body));
     }],
     ["DELETE", /^\/api\/channels\/([\w-]+)$/, ([id]) => {
-      for (const p of db.listProductions({ channelId: id }))
-        if (["running", "queued"].includes(p.status)) orchestrator.cancel(p.id);
+      const productions = db.listProductions({ channelId: id });
+      for (const p of productions) if (["running", "queued"].includes(p.status)) orchestrator.cancel(p.id);
       if (!db.deleteChannel(id)) throw new HttpError(404, "Canal no encontrado.");
+      for (const p of productions) removeMedia(p.id);
       return { ok: true };
     }],
     ["GET", /^\/api\/productions$/, (_, __, url) => {
@@ -114,7 +125,19 @@ export function createRoutes(factory) {
     ["DELETE", /^\/api\/productions\/([\w-]+)$/, ([id]) => {
       if (db.getProduction(id)?.status === "running") orchestrator.cancel(id);
       if (!db.deleteProduction(id)) throw new HttpError(404, "Producción no encontrada.");
+      removeMedia(id);
       return { ok: true };
+    }],
+    ["PUT", /^\/api\/productions\/([\w-]+)\/settings$/, ([id], body) => {
+      const production = db.getProduction(id);
+      if (!production) throw new HttpError(404, "Producción no encontrada.");
+      const settings = { ...production.settings };
+      if (body.narration !== undefined) {
+        if (!voiceById(body.narration?.voice)) throw new HttpError(400, "Esa voz no existe.");
+        const resolved = resolveNarration(null, body.narration);
+        settings.narration = { voice: resolved.voice, speed: resolved.speed };
+      }
+      return db.updateProduction(id, { settings });
     }],
     ["POST", /^\/api\/productions\/([\w-]+)\/cancel$/, ([id]) => orchestrator.cancel(id)],
     ["POST", /^\/api\/tasks\/([\w-]+)\/approve$/, ([id], body) => orchestrator.approve(id, { output: body.output })],

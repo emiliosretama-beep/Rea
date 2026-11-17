@@ -364,3 +364,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--e
 .modal .actions { margin-top: 16px; }
 .modal .actions .btn { flex: 1 1 auto; }
 @media (min-width: 600px) { .modal-backdrop { place-items: center; } }
+
+/* ---------- Narración ---------- */
+.narr-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; }
+.narr-seg { display: grid; gap: 6px; padding: 10px; border-radius: var(--r-md); border: 1px solid transparent; transition: background 0.2s, border-color 0.2s; }
+.narr-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.narr-seg p { margin: 0; font-size: 14px; }
+.narr-seg.playing { background: var(--era-suave); border-color: rgba(240, 78, 35, 0.4); }
+/* El reproductor se queda a la vista mientras recorres las secciones. */
+.narr-player { position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 4; padding: 6px; margin: 0 -6px; border-radius: var(--r-lg); background: var(--panel); }
+.narr-player audio { width: 100%; display: block; }
+input[type="range"] { width: 100%; accent-color: var(--era); min-height: 36px; }

@@ -1,6 +1,8 @@
-// Agente del plan que todavía no está programado. Aparece en el panel con su
-// fase, pero no entra en la cadena y no puede ejecutarse por error.
-export function planned({ id, name, role, phase, description }) {
+// Agente que no entra en la cadena: aún no está programado (fase futura) o
+// no puede funcionar en esta versión (p. ej. la voz en la versión online).
+// Aparece en el panel con el motivo y no puede ejecutarse por error.
+export function planned({ id, name, role, phase, description, unavailableReason = null }) {
+  const why = unavailableReason ?? `aún no está implementado (fase ${phase})`;
   return {
     id,
     name,
@@ -8,11 +10,12 @@ export function planned({ id, name, role, phase, description }) {
     phase,
     description,
     implemented: false,
+    unavailableReason,
     dependsOn: [],
     requiresApproval: false,
     run() {
-      throw new Error(`${name} aún no está implementado (fase ${phase}).`);
+      throw new Error(`${name}: ${why}.`);
     },
-    validate: () => ({ issues: [`${name} aún no está implementado.`], warnings: [] }),
+    validate: () => ({ issues: [`${name}: ${why}.`], warnings: [] }),
   };
 }

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS productions (
   title TEXT NOT NULL,
   topic_hint TEXT,
   material TEXT,
+  settings TEXT,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -111,6 +112,7 @@ function productionRow(row) {
     title: row.title,
     topicHint: row.topic_hint,
     material: row.material,
+    settings: fromJson(row.settings) ?? {},
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -138,6 +140,7 @@ export function openDatabase(path) {
   // Migración: bases creadas antes de que existiera el material de investigación.
   const columns = db.prepare("PRAGMA table_info(productions)").all().map((c) => c.name);
   if (!columns.includes("material")) db.exec("ALTER TABLE productions ADD COLUMN material TEXT");
+  if (!columns.includes("settings")) db.exec("ALTER TABLE productions ADD COLUMN settings TEXT");
 
   const stmt = (sql) => db.prepare(sql);
 
@@ -204,11 +207,13 @@ export function openDatabase(path) {
         : stmt("SELECT * FROM productions ORDER BY created_at DESC").all();
       return rows.map(productionRow);
     },
-    updateProduction(id, { status, title }) {
+    updateProduction(id, { status, title, settings }) {
       if (status !== undefined)
         stmt("UPDATE productions SET status = ?, updated_at = ? WHERE id = ?").run(status, now(), id);
       if (title !== undefined)
         stmt("UPDATE productions SET title = ?, updated_at = ? WHERE id = ?").run(title, now(), id);
+      if (settings !== undefined)
+        stmt("UPDATE productions SET settings = ?, updated_at = ? WHERE id = ?").run(toJson(settings), now(), id);
       return this.getProduction(id);
     },
     deleteProduction: (id) => stmt("DELETE FROM productions WHERE id = ?").run(id).changes > 0,

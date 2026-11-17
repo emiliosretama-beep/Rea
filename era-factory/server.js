@@ -1,7 +1,8 @@
 // ERA Factory — servidor local: interfaz (public/), API REST y eventos en vivo (SSE).
 // Sin autenticación: por eso escucha solo en 127.0.0.1 salvo que HOST diga otra cosa.
 import http from "node:http";
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./src/config.js";
@@ -56,6 +57,35 @@ function streamEvents(factory, req, res) {
   });
 }
 
+// Audio generado: /media/<producción>/<carpeta>/<archivo>.mp3. Safari en
+// iPhone/iPad solo reproduce audio si el servidor acepta peticiones por rangos.
+async function serveMedia(factory, req, res, pathname) {
+  const match = /^\/media\/([\w-]+)\/(narration-[\w-]+)\/([\w-]+\.mp3)$/.exec(pathname);
+  if (!match) return res.writeHead(404).end();
+  const file = join(factory.config.media.root, match[1], match[2], match[3]);
+  let info;
+  try {
+    info = await stat(file);
+  } catch {
+    return res.writeHead(404).end();
+  }
+  const headers = { "Content-Type": "audio/mpeg", "Accept-Ranges": "bytes", "Cache-Control": "private, max-age=31536000, immutable" };
+  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
+  if (!range) {
+    res.writeHead(200, { ...headers, "Content-Length": info.size });
+    return createReadStream(file).pipe(res);
+  }
+  let start = range[1] === "" ? info.size - Number(range[2]) : Number(range[1]);
+  let end = range[1] !== "" && range[2] !== "" ? Number(range[2]) : info.size - 1;
+  end = Math.min(end, info.size - 1);
+  if (!(start >= 0) || start > end) {
+    res.writeHead(416, { "Content-Range": `bytes */${info.size}` });
+    return res.end();
+  }
+  res.writeHead(206, { ...headers, "Content-Range": `bytes ${start}-${end}/${info.size}`, "Content-Length": end - start + 1 });
+  createReadStream(file, { start, end }).pipe(res);
+}
+
 async function serveStatic(req, res) {
   const url = new URL(req.url, "http://localhost");
   const rel = normalize(decodeURIComponent(url.pathname)).replace(/^([/\\])+/, "");
@@ -76,6 +106,7 @@ export function createServer(factory) {
   const routes = createRoutes(factory);
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
+    if (url.pathname.startsWith("/media/")) return serveMedia(factory, req, res, url.pathname);
     if (!url.pathname.startsWith("/api/")) return serveStatic(req, res);
     if (req.method === "GET" && url.pathname === "/api/events") return streamEvents(factory, req, res);
     try {

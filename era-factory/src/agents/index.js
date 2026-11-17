@@ -16,19 +16,14 @@
 import { trendResearcher } from "./trend-researcher.js";
 import { audienceAnalyst } from "./audience-analyst.js";
 import { scriptwriter } from "./scriptwriter.js";
+import { narrator } from "./narrator.js";
 import { planned } from "./planned.js";
 
 const AGENTS = [
   trendResearcher,
   audienceAnalyst,
   scriptwriter,
-  planned({
-    id: "narrator",
-    name: "Narrador",
-    role: "Voz",
-    phase: 2,
-    description: "Convierte el guion aprobado en narración con Kokoro TTS (voces e idiomas a elegir) y marca los tiempos de cada sección.",
-  }),
+  narrator,
   planned({
     id: "thumbnail-designer",
     name: "Diseñador de miniaturas",
@@ -52,20 +47,24 @@ const AGENTS = [
   }),
 ];
 
-export function createRegistry(agents = AGENTS) {
+// unavailable: { agentId: motivo } para agentes que esta versión no puede
+// ejecutar (la versión online no genera audio). Quedan fuera de la cadena.
+export function createRegistry({ agents = AGENTS, unavailable = {} } = {}) {
+  agents = agents.map((a) => (unavailable[a.id] ? planned({ ...a, unavailableReason: unavailable[a.id] }) : a));
   const byId = new Map(agents.map((a) => [a.id, a]));
   return {
     get: (id) => byId.get(id),
     all: () => agents,
     pipeline: () => agents.filter((a) => a.implemented),
     describe: () =>
-      agents.map(({ id, name, role, phase, description, implemented, dependsOn, requiresApproval }) => ({
+      agents.map(({ id, name, role, phase, description, implemented, unavailableReason, dependsOn, requiresApproval }) => ({
         id,
         name,
         role,
         phase,
         description,
         implemented,
+        unavailableReason: unavailableReason ?? null,
         dependsOn,
         requiresApproval,
       })),

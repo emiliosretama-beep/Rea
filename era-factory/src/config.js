@@ -24,6 +24,16 @@ export function loadConfig(env = process.env) {
       model: env.FACTORY_MODEL || "claude-opus-5-5",
       maxSearches: intFrom(env.FACTORY_MAX_SEARCHES, 6),
     },
+    media: {
+      root: env.FACTORY_MEDIA || fileURLToPath(new URL("../data/media", import.meta.url)),
+    },
+    tts: {
+      python: env.FACTORY_PYTHON || "python3",
+      script: fileURLToPath(new URL("../tools/tts_kokoro.py", import.meta.url)),
+      modelPath: env.KOKORO_MODEL || fileURLToPath(new URL("../tools/models/kokoro-v1.0.int8.onnx", import.meta.url)),
+      voicesPath: env.KOKORO_VOICES || fileURLToPath(new URL("../tools/models/voices-v1.0.bin", import.meta.url)),
+      ffmpeg: env.FACTORY_FFMPEG || "ffmpeg",
+    },
     youtube: {
       apiKey: env.YOUTUBE_API_KEY || null,
       regionCode: env.YOUTUBE_REGION || "MX",

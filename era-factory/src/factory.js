@@ -3,6 +3,7 @@
 import { openDatabase } from "./db.js";
 import { assembleFactory } from "./factory-core.js";
 import { createLLM } from "./llm.js";
+import { createTTS } from "./services/tts.js";
 import { createYouTube } from "./services/youtube.js";
 
 export async function createFactory(config, overrides = {}) {
@@ -12,6 +13,7 @@ export async function createFactory(config, overrides = {}) {
     services: {
       llm: overrides.llm ?? (await createLLM(config)),
       youtube: overrides.youtube ?? createYouTube(config.youtube),
+      tts: overrides.tts ?? createTTS({ ...config.tts, mediaRoot: config.media.root }),
     },
     registry: overrides.registry,
   });

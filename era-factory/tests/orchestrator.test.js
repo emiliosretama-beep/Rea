@@ -33,6 +33,11 @@ test("la cadena avanza sola hasta el guion y espera aprobación", async (t) => {
 
   factory.orchestrator.approve(tasks.scriptwriter.id);
   await factory.orchestrator.idle();
+  // Tras el guion, el narrador genera la voz y vuelve a esperar tu aprobación.
+  const narration = tasksOf(factory, production.id).narrator;
+  assert.equal(narration.status, "awaiting_approval");
+  factory.orchestrator.approve(narration.id);
+  await factory.orchestrator.idle();
   assert.equal(factory.db.getProduction(production.id).status, "completed");
 });
 

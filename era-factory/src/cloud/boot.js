@@ -3,6 +3,7 @@
 // externa, y expone un "backend" que la interfaz usa en lugar de fetch/SSE.
 import { LLMError } from "../errors.js";
 import { assembleFactory } from "../factory-core.js";
+import { createRegistry } from "../agents/index.js";
 import { OrchestratorError } from "../orchestrator.js";
 import { HttpError, createRoutes } from "../routes.js";
 import { cloudLLM } from "./llm-cloud.js";
@@ -20,6 +21,11 @@ const CONFIG = {
   // Un solo trabajo a la vez: cada llamada gasta el uso de tu cuenta.
   orchestrator: { maxAttempts: 3, concurrency: 1 },
 };
+
+// La voz necesita Python, Kokoro y ffmpeg: no caben en una página de claude.ai.
+const ONLINE_REGISTRY = createRegistry({
+  unavailable: { narrator: "solo funciona en la versión con servidor (Kokoro necesita Python y ffmpeg)" },
+});
 
 const unavailableLLM = {
   mode: "none",
@@ -73,7 +79,7 @@ export async function bootCloud() {
 
   async function start() {
     const { memory, saver } = await store.open();
-    const factory = assembleFactory({ config: CONFIG, db: memory, services });
+    const factory = assembleFactory({ config: CONFIG, db: memory, services, registry: ONLINE_REGISTRY });
     const off = factory.bus.subscribe(emit);
     current = { factory, routes: createRoutes(factory), saver, off };
     const turn = await store.takeTurn();

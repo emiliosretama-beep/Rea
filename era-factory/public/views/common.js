@@ -65,9 +65,15 @@ export function logList(logs, { showAgent = true, tall = false } = {}) {
 
 export function agentCard(agent, task, { compact = false } = {}) {
   const busy = Boolean(task);
-  const state = !agent.implemented ? pill("planned", `Fase ${agent.phase}`) : busy ? pill("running") : pill("pending", "Libre");
+  const state = !agent.implemented
+    ? pill("planned", agent.unavailableReason ? "Solo con servidor" : `Fase ${agent.phase}`)
+    : busy
+      ? pill("running")
+      : pill("pending", "Libre");
   const doing = !agent.implemented
-    ? "Aún no programado."
+    ? agent.unavailableReason
+      ? "Disponible en la versión con servidor."
+      : "Aún no programado."
     : busy
       ? `Trabajando · <a href="#produccion-${esc(task.productionId)}">ver producción</a>`
       : "Esperando una tarea.";

@@ -1,18 +1,18 @@
 # ERA Factory
 
 Fábrica de canales de YouTube: un equipo de agentes de IA coordinados que
-investiga, decide, escribe y (en próximas fases) narra, diseña y produce videos.
+investiga, decide, escribe y narra videos, y (en próximas fases) diseña y produce.
 Tú supervisas, editas y apruebas desde un centro de operaciones que funciona
 en iPhone, iPad y escritorio.
 
-## Estado actual: fase 1 terminada
+## Estado actual: fase 2 terminada
 
 | Agente | Estado | Qué hace |
 | --- | --- | --- |
 | 1. Investigador de tendencias | ✅ Funciona | Búsqueda web real (herramienta `web_search` de Claude) + videos más vistos del nicho si hay `YOUTUBE_API_KEY`. Propone tendencias e ideas, **cada una citando fuentes reales**. |
 | 2. Analista de audiencia | ✅ Funciona | Define al espectador tipo, elige la mejor idea y fija formato, duración, tono y plan de retención. No inventa métricas: dice cuándo no las hay. |
 | 3. Guionista | ✅ Funciona | Guion completo (gancho, secciones con narración y notas visuales, cierre, CTA, descripción, etiquetas) + segunda pasada que verifica cada dato contra la investigación. **Necesita tu aprobación.** |
-| 4. Narrador | Fase 2 | Kokoro TTS local (voces e idiomas), tiempos por sección. |
+| 4. Narrador | ✅ Funciona (solo con servidor) | Kokoro TTS local: 54 voces en 9 idiomas, velocidad 0,7–1,3×. MP3 por sección + pista completa con pausas; los tiempos de cada sección salen de la duración real del audio. Reproductor sincronizado con el guion. **Necesita tu aprobación.** |
 | 5. Diseñador de miniaturas | Fase 3 | 10 propuestas 1280×720, comparar, recomendar, editar. |
 | 6. Productor | Fase 4 | Montaje con ffmpeg: audio + imágenes + guion → MP4. |
 | 7. Analista de rendimiento | Fase 5 | YouTube Analytics (OAuth): métricas reales → aprendizajes para 1 y 3. |
@@ -33,6 +33,9 @@ de Claude. No necesita servidor ni API key:
   modo lectura (botón «Usar en este dispositivo») para no producir dos veces.
 - **Trabaja mientras la página está abierta.** Si la cierras a media tarea,
   se reanuda al volver a abrirla.
+- **Sin voz**: el narrador necesita Python, Kokoro y ffmpeg, que no caben en una
+  página de claude.ai. Allí aparece como «Solo con servidor» y la cadena
+  termina en el guion aprobado.
 - **Sin búsqueda web**: una página de claude.ai no puede navegar ni llamar a
   YouTube. Pega en «Material de investigación» enlaces o títulos que veas; se
   convierten en las fuentes numeradas del investigador. Sin material, las
@@ -51,8 +54,15 @@ Requisitos: Node.js 22.13 o superior.
 cd era-factory
 npm install
 cp .env.example .env     # pega tu ANTHROPIC_API_KEY (y opcionalmente YOUTUBE_API_KEY)
+bash tools/setup_kokoro.sh   # voz: instala kokoro-onnx y baja el modelo (~115 MB)
 npm start                # http://127.0.0.1:5180
 ```
+
+Requisitos del narrador: Python 3.10+, `ffmpeg` con `libmp3lame` y ~120 MB
+de disco para el modelo int8 (`KOKORO_VARIANT=fp16` o `full` para más
+calidad y más peso). Narrar tarda aproximadamente lo mismo que dura el audio
+en una CPU normal. El audio se guarda en `data/media/` y se borra con su
+producción.
 
 1. **Canales → Nuevo canal**: nombre, nicho, idioma, público, tipo de videos y frecuencia.
 2. **Producir un video** (con un tema concreto opcional). La cadena arranca sola.
@@ -80,6 +90,8 @@ era-factory/
 │   ├── factory.js          ensambla todo (servidor y tests)
 │   ├── agents/             un archivo por agente + registro (index.js)
 │   ├── services/youtube.js YouTube Data API v3
+│   ├── services/tts.js     narración: Kokoro (Python) + ffmpeg
+│   ├── voices.js           catálogo de voces e idiomas de Kokoro
 │   ├── db-memory.js        misma interfaz que db.js, en memoria (versión online)
 │   ├── routes.js           rutas de la API (servidor y versión online)
 │   ├── schema.js           validador de JSON Schema (versión online)
@@ -88,7 +100,9 @@ era-factory/
 ├── public/                 interfaz (HTML + CSS + JS sin framework), común a las dos versiones
 ├── scripts/build-online.mjs  arma la versión online
 ├── online/era-factory.html   versión online generada
-└── tests/                  node:test
+├── tools/tts_kokoro.py     motor de voz (JSON por stdin, WAV por segmento)
+├── tools/setup_kokoro.sh   instala kokoro-onnx y descarga el modelo
+└── tests/                  node:test (incluye una prueba REAL con Kokoro si está instalado)
 ```
 
 ### El coordinador
@@ -121,7 +135,7 @@ Crea `src/agents/<id>.js` con el contrato documentado en `src/agents/index.js`
 | Fase | Contenido | Servicios externos |
 | --- | --- | --- |
 | **1 ✅** | Núcleo, coordinador, agentes 1-3, centro de operaciones | Anthropic API (obligatoria), YouTube Data API v3 (opcional, gratis con cuota) |
-| 2 | Narrador: Kokoro TTS local (`kokoro-onnx`, Python), selector de voz e idioma, audio por sección, reproductor | Ninguno (local). Modelos de Kokoro desde GitHub (~300 MB) |
+| **2 ✅** | Narrador: Kokoro TTS local (`kokoro-onnx` 0.6.1), selector de voz, idioma y velocidad, audio por sección, reproductor sincronizado | Ninguno (local). Modelo int8 + voces desde GitHub (~115 MB) |
 | 3 | Miniaturas: 10 propuestas renderizadas a PNG 1280×720, comparación, recomendación y editor | Render local con Chromium; generación de imágenes con IA opcional (por decidir) |
 | 4 | Productor: montaje con ffmpeg (audio + escenas + subtítulos) → MP4 descargable | ffmpeg (local) |
 | 5 | Analista de rendimiento: métricas reales y bucle de aprendizaje; subida a YouTube opcional | YouTube Analytics API + YouTube Data API con OAuth 2.0 |
