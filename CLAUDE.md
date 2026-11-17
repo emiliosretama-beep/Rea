@@ -27,7 +27,7 @@ propia ERA Studio.
   resultados reales (búsqueda web, YouTube) o del material que pega el
   usuario, nunca del texto del modelo.
 - Prueba con `npm test` y con el navegador a 360 px (`FACTORY_LLM=mock`).
-- La versión online **estable** (v1.0.0, tag `era-factory-v1.0.0`) está en
+- La versión online **estable** (v1.1.0, tag `era-factory-v1.1.0`) está en
   <https://claude.ai/artifact/BsRfL98pX2iei5NMYQH5km> y se genera con
   `npm run build:online`. No la republiques sin autorización de Emilio: los
   cambios nuevos se publican primero en un artifact DEV aparte y pasan a la
