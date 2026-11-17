@@ -1,8 +1,13 @@
 // Guardado de la versión online.
 //
 // La fábrica trabaja sobre una base en memoria (db-memory.js) y este módulo
-// copia cada documento que cambia a la base de datos de claude.ai, bajo
-// data/users/<tu id>/ (privado: solo tú lo ves). Escrituras de una en una
+// copia cada documento que cambia a la base de datos de claude.ai, en tu
+// colección privada data/users/<tu id> (solo tú la ves).
+//
+// Rutas: en esa base un documento tiene un número PAR de segmentos y
+// data/users/<id> ya es una colección, así que todo va directamente dentro,
+// con un prefijo por tipo: ch_<id> (canal), pr_<id> (producción con sus
+// tareas y registro), in_<id> (aprendizaje) y «runner» (el turno). Escrituras de una en una
 // por documento y agrupadas, como pide el contrato de `db`.
 //
 // Turno: el coordinador solo debe correr en UN dispositivo a la vez (si no,
@@ -10,7 +15,7 @@
 // (lease en meta/runner) trabaja; los demás quedan en modo lectura.
 import { openMemoryDatabase } from "../db-memory.js";
 
-const COLLECTIONS = ["channels", "productions", "insights"];
+const PREFIX = { channels: "ch_", productions: "pr_", insights: "in_" };
 const FLUSH_DELAY_MS = 600;
 const RETRY_DELAY_MS = 15_000;
 const LEASE_MS = 45_000;
@@ -22,14 +27,16 @@ const json = (v) => JSON.parse(JSON.stringify(v));
 // ---------- Nube (capability db) ----------
 
 export async function openCloudStore({ db, userId, holder, onStatus = () => {} }) {
-  const base = `data/users/${userId}`;
-  const lock = db.doc(`${base}/meta/runner`);
+  const mine = db.collection(`data/users/${userId}`);
+  const lock = mine.doc("runner");
 
   async function loadAll() {
-    const data = {};
-    for (const name of COLLECTIONS) {
-      const snap = await db.collection(`${base}/${name}`).get();
-      data[name] = snap.docs.filter((d) => d.exists).map((d) => json(d.data()));
+    const data = { channels: [], productions: [], insights: [] };
+    const snap = await mine.get();
+    for (const doc of snap.docs) {
+      if (!doc.exists) continue;
+      const kind = Object.keys(PREFIX).find((k) => doc.id.startsWith(PREFIX[k]));
+      if (kind) data[kind].push(json(doc.data()));
     }
     return data;
   }
@@ -61,7 +68,7 @@ export async function openCloudStore({ db, userId, holder, onStatus = () => {} }
       try {
         for (const [key, { collection, id }] of [...pending]) {
           pending.delete(key);
-          const ref = db.doc(`${base}/${collection}/${id}`);
+          const ref = mine.doc(PREFIX[collection] + id);
           const body = memory.exportDoc(collection, id);
           try {
             if (body) await ref.set(json(body));

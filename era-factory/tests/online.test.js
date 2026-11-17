@@ -73,22 +73,40 @@ test("IA online: valida el JSON, corrige UNA vez y nunca reintenta errores de sa
   assert.deepEqual(research, { text: "Notas", sources: [] });
 });
 
-// Base de datos de claude.ai simulada: documentos por ruta y un lease.
+// Base de datos de claude.ai simulada: documentos por ruta y un lease. Aplica
+// la regla real de rutas: documento = número PAR de segmentos, colección =
+// IMPAR (data/users/<id> ya es una colección). Una ruta mal formada lanza
+// TypeError al construir la referencia, como el capability real.
+const segments = (path) => path.split("/").length;
 function fakeDb() {
   const docs = new Map();
   const leases = new Map();
   const writes = [];
   let clock = 0;
+  let api;
   const snap = (path) => ({
     id: path.split("/").at(-1),
     exists: docs.has(path),
     data: () => (docs.has(path) ? structuredClone(docs.get(path)) : undefined),
   });
-  return {
+  api = {
     docs,
     writes,
     advance: (ms) => (clock += ms),
-    doc: (path) => ({
+    doc: (path) => docRef(path),
+    collection: (path) => {
+      if (segments(path) % 2 === 0) throw new TypeError(`collection(): "${path}" tiene ${segments(path)} segmentos (debe ser impar)`);
+      return {
+        doc: (id) => docRef(`${path}/${id}`),
+        get: async () => ({
+          docs: [...docs.keys()].filter((k) => k.startsWith(`${path}/`) && segments(k) === segments(path) + 1).map(snap),
+        }),
+      };
+    },
+  };
+  function docRef(path) {
+    if (segments(path) % 2 === 1) throw new TypeError(`doc(): "${path}" tiene ${segments(path)} segmentos (debe ser par)`);
+    return {
       get: async () => snap(path),
       set: async (data) => {
         writes.push(path);
@@ -104,15 +122,9 @@ function fakeDb() {
         leases.set(path, { holder, until: clock + ttlMs });
         return { acquired: true };
       },
-    }),
-    collection: (path) => ({
-      get: async () => ({
-        docs: [...docs.keys()]
-          .filter((k) => k.startsWith(`${path}/`) && k.split("/").length === path.split("/").length + 1)
-          .map(snap),
-      }),
-    }),
-  };
+    };
+  }
+  return api;
 }
 
 test("guardado online: cada cambio llega a la nube y se recupera al reabrir", async () => {
@@ -128,7 +140,7 @@ test("guardado online: cada cambio llega a la nube y se recupera al reabrir", as
   memory.addLog({ productionId: production.id, message: "hola" });
   memory.updateTask(memory.listTasks(production.id)[0].id, { status: "done", output: { ok: 1 } });
   await saver.flushNow();
-  assert.ok(db.docs.has(`data/users/u1/channels/${channel.id}`));
+  assert.ok(db.docs.has(`data/users/u1/ch_${channel.id}`));
   // Una ráfaga de cambios en la producción = una sola escritura de ese documento.
   assert.equal(db.writes.filter((w) => w.endsWith(production.id)).length, 1);
 
@@ -139,7 +151,7 @@ test("guardado online: cada cambio llega a la nube y se recupera al reabrir", as
 
   memory.deleteChannel(channel.id);
   await saver.flushNow();
-  assert.equal(db.docs.has(`data/users/u1/productions/${production.id}`), false);
+  assert.equal(db.docs.has(`data/users/u1/pr_${production.id}`), false);
   saver.stop();
 });
 
