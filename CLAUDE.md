@@ -28,3 +28,22 @@ propia ERA Studio.
   archivos de `public/`, nunca `online/rea-studio.html` a mano.
 - Emilio usa sobre todo iPhone y iPad: prueba cada cambio de interfaz en
   pantalla táctil y a 360 px de ancho.
+
+## Videos (sesiones de video)
+
+- Emilio pasa el guion. Antes de producir, pregúntale **siempre** qué estilo
+  de animación quiere (no lo elijas tú): `/stick-figure`, `/zach-d-films`,
+  `/map-route`, `/graph`, `/breakdown`, `/minimalistic-graphics`,
+  `/low-poly`, `/minecraft`, `/kurzgesagt`, `/dan-koe`, o videos con
+  Remotion/IA (skill `videos-verticales-ia`). Puede mezclar varios.
+- Las skills vienen de <https://github.com/artemnovitckii/claude-animation-skills>.
+  El contenedor es efímero: en cada sesión nueva hay que clonarlo en
+  `/home/user/artemnovitckii/claude-animation-skills`, enlazar `skills/*` en
+  `~/.claude/skills/`, `npm install` en `kit/` y luego
+  `npm install playwright@1.63.0` (coincide con el Chromium de `/opt/pw-browsers`;
+  no correr `playwright install`). Para voz: `kit/setup.sh --voice` sin el
+  paso de Playwright (crea `kit/.venv` y baja ~1 GB de modelos).
+- Voz: Kokoro (thewh1teagle/kokoro-onnx). En español usa `lang="es"` y las
+  voces `ef_dora`, `em_alex` o `em_santa` (`tts_kokoro.py` viene fijo en
+  inglés). El alineador Parakeet es inglés: usa sus tiempos pero el texto del
+  guion para los subtítulos.
