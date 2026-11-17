@@ -64,8 +64,9 @@ gancho de forma clara toma unos 3,4 s, y forzarlo a 2 s no se entendía.
 
 - Supertonic-3: **OpenRAIL-M**, permite uso comercial y monetizar. Su
   restricción (e) obliga a **avisar claramente que el contenido está hecho con
-  IA**: por eso el video lleva "VOZ CREADA CON IA" y al publicar hay que
-  activar la etiqueta de contenido generado con IA de cada red.
+  IA**. El video ya no lleva texto en pantalla que lo diga, así que al
+  publicar **siempre** hay que activar la etiqueta de contenido generado con
+  IA de cada red (o escribirlo en la descripción).
 - Whisper small: MIT (solo se usa para medir tiempos; no va en el video).
 - VoiceStudio: AGPL-3.0 (es la herramienta; no cambia la licencia del audio).
 - OmniVoice, el motor por defecto de VoiceStudio, es CC-BY-NC (no comercial):
