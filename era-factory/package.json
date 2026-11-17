@@ -1,0 +1,19 @@
+{
+  "name": "era-factory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ERA Factory: fábrica de canales de YouTube con agentes de IA coordinados.",
+  "type": "module",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch --env-file-if-exists=.env server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"tests/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0"
+  }
+}

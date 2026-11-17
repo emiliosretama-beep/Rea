@@ -16,6 +16,17 @@ Esto incluye diseñar páginas para usarlas dentro de ERA Studio (por ejemplo,
 escribir el prompt que Emilio pegará en la app) y cambios de diseño en la
 propia ERA Studio.
 
+## ERA Factory
+
+- `era-factory/` es la fábrica de canales de YouTube con agentes de IA
+  (Node 22, `node:sqlite`, sin framework). El plan por fases y la arquitectura
+  están en `era-factory/README.md`; actualiza su tabla de estado al terminar
+  cada fase.
+- No simules funciones: un agente sin programar se registra con `planned()` y
+  no entra en la cadena. Las fuentes que citan los agentes salen siempre de
+  resultados reales (búsqueda web, YouTube), nunca del texto del modelo.
+- Prueba con `npm test` y con el navegador a 360 px (`FACTORY_LLM=mock`).
+
 ## ERA Studio
 
 - La marca es **ERA Studio** (no "Rea"): logo del sol que forma una E,

@@ -1,0 +1,122 @@
+# ERA Factory
+
+Fábrica de canales de YouTube: un equipo de agentes de IA coordinados que
+investiga, decide, escribe y (en próximas fases) narra, diseña y produce videos.
+Tú supervisas, editas y apruebas desde un centro de operaciones que funciona
+en iPhone, iPad y escritorio.
+
+## Estado actual: fase 1 terminada
+
+| Agente | Estado | Qué hace |
+| --- | --- | --- |
+| 1. Investigador de tendencias | ✅ Funciona | Búsqueda web real (herramienta `web_search` de Claude) + videos más vistos del nicho si hay `YOUTUBE_API_KEY`. Propone tendencias e ideas, **cada una citando fuentes reales**. |
+| 2. Analista de audiencia | ✅ Funciona | Define al espectador tipo, elige la mejor idea y fija formato, duración, tono y plan de retención. No inventa métricas: dice cuándo no las hay. |
+| 3. Guionista | ✅ Funciona | Guion completo (gancho, secciones con narración y notas visuales, cierre, CTA, descripción, etiquetas) + segunda pasada que verifica cada dato contra la investigación. **Necesita tu aprobación.** |
+| 4. Narrador | Fase 2 | Kokoro TTS local (voces e idiomas), tiempos por sección. |
+| 5. Diseñador de miniaturas | Fase 3 | 10 propuestas 1280×720, comparar, recomendar, editar. |
+| 6. Productor | Fase 4 | Montaje con ffmpeg: audio + imágenes + guion → MP4. |
+| 7. Analista de rendimiento | Fase 5 | YouTube Analytics (OAuth): métricas reales → aprendizajes para 1 y 3. |
+
+Los agentes de fases futuras aparecen en el panel marcados como planificados y
+**no se ejecutan**: no hay botones decorativos.
+
+## Cómo usarlo
+
+Requisitos: Node.js 22.13 o superior.
+
+```bash
+cd era-factory
+npm install
+cp .env.example .env     # pega tu ANTHROPIC_API_KEY (y opcionalmente YOUTUBE_API_KEY)
+npm start                # http://127.0.0.1:5180
+```
+
+1. **Canales → Nuevo canal**: nombre, nicho, idioma, público, tipo de videos y frecuencia.
+2. **Producir un video** (con un tema concreto opcional). La cadena arranca sola.
+3. Mira el progreso en vivo. Al terminar el guion, la producción se detiene:
+   edítalo ahí mismo y **apruébalo**, o **pide cambios** a la IA con tus notas.
+
+Sin `ANTHROPIC_API_KEY` la app abre, pero los agentes fallan con un mensaje
+claro. Para revisar la interfaz sin gastar API: `FACTORY_LLM=mock npm start`
+(datos de prueba fijos, marcados como `[SIMULACIÓN]`).
+
+Para abrirla desde el iPhone en tu red: `HOST=0.0.0.0 npm start` y entra a
+`http://IP-de-tu-compu:5180`. **No tiene login**: hazlo solo en redes de confianza.
+
+## Arquitectura
+
+```
+era-factory/
+├── server.js               HTTP: interfaz, API REST y eventos en vivo (SSE)
+├── src/
+│   ├── config.js           variables de entorno (único lugar que las lee)
+│   ├── db.js               SQLite (node:sqlite): canales, producciones, tareas, registro, aprendizajes
+│   ├── events.js           bus de eventos → SSE
+│   ├── llm.js              Claude: json() con JSON Schema y research() con búsqueda web
+│   ├── orchestrator.js     coordinador central (ver abajo)
+│   ├── factory.js          ensambla todo (servidor y tests)
+│   ├── agents/             un archivo por agente + registro (index.js)
+│   ├── services/youtube.js YouTube Data API v3
+│   └── mock-fixtures.js    datos del modo simulación y de los tests
+├── public/                 interfaz (HTML + CSS + JS sin framework)
+└── tests/                  node:test (sin dependencias extra)
+```
+
+### El coordinador
+
+Cada video es una **producción** con una **tarea por agente**. El coordinador:
+
+- **Asigna** la siguiente tarea en cuanto termina la anterior (cola con límite de concurrencia).
+- **Comparte información**: cada agente recibe los resultados de los agentes de los que depende (`dependsOn`) y los aprendizajes del canal.
+- **Revisa** cada resultado (`validate`) antes de pasarlo: `issues` hacen repetir la tarea con las correcciones; `warnings` se te muestran.
+- **Reintenta**: hasta `FACTORY_MAX_ATTEMPTS` por revisión fallida o error temporal de la API (con espera). Los errores de configuración no se reintentan.
+- **Se detiene** donde hace falta tu aprobación; **pedir cambios** rehace la tarea con tus notas e invalida lo que dependía de ella.
+- **Cancela** tareas en curso y **recupera** las que quedaron a medias si el servidor se reinicia.
+- **Publica** cada cambio en tiempo real a la interfaz.
+
+Estados de tarea: `pending → running → done | awaiting_approval | failed | cancelled`.
+
+### Contra la información inventada
+
+- Las fuentes las pone el **código**, a partir de los resultados reales de la búsqueda web y de YouTube. Los agentes solo pueden citarlas por número.
+- La revisión **rechaza** cualquier cita a una fuente que no existe y la tarea se repite.
+- El guionista lista cada dato verificable; una segunda pasada lo marca como respaldado, sin respaldo o contradicho. Lo contradicho obliga a reescribir; lo sin respaldo te lo señala antes de aprobar.
+
+### Añadir un agente
+
+Crea `src/agents/<id>.js` con el contrato documentado en `src/agents/index.js`
+(`run`, `validate`, `dependsOn`, `requiresApproval`…) y colócalo en `AGENTS`.
+
+## Plan por fases
+
+| Fase | Contenido | Servicios externos |
+| --- | --- | --- |
+| **1 ✅** | Núcleo, coordinador, agentes 1-3, centro de operaciones | Anthropic API (obligatoria), YouTube Data API v3 (opcional, gratis con cuota) |
+| 2 | Narrador: Kokoro TTS local (`kokoro-onnx`, Python), selector de voz e idioma, audio por sección, reproductor | Ninguno (local). Modelos de Kokoro desde GitHub (~300 MB) |
+| 3 | Miniaturas: 10 propuestas renderizadas a PNG 1280×720, comparación, recomendación y editor | Render local con Chromium; generación de imágenes con IA opcional (por decidir) |
+| 4 | Productor: montaje con ffmpeg (audio + escenas + subtítulos) → MP4 descargable | ffmpeg (local) |
+| 5 | Analista de rendimiento: métricas reales y bucle de aprendizaje; subida a YouTube opcional | YouTube Analytics API + YouTube Data API con OAuth 2.0 |
+
+## Pruebas
+
+```bash
+npm test
+```
+
+Cubren el coordinador (cadena completa, revisión con reintento, fallo tras
+agotar intentos, sin API key, pedir cambios, edición aprobada, cancelar y
+reanudar, recuperación tras reinicio), el adaptador de Claude con un cliente
+simulado, el de YouTube con respuestas simuladas y la API HTTP con SSE.
+
+**Lo que no se ha probado contra los servicios reales**: las llamadas a la API
+de Anthropic y a YouTube (en el entorno de desarrollo no había keys). Los tests
+verifican la forma de las peticiones y el manejo de respuestas; la primera
+ejecución con tus keys es la prueba real.
+
+## Costos
+
+Cada video en fase 1 hace 5 llamadas a Claude (investigación con hasta 6
+búsquedas web, estructurar, audiencia, guion, verificación). Las búsquedas web
+y los tokens se cobran a tu cuenta de Anthropic; revisa tu consumo en la
+consola tras los primeros videos. La búsqueda de YouTube usa ~101 unidades de
+cuota de las 10 000 diarias gratuitas.
