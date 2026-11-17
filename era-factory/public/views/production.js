@@ -1,6 +1,7 @@
 // Detalle de una producción: línea de producción en vivo, resultados de cada
 // agente, editor de guion y decisiones (aprobar, pedir cambios, reintentar).
 import { buildPackage, packageFilename } from "../package.js";
+import { thumbnailBlob } from "../thumbs/render.js";
 import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast, saveFile } from "../lib.js";
 import { agentName, debounce, store } from "../store.js";
 import { logList } from "./common.js";
@@ -410,6 +411,7 @@ function thumbContext() {
     title: state.detail.production.title,
     channel: state.detail.channel?.name ?? "",
     seconds: narration?.full?.duration ?? script?.estimatedSeconds ?? null,
+    vertical: state.detail.channel?.format === "short",
   };
 }
 
@@ -495,6 +497,15 @@ async function act(button) {
   try {
     if (action === "export") {
       const pkg = buildPackage(state.detail);
+      // La portada viaja dibujada (el servidor no tiene el dibujador del navegador).
+      if (pkg.thumbnail) {
+        const png = await thumbnailBlob(pkg.thumbnail, { vertical: pkg.channel.format === "short" });
+        pkg.coverPng = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(png);
+        });
+      }
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" });
       try {
         await saveFile(blob, packageFilename(pkg));

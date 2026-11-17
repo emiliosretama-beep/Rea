@@ -4,6 +4,13 @@ import { BACKGROUNDS, ICONS, LAYOUT_NAMES, LIMITS, PALETTES, checkSpec, clean } 
 import { drawThumbnail, ensureFonts, thumbnailBlob } from "../thumbs/render.js";
 import { api, esc, icon, minutes, saveFile, toast } from "../lib.js";
 
+// Orientación del canal en pantalla: los Shorts usan portada vertical 1080×1920.
+let VERTICAL = false;
+const frame = (attrs, { small = false } = {}) => {
+  const [w, h] = VERTICAL ? (small ? [168, 298] : [360, 640]) : small ? [336, 189] : [640, 360];
+  return `<div class="thumb-frame${VERTICAL ? " v" : ""}${small ? " small" : ""}"><canvas width="${w}" height="${h}" ${attrs}></canvas>`;
+};
+
 // Edición en curso (sobrevive a los redibujos por eventos en vivo).
 const edit = { taskId: null, selected: null, draft: null };
 export const isEditingThumbnail = () => edit.draft !== null;
@@ -15,11 +22,17 @@ const options = (entries, value) =>
   entries.map(([k, label]) => `<option value="${esc(k)}"${k === value ? " selected" : ""}>${esc(label)}</option>`).join("");
 
 function feedPreview(spec, { title, channel, seconds }) {
+  if (VERTICAL)
+    return `<div class="feed shorts">
+      <div class="shorts-card">${frame('data-spec="final"', { small: true })}</div>
+        <div class="feed-meta"><strong>${esc(title)}</strong><span class="muted">Estante de Shorts</span></div></div>
+      <p class="muted" style="font-size:12.5px;margin:0">En Shorts, YouTube suele usar un fotograma del video como portada: esta imagen va al final del video para que la elijas al subirlo.</p>
+    </div>`;
   return `<div class="feed">
-    <div class="feed-main"><div class="thumb-frame"><canvas width="640" height="360" data-spec="final"></canvas>
+    <div class="feed-main">${frame('data-spec="final"')}
       ${seconds ? `<span class="feed-time mono">${minutes(seconds)}</span>` : ""}</div>
       <div class="feed-meta"><strong>${esc(title)}</strong><span>${esc(channel)}</span></div></div>
-    <div class="feed-small"><div class="thumb-frame small"><canvas width="336" height="189" data-spec="final"></canvas></div>
+    <div class="feed-small">${frame('data-spec="final"', { small: true })}</div>
       <span class="muted">Tamaño de «videos sugeridos»: si aquí se lee, funciona.</span></div>
   </div>`;
 }
@@ -27,12 +40,12 @@ function feedPreview(spec, { title, channel, seconds }) {
 function gridHtml(task) {
   const o = task.output;
   const rank = new Map(o.recommended.map((r, i) => [r.index, { place: i + 1, reason: r.reason }]));
-  return `<div class="thumb-grid">${o.proposals
+  return `<div class="thumb-grid${VERTICAL ? " v" : ""}">${o.proposals
     .map((p, i) => {
       const r = rank.get(i);
       const chosen = o.selected === i;
       return `<article class="thumb-card${r ? " recommended" : ""}${chosen ? " chosen" : ""}">
-        <div class="thumb-frame"><canvas width="640" height="360" data-proposal="${i}" aria-label="Miniatura ${i + 1}: ${esc(p.spec.headline)}"></canvas></div>
+        ${frame(`data-proposal="${i}" aria-label="Miniatura ${i + 1}: ${esc(p.spec.headline)}"`)}</div>
         <div class="thumb-info">
           <div class="thumb-title"><strong>${i + 1}. ${esc(p.concept)}</strong>${
             r ? `<span class="pill st-running">Recomendada ${r.place}</span>` : chosen ? `<span class="pill st-done">Elegida</span>` : ""
@@ -53,7 +66,7 @@ function editorHtml(task, context) {
         <h2 style="margin:0">Editar la miniatura ${edit.selected + 1}</h2>
         <button class="btn small ghost" data-th="back">${icon("back")}Ver las 10</button>
       </div>
-      <div class="th-sticky"><div class="thumb-frame"><canvas width="640" height="360" data-spec="final" aria-label="Vista previa"></canvas></div></div>
+      <div class="th-sticky${VERTICAL ? " v" : ""}">${frame('data-spec="final" aria-label="Vista previa"')}</div></div>
       <p class="form-error" id="th-error" hidden></p>
       <div class="form-grid">
         <div class="field full"><label for="th-headline">Titular <span class="mono muted" id="th-count"></span></label>
@@ -82,13 +95,14 @@ function editorHtml(task, context) {
       </div>
       <h3 style="margin-top:6px">Así se verá en YouTube</h3>
       ${feedPreview(d, context)}
-      <div class="actions"><button class="btn" data-th="download">${icon("play")}Descargar PNG 1280×720</button></div>
+      <div class="actions"><button class="btn" data-th="download">${icon("play")}Descargar PNG ${VERTICAL ? "1080×1920" : "1280×720"}</button></div>
     </div></section>
     <div class="decision-bar" role="region" aria-label="Decisión"><div class="actions">
       <button class="btn ok" data-th="approve">${icon("check")}Aprobar esta miniatura</button></div></div>`;
 }
 
 export function thumbnailsHtml(task, context) {
+  VERTICAL = Boolean(context.vertical);
   const o = task.output;
   if (edit.taskId !== task.id) resetThumbnailEditor();
   if (task.status === "awaiting_approval" && edit.draft) return editorHtml(task, context);
@@ -99,7 +113,7 @@ export function thumbnailsHtml(task, context) {
           <p class="muted" style="font-size:12.5px">Son composiciones gráficas (tipografía, icono y color). No incluyen fotos.</p></div></section>`
       : o.final
         ? `<section class="card"><div class="core"><h2>Miniatura aprobada</h2>${feedPreview(o.final, context)}
-            <div class="actions"><button class="btn" data-th="download">${icon("play")}Descargar PNG 1280×720</button></div></div></section>`
+            <div class="actions"><button class="btn" data-th="download">${icon("play")}Descargar PNG ${VERTICAL ? "1080×1920" : "1280×720"}</button></div></div></section>`
         : "";
   return `${intro}<section class="card"><div class="core"><h2>${task.status === "awaiting_approval" ? "Las propuestas" : "Todas las propuestas"}</h2>${gridHtml(task)}</div></section>`;
 }
@@ -171,8 +185,8 @@ export async function bindThumbnails(root, task, { productionId, onDirty, onDone
       } else if (action === "download") {
         b.disabled = true;
         try {
-          const blob = await thumbnailBlob(finalSpec());
-          await saveFile(blob, `miniatura-${productionId.slice(0, 8)}.png`);
+          const blob = await thumbnailBlob(finalSpec(), { vertical: VERTICAL });
+          await saveFile(blob, `${VERTICAL ? "portada" : "miniatura"}-${productionId.slice(0, 8)}.png`);
         } catch (err) {
           if (err?.code !== "declined") toast(err.message || "No se pudo descargar.", "error");
         } finally {

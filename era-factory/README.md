@@ -30,6 +30,8 @@ Cada canal elige su formato: **Shorts verticales 9:16** (por defecto) o
 - El productor cambia de pantalla cada 2–4 s y monta en 1080×1920, con el texto en la zona
   segura (lejos de los botones de la derecha y del título de abajo).
 - Subtítulos incrustados por defecto, de 3 palabras y grandes; el .srt también se entrega.
+- Miniaturas verticales 1080×1920 (portada). Como en Shorts YouTube suele usar un fotograma del
+  video como portada, la elegida se pone como última escena del Short para seleccionarla al subirlo.
 
 ## Producir el video desde la versión online
 

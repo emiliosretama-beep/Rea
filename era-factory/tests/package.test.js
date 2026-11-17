@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,6 +51,7 @@ test("Shorts: el analista pide segundos, el guionista estructura corta y el prod
   assert.equal(job.burnSubtitles, true, "los Shorts llevan subtítulos incrustados por defecto");
   assert.match(job.ass, /PlayResY: 1920/);
   assert.match(llm.calls.find((c) => c.name === "producer.beats").prompt, /cada 2 a 4 segundos/);
+  assert.match(llm.calls.find((c) => c.name === "thumbs.design").prompt, /PORTADA VERTICAL 9:16/);
 
   // El paquete exportado lleva lo necesario para producir fuera.
   const detail = { production: factory.db.getProduction(production.id), channel: factory.db.getChannel(channel.id), tasks: factory.db.listTasks(production.id) };
@@ -103,7 +104,17 @@ test("producir un paquete real: Short 1080×1920 con voz, subtítulos y descripc
     script: { title: "Prueba", hook: "Mira esto.", sections: [{ heading: "Idea", narration: "Una idea corta. Otra más." }], outro: "Fin.", callToAction: "Síguenos.", description: "Descripción.", tags: ["ia"] },
     thumbnail: { palette: "menta" },
   };
+  // Portada roja de 1080×1920: debe acabar siendo el último fotograma del Short.
+  const coverPath = join(out, "rojo.png");
+  execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=c=red:s=1080x1920", "-frames:v", "1", "-y", coverPath]);
+  pkg.coverPng = `data:image/png;base64,${(await readFile(coverPath)).toString("base64")}`;
   const r = await producePackage(pkg, { out, log: () => {} });
+  const last = join(out, "ultimo.png");
+  execFileSync("ffmpeg", ["-v", "error", "-sseof", "-0.4", "-i", r.video, "-frames:v", "1", "-y", last]);
+  const pixel = execFileSync("python3", ["-c", `from PIL import Image; print(Image.open("${last}").convert("RGB").getpixel((540, 200)))`]).toString().trim();
+  const [red, green, blue] = pixel.replace(/[()]/g, "").split(",").map(Number);
+  assert.ok(red > 200 && green < 60 && blue < 60, `el último fotograma es la portada (pixel ${pixel})`);
+  assert.ok(r.cover, "la portada también se entrega como archivo");
   const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,width,height", "-of", "json", r.video]));
   const v = probe.streams.find((s) => s.codec_type === "video");
   assert.deepEqual([v.width, v.height], [1080, 1920]);

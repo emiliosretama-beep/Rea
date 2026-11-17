@@ -7,6 +7,7 @@
 // No genera fotos: ningún servicio de imágenes está conectado. Son
 // composiciones gráficas con tipografía, icono y color.
 import { BACKGROUNDS, ICONS, LAYOUTS, LIMITS, PALETTES, checkSpec } from "../../public/thumbs/catalog.js";
+import { FORMATS, formatOf } from "../../public/formats.js";
 import { LANGUAGE_RULE, channelBrief, feedbackBlock } from "./shared.js";
 
 export const PROPOSALS = 10;
@@ -106,6 +107,11 @@ export const thumbnailDesigner = {
         `${channelBrief(ctx.channel)}\n\n## El video\nTítulo: ${script.title}\nGancho: ${script.hook}\n` +
         `Secciones: ${script.sections.map((s) => s.heading).join(" · ")}\n\n## Espectador tipo\n${audience.persona.description}\n` +
         `Le mueve: ${audience.persona.motivations.join("; ")}\n\n## Lo que puedes usar\n${catalogText()}\n\n` +
+        (formatOf(ctx.channel) === FORMATS.short
+          ? `Es un Short: la miniatura es una PORTADA VERTICAL 9:16 (1080×1920) que también será el último ` +
+            `fotograma del video. Titulares de 2 a 5 palabras, enormes; deja libre la parte de abajo y la derecha ` +
+            `(ahí pone YouTube el título y sus botones).\n\n`
+          : "") +
         `Propón exactamente ${PROPOSALS} miniaturas MUY distintas entre sí: usa al menos 5 diseños y 4 paletas ` +
         `diferentes y prueba ángulos distintos (curiosidad, beneficio, comparación, advertencia, número, pregunta). ` +
         `El titular de la miniatura NO repite el título del video: lo complementa. Máximo ${LIMITS.headlineWords} ` +

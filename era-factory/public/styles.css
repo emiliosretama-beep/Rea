@@ -420,3 +420,13 @@ input[type="range"] { width: 100%; accent-color: var(--era); min-height: 36px; }
 .mono-block { margin: 8px 0 0; padding: 12px; border-radius: var(--r-md); background: #0d1426; border: 1px solid var(--borde); font-size: 13px; max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
 .check input { width: 22px; height: 22px; margin: 0; accent-color: var(--era); flex: none; }
+
+/* Portadas verticales (Shorts) */
+.thumb-frame.v { aspect-ratio: 9 / 16; }
+.thumb-grid.v { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.thumb-grid.v .thumb-title { flex-wrap: wrap; }
+@media (min-width: 900px) { .thumb-grid.v { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.thumb-frame.v.small { width: 168px; }
+.th-sticky.v .thumb-frame { width: 42%; margin: 0 auto; }
+.feed.shorts { grid-template-columns: 1fr; }
+.shorts-card { display: grid; grid-template-columns: 168px 1fr; gap: 12px; align-items: end; }

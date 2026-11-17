@@ -3,9 +3,15 @@
 // se pinta aquí cuando se ve, se edita o se descarga.
 import { BACKGROUNDS, ICONS, LAYOUTS, PALETTES, SIZE, clean } from "./catalog.js";
 
-const W = SIZE.width;
-const H = SIZE.height;
-const PAD = 64;
+// Medidas del dibujo en curso. Horizontal 1280×720 (videos) o vertical
+// 1080×1920 (Shorts): drawThumbnail las fija según el lienzo.
+let W = SIZE.width;
+let H = SIZE.height;
+let PAD = 64;
+let VERTICAL = false;
+// Zona segura vertical: arriba la barra del teléfono, abajo el título y el
+// canal que pone YouTube, a la derecha sus botones.
+const SAFE_V = { top: 0.13, bottom: 0.72, right: 170 };
 const DISPLAY = '"Anton", Impact, "Arial Narrow Bold", "Arial Black", sans-serif';
 const BODY = '"Plus Jakarta Sans", system-ui, sans-serif';
 
@@ -154,7 +160,7 @@ function drawLines(ctx, layout, x, y, p, { align = "left", accent, highlightBars
 
 function subline(ctx, text, x, y, maxW, p, align = "left") {
   if (!text) return;
-  let size = 44;
+  let size = VERTICAL ? 60 : 44;
   ctx.font = `700 ${size}px ${BODY}`;
   while (ctx.measureText(text).width > maxW && size > 24) ctx.font = `700 ${(size -= 2)}px ${BODY}`;
   ctx.textAlign = align;
@@ -168,14 +174,16 @@ function subline(ctx, text, x, y, maxW, p, align = "left") {
 
 function badge(ctx, text, p) {
   if (!text) return;
-  ctx.font = `700 34px ${BODY}`;
-  const w = ctx.measureText(text.toUpperCase()).width + 44;
+  const k = VERTICAL ? 1.5 : 1;
+  const y = VERTICAL ? H * SAFE_V.top : PAD - 12;
+  ctx.font = `700 ${34 * k}px ${BODY}`;
+  const w = ctx.measureText(text.toUpperCase()).width + 44 * k;
   ctx.fillStyle = p.accent;
-  roundRect(ctx, PAD - 8, PAD - 12, w, 58, 29);
+  roundRect(ctx, PAD - 8, y, w, 58 * k, 29 * k);
   ctx.fill();
   ctx.fillStyle = p.accentText;
   ctx.textBaseline = "middle";
-  ctx.fillText(text.toUpperCase(), PAD + 14, PAD + 17);
+  ctx.fillText(text.toUpperCase(), PAD + 14 * k, y + 29 * k);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -355,26 +363,173 @@ const LAYOUT_DRAW = {
   },
 };
 
+// ---------- Diseños verticales (Shorts) ----------
+// Mismas ideas que en horizontal, apiladas de arriba abajo dentro de la zona
+// segura: texto arriba, protagonista (icono, número, «?», VS) debajo.
+
+const vBox = (spec) => {
+  const top = H * SAFE_V.top + (spec.badge ? 120 : 0);
+  return { left: PAD, top, width: W - PAD - SAFE_V.right, bottom: H * SAFE_V.bottom };
+};
+
+function vText(ctx, spec, p, accent, box, maxH, opts = {}) {
+  const t = fit(ctx, words(spec), box.width, maxH, { max: 230, min: 60, maxLines: 5, ...opts });
+  const end = drawLines(ctx, t, opts.align === "center" ? box.left + box.width / 2 : box.left, box.top, p, { accent, ...opts });
+  subline(ctx, spec.subline, opts.align === "center" ? box.left + box.width / 2 : box.left, end, box.width, p, opts.align ?? "left");
+  return end + (spec.subline ? 90 : 0);
+}
+
+// Icono debajo de todo el texto; si no cabe, se encoge (nunca tapa texto).
+function iconBelow(ctx, spec, p, box, end, r = 210) {
+  if (spec.icon === "ninguno") return;
+  const room = box.bottom - end - 40;
+  const radius = Math.max(90, Math.min(r, room / 2));
+  iconDisc(ctx, spec, p, box.left + box.width / 2, end + 40 + radius, radius);
+}
+
+const LAYOUT_DRAW_V = {
+  "split-left"(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    const end = vText(ctx, spec, p, accent, box, (box.bottom - box.top) * (spec.icon === "ninguno" ? 0.9 : 0.5));
+    iconBelow(ctx, spec, p, box, end);
+  },
+  "split-right"(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    if (spec.icon !== "ninguno") {
+      iconDisc(ctx, spec, p, box.left + box.width / 2, box.top + 210, 200);
+      box.top += 460;
+    }
+    vText(ctx, spec, p, accent, box, box.bottom - box.top);
+  },
+  center(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    const t = fit(ctx, words(spec), box.width, box.bottom - box.top - (spec.subline ? 120 : 0), { max: 260, min: 60, maxLines: 6 });
+    const block = t.lines.length * t.size * t.lineHeight;
+    box.top += Math.max(0, (box.bottom - box.top - block - (spec.subline ? 120 : 0)) / 2);
+    vText(ctx, spec, p, accent, box, block + 10, { align: "center" });
+  },
+  "big-number"(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    const all = words(spec);
+    const hero = all.find((w) => /\d/.test(w)) ?? all.find((w) => clean(w) === accent) ?? all[0];
+    const big = fit(ctx, [hero], box.width, 620, { max: 640, maxLines: 1 });
+    ctx.font = `${big.size}px ${DISPLAY}`;
+    ctx.textBaseline = "top";
+    ctx.fillStyle = p.accent;
+    ctx.strokeStyle = outline(p);
+    ctx.lineWidth = big.size * 0.05;
+    const heroTop = box.top + big.size * 0.06; // el glifo de Anton sobresale por arriba
+    ctx.strokeText(hero, box.left, heroTop);
+    ctx.fillText(hero, box.left, heroTop);
+    const rest = all.filter((w) => w !== hero);
+    const t = fit(ctx, rest.length ? rest : [""], box.width, box.bottom - box.top - big.size, { max: 180, min: 56, maxLines: 4 });
+    const end = drawLines(ctx, t, box.left, box.top + big.size * 1.02, p, { accent });
+    subline(ctx, spec.subline, box.left, end, box.width, p);
+  },
+  versus(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    const all = words(spec);
+    const cut = all.findIndex((w) => ["VS", "VS.", "CONTRA", "O", "OR"].includes(w));
+    const first = cut > 0 ? all.slice(0, cut) : all.slice(0, Math.ceil(all.length / 2));
+    const second = cut > 0 ? all.slice(cut + 1) : all.slice(Math.ceil(all.length / 2));
+    const mid = (box.top + box.bottom) / 2;
+    ctx.save();
+    ctx.fillStyle = p.bg2;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(0, mid + 60);
+    ctx.lineTo(W, mid - 60);
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.fill();
+    ctx.restore();
+    const half = (box.bottom - box.top) / 2 - 120;
+    const t1 = fit(ctx, first, box.width, half, { max: 220, maxLines: 3 });
+    drawLines(ctx, t1, box.left + box.width / 2, mid - 120 - t1.lines.length * t1.size * t1.lineHeight, p, { accent, align: "center" });
+    const t2 = fit(ctx, second.length ? second : [""], box.width, half, { max: 220, maxLines: 3 });
+    drawLines(ctx, t2, box.left + box.width / 2, mid + 130, p, { accent, align: "center" });
+    ctx.fillStyle = p.accent;
+    ctx.beginPath();
+    ctx.arc(box.left + box.width / 2, mid, 110, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = `130px ${DISPLAY}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = p.accentText;
+    ctx.fillText("VS", box.left + box.width / 2, mid + 6);
+    ctx.textAlign = "left";
+  },
+  question(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    ctx.save();
+    ctx.font = `900px ${DISPLAY}`;
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "center";
+    ctx.fillStyle = p.accent;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText("?", box.left + box.width * 0.62, box.bottom);
+    ctx.restore();
+    vText(ctx, spec, p, accent, box, (box.bottom - box.top) * 0.5);
+  },
+  stack(ctx, spec, p) {
+    const box = vBox(spec);
+    ctx.save();
+    ctx.translate(box.left + 20, 0);
+    ctx.rotate(-0.03);
+    const t = fit(ctx, words(spec), box.width - 40, (box.bottom - box.top) * 0.55, { max: 190, min: 60, maxLines: 6, lineHeight: 1.18 });
+    const end = drawLines(ctx, t, 0, box.top + 20, p, { highlightBars: true });
+    ctx.restore();
+    subline(ctx, spec.subline, box.left + 20, end + 10, box.width, p);
+    iconBelow(ctx, spec, p, box, end + (spec.subline ? 110 : 20), 180);
+  },
+  arrow(ctx, spec, p, accent) {
+    const box = vBox(spec);
+    const end = vText(ctx, spec, p, accent, box, (box.bottom - box.top) * 0.45);
+    const cx = box.left + box.width / 2;
+    const iconY = Math.min(box.bottom - 190, end + 420);
+    ctx.save();
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 30;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(box.left + 60, end + 40);
+    ctx.quadraticCurveTo(box.left + 20, iconY, cx - 220, iconY);
+    ctx.stroke();
+    ctx.translate(cx - 200, iconY);
+    ctx.fillStyle = p.accent;
+    ctx.beginPath();
+    ctx.moveTo(40, 0);
+    ctx.lineTo(-30, -48);
+    ctx.lineTo(-30, 48);
+    ctx.fill();
+    ctx.restore();
+    iconDisc(ctx, spec.icon === "ninguno" ? { ...spec, icon: "flecha" } : spec, p, cx + 40, iconY, 170);
+  },
+};
+
 // Dibuja `spec` en el canvas, escalado a su tamaño (el canvas puede ser una miniatura).
 export function drawThumbnail(canvas, spec) {
+  VERTICAL = canvas.height > canvas.width;
+  [W, H, PAD] = VERTICAL ? [1080, 1920, 80] : [SIZE.width, SIZE.height, 64];
   const ctx = canvas.getContext("2d");
   const p = PALETTES[spec.palette] ?? PALETTES.noche;
   ctx.save();
   ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
   ctx.clearRect(0, 0, W, H);
   background(ctx, spec, p);
-  const draw = LAYOUT_DRAW[LAYOUTS[spec.layout] ? spec.layout : "split-left"];
+  const layouts = VERTICAL ? LAYOUT_DRAW_V : LAYOUT_DRAW;
+  const draw = layouts[LAYOUTS[spec.layout] ? spec.layout : "split-left"];
   draw(ctx, spec, p, spec.accentWord ? clean(spec.accentWord) : null);
   badge(ctx, spec.badge, p);
   ctx.restore();
 }
 
-// PNG 1280×720 listo para subir a YouTube.
-export async function thumbnailBlob(spec) {
+// PNG listo para YouTube: 1280×720, o 1080×1920 para Shorts (vertical).
+export async function thumbnailBlob(spec, { vertical = false } = {}) {
   await ensureFonts();
   const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = vertical ? 1080 : SIZE.width;
+  canvas.height = vertical ? 1920 : SIZE.height;
   drawThumbnail(canvas, spec);
   return new Promise((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo crear la imagen."))), "image/png"),

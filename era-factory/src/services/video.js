@@ -3,7 +3,7 @@
 // incrustados en la imagen solo si se piden. Archivos en
 // <mediaRoot>/<productionId>/video-<versión>/
 import { existsSync } from "node:fs";
-import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MediaError, lastLine, run } from "./process.js";
 
@@ -100,7 +100,8 @@ export function createVideo(
 
     // size: {width, height} (1920×1080 horizontal, 1080×1920 Shorts); ass: subtítulos para incrustar.
     // -> { folder, video: {file, duration, width, height, sizeBytes}, subtitles: {file}, scenes: [{...scene, file}] }
-    async produce({ productionId, scenes, palette, size, audioFile, totalDuration, srt, ass, burnSubtitles, signal, onProgress }) {
+    // coverFile (opcional): PNG del tamaño del video que reemplaza la última escena (portada de un Short).
+    async produce({ productionId, scenes, palette, size, audioFile, totalDuration, srt, ass, burnSubtitles, coverFile, signal, onProgress }) {
       if (!/^[\w-]+$/.test(productionId)) throw new MediaError("Identificador de producción no válido.");
       const status = availability();
       if (!status.ok) throw new MediaError(status.reason, { kind: "config" });
@@ -112,6 +113,7 @@ export function createVideo(
         await writeFile(join(dir, "subtitles.srt"), srt);
         if (burnSubtitles) await writeFile(join(dir, "subtitles.ass"), ass);
         await renderScenes({ scenes, palette, size, dir, signal, onProgress });
+        if (coverFile) await copyFile(coverFile, join(dir, `${scenes.at(-1).id}.png`));
         await encode({ scenes, audioFile, totalDuration, burnSubtitles, dir, signal, onProgress });
         const { size: bytes } = await stat(join(dir, "video.mp4"));
         for (const old of await readdir(join(mediaRoot, productionId)).catch(() => []))

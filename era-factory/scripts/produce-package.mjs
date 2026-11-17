@@ -66,6 +66,18 @@ export async function producePackage(pkg, { plan, out, voice, speed, subs, confi
   const issues = checkPlan(beats, timed, pkg.script);
   if (issues.length) throw new Error(`El plan de pantalla tiene problemas: ${issues.join(" ")}`);
 
+  // Portada exportada desde la versión online (PNG del tamaño del formato).
+  let coverFile = null;
+  if (pkg.coverPng) {
+    const png = Buffer.from(String(pkg.coverPng).replace(/^data:image\/png;base64,/, ""), "base64");
+    const [w, h] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+    if (png.toString("ascii", 1, 4) === "PNG" && w === format.width && h === format.height) {
+      coverFile = join(work, "portada.png");
+      await mkdir(work, { recursive: true });
+      await writeFile(coverFile, png);
+    } else log(`La portada mide ${w}×${h} y el video ${format.width}×${format.height}: no se usa como última escena.`);
+  }
+
   const total = Math.round((n.full.duration + END_CARD_SECONDS) * 1000) / 1000;
   const scenes = buildScenes(timed, beats, { title: pkg.script.title, channel: pkg.channel.name, callToAction: pkg.script.callToAction, totalDuration: total });
   const size = { width: format.width, height: format.height };
@@ -82,6 +94,8 @@ export async function producePackage(pkg, { plan, out, voice, speed, subs, confi
     srt: toSrt(cues),
     ass: toAss(cues, { ...size, vertical: size.height > size.width }),
     burnSubtitles: burn,
+    // En un Short la portada es la última escena: al subirlo, elige ese fotograma.
+    coverFile: format.height > format.width ? coverFile : null,
   });
 
   // Entrega: video, subtítulos y texto para YouTube, con nombres claros.
@@ -92,6 +106,10 @@ export async function producePackage(pkg, { plan, out, voice, speed, subs, confi
   const chapters = format.width > format.height ? youtubeChapters(timed, total).text : "";
   const tags = (pkg.script.tags ?? []).map((t) => `#${t.replace(/\s+/g, "")}`).join(" ");
   await writeFile(files.description, [pkg.script.title, "", pkg.script.description, chapters, tags].filter(Boolean).join("\n\n") + "\n");
+  if (coverFile) {
+    files.cover = join(out, "portada.png");
+    await copyFile(coverFile, files.cover);
+  }
   await rm(work, { recursive: true, force: true });
   return { ...files, duration: total, size, scenes: scenes.length, burnSubtitles: burn, format: pkg.channel.format };
 }
