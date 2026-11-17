@@ -6,6 +6,7 @@ import { Camara } from './Camara';
 import { Fondo } from './Fondo';
 import { Destello, Encabezado } from './Encabezado';
 import { Subtitulos } from './Subtitulos';
+import { FUENTE } from './fuente';
 import {
   ILUSTRACION_ALTO,
   ILUSTRACION_ANCHO,
@@ -98,29 +99,44 @@ export const DatoCurioso: React.FC<DatoProps> = ({
             <PuntitosArriba paleta={paleta} />
           </Lienzo>
         ) : null}
-        {escenas.map((escena, i) => (
-          <Sequence
-            key={i}
-            from={Math.round(inicios[i] * fps)}
-            durationInFrames={Math.round(escena.duracion * fps)}
-            name={`Escena ${i + 1}`}
-          >
-            <Lienzo id={`e${i}`}>
-              <Dibujo
-                escena={i}
-                duracion={Math.round(escena.duracion * fps)}
-                paleta={paleta}
-                cuando={cuandoEn(i)}
-              />
-            </Lienzo>
-          </Sequence>
-        ))}
+        {escenas.map((escena, i) => {
+          // Redondear inicio y fin (no la duración) evita huecos de 1 cuadro entre escenas.
+          const desde = Math.round(inicios[i] * fps);
+          const hasta = Math.round((inicios[i] + escena.duracion) * fps);
+          return (
+            <Sequence key={i} from={desde} durationInFrames={hasta - desde} name={`Escena ${i + 1}`}>
+              <Lienzo id={`e${i}`}>
+                <Dibujo escena={i} duracion={hasta - desde} paleta={paleta} cuando={cuandoEn(i)} />
+              </Lienzo>
+            </Sequence>
+          );
+        })}
       </Camara>
 
       <Destello escenas={escenas} />
       <Encabezado etiqueta={etiqueta} paleta={paleta} escenas={escenas} />
       <Subtitulos grupos={grupos} paleta={paleta} />
-      {audio ? <Html5Audio src={staticFile(audio)} /> : null}
+      {audio ? (
+        <>
+          <Html5Audio src={staticFile(audio)} />
+          {/* La licencia del modelo de voz (OpenRAIL-M) pide avisar que es IA. */}
+          <AbsoluteFill style={{ top: 1480, height: 40, alignItems: 'center' }}>
+            <div
+              style={{
+                fontFamily: FUENTE,
+                fontWeight: 900,
+                fontSize: 30,
+                letterSpacing: 3,
+                color: 'rgba(255,255,255,0.88)',
+                WebkitTextStroke: `6px ${paleta.borde}`,
+                paintOrder: 'stroke fill',
+              }}
+            >
+              VOZ CREADA CON IA
+            </div>
+          </AbsoluteFill>
+        </>
+      ) : null}
     </AbsoluteFill>
   );
 };

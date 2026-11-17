@@ -1,0 +1,360 @@
+{
+  "voz": "M5",
+  "motor": "supertonic3 (VoiceStudio)",
+  "velocidad": 1.24,
+  "duracionVoz": 18.208,
+  "audio": "voz/Boligrafo.wav",
+  "duraciones": [
+    3.48,
+    5.193,
+    5.126,
+    6.201
+  ],
+  "textoHablado": "Muchas tapas de bolígrafo tienen este agujero. ¿Para qué es? Si alguien se traga la tapa, el agujero deja pasar aire y reduce el riesgo de asfixia. El agujerito del tubo es otro: iguala la presión para que la tinta fluya y no se salga. No es un adorno, es una norma de seguridad. ¿Qué investigo después?",
+  "transcripcion": "Muchas tapas de bolígrafo tienen este agujero, para que es, si alguien se traga la tapa el agujero deja pasar aire y reduce el riesgo de asfixia. El agujerito del tubo es otro, igual a la presión para que la tinta fluya y no se salga. No es un adorno, es una norma de seguridad. Que investigo después.",
+  "tokensEmparejados": "56/57",
+  "palabras": [
+    {
+      "texto": "Muchas",
+      "inicio": 0,
+      "fin": 0.26,
+      "escena": 0
+    },
+    {
+      "texto": "tapas",
+      "inicio": 0.26,
+      "fin": 0.68,
+      "escena": 0
+    },
+    {
+      "texto": "de",
+      "inicio": 0.68,
+      "fin": 0.76,
+      "escena": 0
+    },
+    {
+      "texto": "bolígrafo",
+      "inicio": 0.76,
+      "fin": 1.24,
+      "escena": 0
+    },
+    {
+      "texto": "tienen",
+      "inicio": 1.24,
+      "fin": 1.46,
+      "escena": 0
+    },
+    {
+      "texto": "este",
+      "inicio": 1.46,
+      "fin": 1.76,
+      "escena": 0
+    },
+    {
+      "texto": "agujero.",
+      "inicio": 1.76,
+      "fin": 2.26,
+      "escena": 0
+    },
+    {
+      "texto": "¿Para",
+      "inicio": 2.719,
+      "fin": 2.84,
+      "escena": 0
+    },
+    {
+      "texto": "qué",
+      "inicio": 2.84,
+      "fin": 3.04,
+      "escena": 0
+    },
+    {
+      "texto": "es?",
+      "inicio": 3.04,
+      "fin": 3.32,
+      "escena": 0
+    },
+    {
+      "texto": "Si",
+      "inicio": 3.6,
+      "fin": 3.7,
+      "escena": 1
+    },
+    {
+      "texto": "alguien",
+      "inicio": 3.7,
+      "fin": 3.9,
+      "escena": 1
+    },
+    {
+      "texto": "se",
+      "inicio": 3.9,
+      "fin": 4.1,
+      "escena": 1
+    },
+    {
+      "texto": "traga",
+      "inicio": 4.1,
+      "fin": 4.44,
+      "escena": 1
+    },
+    {
+      "texto": "la",
+      "inicio": 4.44,
+      "fin": 4.56,
+      "escena": 1
+    },
+    {
+      "texto": "tapa,",
+      "inicio": 4.56,
+      "fin": 4.84,
+      "escena": 1
+    },
+    {
+      "texto": "el",
+      "inicio": 4.84,
+      "fin": 5.04,
+      "escena": 1
+    },
+    {
+      "texto": "agujero",
+      "inicio": 5.04,
+      "fin": 5.52,
+      "escena": 1
+    },
+    {
+      "texto": "deja",
+      "inicio": 5.52,
+      "fin": 5.76,
+      "escena": 1
+    },
+    {
+      "texto": "pasar",
+      "inicio": 5.76,
+      "fin": 6.08,
+      "escena": 1
+    },
+    {
+      "texto": "aire",
+      "inicio": 6.08,
+      "fin": 6.42,
+      "escena": 1
+    },
+    {
+      "texto": "y",
+      "inicio": 6.42,
+      "fin": 6.6,
+      "escena": 1
+    },
+    {
+      "texto": "reduce",
+      "inicio": 6.6,
+      "fin": 6.98,
+      "escena": 1
+    },
+    {
+      "texto": "el",
+      "inicio": 6.98,
+      "fin": 7.2,
+      "escena": 1
+    },
+    {
+      "texto": "riesgo",
+      "inicio": 7.2,
+      "fin": 7.62,
+      "escena": 1
+    },
+    {
+      "texto": "de",
+      "inicio": 7.62,
+      "fin": 7.72,
+      "escena": 1
+    },
+    {
+      "texto": "asfixia",
+      "inicio": 7.72,
+      "fin": 8.38,
+      "escena": 1
+    },
+    {
+      "texto": "El",
+      "inicio": 8.793,
+      "fin": 8.88,
+      "escena": 2
+    },
+    {
+      "texto": "agujerito",
+      "inicio": 8.88,
+      "fin": 9.38,
+      "escena": 2
+    },
+    {
+      "texto": "del",
+      "inicio": 9.38,
+      "fin": 9.5,
+      "escena": 2
+    },
+    {
+      "texto": "tubo",
+      "inicio": 9.5,
+      "fin": 9.78,
+      "escena": 2
+    },
+    {
+      "texto": "es",
+      "inicio": 9.78,
+      "fin": 9.9,
+      "escena": 2
+    },
+    {
+      "texto": "otro:",
+      "inicio": 9.9,
+      "fin": 10.16,
+      "escena": 2
+    },
+    {
+      "texto": "iguala",
+      "inicio": 10.16,
+      "fin": 10.92,
+      "escena": 2
+    },
+    {
+      "texto": "la",
+      "inicio": 10.92,
+      "fin": 11,
+      "escena": 2
+    },
+    {
+      "texto": "presión",
+      "inicio": 11,
+      "fin": 11.42,
+      "escena": 2
+    },
+    {
+      "texto": "para",
+      "inicio": 11.42,
+      "fin": 11.68,
+      "escena": 2
+    },
+    {
+      "texto": "que",
+      "inicio": 11.68,
+      "fin": 11.82,
+      "escena": 2
+    },
+    {
+      "texto": "la",
+      "inicio": 11.82,
+      "fin": 11.94,
+      "escena": 2
+    },
+    {
+      "texto": "tinta",
+      "inicio": 11.94,
+      "fin": 12.26,
+      "escena": 2
+    },
+    {
+      "texto": "fluya",
+      "inicio": 12.26,
+      "fin": 12.74,
+      "escena": 2
+    },
+    {
+      "texto": "y",
+      "inicio": 12.74,
+      "fin": 12.82,
+      "escena": 2
+    },
+    {
+      "texto": "no",
+      "inicio": 12.82,
+      "fin": 12.96,
+      "escena": 2
+    },
+    {
+      "texto": "se",
+      "inicio": 12.96,
+      "fin": 13.1,
+      "escena": 2
+    },
+    {
+      "texto": "salga",
+      "inicio": 13.1,
+      "fin": 13.56,
+      "escena": 2
+    },
+    {
+      "texto": "No",
+      "inicio": 13.919,
+      "fin": 14.04,
+      "escena": 3
+    },
+    {
+      "texto": "es",
+      "inicio": 14.04,
+      "fin": 14.16,
+      "escena": 3
+    },
+    {
+      "texto": "un",
+      "inicio": 14.16,
+      "fin": 14.3,
+      "escena": 3
+    },
+    {
+      "texto": "adorno,",
+      "inicio": 14.3,
+      "fin": 14.66,
+      "escena": 3
+    },
+    {
+      "texto": "es",
+      "inicio": 14.82,
+      "fin": 14.9,
+      "escena": 3
+    },
+    {
+      "texto": "una",
+      "inicio": 14.9,
+      "fin": 15.08,
+      "escena": 3
+    },
+    {
+      "texto": "norma",
+      "inicio": 15.08,
+      "fin": 15.58,
+      "escena": 3
+    },
+    {
+      "texto": "de",
+      "inicio": 15.58,
+      "fin": 15.66,
+      "escena": 3
+    },
+    {
+      "texto": "seguridad.",
+      "inicio": 15.66,
+      "fin": 16.18,
+      "escena": 3
+    },
+    {
+      "texto": "¿Qué",
+      "inicio": 17.155,
+      "fin": 17.22,
+      "escena": 3
+    },
+    {
+      "texto": "investigo",
+      "inicio": 17.22,
+      "fin": 17.7,
+      "escena": 3
+    },
+    {
+      "texto": "después?",
+      "inicio": 17.7,
+      "fin": 17.9,
+      "escena": 3
+    }
+  ]
+}

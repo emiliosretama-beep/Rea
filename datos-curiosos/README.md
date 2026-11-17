@@ -35,18 +35,39 @@ npm run render:boligrafo # out/Boligrafo.mp4
 - Los dibujos cambian justo cuando aparece la palabra clave (por ejemplo,
   el "Fe" se tacha cuando se lee "hierro").
 
-## Agregar la voz más adelante
+## Voz
 
-La plantilla ya acepta dos props opcionales:
+Narración en español generada con [VoiceStudio](https://github.com/debpalash/VoiceStudio)
+(backend local, solo CPU) usando el motor **Supertonic-3** y su voz incluida
+**M5** (masculina, no es la voz clonada de ninguna persona). Velocidad entre
+x1.08 y x1.24 para que cada narración dure unos 18 s. Volumen normalizado a
+-14 LUFS.
 
-```ts
-audio: 'voz/pulpo.wav',          // archivo dentro de public/
-palabras: [{ texto: 'Este', inicio: 0.12, fin: 0.31 }, ...] // tiempos reales
-```
+`npm run voz` (con el backend de VoiceStudio corriendo en `127.0.0.1:3900`):
 
-Con `palabras`, los subtítulos y los dibujos se sincronizan con la voz real
-en lugar del tiempo del guion. Los tiempos se pueden sacar con un modelo de
-transcripción con marcas por palabra (por ejemplo Whisper).
+1. Genera la voz a partir del texto de cada escena; los números se dicen en
+   palabras ("3" -> "tres", "#2" -> "número dos").
+2. La transcribe con Whisper small (`Systran/faster-whisper-small`, MIT) para
+   sacar el tiempo real de cada palabra y la alinea con el guion.
+3. Si Whisper marca una palabra dentro de una pausa, la mueve al final de la pausa.
+4. Guarda `public/voz/<id>.wav` y `src/voz/<id>.json` (tiempos por palabra y
+   duración de cada escena según la voz).
+
+`npm run voz -- --reusar-voz` vuelve a medir los tiempos sin generar voz nueva.
+
+Las escenas duran lo que dura su frase en la voz (no 2/6/7/5 s fijos): decir el
+gancho de forma clara toma unos 3,4 s, y forzarlo a 2 s no se entendía.
+
+### Licencias de la voz
+
+- Supertonic-3: **OpenRAIL-M**, permite uso comercial y monetizar. Su
+  restricción (e) obliga a **avisar claramente que el contenido está hecho con
+  IA**: por eso el video lleva "VOZ CREADA CON IA" y al publicar hay que
+  activar la etiqueta de contenido generado con IA de cada red.
+- Whisper small: MIT (solo se usa para medir tiempos; no va en el video).
+- VoiceStudio: AGPL-3.0 (es la herramienta; no cambia la licencia del audio).
+- OmniVoice, el motor por defecto de VoiceStudio, es CC-BY-NC (no comercial):
+  **no se usó**.
 
 ## Datos verificados
 

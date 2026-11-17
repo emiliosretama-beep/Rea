@@ -31,7 +31,8 @@
     "lint": "eslint src && tsc",
     "render:pulpo": "remotion render Pulpo out/Pulpo.mp4 --crf=18",
     "render:saltar": "remotion render Saltar out/Saltar.mp4 --crf=18",
-    "render:boligrafo": "remotion render Boligrafo out/Boligrafo.mp4 --crf=18"
+    "render:boligrafo": "remotion render Boligrafo out/Boligrafo.mp4 --crf=18",
+    "voz": "node scripts/generar-voz.mjs"
   },
   "allowScripts": {
     "esbuild": false

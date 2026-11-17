@@ -1,0 +1,324 @@
+{
+  "voz": "M5",
+  "motor": "supertonic3 (VoiceStudio)",
+  "velocidad": 1.13,
+  "duracionVoz": 18.383,
+  "audio": "voz/Pulpo.wav",
+  "duraciones": [
+    3.38,
+    5.52,
+    2.939,
+    8.161
+  ],
+  "textoHablado": "Este animal tiene tres corazones y sangre azul. Dos corazones mandan la sangre a las branquias. El tercero la manda al resto del cuerpo. Su sangre es azul porque usa cobre en vez de hierro. Cuando nada, el corazón principal se detiene. Por eso prefiere caminar. Sigue para el dato número dos.",
+  "transcripcion": "Este animal tiene tres corazones sangre azul, dos corazones mandan la sangre a las branquias, el tercero la manda al resto del cuerpo. Su sangre es azul porque usa cobre en vez de hierro, cuando nada el corazón principal se detiene, por eso prefiere caminar. Sigue para el dato número dos.",
+  "tokensEmparejados": "51/52",
+  "palabras": [
+    {
+      "texto": "Este",
+      "inicio": 0,
+      "fin": 0.28,
+      "escena": 0
+    },
+    {
+      "texto": "animal",
+      "inicio": 0.28,
+      "fin": 0.66,
+      "escena": 0
+    },
+    {
+      "texto": "tiene",
+      "inicio": 0.66,
+      "fin": 1.02,
+      "escena": 0
+    },
+    {
+      "texto": "3",
+      "inicio": 1.02,
+      "fin": 1.32,
+      "escena": 0
+    },
+    {
+      "texto": "corazones",
+      "inicio": 1.32,
+      "fin": 1.94,
+      "escena": 0
+    },
+    {
+      "texto": "y",
+      "inicio": 1.94,
+      "fin": 1.99,
+      "escena": 0
+    },
+    {
+      "texto": "sangre",
+      "inicio": 1.94,
+      "fin": 2.3,
+      "escena": 0
+    },
+    {
+      "texto": "azul",
+      "inicio": 2.3,
+      "fin": 2.72,
+      "escena": 0
+    },
+    {
+      "texto": "Dos",
+      "inicio": 3.5,
+      "fin": 3.62,
+      "escena": 1
+    },
+    {
+      "texto": "corazones",
+      "inicio": 3.62,
+      "fin": 4.22,
+      "escena": 1
+    },
+    {
+      "texto": "mandan",
+      "inicio": 4.22,
+      "fin": 4.72,
+      "escena": 1
+    },
+    {
+      "texto": "la",
+      "inicio": 4.72,
+      "fin": 4.9,
+      "escena": 1
+    },
+    {
+      "texto": "sangre",
+      "inicio": 4.9,
+      "fin": 5.24,
+      "escena": 1
+    },
+    {
+      "texto": "a",
+      "inicio": 5.24,
+      "fin": 5.4,
+      "escena": 1
+    },
+    {
+      "texto": "las",
+      "inicio": 5.4,
+      "fin": 5.52,
+      "escena": 1
+    },
+    {
+      "texto": "branquias.",
+      "inicio": 5.52,
+      "fin": 6.1,
+      "escena": 1
+    },
+    {
+      "texto": "El",
+      "inicio": 6.58,
+      "fin": 6.68,
+      "escena": 1
+    },
+    {
+      "texto": "tercero",
+      "inicio": 6.68,
+      "fin": 7.16,
+      "escena": 1
+    },
+    {
+      "texto": "la",
+      "inicio": 7.16,
+      "fin": 7.28,
+      "escena": 1
+    },
+    {
+      "texto": "manda",
+      "inicio": 7.28,
+      "fin": 7.7,
+      "escena": 1
+    },
+    {
+      "texto": "al",
+      "inicio": 7.7,
+      "fin": 7.8,
+      "escena": 1
+    },
+    {
+      "texto": "resto",
+      "inicio": 7.8,
+      "fin": 8.08,
+      "escena": 1
+    },
+    {
+      "texto": "del",
+      "inicio": 8.08,
+      "fin": 8.3,
+      "escena": 1
+    },
+    {
+      "texto": "cuerpo",
+      "inicio": 8.3,
+      "fin": 8.74,
+      "escena": 1
+    },
+    {
+      "texto": "Su",
+      "inicio": 9.02,
+      "fin": 9.1,
+      "escena": 2
+    },
+    {
+      "texto": "sangre",
+      "inicio": 9.1,
+      "fin": 9.42,
+      "escena": 2
+    },
+    {
+      "texto": "es",
+      "inicio": 9.42,
+      "fin": 9.58,
+      "escena": 2
+    },
+    {
+      "texto": "azul",
+      "inicio": 9.58,
+      "fin": 9.88,
+      "escena": 2
+    },
+    {
+      "texto": "porque",
+      "inicio": 9.88,
+      "fin": 10.12,
+      "escena": 2
+    },
+    {
+      "texto": "usa",
+      "inicio": 10.12,
+      "fin": 10.38,
+      "escena": 2
+    },
+    {
+      "texto": "cobre",
+      "inicio": 10.38,
+      "fin": 10.82,
+      "escena": 2
+    },
+    {
+      "texto": "en",
+      "inicio": 10.82,
+      "fin": 10.96,
+      "escena": 2
+    },
+    {
+      "texto": "vez",
+      "inicio": 10.96,
+      "fin": 11.08,
+      "escena": 2
+    },
+    {
+      "texto": "de",
+      "inicio": 11.08,
+      "fin": 11.24,
+      "escena": 2
+    },
+    {
+      "texto": "hierro",
+      "inicio": 11.24,
+      "fin": 11.62,
+      "escena": 2
+    },
+    {
+      "texto": "Cuando",
+      "inicio": 11.959,
+      "fin": 12.06,
+      "escena": 3
+    },
+    {
+      "texto": "nada,",
+      "inicio": 12.06,
+      "fin": 12.54,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 12.54,
+      "fin": 12.78,
+      "escena": 3
+    },
+    {
+      "texto": "corazón",
+      "inicio": 12.78,
+      "fin": 13.14,
+      "escena": 3
+    },
+    {
+      "texto": "principal",
+      "inicio": 13.14,
+      "fin": 13.66,
+      "escena": 3
+    },
+    {
+      "texto": "se",
+      "inicio": 13.66,
+      "fin": 13.96,
+      "escena": 3
+    },
+    {
+      "texto": "detiene.",
+      "inicio": 13.96,
+      "fin": 14.46,
+      "escena": 3
+    },
+    {
+      "texto": "Por",
+      "inicio": 14.899,
+      "fin": 14.98,
+      "escena": 3
+    },
+    {
+      "texto": "eso",
+      "inicio": 14.98,
+      "fin": 15.16,
+      "escena": 3
+    },
+    {
+      "texto": "prefiere",
+      "inicio": 15.16,
+      "fin": 15.62,
+      "escena": 3
+    },
+    {
+      "texto": "caminar.",
+      "inicio": 15.62,
+      "fin": 16.16,
+      "escena": 3
+    },
+    {
+      "texto": "Sigue",
+      "inicio": 16.55,
+      "fin": 16.76,
+      "escena": 3
+    },
+    {
+      "texto": "para",
+      "inicio": 16.76,
+      "fin": 17,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 17,
+      "fin": 17.14,
+      "escena": 3
+    },
+    {
+      "texto": "dato",
+      "inicio": 17.14,
+      "fin": 17.32,
+      "escena": 3
+    },
+    {
+      "texto": "#2",
+      "inicio": 17.32,
+      "fin": 18.06,
+      "escena": 3
+    }
+  ]
+}

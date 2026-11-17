@@ -31,6 +31,8 @@ export type PalabraConTiempo = {
   /** Segundos desde el inicio del video. */
   inicio: number;
   fin: number;
+  /** Escena a la que pertenece (si no se indica, se deduce por el tiempo). */
+  escena?: number;
 };
 
 export type Tema = 'pulpo' | 'saltar' | 'boligrafo';

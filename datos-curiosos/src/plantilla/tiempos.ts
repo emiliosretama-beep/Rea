@@ -91,6 +91,7 @@ export const tiemposDelAudio = (
 ): Palabra[] => {
   const inicios = inicioDeEscenas(escenas);
   return palabras.map((p) => {
+    if (p.escena !== undefined) return { ...p, escena: p.escena };
     let escena = 0;
     inicios.forEach((inicio, i) => {
       if (p.inicio >= inicio) escena = i;

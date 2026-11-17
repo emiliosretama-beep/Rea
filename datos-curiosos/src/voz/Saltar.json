@@ -1,0 +1,324 @@
+{
+  "voz": "M5",
+  "motor": "supertonic3 (VoiceStudio)",
+  "velocidad": 1.08,
+  "duracionVoz": 17.964,
+  "audio": "voz/Saltar.wav",
+  "duraciones": [
+    3.47,
+    3.345,
+    5.211,
+    7.974
+  ],
+  "textoHablado": "¿Y si los ocho mil millones de personas saltáramos a la vez? Todos juntos pesamos muchísimo menos que la Tierra. Por eso no se movería nada que se pueda notar. Solo habría pequeñas vibraciones. Para moverlo de forma notable tendríamos que pesar billones de veces más. ¿Qué pasa en el número tres?",
+  "transcripcion": "Y si los 8 mil millones de personas saltáramos a la vez, todos juntos pesamos muchísimo menos que la Tierra, por eso no se movería nada que se pueda notar. Sólo habría pequeñas vibraciones, para moverlo de forma notable tendríamos que pesar billones de veces más. ¿Qué pasa en el número 3?",
+  "tokensEmparejados": "52/52",
+  "palabras": [
+    {
+      "texto": "¿Y",
+      "inicio": 0,
+      "fin": 0.14,
+      "escena": 0
+    },
+    {
+      "texto": "si",
+      "inicio": 0.14,
+      "fin": 0.26,
+      "escena": 0
+    },
+    {
+      "texto": "los",
+      "inicio": 0.26,
+      "fin": 0.46,
+      "escena": 0
+    },
+    {
+      "texto": "8",
+      "inicio": 0.46,
+      "fin": 0.74,
+      "escena": 0
+    },
+    {
+      "texto": "mil",
+      "inicio": 0.74,
+      "fin": 1,
+      "escena": 0
+    },
+    {
+      "texto": "millones",
+      "inicio": 1,
+      "fin": 1.48,
+      "escena": 0
+    },
+    {
+      "texto": "de",
+      "inicio": 1.48,
+      "fin": 1.62,
+      "escena": 0
+    },
+    {
+      "texto": "personas",
+      "inicio": 1.62,
+      "fin": 2,
+      "escena": 0
+    },
+    {
+      "texto": "saltáramos",
+      "inicio": 2,
+      "fin": 2.56,
+      "escena": 0
+    },
+    {
+      "texto": "a",
+      "inicio": 2.56,
+      "fin": 2.72,
+      "escena": 0
+    },
+    {
+      "texto": "la",
+      "inicio": 2.72,
+      "fin": 2.8,
+      "escena": 0
+    },
+    {
+      "texto": "vez?",
+      "inicio": 2.8,
+      "fin": 3.08,
+      "escena": 0
+    },
+    {
+      "texto": "Todos",
+      "inicio": 3.59,
+      "fin": 3.74,
+      "escena": 1
+    },
+    {
+      "texto": "juntos",
+      "inicio": 3.74,
+      "fin": 4.1,
+      "escena": 1
+    },
+    {
+      "texto": "pesamos",
+      "inicio": 4.1,
+      "fin": 4.68,
+      "escena": 1
+    },
+    {
+      "texto": "muchísimo",
+      "inicio": 4.68,
+      "fin": 5.16,
+      "escena": 1
+    },
+    {
+      "texto": "menos",
+      "inicio": 5.16,
+      "fin": 5.64,
+      "escena": 1
+    },
+    {
+      "texto": "que",
+      "inicio": 5.64,
+      "fin": 5.92,
+      "escena": 1
+    },
+    {
+      "texto": "la",
+      "inicio": 5.92,
+      "fin": 6.06,
+      "escena": 1
+    },
+    {
+      "texto": "Tierra",
+      "inicio": 6.06,
+      "fin": 6.5,
+      "escena": 1
+    },
+    {
+      "texto": "Por",
+      "inicio": 6.935,
+      "fin": 7.02,
+      "escena": 2
+    },
+    {
+      "texto": "eso",
+      "inicio": 7.02,
+      "fin": 7.24,
+      "escena": 2
+    },
+    {
+      "texto": "no",
+      "inicio": 7.24,
+      "fin": 7.42,
+      "escena": 2
+    },
+    {
+      "texto": "se",
+      "inicio": 7.42,
+      "fin": 7.56,
+      "escena": 2
+    },
+    {
+      "texto": "movería",
+      "inicio": 7.56,
+      "fin": 8.06,
+      "escena": 2
+    },
+    {
+      "texto": "nada",
+      "inicio": 8.06,
+      "fin": 8.26,
+      "escena": 2
+    },
+    {
+      "texto": "que",
+      "inicio": 8.26,
+      "fin": 8.5,
+      "escena": 2
+    },
+    {
+      "texto": "se",
+      "inicio": 8.5,
+      "fin": 8.68,
+      "escena": 2
+    },
+    {
+      "texto": "pueda",
+      "inicio": 8.68,
+      "fin": 8.96,
+      "escena": 2
+    },
+    {
+      "texto": "notar.",
+      "inicio": 8.96,
+      "fin": 9.5,
+      "escena": 2
+    },
+    {
+      "texto": "Solo",
+      "inicio": 9.826,
+      "fin": 10.16,
+      "escena": 2
+    },
+    {
+      "texto": "habría",
+      "inicio": 10.16,
+      "fin": 10.48,
+      "escena": 2
+    },
+    {
+      "texto": "pequeñas",
+      "inicio": 10.48,
+      "fin": 10.96,
+      "escena": 2
+    },
+    {
+      "texto": "vibraciones",
+      "inicio": 10.96,
+      "fin": 11.54,
+      "escena": 2
+    },
+    {
+      "texto": "Para",
+      "inicio": 12.146,
+      "fin": 12.28,
+      "escena": 3
+    },
+    {
+      "texto": "moverlo",
+      "inicio": 12.28,
+      "fin": 12.7,
+      "escena": 3
+    },
+    {
+      "texto": "de",
+      "inicio": 12.7,
+      "fin": 12.8,
+      "escena": 3
+    },
+    {
+      "texto": "forma",
+      "inicio": 12.8,
+      "fin": 13.04,
+      "escena": 3
+    },
+    {
+      "texto": "notable",
+      "inicio": 13.04,
+      "fin": 13.52,
+      "escena": 3
+    },
+    {
+      "texto": "tendríamos",
+      "inicio": 13.52,
+      "fin": 14.12,
+      "escena": 3
+    },
+    {
+      "texto": "que",
+      "inicio": 14.12,
+      "fin": 14.28,
+      "escena": 3
+    },
+    {
+      "texto": "pesar",
+      "inicio": 14.28,
+      "fin": 14.58,
+      "escena": 3
+    },
+    {
+      "texto": "billones",
+      "inicio": 14.58,
+      "fin": 15.08,
+      "escena": 3
+    },
+    {
+      "texto": "de",
+      "inicio": 15.08,
+      "fin": 15.24,
+      "escena": 3
+    },
+    {
+      "texto": "veces",
+      "inicio": 15.24,
+      "fin": 15.44,
+      "escena": 3
+    },
+    {
+      "texto": "más.",
+      "inicio": 15.44,
+      "fin": 15.74,
+      "escena": 3
+    },
+    {
+      "texto": "¿Qué",
+      "inicio": 16.477,
+      "fin": 16.56,
+      "escena": 3
+    },
+    {
+      "texto": "pasa",
+      "inicio": 16.56,
+      "fin": 16.82,
+      "escena": 3
+    },
+    {
+      "texto": "en",
+      "inicio": 16.82,
+      "fin": 16.98,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 16.98,
+      "fin": 17.08,
+      "escena": 3
+    },
+    {
+      "texto": "#3?",
+      "inicio": 17.08,
+      "fin": 17.7,
+      "escena": 3
+    }
+  ]
+}
