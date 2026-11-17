@@ -15,6 +15,8 @@ export const FORMATS = {
     maxHookWords: 15,
     burnSubtitles: true, // mucha gente ve los Shorts sin sonido
     subtitleWords: 3, // subtítulos de pocas palabras: retienen más en vertical
+    sectionCards: false, // sin tarjetas «Parte 1…»: en 30 s cada segundo cuenta
+    minGap: 0.6, // cambios rápidos: en una lista dicha deprisa, cada palabra sale cuando se dice
   },
   long: {
     label: "Videos horizontales 16:9",
@@ -28,6 +30,8 @@ export const FORMATS = {
     maxHookWords: 70,
     burnSubtitles: false, // en YouTube es mejor subir el .srt
     subtitleWords: null, // frases completas, 2 líneas de 42 caracteres
+    sectionCards: true,
+    minGap: 2.5,
   },
 };
 

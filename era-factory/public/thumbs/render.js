@@ -375,8 +375,10 @@ const vBox = (spec) => {
 function vText(ctx, spec, p, accent, box, maxH, opts = {}) {
   const t = fit(ctx, words(spec), box.width, maxH, { max: 230, min: 60, maxLines: 5, ...opts });
   const end = drawLines(ctx, t, opts.align === "center" ? box.left + box.width / 2 : box.left, box.top, p, { accent, ...opts });
-  subline(ctx, spec.subline, opts.align === "center" ? box.left + box.width / 2 : box.left, end, box.width, p, opts.align ?? "left");
-  return end + (spec.subline ? 90 : 0);
+  // Con letra enorme, el trazo de Anton baja más que su línea: el margen crece con el tamaño.
+  const gap = t.size * 0.12;
+  subline(ctx, spec.subline, opts.align === "center" ? box.left + box.width / 2 : box.left, end + gap, box.width, p, opts.align ?? "left");
+  return end + gap + (spec.subline ? 90 : 0);
 }
 
 // Icono debajo de todo el texto; si no cabe, se encoge (nunca tapa texto).

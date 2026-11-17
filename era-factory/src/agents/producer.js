@@ -134,6 +134,8 @@ export const producer = {
       channel: ctx.channel.name,
       callToAction: script.callToAction,
       totalDuration,
+      sectionCards: format.sectionCards,
+      minGap: format.minGap,
     });
     // Si no elegiste nada, manda el formato: los Shorts llevan subtítulos incrustados.
     const chosen = ctx.production.settings?.video?.burnSubtitles;

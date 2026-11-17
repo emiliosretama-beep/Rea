@@ -39,17 +39,22 @@ export function timeSentences(segments) {
 // Escenas: tarjeta de título (gancho), tarjeta de cada sección, los momentos
 // que eligió el productor y la tarjeta final. Sin huecos ni solapes.
 // plan: { [segmentId]: [{ fromSentence, onScreen, kind }] }
-export function buildScenes(timed, plan, { title, channel, callToAction, totalDuration }) {
+// sectionCards: tarjeta con el nombre de cada sección (en Shorts no: gasta tiempo).
+// minGap: segundos mínimos entre cambios de pantalla dentro de una sección.
+export function buildScenes(timed, plan, { title, channel, callToAction, totalDuration, sectionCards = true, minGap = 2.5 }) {
+  // Una escena más corta que el hueco mínimo se descarta; con tolerancia para que
+  // las que duran justo minGap (1,1999… por redondeo) no se pierdan.
+  const minScene = Math.min(MIN_SCENE, minGap) - 0.05;
   const raw = [];
   timed.forEach((seg, index) => {
     const beats = [...(plan[seg.id] ?? [])].sort((a, b) => a.fromSentence - b.fromSentence);
     const segEnd = index < timed.length - 1 ? timed[index + 1].start : seg.end;
     const at = (i) => seg.sentences[Math.min(i, seg.sentences.length - 1)]?.start ?? seg.start;
     if (seg.id === "hook") raw.push({ kind: "title", text: title, context: channel, start: seg.start });
-    else if (seg.id !== "outro") raw.push({ kind: "section", text: seg.label, context: `Parte ${index}`, start: seg.start });
+    else if (seg.id !== "outro" && sectionCards) raw.push({ kind: "section", text: seg.label, context: `Parte ${index}`, start: seg.start });
     for (const beat of beats) {
       // La tarjeta de título o de sección se ve al menos un momento.
-      const start = Math.max(at(beat.fromSentence), raw.length && raw.at(-1).start >= seg.start ? raw.at(-1).start + 2.5 : seg.start);
+      const start = Math.max(at(beat.fromSentence), raw.length && raw.at(-1).start >= seg.start ? raw.at(-1).start + minGap : seg.start);
       if (start < segEnd - MIN_SCENE / 2) raw.push({ kind: beat.kind, text: beat.onScreen, context: seg.id === "hook" ? "" : seg.label, start });
     }
   });
@@ -59,7 +64,7 @@ export function buildScenes(timed, plan, { title, channel, callToAction, totalDu
   const scenes = [];
   raw.forEach((scene, i) => {
     const end = i < raw.length - 1 ? raw[i + 1].start : totalDuration;
-    if (end - scene.start < MIN_SCENE && scene.kind !== "end" && scenes.length) {
+    if (end - scene.start < minScene && scene.kind !== "end" && scenes.length) {
       return; // la anterior se alarga hasta la siguiente
     }
     scenes.push({ ...scene, start: round(scene.start), end: round(end) });

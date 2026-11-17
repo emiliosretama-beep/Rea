@@ -79,7 +79,7 @@ export async function producePackage(pkg, { plan, out, voice, speed, subs, confi
   }
 
   const total = Math.round((n.full.duration + END_CARD_SECONDS) * 1000) / 1000;
-  const scenes = buildScenes(timed, beats, { title: pkg.script.title, channel: pkg.channel.name, callToAction: pkg.script.callToAction, totalDuration: total });
+  const scenes = buildScenes(timed, beats, { title: pkg.script.title, channel: pkg.channel.name, callToAction: pkg.script.callToAction, totalDuration: total, sectionCards: format.sectionCards, minGap: format.minGap });
   const size = { width: format.width, height: format.height };
   const cues = subtitleCues(timed, { maxWords: format.subtitleWords });
   const burn = subs === undefined ? format.burnSubtitles : subs;

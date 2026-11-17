@@ -123,3 +123,15 @@ test("rehacer la narración invalida el video montado con la anterior", async (t
   assert.equal(tasks.producer.status, "pending");
   assert.equal(tasks.producer.output, null);
 });
+
+test("Shorts: sin tarjetas de sección y con cortes rápidos que no se pierden por redondeo", () => {
+  const timed = timeSentences([
+    { id: "hook", label: "Gancho", text: "Mira esto.", start: 0, end: 1.5, duration: 1.5 },
+    { id: "s2", label: "Materiales", text: "Con jabón. Pasta de papel. Pintura. Y pelo real de la barbería.", start: 2.1, end: 6.1, duration: 4 },
+    { id: "outro", label: "Cierre", text: "Comenta.", start: 6.7, end: 7.5, duration: 0.8 },
+  ]);
+  const plan = { s2: ["JABÓN", "PASTA DE PAPEL", "PINTURA", "PELO REAL"].map((onScreen, i) => ({ fromSentence: i, onScreen, kind: "point" })) };
+  const scenes = buildScenes(timed, plan, { title: "T", channel: "C", callToAction: "", totalDuration: 10.5, sectionCards: false, minGap: 0.6 });
+  assert.equal(scenes.some((s) => s.kind === "section"), false, "sin tarjetas de sección");
+  assert.deepEqual(scenes.filter((s) => s.kind === "point").map((s) => s.text), ["JABÓN", "PASTA DE PAPEL", "PINTURA", "PELO REAL"]);
+});
