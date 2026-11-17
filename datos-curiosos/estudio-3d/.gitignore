@@ -1,0 +1,4 @@
+stills/
+*.mp4
+render*.log
+videos/*/audio/*.crudo.wav

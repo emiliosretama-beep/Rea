@@ -1,0 +1,434 @@
+{
+  "voz": "M5",
+  "motor": "supertonic3 (VoiceStudio)",
+  "velocidad": 1.21,
+  "duracionVoz": 21.904,
+  "audio": "voz/vo.wav",
+  "duraciones": [
+    3.397,
+    2.4,
+    2.799,
+    4.4,
+    3.771,
+    10.233
+  ],
+  "textoHablado": "Si te tragas un chicle, ¿se queda siete años en tu panza? Mucha gente lo cree, pero es puro mito. Tu cuerpo no puede digerir la goma del chicle,. pero tampoco la deja atrapada: el intestino la empuja como a todo lo demás. En uno a tres días sale por el camino de siempre. Eso sí: tragarse muchos seguidos puede tapar el intestino, sobre todo en niños. ¿Lo sabías?",
+  "transcripcion": "Si te tragas un chicle, se queda siete años en tu panza. Mucha gente lo cree, pero es puro mito. Tu cuerpo no puede digerir la goma del chicle, pero tampoco la deja atrapada, el intestino la empuja como a todo lo demás. En uno a tres días sale por el camino de siempre. Eso sí, tragarse muchos seguidos puede tapar el intestino, sobre todo en niños. ¿Lo sabías?",
+  "tokensEmparejados": "69/69",
+  "palabras": [
+    {
+      "texto": "Si",
+      "inicio": 0,
+      "fin": 0.18,
+      "escena": 0
+    },
+    {
+      "texto": "te",
+      "inicio": 0.18,
+      "fin": 0.32,
+      "escena": 0
+    },
+    {
+      "texto": "tragas",
+      "inicio": 0.32,
+      "fin": 0.66,
+      "escena": 0
+    },
+    {
+      "texto": "un",
+      "inicio": 0.66,
+      "fin": 0.8,
+      "escena": 0
+    },
+    {
+      "texto": "chicle,",
+      "inicio": 0.8,
+      "fin": 1.16,
+      "escena": 0
+    },
+    {
+      "texto": "¿se",
+      "inicio": 1.28,
+      "fin": 1.38,
+      "escena": 0
+    },
+    {
+      "texto": "queda",
+      "inicio": 1.38,
+      "fin": 1.64,
+      "escena": 0
+    },
+    {
+      "texto": "7",
+      "inicio": 1.64,
+      "fin": 1.94,
+      "escena": 0
+    },
+    {
+      "texto": "años",
+      "inicio": 1.94,
+      "fin": 2.3,
+      "escena": 0
+    },
+    {
+      "texto": "en",
+      "inicio": 2.3,
+      "fin": 2.52,
+      "escena": 0
+    },
+    {
+      "texto": "tu",
+      "inicio": 2.52,
+      "fin": 2.62,
+      "escena": 0
+    },
+    {
+      "texto": "panza?",
+      "inicio": 2.62,
+      "fin": 3.08,
+      "escena": 0
+    },
+    {
+      "texto": "Mucha",
+      "inicio": 3.517,
+      "fin": 3.76,
+      "escena": 1
+    },
+    {
+      "texto": "gente",
+      "inicio": 3.76,
+      "fin": 3.94,
+      "escena": 1
+    },
+    {
+      "texto": "lo",
+      "inicio": 3.94,
+      "fin": 4.16,
+      "escena": 1
+    },
+    {
+      "texto": "cree,",
+      "inicio": 4.16,
+      "fin": 4.38,
+      "escena": 1
+    },
+    {
+      "texto": "pero",
+      "inicio": 4.58,
+      "fin": 4.7,
+      "escena": 1
+    },
+    {
+      "texto": "es",
+      "inicio": 4.7,
+      "fin": 4.86,
+      "escena": 1
+    },
+    {
+      "texto": "puro",
+      "inicio": 4.86,
+      "fin": 5.06,
+      "escena": 1
+    },
+    {
+      "texto": "mito.",
+      "inicio": 5.06,
+      "fin": 5.44,
+      "escena": 1
+    },
+    {
+      "texto": "Tu",
+      "inicio": 5.917,
+      "fin": 5.98,
+      "escena": 2
+    },
+    {
+      "texto": "cuerpo",
+      "inicio": 5.98,
+      "fin": 6.34,
+      "escena": 2
+    },
+    {
+      "texto": "no",
+      "inicio": 6.34,
+      "fin": 6.58,
+      "escena": 2
+    },
+    {
+      "texto": "puede",
+      "inicio": 6.58,
+      "fin": 6.78,
+      "escena": 2
+    },
+    {
+      "texto": "digerir",
+      "inicio": 6.78,
+      "fin": 7.26,
+      "escena": 2
+    },
+    {
+      "texto": "la",
+      "inicio": 7.26,
+      "fin": 7.42,
+      "escena": 2
+    },
+    {
+      "texto": "goma",
+      "inicio": 7.42,
+      "fin": 7.68,
+      "escena": 2
+    },
+    {
+      "texto": "del",
+      "inicio": 7.68,
+      "fin": 7.82,
+      "escena": 2
+    },
+    {
+      "texto": "chicle,",
+      "inicio": 7.82,
+      "fin": 8.28,
+      "escena": 2
+    },
+    {
+      "texto": "pero",
+      "inicio": 8.716,
+      "fin": 8.82,
+      "escena": 3
+    },
+    {
+      "texto": "tampoco",
+      "inicio": 8.82,
+      "fin": 9.2,
+      "escena": 3
+    },
+    {
+      "texto": "la",
+      "inicio": 9.2,
+      "fin": 9.5,
+      "escena": 3
+    },
+    {
+      "texto": "deja",
+      "inicio": 9.5,
+      "fin": 9.72,
+      "escena": 3
+    },
+    {
+      "texto": "atrapada:",
+      "inicio": 9.72,
+      "fin": 10.28,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 10.46,
+      "fin": 10.56,
+      "escena": 3
+    },
+    {
+      "texto": "intestino",
+      "inicio": 10.56,
+      "fin": 11.08,
+      "escena": 3
+    },
+    {
+      "texto": "la",
+      "inicio": 11.08,
+      "fin": 11.22,
+      "escena": 3
+    },
+    {
+      "texto": "empuja",
+      "inicio": 11.22,
+      "fin": 11.62,
+      "escena": 3
+    },
+    {
+      "texto": "como",
+      "inicio": 11.62,
+      "fin": 11.86,
+      "escena": 3
+    },
+    {
+      "texto": "a",
+      "inicio": 11.86,
+      "fin": 11.96,
+      "escena": 3
+    },
+    {
+      "texto": "todo",
+      "inicio": 11.96,
+      "fin": 12.12,
+      "escena": 3
+    },
+    {
+      "texto": "lo",
+      "inicio": 12.12,
+      "fin": 12.28,
+      "escena": 3
+    },
+    {
+      "texto": "demás.",
+      "inicio": 12.28,
+      "fin": 12.58,
+      "escena": 3
+    },
+    {
+      "texto": "En",
+      "inicio": 13.116,
+      "fin": 13.22,
+      "escena": 4
+    },
+    {
+      "texto": "1",
+      "inicio": 13.22,
+      "fin": 13.38,
+      "escena": 4
+    },
+    {
+      "texto": "a",
+      "inicio": 13.38,
+      "fin": 13.48,
+      "escena": 4
+    },
+    {
+      "texto": "3",
+      "inicio": 13.48,
+      "fin": 13.68,
+      "escena": 4
+    },
+    {
+      "texto": "días",
+      "inicio": 13.68,
+      "fin": 13.86,
+      "escena": 4
+    },
+    {
+      "texto": "sale",
+      "inicio": 13.86,
+      "fin": 14.14,
+      "escena": 4
+    },
+    {
+      "texto": "por",
+      "inicio": 14.14,
+      "fin": 14.36,
+      "escena": 4
+    },
+    {
+      "texto": "el",
+      "inicio": 14.36,
+      "fin": 14.48,
+      "escena": 4
+    },
+    {
+      "texto": "camino",
+      "inicio": 14.48,
+      "fin": 14.76,
+      "escena": 4
+    },
+    {
+      "texto": "de",
+      "inicio": 14.76,
+      "fin": 14.96,
+      "escena": 4
+    },
+    {
+      "texto": "siempre.",
+      "inicio": 14.96,
+      "fin": 15.36,
+      "escena": 4
+    },
+    {
+      "texto": "Eso",
+      "inicio": 16.887,
+      "fin": 17.08,
+      "escena": 5
+    },
+    {
+      "texto": "sí:",
+      "inicio": 17.08,
+      "fin": 17.34,
+      "escena": 5
+    },
+    {
+      "texto": "tragarse",
+      "inicio": 17.68,
+      "fin": 18.06,
+      "escena": 5
+    },
+    {
+      "texto": "muchos",
+      "inicio": 18.06,
+      "fin": 18.28,
+      "escena": 5
+    },
+    {
+      "texto": "seguidos",
+      "inicio": 18.28,
+      "fin": 18.7,
+      "escena": 5
+    },
+    {
+      "texto": "puede",
+      "inicio": 18.7,
+      "fin": 18.88,
+      "escena": 5
+    },
+    {
+      "texto": "tapar",
+      "inicio": 18.88,
+      "fin": 19.1,
+      "escena": 5
+    },
+    {
+      "texto": "el",
+      "inicio": 19.1,
+      "fin": 19.24,
+      "escena": 5
+    },
+    {
+      "texto": "intestino,",
+      "inicio": 19.24,
+      "fin": 19.72,
+      "escena": 5
+    },
+    {
+      "texto": "sobre",
+      "inicio": 19.82,
+      "fin": 19.98,
+      "escena": 5
+    },
+    {
+      "texto": "todo",
+      "inicio": 19.98,
+      "fin": 20.18,
+      "escena": 5
+    },
+    {
+      "texto": "en",
+      "inicio": 20.18,
+      "fin": 20.34,
+      "escena": 5
+    },
+    {
+      "texto": "niños.",
+      "inicio": 20.34,
+      "fin": 20.64,
+      "escena": 5
+    },
+    {
+      "texto": "¿Lo",
+      "inicio": 21.24,
+      "fin": 21.3,
+      "escena": 5
+    },
+    {
+      "texto": "sabías?",
+      "inicio": 21.3,
+      "fin": 21.62,
+      "escena": 5
+    }
+  ]
+}

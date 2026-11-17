@@ -36,7 +36,9 @@ const ANTES_DE_FRASE = 0.12; // la escena empieza un poco antes que su primera p
 
 // Cómo se dice en voz alta lo que en pantalla va con números o símbolos.
 const LECTURA = {
+  '1': 'uno',
   '3': 'tres',
+  '7': 'siete',
   '8': 'ocho',
   '30': 'treinta',
   '5500': 'cinco mil quinientos',
