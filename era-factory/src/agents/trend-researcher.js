@@ -93,7 +93,9 @@ export const trendResearcher = {
         ctx.log(`YouTube no disponible: ${err.message} Se sigue solo con la web.`, "warn");
       }
     } else {
-      ctx.log("Sin YOUTUBE_API_KEY: la investigación usa solo búsqueda web.", "warn");
+      // Con búsqueda web, avisa de que falta la key de YouTube; sin ella (versión
+      // online) el mensaje de abajo ya explica con qué se investiga.
+      if (services.llm.webSearch) ctx.log("Sin YOUTUBE_API_KEY: la investigación usa solo búsqueda web.", "warn");
     }
 
     const ytBlock = youtubeVideos?.length

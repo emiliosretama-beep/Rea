@@ -205,3 +205,15 @@ test("sin búsqueda web: las ideas sin fuente pasan con aviso y el material se c
   const strict = trendResearcher.validate({ ...research.output, dataSources: { webSearch: true } });
   assert.ok(strict.issues.some((i) => /no cita ninguna fuente/.test(i)));
 });
+
+test("sin búsqueda web no se dice que la investigación «usa búsqueda web»", async (t) => {
+  const { factory, llm } = await makeFactory({ fixtures: { "trends.research": { text: "Notas", sources: [] } } });
+  t.after(() => factory.close());
+  llm.webSearch = false;
+  const channel = factory.db.createChannel(CHANNEL);
+  const production = factory.orchestrator.startProduction({ channelId: channel.id, material: "Fuente A\nFuente B\nFuente C" });
+  await factory.orchestrator.idle();
+  const logs = factory.db.listLogs({ productionId: production.id }).map((l) => l.message);
+  assert.equal(logs.some((m) => /usa solo búsqueda web/.test(m)), false);
+  assert.ok(logs.some((m) => /no tiene búsqueda web/.test(m)));
+});
