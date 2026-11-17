@@ -110,4 +110,15 @@ export const MOCK_FIXTURES = {
       { claimIndex: 1, verdict: "sin_respaldo", note: "La fuente 3 es un foro; conviene confirmarlo." },
     ],
   },
+  "performance.analyze": {
+    verdict: "sin_referencia",
+    summary: `${S} Es el primer video con métricas: no hay con qué comparar. Las cifras son de prueba.`,
+    worked: [`${S} El gancho retuvo a buena parte del público en los primeros segundos.`],
+    didnt: [`${S} Falta el CTR de impresiones para valorar la miniatura.`],
+    learnings: [
+      { for: "guionista", text: `${S} Mantén el gancho en una sola frase con una pregunta.`, evidence: "Dato de prueba." },
+      { for: "miniaturas", text: `${S} Prueba un titular de 3 palabras.`, evidence: "Dato de prueba." },
+    ],
+    nextTest: `${S} Cambia solo el titular de la portada y mira el % que se quedó.`,
+  },
 };

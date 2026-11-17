@@ -8,7 +8,7 @@
 // composiciones gráficas con tipografía, icono y color.
 import { BACKGROUNDS, ICONS, LAYOUTS, LIMITS, PALETTES, checkSpec } from "../../public/thumbs/catalog.js";
 import { FORMATS, formatOf } from "../../public/formats.js";
-import { LANGUAGE_RULE, channelBrief, feedbackBlock } from "./shared.js";
+import { LANGUAGE_RULE, channelBrief, feedbackBlock, insightsBlock } from "./shared.js";
 
 export const PROPOSALS = 10;
 
@@ -117,6 +117,7 @@ export const thumbnailDesigner = {
         `El titular de la miniatura NO repite el título del video: lo complementa. Máximo ${LIMITS.headlineWords} ` +
         `palabras. No uses cifras, fechas ni datos que no estén en el guion. Después elige las 3 mejores para este ` +
         `público (índices desde 0) y explica por qué. ${LANGUAGE_RULE}` +
+        insightsBlock(ctx.insights) +
         feedbackBlock(ctx),
     });
     return {

@@ -13,12 +13,14 @@
 //   validate(output, ctx) -> { issues: [], warnings: [] }
 //                                  issues = se repite la tarea; warnings = se avisa
 //   titleFrom?(output)             título del video, si este agente lo decide
+//   standalone?                    no entra en la cadena: lo lanza el usuario aparte
 import { trendResearcher } from "./trend-researcher.js";
 import { audienceAnalyst } from "./audience-analyst.js";
 import { scriptwriter } from "./scriptwriter.js";
 import { narrator } from "./narrator.js";
 import { thumbnailDesigner } from "./thumbnail-designer.js";
 import { producer } from "./producer.js";
+import { performanceAnalyst } from "./performance-analyst.js";
 import { planned } from "./planned.js";
 
 const AGENTS = [
@@ -28,13 +30,7 @@ const AGENTS = [
   narrator,
   thumbnailDesigner,
   producer,
-  planned({
-    id: "performance-analyst",
-    name: "Analista de rendimiento",
-    role: "Analíticas",
-    phase: 5,
-    description: "Lee las métricas reales de YouTube Analytics (OAuth), detecta qué funcionó y envía aprendizajes al investigador y al guionista.",
-  }),
+  performanceAnalyst,
 ];
 
 // unavailable: { agentId: motivo } para agentes que esta versión no puede
@@ -45,9 +41,10 @@ export function createRegistry({ agents = AGENTS, unavailable = {} } = {}) {
   return {
     get: (id) => byId.get(id),
     all: () => agents,
-    pipeline: () => agents.filter((a) => a.implemented),
+    // standalone: trabaja fuera de la cadena (el analista, tras publicar el video).
+    pipeline: () => agents.filter((a) => a.implemented && !a.standalone),
     describe: () =>
-      agents.map(({ id, name, role, phase, description, implemented, unavailableReason, dependsOn, requiresApproval }) => ({
+      agents.map(({ id, name, role, phase, description, implemented, unavailableReason, dependsOn, requiresApproval, standalone }) => ({
         id,
         name,
         role,
@@ -57,6 +54,7 @@ export function createRegistry({ agents = AGENTS, unavailable = {} } = {}) {
         unavailableReason: unavailableReason ?? null,
         dependsOn,
         requiresApproval,
+        standalone: Boolean(standalone),
       })),
   };
 }

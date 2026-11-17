@@ -33,6 +33,8 @@ propia ERA Studio.
   cambios nuevos se publican primero en un artifact DEV aparte y pasan a la
   URL estable (con un tag `era-factory-vX.Y.Z` nuevo) solo cuando él lo
   apruebe. Allí no hay `confirm()`, `fetch` externo ni búsqueda web.
+- La versión DEV está en <https://claude.ai/artifact/1Hxr13yjW6waE1Bq9ZFEbm>
+  y se genera con `npm run build:dev` (`online/era-factory-dev.html`).
 - Antes de republicar la estable, lee el artifact: si alguien le añadió algo
   (como pasó con la vista Oficina), pásalo primero a `public/` para no
   borrarlo.

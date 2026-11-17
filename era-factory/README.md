@@ -5,7 +5,7 @@ investiga, decide, escribe, narra, diseña las miniaturas y monta tus videos.
 Tú supervisas, editas y apruebas desde un centro de operaciones que funciona
 en iPhone, iPad y escritorio.
 
-## Estado actual: fase 4 terminada
+## Estado actual: fase 5 en DEV (pendiente de pasar a estable)
 
 | Agente | Estado | Qué hace |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ en iPhone, iPad y escritorio.
 | 4. Narrador | ✅ Funciona (solo con servidor) | Kokoro TTS local: 54 voces en 9 idiomas, velocidad 0,7–1,3×. MP3 por sección + pista completa con pausas; los tiempos de cada sección salen de la duración real del audio. Reproductor sincronizado con el guion. **Necesita tu aprobación.** |
 | 5. Diseñador de miniaturas | ✅ Funciona (también online) | Claude propone 10 miniaturas distintas (8 diseños, 6 fondos, 8 paletas con contraste comprobado, 16 iconos) y recomienda 3. Se dibujan con Canvas; comparas, ves cómo quedan en el feed, editas en vivo y descargas el PNG 1280×720. La revisión rechaza cifras que no estén en el guion y propuestas repetidas. **Aprobar exige elegir una.** Son composiciones gráficas: sin fotos. |
 | 6. Productor | ✅ Funciona (solo con servidor) | Claude decide qué texto aparece en pantalla en cada frase; escenas 1920×1080 con la paleta de la miniatura (Pillow); MP4 H.264 + AAC con ffmpeg; subtítulos .srt (o incrustados) y capítulos de YouTube cuando cumplen sus reglas. Los tiempos de escena salen del audio real; dentro de una sección, los subtítulos son aproximados (±1 s). **Necesita tu aprobación.** |
-| 7. Analista de rendimiento | Fase 5 | YouTube Analytics (OAuth): métricas reales → aprendizajes para 1 y 3. |
+| 7. Analista de rendimiento | 🧪 En DEV (también online) | Trabaja aparte de la cadena, en la pestaña **Resultados**: pegas las cifras del video publicado (YouTube Studio, TikTok o Instagram; solo las vistas son obligatorias), las compara con la mediana de tus otros videos y envía aprendizajes con su evidencia al investigador, al analista de audiencia, al guionista y al de miniaturas. Solo usa las cifras que escribes; con menos de 2 videos no da veredicto. Conexión automática con YouTube Analytics (OAuth): pendiente, necesita servidor. |
 
 Los agentes de fases futuras aparecen en el panel marcados como planificados y
 **no se ejecutan**: no hay botones decorativos.
@@ -26,6 +26,8 @@ Los agentes de fases futuras aparecen en el panel marcados como planificados y
   <https://claude.ai/artifact/BsRfL98pX2iei5NMYQH5km>. Es la que usa Emilio.
   Incluye la vista **Oficina** (el equipo dibujado en una oficina isométrica,
   con su estado real).
+- **DEV actual:** <https://claude.ai/artifact/1Hxr13yjW6waE1Bq9ZFEbm> (`npm run build:dev`
+  → `online/era-factory-dev.html`). Trae la fase 5 y los ajustes de la Oficina.
 - Los cambios nuevos se prueban primero en una **versión DEV** (otro artifact,
   con datos aparte) y solo pasan a la URL estable cuando Emilio lo autoriza.
   Cada versión estable lleva su tag `era-factory-vX.Y.Z` para poder volver atrás.
@@ -183,7 +185,7 @@ Crea `src/agents/<id>.js` con el contrato documentado en `src/agents/index.js`
 | **2 ✅** | Narrador: Kokoro TTS local (`kokoro-onnx` 0.6.1), selector de voz, idioma y velocidad, audio por sección, reproductor sincronizado | Ninguno (local). Modelo int8 + voces desde GitHub (~115 MB) |
 | **3 ✅** | Miniaturas: 10 propuestas dibujadas con Canvas, comparación, recomendación, editor en vivo y descarga PNG 1280×720 | Ninguno (fuente Anton de Google Fonts). Fotos o imágenes con IA: pendiente de decidir |
 | **4 ✅** | Productor: escenas, montaje MP4, subtítulos, capítulos y descripción para YouTube | ffmpeg (libx264, aac, libass), Pillow y fuentes OFL (Anton, Atkinson Hyperlegible) |
-| 5 | Analista de rendimiento: métricas reales y bucle de aprendizaje; subida a YouTube opcional | YouTube Analytics API + YouTube Data API con OAuth 2.0 |
+| **5 🧪** | Analista de rendimiento: métricas que pega el usuario → comparación con el canal → aprendizajes para 4 agentes (en DEV). Pendiente: lectura automática con OAuth y subida a YouTube | Ninguno con métricas manuales. Con OAuth: YouTube Analytics API + YouTube Data API |
 
 ## Pruebas
 

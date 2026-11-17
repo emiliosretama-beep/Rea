@@ -1,16 +1,12 @@
 import { FORMATS } from "../public/formats.js";
 import { LANGUAGES, VOICES, resolveNarration, voiceById } from "./voices.js";
+import { HttpError } from "./http-error.js";
+import { createPerformance } from "./performance.js";
 
 // Rutas de la API, sin nada de Node: el servidor las expone por HTTP y la
 // versión online las llama directamente en el navegador. Una sola lógica.
 
-export class HttpError extends Error {
-  constructor(status, message, details) {
-    super(message);
-    this.status = status;
-    this.details = details;
-  }
-}
+export { HttpError };
 
 // Lo que la interfaz puede saber de la configuración (nunca secretos).
 export function publicStatus(config, services) {
@@ -57,7 +53,8 @@ function parseChannel(body) {
 }
 
 export function createRoutes(factory) {
-  const { db, orchestrator, registry, config, services } = factory;
+  const { db, orchestrator, registry, config, services, bus } = factory;
+  const performance = createPerformance({ db, bus, llm: services.llm });
 
   // El audio generado vive fuera de la base de datos: se borra con su producción.
   const removeMedia = (id) => Promise.resolve(services.tts?.removeProduction?.(id)).catch(() => {});
@@ -94,7 +91,7 @@ export function createRoutes(factory) {
     ["GET", /^\/api\/status$/, () => ({
       ...publicStatus(config, services),
       agents: registry.describe(),
-      activity: orchestrator.activity(),
+      activity: [...orchestrator.activity(), ...performance.activity()],
       summary: summary(),
     })],
     ["GET", /^\/api\/voices$/, () => ({ languages: LANGUAGES, voices: VOICES })],
@@ -151,6 +148,8 @@ export function createRoutes(factory) {
     ["POST", /^\/api\/tasks\/([\w-]+)\/approve$/, ([id], body) => orchestrator.approve(id, { output: body.output })],
     ["POST", /^\/api\/tasks\/([\w-]+)\/changes$/, ([id], body) => orchestrator.requestChanges(id, body.notes)],
     ["POST", /^\/api\/tasks\/([\w-]+)\/retry$/, ([id]) => orchestrator.retry(id)],
+    ["PUT", /^\/api\/productions\/([\w-]+)\/results$/, ([id], body) => performance.save(id, body)],
+    ["POST", /^\/api\/productions\/([\w-]+)\/analyze$/, ([id]) => performance.analyze(id)],
     ["GET", /^\/api\/logs$/, (_, __, url) => db.listLogs({ limit: Math.min(Number(url.searchParams.get("limit")) || 60, 300) })],
   ];
 }

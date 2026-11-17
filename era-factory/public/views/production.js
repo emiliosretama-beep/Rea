@@ -8,6 +8,7 @@ import { logList } from "./common.js";
 import { bindNarration, loadVoices, narrationHtml, revoice } from "./narration.js";
 import { bindVideo, remount, videoHtml } from "./video.js";
 import { bindThumbnails, resetThumbnailEditor, thumbnailsHtml } from "./thumbnails.js";
+import { PERFORMANCE_TAB, bindPerformance, performanceNode, performancePanel } from "./performance.js";
 
 const WORDS_PER_MINUTE = 150; // mismo ritmo que usa el guionista en el servidor
 const UNSAVED = { title: "Tienes cambios sin guardar", body: "Si sales ahora se pierden.", confirmLabel: "Salir sin guardar", danger: true };
@@ -18,6 +19,7 @@ const TABS = [
   { id: "narrator", label: "Voz" },
   { id: "thumbnail-designer", label: "Miniaturas" },
   { id: "producer", label: "Video" },
+  { id: PERFORMANCE_TAB, label: "Resultados" },
   { id: "log", label: "Registro" },
 ];
 
@@ -42,6 +44,8 @@ function sourceLinks(ids, sources) {
 }
 
 function defaultTab() {
+  // Video terminado: lo siguiente es contar cómo le fue.
+  if (state.detail.production.status === "completed") return PERFORMANCE_TAB;
   const tasks = state.detail.tasks;
   const focus = tasks.find((t) => ["awaiting_approval", "failed", "running", "cancelled"].includes(t.status));
   if (focus) return focus.agentId;
@@ -76,6 +80,7 @@ function lineHtml() {
   const agents = store.status?.agents ?? [];
   return `<section class="card" aria-label="Línea de producción"><div class="core"><div class="line">${agents
     .map((a) => {
+      if (a.standalone) return performanceNode(view, a);
       const task = taskOf(a.id);
       const status = task ? task.status : "planned";
       const sub = task
@@ -369,6 +374,7 @@ function bindEditor() {
 function panelHtml() {
   if (state.tab === "log")
     return `<section class="card"><div class="core"><h2>Registro de la producción</h2>${logList(state.detail.logs.slice().reverse(), { tall: true })}</div></section>`;
+  if (state.tab === PERFORMANCE_TAB) return performancePanel(view);
   // Agentes que esta versión no puede ejecutar (voz y video en la versión online).
   const agent = store.status?.agents.find((a) => a.id === state.tab);
   if (agent && !agent.implemented)
@@ -427,6 +433,7 @@ function drawPanel() {
   if (state.draft && task?.status === "awaiting_approval" && task.agentId === "scriptwriter") bindEditor();
   if (state.tab === "narrator") bindNarration(panel);
   if (state.tab === "producer") bindVideo(panel);
+  if (state.tab === PERFORMANCE_TAB) bindPerformance(panel, view);
   if (state.tab === "thumbnail-designer" && task?.output && !["pending", "running"].includes(task.status))
     bindThumbnails(panel, task, {
       productionId: state.id,
@@ -485,7 +492,7 @@ const refresh = debounce(async () => {
   }
   state.root.querySelector("#line").innerHTML = lineHtml();
   const task = taskOf(state.tab);
-  if (state.tab === "log" || (sig(task) !== state.signature && !state.dirty)) {
+  if (state.tab === "log" || (state.tab === PERFORMANCE_TAB && !state.dirty) || (sig(task) !== state.signature && !state.dirty)) {
     if (task?.status !== "awaiting_approval") state.draft = null;
     drawPanel();
   }
@@ -555,6 +562,9 @@ async function act(button) {
     button.disabled = false;
   }
 }
+
+// Lo que necesita la pestaña Resultados (views/performance.js).
+const view = { state, taskOf, load, drawAll, drawPanel };
 
 export const productionView = {
   async render(root, [id]) {

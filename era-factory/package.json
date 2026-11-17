@@ -7,8 +7,9 @@
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server.js",
     "dev": "node --disable-warning=ExperimentalWarning --watch --env-file-if-exists=.env server.js",
-    "test": "node --disable-warning=ExperimentalWarning --test \"tests/*.test.js\" && FACTORY_TEST_DB=memory node --disable-warning=ExperimentalWarning --test tests/orchestrator.test.js tests/api.test.js",
-    "build:online": "node scripts/build-online.mjs"
+    "test": "node --disable-warning=ExperimentalWarning --test \"tests/*.test.js\" && FACTORY_TEST_DB=memory node --disable-warning=ExperimentalWarning --test tests/orchestrator.test.js tests/api.test.js tests/performance.test.js",
+    "build:online": "node scripts/build-online.mjs",
+    "build:dev": "node scripts/build-online.mjs --dev"
   },
   "engines": {
     "node": ">=22.13.0"

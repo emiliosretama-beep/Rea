@@ -29,7 +29,8 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
 
   const status = await api("GET", "/api/status");
   assert.equal(status.data.agents.length, 7);
-  assert.equal(status.data.agents.filter((a) => a.implemented).length, 6);
+  assert.equal(status.data.agents.filter((a) => a.implemented).length, 7);
+  assert.deepEqual(status.data.agents.filter((a) => a.standalone).map((a) => a.id), ["performance-analyst"]);
   assert.equal(status.data.video.ok, true);
   assert.equal(status.data.tts.ok, true);
   assert.equal(JSON.stringify(status.data).includes("apiKey"), false);

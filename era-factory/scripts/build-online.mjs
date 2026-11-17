@@ -25,7 +25,10 @@ if (/\bfrom\s*["']node:|require\(["']node:/.test(js)) throw new Error("El paquet
 
 const [index, css, favicon] = await Promise.all([read("public/index.html"), read("public/styles.css"), read("public/favicon.svg")]);
 const head = index.slice(index.indexOf("<head>") + 6, index.indexOf("</head>"));
-const title = head.match(/<title>[\s\S]*?<\/title>/)[0];
+// --dev: copia de pruebas (otro artifact, con sus propios datos) antes de tocar la estable.
+const dev = process.argv.includes("--dev");
+let title = head.match(/<title>[\s\S]*?<\/title>/)[0];
+if (dev) title = title.replace("</title>", " DEV</title>");
 const fonts = [...head.matchAll(/<link[^>]+href="https:\/\/fonts\.googleapis\.com\/css2[^>]*>/g)].map((m) => m[0]);
 
 const faviconUri = `data:image/svg+xml,${encodeURIComponent(favicon.trim())}`;
@@ -60,5 +63,6 @@ ${js}
 `;
 
 await mkdir(new URL("online/", root), { recursive: true });
-await writeFile(new URL("online/era-factory.html", root), html);
-console.log(`online/era-factory.html · ${(html.length / 1024).toFixed(0)} KB`);
+const outName = dev ? "online/era-factory-dev.html" : "online/era-factory.html";
+await writeFile(new URL(outName, root), html);
+console.log(`${outName} · ${(html.length / 1024).toFixed(0)} KB`);

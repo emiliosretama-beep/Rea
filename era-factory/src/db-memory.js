@@ -223,6 +223,13 @@ export function openMemoryDatabase(initial = {}) {
       changed("insights", insight.id);
       return clone(insight);
     },
+    removeInsights(match) {
+      for (const [id, insight] of insights)
+        if (match(clone(insight))) {
+          insights.delete(id);
+          changed("insights", id, true);
+        }
+    },
     listInsights: (channelId) =>
       [...insights.values()]
         .filter((i) => i.channelId === channelId)

@@ -281,6 +281,12 @@ export function openDatabase(path) {
       );
       return insight;
     },
+    // Borra los aprendizajes que cumplan match(insight) (p. ej. los de un video reanalizado).
+    removeInsights(match) {
+      for (const r of stmt("SELECT * FROM insights").all())
+        if (match({ id: r.id, channelId: r.channel_id, source: r.source, content: JSON.parse(r.content), createdAt: r.created_at }))
+          stmt("DELETE FROM insights WHERE id = ?").run(r.id);
+    },
     listInsights: (channelId) =>
       stmt("SELECT * FROM insights WHERE channel_id = ? ORDER BY created_at DESC LIMIT 20")
         .all(channelId)

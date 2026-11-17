@@ -36,7 +36,9 @@ function cloudBanners(mode, cloud) {
 
 export function productionRow(p) {
   const agents = store.status?.agents ?? [];
+  // Los puntos son la cadena; el analista (standalone) trabaja aparte.
   const dots = agents
+    .filter((a) => !a.standalone)
     .map((a) => {
       const task = p.tasks?.find((t) => t.agentId === a.id);
       const cls = task ? task.status : "planned";
@@ -76,7 +78,9 @@ export function agentCard(agent, task, { compact = false } = {}) {
       : "Aún no programado."
     : busy
       ? `Trabajando · <a href="#produccion-${esc(task.productionId)}">ver producción</a>`
-      : "Esperando una tarea.";
+      : agent.standalone
+        ? "Trabaja cuando le pasas las métricas de un video publicado."
+        : "Esperando una tarea.";
   return `<div class="agent${busy ? " busy" : ""}${agent.implemented ? "" : " planned"}">
     <div class="avatar">${icon(agent.id)}</div>
     <div class="grow">

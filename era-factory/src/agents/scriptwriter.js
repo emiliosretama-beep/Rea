@@ -4,7 +4,7 @@
 //    notas de investigación (respaldado / sin respaldo / contradicho).
 // La cadena se detiene aquí: el guion necesita tu aprobación (puedes editarlo).
 import { FORMATS, formatOf, targetSecondsOf } from "../../public/formats.js";
-import { LANGUAGE_RULE, channelBrief, feedbackBlock, invalidSourceIds, sourcesBlock } from "./shared.js";
+import { LANGUAGE_RULE, channelBrief, feedbackBlock, insightsBlock, invalidSourceIds, sourcesBlock } from "./shared.js";
 
 // Ritmo de narración típico en voz en off (palabras por minuto).
 export const WORDS_PER_MINUTE = 150;
@@ -125,6 +125,7 @@ export const scriptwriter = {
         `${structure} Cada sección lleva la narración exacta y notas visuales. ` +
         `Lista en claims cada dato verificable que uses con el número de su fuente, o null ` +
         `si no tiene. ${LANGUAGE_RULE}` +
+        insightsBlock(ctx.insights) +
         feedbackBlock(ctx),
     });
 
