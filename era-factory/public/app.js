@@ -9,9 +9,11 @@ import { channelsView } from "./views/channels.js";
 import { productionsView } from "./views/productions.js";
 import { productionView } from "./views/production.js";
 import { agentsView } from "./views/agents.js";
+import { oficina } from "./views/oficina.js";
 
 const NAV = [
   { href: "#centro", label: "Centro", icon: "centro", match: /^(centro)?$/ },
+  { href: "#oficina", label: "Oficina", icon: "oficina", match: /^oficina$/ },
   { href: "#canales", label: "Canales", icon: "canales", match: /^canal/ },
   { href: "#producciones", label: "Producciones", icon: "producciones", match: /^produccion/ },
   { href: "#agentes", label: "Agentes", icon: "agentes", match: /^agentes$/ },
@@ -25,6 +27,7 @@ const ROUTES = [
   [/^producciones$/, productionsView],
   [/^produccion-([\w-]+)$/, productionView],
   [/^agentes$/, agentsView],
+  [/^oficina$/, oficina],
 ];
 
 const root = document.getElementById("view");

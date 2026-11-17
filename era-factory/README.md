@@ -20,6 +20,16 @@ en iPhone, iPad y escritorio.
 Los agentes de fases futuras aparecen en el panel marcados como planificados y
 **no se ejecutan**: no hay botones decorativos.
 
+## Versión estable y versión DEV
+
+- **Estable: v1.0.0** (git tag `era-factory-v1.0.0`), publicada en
+  <https://claude.ai/artifact/BsRfL98pX2iei5NMYQH5km>. Es la que usa Emilio.
+  Incluye la vista **Oficina** (el equipo dibujado en una oficina isométrica,
+  con su estado real).
+- Los cambios nuevos se prueban primero en una **versión DEV** (otro artifact,
+  con datos aparte) y solo pasan a la URL estable cuando Emilio lo autoriza.
+  Cada versión estable lleva su tag `era-factory-vX.Y.Z` para poder volver atrás.
+
 ## Shorts verticales
 
 Cada canal elige su formato: **Shorts verticales 9:16** (por defecto) o

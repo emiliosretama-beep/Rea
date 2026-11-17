@@ -55,7 +55,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   border-top: 1px solid var(--borde);
 }
 .brand, .side-status { display: none; }
-.nav { display: grid; grid-template-columns: repeat(4, 1fr); height: var(--tabbar); }
+.nav { display: grid; grid-template-columns: repeat(5, 1fr); height: var(--tabbar); }
 .nav a {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   text-decoration: none; color: var(--suave); font-size: 11px; font-weight: 600;
@@ -430,3 +430,34 @@ input[type="range"] { width: 100%; accent-color: var(--era); min-height: 36px; }
 .th-sticky.v .thumb-frame { width: 42%; margin: 0 auto; }
 .feed.shorts { grid-template-columns: 1fr; }
 .shorts-card { display: grid; grid-template-columns: 168px 1fr; gap: 12px; align-items: end; }
+
+/* ---------- Oficina (vista isométrica del equipo) ---------- */
+.of-escena { position: relative; overflow-x: auto; overflow-y: hidden; border-radius: var(--r-xl); border: 1px solid var(--borde);
+  background: radial-gradient(600px 300px at 50% 0%, rgba(240, 78, 35, 0.08), transparent 70%), #0c1224;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.of-escena::-webkit-scrollbar { display: none; }
+.of-escena canvas { display: block; }
+.of-capa { position: absolute; left: 0; top: 0; pointer-events: none; }
+.of-tag { position: absolute; left: 0; top: 0; pointer-events: auto; display: grid; justify-items: center; gap: 4px;
+  padding: 0; border: 0; background: none; cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.of-nombre { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  font-size: 11px; font-weight: 700; color: var(--texto); background: rgba(10, 15, 30, 0.86); border: 1px solid var(--borde-fuerte); }
+.of-nombre i { width: 7px; height: 7px; border-radius: 50%; background: var(--suave); }
+.of-tag.running .of-nombre i { background: var(--era); animation: latido 1.2s infinite; }
+.of-tag.awaiting_approval .of-nombre i { background: var(--espera); }
+.of-tag.awaiting_approval .of-nombre { border-color: rgba(245, 181, 68, 0.6); }
+.of-tag.failed .of-nombre i { background: var(--error); }
+.of-tag.planned .of-nombre { opacity: 0.6; }
+.of-tag.planned .of-nombre i { background: transparent; border: 1px dashed var(--suave); }
+.of-tag.tu .of-nombre i { background: var(--era); }
+.of-tag.sel .of-nombre { border-color: var(--era); box-shadow: 0 0 0 3px var(--era-suave); }
+.of-globo { position: relative; max-width: 170px; padding: 7px 10px; border-radius: 12px; font-size: 12px; line-height: 1.35; text-align: left;
+  color: #0a0f1e; background: #f3f5fb; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.8); white-space: normal; width: max-content; }
+.of-globo::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: #f3f5fb; transform: translateX(-50%) rotate(45deg); }
+.of-tag:focus-visible { outline: none; }
+.of-tag:focus-visible .of-nombre { outline: 2px solid var(--era); outline-offset: 2px; }
+.of-pista { font-size: 12px; margin: 8px 2px 0; }
+@media (min-width: 900px) { .of-pista { display: none; } }
+.equipo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.equipo-head a { font-size: 13px; color: var(--era); text-decoration: none; font-weight: 600; }
+@media (max-width: 599px) { .of-nombre { font-size: 10px; padding: 2px 7px; } .of-globo { font-size: 11.5px; max-width: 150px; } }

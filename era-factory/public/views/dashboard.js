@@ -48,7 +48,7 @@ async function draw() {
       </div>
       <div class="stack">
         <section class="card"><div class="core">
-          <h2>Equipo en vivo</h2>
+          <div class="equipo-head"><h2>Equipo en vivo</h2><a href="#oficina">Ver la oficina →</a></div>
           <div class="list">${status.agents
             .filter((a) => a.implemented)
             .map((a) => agentCard(a, busy.get(a.id), { compact: true }))
