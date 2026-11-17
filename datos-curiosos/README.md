@@ -13,6 +13,9 @@ Cuatro videos de 1080x1920, 30 fps y 20 s, hechos con **una sola plantilla**
 Los textos, duraciones y colores están en `src/datos.ts`. Para un video nuevo
 copia un bloque, cambia el texto y la paleta, y elige los dibujos con `tema`.
 
+Además, `ojos-3d/` es un video **3D** (30 s) sobre la operación de ojos con láser,
+hecho con la skill `zach-d-films` (three.js) y la misma voz. Ver `ojos-3d/README.md`.
+
 ## Comandos
 
 ```
@@ -56,6 +59,9 @@ x1.08 y x1.24 para que cada narración dure unos 18 s. Volumen normalizado a
    duración de cada escena según la voz).
 
 `npm run voz -- --reusar-voz` vuelve a medir los tiempos sin generar voz nueva.
+
+Para otro proyecto (por ejemplo el 3D): `node scripts/generar-voz.mjs --guion=<frases.json>
+--id=<nombre> --audio=<carpeta> --json=<carpeta> --duracion=<s> --objetivo=<s>`.
 
 Las escenas duran lo que dura su frase en la voz (no 2/6/7/5 s fijos): decir el
 gancho de forma clara toma unos 3,4 s, y forzarlo a 2 s no se entendía.

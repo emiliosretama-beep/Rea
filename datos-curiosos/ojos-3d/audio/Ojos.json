@@ -1,0 +1,543 @@
+{
+  "voz": "M5",
+  "motor": "supertonic3 (VoiceStudio)",
+  "velocidad": 1.11,
+  "duracionVoz": 29.089,
+  "audio": "voz/Ojos.wav",
+  "duraciones": [
+    3.76,
+    2.162,
+    4.598,
+    3.958,
+    5.304,
+    5.148,
+    8.07
+  ],
+  "textoHablado": "Si te operas los ojos con láser, esto le pasa a tu ojo. Mucha gente cree que el láser lo quema. Pero ese láser es frío: deshace el tejido sin calentarlo. Primero, unas gotas duermen el ojo y un aparato lo deja abierto. Otro láser corta una tapa finísima en la córnea y el doctor la levanta. El láser frío le da nueva forma a la córnea. Si mueves el ojo, te sigue. La tapa vuelve a su lugar y sirve como su propia venda. ¿Te operarías?",
+  "transcripcion": "Si te operas los ojos con láser, esto le pasa a tu ojo. Mucha gente cree que el láser lo quema, pero ese láser es frío, deshace el tejido sin calentarlo. Primero, unas gotas duermen el ojo y un aparato lo deja abierto. Otro láser corta una tapa finísima en la córnea y el doctor la levanta. El láser frío le da nueva forma a la córnea. Si mueves el ojo, te sigue. La tapa vuelve a su lugar y sirve como su propia venda. te operarías.",
+  "tokensEmparejados": "87/87",
+  "palabras": [
+    {
+      "texto": "Si",
+      "inicio": 0,
+      "fin": 0.18,
+      "escena": 0
+    },
+    {
+      "texto": "te",
+      "inicio": 0.18,
+      "fin": 0.32,
+      "escena": 0
+    },
+    {
+      "texto": "operas",
+      "inicio": 0.32,
+      "fin": 0.72,
+      "escena": 0
+    },
+    {
+      "texto": "los",
+      "inicio": 0.72,
+      "fin": 0.9,
+      "escena": 0
+    },
+    {
+      "texto": "ojos",
+      "inicio": 0.9,
+      "fin": 1.18,
+      "escena": 0
+    },
+    {
+      "texto": "con",
+      "inicio": 1.18,
+      "fin": 1.46,
+      "escena": 0
+    },
+    {
+      "texto": "láser,",
+      "inicio": 1.46,
+      "fin": 1.92,
+      "escena": 0
+    },
+    {
+      "texto": "esto",
+      "inicio": 2.18,
+      "fin": 2.38,
+      "escena": 0
+    },
+    {
+      "texto": "le",
+      "inicio": 2.38,
+      "fin": 2.52,
+      "escena": 0
+    },
+    {
+      "texto": "pasa",
+      "inicio": 2.52,
+      "fin": 2.78,
+      "escena": 0
+    },
+    {
+      "texto": "a",
+      "inicio": 2.78,
+      "fin": 2.96,
+      "escena": 0
+    },
+    {
+      "texto": "tu",
+      "inicio": 2.96,
+      "fin": 3.06,
+      "escena": 0
+    },
+    {
+      "texto": "ojo.",
+      "inicio": 3.06,
+      "fin": 3.4,
+      "escena": 0
+    },
+    {
+      "texto": "Mucha",
+      "inicio": 3.88,
+      "fin": 4.14,
+      "escena": 1
+    },
+    {
+      "texto": "gente",
+      "inicio": 4.14,
+      "fin": 4.34,
+      "escena": 1
+    },
+    {
+      "texto": "cree",
+      "inicio": 4.34,
+      "fin": 4.6,
+      "escena": 1
+    },
+    {
+      "texto": "que",
+      "inicio": 4.6,
+      "fin": 4.74,
+      "escena": 1
+    },
+    {
+      "texto": "el",
+      "inicio": 4.74,
+      "fin": 4.88,
+      "escena": 1
+    },
+    {
+      "texto": "láser",
+      "inicio": 4.88,
+      "fin": 5.14,
+      "escena": 1
+    },
+    {
+      "texto": "lo",
+      "inicio": 5.14,
+      "fin": 5.3,
+      "escena": 1
+    },
+    {
+      "texto": "quema.",
+      "inicio": 5.3,
+      "fin": 5.58,
+      "escena": 1
+    },
+    {
+      "texto": "Pero",
+      "inicio": 6.042,
+      "fin": 6.16,
+      "escena": 2
+    },
+    {
+      "texto": "ese",
+      "inicio": 6.16,
+      "fin": 6.36,
+      "escena": 2
+    },
+    {
+      "texto": "láser",
+      "inicio": 6.36,
+      "fin": 6.78,
+      "escena": 2
+    },
+    {
+      "texto": "es",
+      "inicio": 6.78,
+      "fin": 6.92,
+      "escena": 2
+    },
+    {
+      "texto": "frío:",
+      "inicio": 6.92,
+      "fin": 7.3,
+      "escena": 2
+    },
+    {
+      "texto": "deshace",
+      "inicio": 7.68,
+      "fin": 8.1,
+      "escena": 2
+    },
+    {
+      "texto": "el",
+      "inicio": 8.1,
+      "fin": 8.6,
+      "escena": 2
+    },
+    {
+      "texto": "tejido",
+      "inicio": 8.6,
+      "fin": 9.08,
+      "escena": 2
+    },
+    {
+      "texto": "sin",
+      "inicio": 9.08,
+      "fin": 9.32,
+      "escena": 2
+    },
+    {
+      "texto": "calentarlo.",
+      "inicio": 9.32,
+      "fin": 10.14,
+      "escena": 2
+    },
+    {
+      "texto": "Primero,",
+      "inicio": 10.64,
+      "fin": 11.02,
+      "escena": 3
+    },
+    {
+      "texto": "unas",
+      "inicio": 11.18,
+      "fin": 11.3,
+      "escena": 3
+    },
+    {
+      "texto": "gotas",
+      "inicio": 11.3,
+      "fin": 11.66,
+      "escena": 3
+    },
+    {
+      "texto": "duermen",
+      "inicio": 11.66,
+      "fin": 12,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 12,
+      "fin": 12.16,
+      "escena": 3
+    },
+    {
+      "texto": "ojo",
+      "inicio": 12.16,
+      "fin": 12.46,
+      "escena": 3
+    },
+    {
+      "texto": "y",
+      "inicio": 12.46,
+      "fin": 12.76,
+      "escena": 3
+    },
+    {
+      "texto": "un",
+      "inicio": 12.76,
+      "fin": 12.92,
+      "escena": 3
+    },
+    {
+      "texto": "aparato",
+      "inicio": 12.92,
+      "fin": 13.26,
+      "escena": 3
+    },
+    {
+      "texto": "lo",
+      "inicio": 13.26,
+      "fin": 13.44,
+      "escena": 3
+    },
+    {
+      "texto": "deja",
+      "inicio": 13.44,
+      "fin": 13.66,
+      "escena": 3
+    },
+    {
+      "texto": "abierto.",
+      "inicio": 13.66,
+      "fin": 14.08,
+      "escena": 3
+    },
+    {
+      "texto": "Otro",
+      "inicio": 14.598,
+      "fin": 14.8,
+      "escena": 4
+    },
+    {
+      "texto": "láser",
+      "inicio": 14.8,
+      "fin": 15.12,
+      "escena": 4
+    },
+    {
+      "texto": "corta",
+      "inicio": 15.12,
+      "fin": 15.44,
+      "escena": 4
+    },
+    {
+      "texto": "una",
+      "inicio": 15.44,
+      "fin": 15.54,
+      "escena": 4
+    },
+    {
+      "texto": "tapa",
+      "inicio": 15.54,
+      "fin": 15.78,
+      "escena": 4
+    },
+    {
+      "texto": "finísima",
+      "inicio": 15.78,
+      "fin": 16.42,
+      "escena": 4
+    },
+    {
+      "texto": "en",
+      "inicio": 16.42,
+      "fin": 16.5,
+      "escena": 4
+    },
+    {
+      "texto": "la",
+      "inicio": 16.5,
+      "fin": 16.62,
+      "escena": 4
+    },
+    {
+      "texto": "córnea",
+      "inicio": 16.62,
+      "fin": 17.02,
+      "escena": 4
+    },
+    {
+      "texto": "y",
+      "inicio": 17.02,
+      "fin": 17.36,
+      "escena": 4
+    },
+    {
+      "texto": "el",
+      "inicio": 17.36,
+      "fin": 17.5,
+      "escena": 4
+    },
+    {
+      "texto": "doctor",
+      "inicio": 17.5,
+      "fin": 17.82,
+      "escena": 4
+    },
+    {
+      "texto": "la",
+      "inicio": 17.82,
+      "fin": 18.26,
+      "escena": 4
+    },
+    {
+      "texto": "levanta.",
+      "inicio": 18.26,
+      "fin": 18.84,
+      "escena": 4
+    },
+    {
+      "texto": "El",
+      "inicio": 19.902,
+      "fin": 20.02,
+      "escena": 5
+    },
+    {
+      "texto": "láser",
+      "inicio": 20.02,
+      "fin": 20.34,
+      "escena": 5
+    },
+    {
+      "texto": "frío",
+      "inicio": 20.34,
+      "fin": 20.68,
+      "escena": 5
+    },
+    {
+      "texto": "le",
+      "inicio": 20.68,
+      "fin": 20.82,
+      "escena": 5
+    },
+    {
+      "texto": "da",
+      "inicio": 20.82,
+      "fin": 20.94,
+      "escena": 5
+    },
+    {
+      "texto": "nueva",
+      "inicio": 20.94,
+      "fin": 21.12,
+      "escena": 5
+    },
+    {
+      "texto": "forma",
+      "inicio": 21.12,
+      "fin": 21.52,
+      "escena": 5
+    },
+    {
+      "texto": "a",
+      "inicio": 21.52,
+      "fin": 21.88,
+      "escena": 5
+    },
+    {
+      "texto": "la",
+      "inicio": 21.88,
+      "fin": 22.02,
+      "escena": 5
+    },
+    {
+      "texto": "córnea.",
+      "inicio": 22.02,
+      "fin": 22.44,
+      "escena": 5
+    },
+    {
+      "texto": "Si",
+      "inicio": 22.94,
+      "fin": 23.04,
+      "escena": 5
+    },
+    {
+      "texto": "mueves",
+      "inicio": 23.04,
+      "fin": 23.36,
+      "escena": 5
+    },
+    {
+      "texto": "el",
+      "inicio": 23.36,
+      "fin": 23.54,
+      "escena": 5
+    },
+    {
+      "texto": "ojo,",
+      "inicio": 23.54,
+      "fin": 23.84,
+      "escena": 5
+    },
+    {
+      "texto": "te",
+      "inicio": 24.14,
+      "fin": 24.22,
+      "escena": 5
+    },
+    {
+      "texto": "sigue.",
+      "inicio": 24.22,
+      "fin": 24.54,
+      "escena": 5
+    },
+    {
+      "texto": "La",
+      "inicio": 25.05,
+      "fin": 25.12,
+      "escena": 6
+    },
+    {
+      "texto": "tapa",
+      "inicio": 25.12,
+      "fin": 25.3,
+      "escena": 6
+    },
+    {
+      "texto": "vuelve",
+      "inicio": 25.3,
+      "fin": 25.66,
+      "escena": 6
+    },
+    {
+      "texto": "a",
+      "inicio": 25.66,
+      "fin": 25.74,
+      "escena": 6
+    },
+    {
+      "texto": "su",
+      "inicio": 25.74,
+      "fin": 25.84,
+      "escena": 6
+    },
+    {
+      "texto": "lugar",
+      "inicio": 25.84,
+      "fin": 26.1,
+      "escena": 6
+    },
+    {
+      "texto": "y",
+      "inicio": 26.1,
+      "fin": 26.26,
+      "escena": 6
+    },
+    {
+      "texto": "sirve",
+      "inicio": 26.26,
+      "fin": 26.52,
+      "escena": 6
+    },
+    {
+      "texto": "como",
+      "inicio": 26.52,
+      "fin": 26.76,
+      "escena": 6
+    },
+    {
+      "texto": "su",
+      "inicio": 26.76,
+      "fin": 26.94,
+      "escena": 6
+    },
+    {
+      "texto": "propia",
+      "inicio": 26.94,
+      "fin": 27.22,
+      "escena": 6
+    },
+    {
+      "texto": "venda.",
+      "inicio": 27.22,
+      "fin": 27.62,
+      "escena": 6
+    },
+    {
+      "texto": "¿Te",
+      "inicio": 27.62,
+      "fin": 28.18,
+      "escena": 6
+    },
+    {
+      "texto": "operarías?",
+      "inicio": 28.18,
+      "fin": 28.84,
+      "escena": 6
+    }
+  ]
+}

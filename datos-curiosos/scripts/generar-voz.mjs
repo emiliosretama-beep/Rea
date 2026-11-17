@@ -20,8 +20,16 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BACKEND = process.env.VOICESTUDIO_URL ?? 'http://127.0.0.1:3900';
 const VOZ = 'M5'; // voz masculina incluida en Supertonic-3 (no es una voz clonada)
 const IDIOMA = 'es';
-const DURACION_VIDEO = 20; // segundos
-const OBJETIVO_VOZ = 18; // segundos de narración buscados
+// Opciones --clave=valor. Sin opciones se comporta como siempre (videos de src/datos.ts, 20 s).
+//   --guion=ojos-3d/script.json  lista de frases (cada frase es una escena) de otro proyecto
+//   --id=Ojos  --audio=ojos-3d/audio  --json=ojos-3d/audio  --duracion=32  --objetivo=29
+const OPCIONES = Object.fromEntries(
+  process.argv.slice(2).filter((a) => a.startsWith('--') && a.includes('=')).map((a) => a.slice(2).split(/=(.*)/s).slice(0, 2)),
+);
+const DURACION_VIDEO = Number(OPCIONES.duracion ?? 20); // segundos
+const OBJETIVO_VOZ = Number(OPCIONES.objetivo ?? 18); // segundos de narración buscados
+const DIR_AUDIO = path.resolve(RAIZ, OPCIONES.audio ?? 'public/voz');
+const DIR_JSON = path.resolve(RAIZ, OPCIONES.json ?? 'src/voz');
 const VELOCIDAD_MIN = 1.0;
 const VELOCIDAD_MAX = 1.3;
 const ANTES_DE_FRASE = 0.12; // la escena empieza un poco antes que su primera palabra
@@ -161,15 +169,15 @@ const alinear = (tokens, transcritas) => {
 
 const procesar = async ({ id, escenas }) => {
   const { tokens, pantalla, textoHablado } = tokensDelGuion(escenas);
-  await mkdir(path.join(RAIZ, 'public/voz'), { recursive: true });
-  await mkdir(path.join(RAIZ, 'src/voz'), { recursive: true });
-  const wav = path.join(RAIZ, 'public/voz', `${id}.wav`);
+  await mkdir(DIR_AUDIO, { recursive: true });
+  await mkdir(DIR_JSON, { recursive: true });
+  const wav = path.join(DIR_AUDIO, `${id}.wav`);
 
   let velocidad;
   let duracion;
   if (REUSAR) {
     // --reusar-voz: no genera voz nueva, solo vuelve a medir los tiempos.
-    const previo = JSON.parse(await readFile(path.join(RAIZ, 'src/voz', `${id}.json`), 'utf8'));
+    const previo = JSON.parse(await readFile(path.join(DIR_JSON, `${id}.json`), 'utf8'));
     velocidad = previo.velocidad;
     duracion = duracionDe(wav);
   } else {
@@ -247,7 +255,7 @@ const procesar = async ({ id, escenas }) => {
     tokensEmparejados: `${emparejados}/${tokens.length}`,
     palabras,
   };
-  await writeFile(path.join(RAIZ, 'src/voz', `${id}.json`), JSON.stringify(salida, null, 2) + '\n');
+  await writeFile(path.join(DIR_JSON, `${id}.json`), JSON.stringify(salida, null, 2) + '\n');
   console.log(
     `${id}: voz ${duracion.toFixed(2)} s a x${velocidad} | escenas ${duraciones.join(' + ')} s | palabras alineadas ${emparejados}/${tokens.length} | inicios ajustados a silencio: ${ajustadas}`,
   );
@@ -255,6 +263,8 @@ const procesar = async ({ id, escenas }) => {
 
 const REUSAR = process.argv.includes('--reusar-voz');
 const pedidos = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const videos = (await cargarVideos()).filter((v) => !pedidos.length || pedidos.includes(v.id));
+const videos = OPCIONES.guion
+  ? [{ id: OPCIONES.id ?? 'Guion', escenas: JSON.parse(await readFile(path.resolve(RAIZ, OPCIONES.guion), 'utf8')) }]
+  : (await cargarVideos()).filter((v) => !pedidos.length || pedidos.includes(v.id));
 if (!videos.length) throw new Error('No encontré videos en src/datos.ts');
 for (const video of videos) await procesar(video);
