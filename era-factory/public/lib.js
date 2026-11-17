@@ -77,6 +77,23 @@ export function askConfirm({ title, body = "", confirmLabel = "Confirmar", dange
   });
 }
 
+// Entrega un archivo generado en la página. En claude.ai pasa por su diálogo
+// de descarga (capability downloads); con el servidor, descarga directa.
+export async function saveFile(blob, filename) {
+  if (backend()) {
+    const downloads = await globalThis.claude?.use?.("downloads").catch(() => null);
+    if (!downloads) throw new Error("Esta vista no permite descargar archivos.");
+    await downloads.save({ filename, data: blob });
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 export function toast(message, kind = "info") {
   const box = document.getElementById("toasts");
   const el = document.createElement("div");

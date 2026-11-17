@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { LLMError } from "../src/llm.js";
 import { MOCK_FIXTURES } from "../src/mock-fixtures.js";
-import { CHANNEL, makeFactory, tasksOf } from "./helpers.js";
+import { CHANNEL, chooseThumbnail, makeFactory, tasksOf } from "./helpers.js";
 
 test("la cadena avanza sola hasta el guion y espera aprobación", async (t) => {
   const { factory, llm, events } = await makeFactory();
@@ -38,6 +38,14 @@ test("la cadena avanza sola hasta el guion y espera aprobación", async (t) => {
   assert.equal(narration.status, "awaiting_approval");
   factory.orchestrator.approve(narration.id);
   await factory.orchestrator.idle();
+  // Después, 10 miniaturas: aprobar exige elegir una.
+  const thumbs = tasksOf(factory, production.id)["thumbnail-designer"];
+  assert.equal(thumbs.status, "awaiting_approval");
+  assert.equal(thumbs.output.proposals.length, 10);
+  assert.throws(() => factory.orchestrator.approve(thumbs.id), /Elige una miniatura/);
+  chooseThumbnail(factory, thumbs, 3);
+  await factory.orchestrator.idle();
+  assert.equal(tasksOf(factory, production.id)["thumbnail-designer"].output.final.layout, "big-number");
   assert.equal(factory.db.getProduction(production.id).status, "completed");
 });
 

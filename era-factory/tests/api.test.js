@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer } from "../server.js";
-import { CHANNEL, makeFactory } from "./helpers.js";
+import { CHANNEL, chooseThumbnail, makeFactory, tasksOf } from "./helpers.js";
 
 async function start(t) {
   const { factory } = await makeFactory();
@@ -29,7 +29,7 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
 
   const status = await api("GET", "/api/status");
   assert.equal(status.data.agents.length, 7);
-  assert.equal(status.data.agents.filter((a) => a.implemented).length, 4);
+  assert.equal(status.data.agents.filter((a) => a.implemented).length, 5);
   assert.equal(status.data.tts.ok, true);
   assert.equal(JSON.stringify(status.data).includes("apiKey"), false);
 
@@ -82,6 +82,14 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
   const narration = (await api("GET", `/api/productions/${production.id}`)).data.tasks.find((x) => x.agentId === "narrator");
   assert.equal(narration.status, "awaiting_approval");
   assert.equal((await api("POST", `/api/tasks/${narration.id}/approve`, {})).data.status, "done");
+  await factory.orchestrator.idle();
+  const thumbs = tasksOf(factory, production.id)["thumbnail-designer"];
+  assert.equal((await api("POST", `/api/tasks/${thumbs.id}/approve`, {})).status, 422);
+  const broken = { ...thumbs.output, selected: 0, final: { ...thumbs.output.proposals[0].spec, palette: "inventada" } };
+  const rejected = await api("POST", `/api/tasks/${thumbs.id}/approve`, { output: broken });
+  assert.equal(rejected.status, 422);
+  assert.ok(rejected.data.details.some((d) => /paleta desconocida/.test(d)));
+  chooseThumbnail(factory, thumbs);
   await factory.orchestrator.idle();
   const list = (await api("GET", "/api/productions")).data;
   assert.equal(list[0].status, "completed");

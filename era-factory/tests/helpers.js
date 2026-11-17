@@ -53,5 +53,12 @@ export async function makeFactory({ fixtures = {}, youtube = offlineYouTube, tts
   return { factory, llm, events };
 }
 
+// Aprueba las miniaturas eligiendo una (la aprobación lo exige).
+export function chooseThumbnail(factory, task, index = 0) {
+  return factory.orchestrator.approve(task.id, {
+    output: { ...task.output, selected: index, final: task.output.proposals[index].spec },
+  });
+}
+
 export const tasksOf = (factory, productionId) =>
   Object.fromEntries(factory.db.listTasks(productionId).map((t) => [t.agentId, t]));

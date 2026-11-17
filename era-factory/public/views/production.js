@@ -4,13 +4,16 @@ import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUr
 import { agentName, debounce, store } from "../store.js";
 import { logList } from "./common.js";
 import { bindNarration, loadVoices, narrationHtml, narrationUnavailableHtml, revoice } from "./narration.js";
+import { bindThumbnails, resetThumbnailEditor, thumbnailsHtml } from "./thumbnails.js";
 
 const WORDS_PER_MINUTE = 150; // mismo ritmo que usa el guionista en el servidor
+const UNSAVED = { title: "Tienes cambios sin guardar", body: "Si sales ahora se pierden.", confirmLabel: "Salir sin guardar", danger: true };
 const TABS = [
   { id: "trend-researcher", label: "Investigación" },
   { id: "audience-analyst", label: "Audiencia" },
   { id: "scriptwriter", label: "Guion" },
   { id: "narrator", label: "Voz" },
+  { id: "thumbnail-designer", label: "Miniaturas" },
   { id: "log", label: "Registro" },
 ];
 
@@ -362,6 +365,10 @@ function panelHtml() {
   if (!task)
     return `<div class="card"><div class="core empty"><strong>Este agente no forma parte de esta producción.</strong>Se creó antes de que existiera. Lanza un video nuevo para usarlo.</div></div>`;
   const block = taskStatusBlock(task);
+  if (task.agentId === "thumbnail-designer") {
+    if (!task.output || ["pending", "running"].includes(task.status)) return block;
+    return block + thumbnailsHtml(task, thumbContext());
+  }
   if (task.agentId === "narrator") {
     if (["pending", "running"].includes(task.status)) return block;
     return block + narrationHtml(task, { productionId: state.id, current: state.detail.narration ?? {} });
@@ -379,6 +386,17 @@ function panelHtml() {
   return block + content;
 }
 
+// Datos para la vista «así se verá en YouTube».
+function thumbContext() {
+  const narration = taskOf("narrator")?.output;
+  const script = taskOf("scriptwriter")?.output;
+  return {
+    title: state.detail.production.title,
+    channel: state.detail.channel?.name ?? "",
+    seconds: narration?.full?.duration ?? script?.estimatedSeconds ?? null,
+  };
+}
+
 function drawPanel() {
   const task = taskOf(state.tab);
   if (task?.agentId === "scriptwriter" && task.status === "awaiting_approval" && !state.draft) {
@@ -390,6 +408,17 @@ function drawPanel() {
   panel.innerHTML = panelHtml();
   if (state.draft && task?.status === "awaiting_approval" && task.agentId === "scriptwriter") bindEditor();
   if (state.tab === "narrator") bindNarration(panel);
+  if (state.tab === "thumbnail-designer" && task?.output && !["pending", "running"].includes(task.status))
+    bindThumbnails(panel, task, {
+      productionId: state.id,
+      onDirty: (dirty) => (state.dirty = dirty),
+      onDone: async (what) => {
+        if (what === "reload") {
+          await load();
+          drawAll();
+        } else drawPanel();
+      },
+    });
 }
 
 function drawAll() {
@@ -399,11 +428,11 @@ function drawAll() {
 }
 
 async function selectTab(tab) {
-  if (state.dirty && state.tab === "scriptwriter" && tab !== "scriptwriter" && !(await askConfirm({ title: "Tienes cambios sin guardar en el guion", body: "Si sales ahora se pierden.", confirmLabel: "Salir sin guardar", danger: true })))
-    return;
-  if (tab !== "scriptwriter") {
+  if (state.dirty && tab !== state.tab && !(await askConfirm(UNSAVED))) return;
+  if (tab !== state.tab) {
     state.draft = null;
     state.dirty = false;
+    resetThumbnailEditor();
   }
   state.tab = tab;
   state.root.querySelector("#line").innerHTML = lineHtml();
@@ -527,7 +556,7 @@ export const productionView = {
   // La confirmación es asíncrona: se cancela la navegación y, si confirma, se repite.
   canLeave(target) {
     if (!state.dirty) return true;
-    askConfirm({ title: "Tienes cambios sin guardar en el guion", body: "Si sales ahora se pierden.", confirmLabel: "Salir sin guardar", danger: true }).then((ok) => {
+    askConfirm(UNSAVED).then((ok) => {
       if (!ok) return;
       state.dirty = false;
       location.hash = target;

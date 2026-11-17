@@ -253,8 +253,11 @@ export function createOrchestrator({ db, bus, registry, services, config }) {
       if (task.status !== "awaiting_approval")
         throw new OrchestratorError("Esta tarea no está esperando aprobación.", { status: 409 });
       const patch = { status: "done", finishedAt: new Date().toISOString() };
+      const agent = agentOf(task.agentId);
+      // Algunos agentes piden una decisión para aprobar (p. ej. elegir una miniatura).
+      const missing = agent.approvalCheck?.(output !== undefined && output && typeof output === "object" ? agent.normalize?.(output) ?? output : task.output);
+      if (missing) throw new OrchestratorError(missing, { status: 422 });
       if (output !== undefined) {
-        const agent = agentOf(task.agentId);
         if (!output || typeof output !== "object" || Array.isArray(output))
           throw new OrchestratorError("La versión editada no tiene el formato esperado.", { status: 422 });
         if (agent.normalize) output = agent.normalize(output);

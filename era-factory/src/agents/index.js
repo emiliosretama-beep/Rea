@@ -17,6 +17,7 @@ import { trendResearcher } from "./trend-researcher.js";
 import { audienceAnalyst } from "./audience-analyst.js";
 import { scriptwriter } from "./scriptwriter.js";
 import { narrator } from "./narrator.js";
+import { thumbnailDesigner } from "./thumbnail-designer.js";
 import { planned } from "./planned.js";
 
 const AGENTS = [
@@ -24,13 +25,7 @@ const AGENTS = [
   audienceAnalyst,
   scriptwriter,
   narrator,
-  planned({
-    id: "thumbnail-designer",
-    name: "Diseñador de miniaturas",
-    role: "Miniaturas",
-    phase: 3,
-    description: "Genera 10 propuestas de miniatura 1280×720, las compara, recomienda las mejores y deja editar la final.",
-  }),
+  thumbnailDesigner,
   planned({
     id: "producer",
     name: "Productor",

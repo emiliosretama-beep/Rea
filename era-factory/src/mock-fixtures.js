@@ -65,6 +65,36 @@ export const MOCK_FIXTURES = {
     description: `${S} Descripción de prueba para YouTube.`,
     tags: ["prueba", "simulación"],
   },
+  "thumbs.design": {
+    proposals: [
+      ["split-left", "gradient", "noche", "chip", "El tema que nadie explica", "nadie", "", "Nuevo"],
+      ["split-right", "burst", "fuego", "rayo", "Lo entiendes en un minuto", "minuto", "", ""],
+      ["center", "spotlight", "violeta", "ninguno", "Nadie te dijo esto", "nadie", "Y es más simple de lo que crees", ""],
+      ["big-number", "grid", "carbon", "ninguno", "3 pasos para aprovecharlo", "pasos", "", ""],
+      ["versus", "solid", "era", "ninguno", "Antes vs ahora", "", "", ""],
+      ["question", "gradient", "hielo", "ninguno", "¿Por qué importa?", "importa", "", "Guía"],
+      ["stack", "stripes", "papel", "alerta", "No lo ignores", "", "Lo que nadie dice", "Ojo"],
+      ["arrow", "gradient", "menta", "flecha", "Así lo aprovechas hoy", "hoy", "", ""],
+      ["split-left", "spotlight", "fuego", "lupa", "Lo que no ves", "ves", "", ""],
+      ["center", "burst", "noche", "ninguno", "Todo cambia", "cambia", "", ""],
+    ].map(([layout, background, palette, icon, headline, accentWord, subline, badge], i) => ({
+      concept: `${S} Concepto ${i + 1}`,
+      rationale: "Promesa clara y legible en el celular.",
+      layout,
+      background,
+      palette,
+      icon,
+      headline,
+      accentWord,
+      subline,
+      badge,
+    })),
+    recommended: [
+      { index: 0, reason: "Curiosidad directa." },
+      { index: 3, reason: "El número concreto da confianza." },
+      { index: 5, reason: "La pregunta engancha al público joven." },
+    ],
+  },
   "script.factcheck": {
     checks: [
       { claimIndex: 0, verdict: "respaldado", note: "Coincide con la fuente 1." },
