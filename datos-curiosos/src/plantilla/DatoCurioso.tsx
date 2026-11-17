@@ -16,11 +16,13 @@ import {
 import { Pulpo } from '../dibujos/Pulpo';
 import { PuntitosArriba, Saltar } from '../dibujos/Saltar';
 import { Boligrafo } from '../dibujos/Boligrafo';
+import { RayoDibujo } from '../dibujos/Rayo';
 
 const DIBUJOS: Record<Tema, React.FC<PropsDibujo>> = {
   pulpo: Pulpo,
   saltar: Saltar,
   boligrafo: Boligrafo,
+  rayo: RayoDibujo,
 };
 
 const normalizar = (s: string) =>

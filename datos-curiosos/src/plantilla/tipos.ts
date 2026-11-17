@@ -35,7 +35,7 @@ export type PalabraConTiempo = {
   escena?: number;
 };
 
-export type Tema = 'pulpo' | 'saltar' | 'boligrafo';
+export type Tema = 'pulpo' | 'saltar' | 'boligrafo' | 'rayo';
 
 export type DatoProps = {
   /** Texto de la etiqueta superior, por ejemplo "DATO CURIOSO #1". */

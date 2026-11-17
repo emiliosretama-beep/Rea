@@ -108,4 +108,34 @@ export const VIDEOS: { id: string; props: DatoProps }[] = [
       ],
     },
   },
+  {
+    id: 'Rayo',
+    props: {
+      etiqueta: 'DATO CURIOSO #4',
+      tema: 'rayo',
+      paleta: {
+        fondoA: '#05070f',
+        fondoB: '#141b2e',
+        fondoC: '#2a3550',
+        acento: '#ffe94a',
+        acento2: '#ff8a3d',
+        resaltado: '#ffe94a',
+        texto: '#ffffff',
+        borde: '#03050c',
+      },
+      // Es más caliente que la SUPERFICIE del Sol (~5500 °C), no que su núcleo.
+      escenas: [
+        { texto: 'Un rayo está más caliente que la superficie del Sol', duracion: 3 },
+        { texto: 'En una fracción de segundo calienta el aire a unos 30 mil grados', duracion: 5 },
+        {
+          texto: 'La superficie del Sol está a unos 5500 grados. El rayo es unas cinco veces más caliente',
+          duracion: 6,
+        },
+        {
+          texto: 'Ese calor expande el aire de golpe, y eso es el trueno. ¿Qué dato quieres en el #5?',
+          duracion: 6,
+        },
+      ],
+    },
+  },
 ];

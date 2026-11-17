@@ -47,6 +47,10 @@ const LECTURA: Record<string, string> = {
   '#1': 'numero uno',
   '#2': 'numero dos',
   '#3': 'numero tres',
+  '#4': 'numero cuatro',
+  '#5': 'numero cinco',
+  '30': 'treinta',
+  '5500': 'cinco mil quinientos',
 };
 
 const limpiar = (palabra: string) => palabra.toLowerCase().replace(/[¿?¡!.,:;]/g, '');

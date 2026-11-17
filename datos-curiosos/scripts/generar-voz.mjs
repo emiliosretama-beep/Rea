@@ -27,7 +27,17 @@ const VELOCIDAD_MAX = 1.3;
 const ANTES_DE_FRASE = 0.12; // la escena empieza un poco antes que su primera palabra
 
 // Cómo se dice en voz alta lo que en pantalla va con números o símbolos.
-const LECTURA = { '3': 'tres', '8': 'ocho', '#1': 'número uno', '#2': 'número dos', '#3': 'número tres' };
+const LECTURA = {
+  '3': 'tres',
+  '8': 'ocho',
+  '30': 'treinta',
+  '5500': 'cinco mil quinientos',
+  '#1': 'número uno',
+  '#2': 'número dos',
+  '#3': 'número tres',
+  '#4': 'número cuatro',
+  '#5': 'número cinco',
+};
 
 const NUMEROS = { 0: 'cero', 1: 'uno', 2: 'dos', 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis', 7: 'siete', 8: 'ocho', 9: 'nueve', 10: 'diez' };
 

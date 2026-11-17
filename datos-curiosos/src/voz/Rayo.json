@@ -1,0 +1,366 @@
+{
+  "voz": "M5",
+  "motor": "supertonic3 (VoiceStudio)",
+  "velocidad": 1.24,
+  "duracionVoz": 18.175,
+  "audio": "voz/Rayo.wav",
+  "duraciones": [
+    3.052,
+    3.788,
+    5.94,
+    7.22
+  ],
+  "textoHablado": "Un rayo está más caliente que la superficie del Sol. En una fracción de segundo calienta el aire a unos treinta mil grados. La superficie del Sol está a unos cinco mil quinientos grados. El rayo es unas cinco veces más caliente. Ese calor expande el aire de golpe, y eso es el trueno. ¿Qué dato quieres en el número cinco?",
+  "transcripcion": "Un rayo está más caliente que la superficie del sol, en una fracción de segundo calienta el aire a unos 30 mil grados. La superficie del sol está a unos 5500 grados. El rayo es unas 5 veces más caliente. Ese calor expande el aire de golpe y eso es el trueno. ¿Qué dato quieres en el número 5?",
+  "tokensEmparejados": "57/61",
+  "palabras": [
+    {
+      "texto": "Un",
+      "inicio": 0,
+      "fin": 0.2,
+      "escena": 0
+    },
+    {
+      "texto": "rayo",
+      "inicio": 0.2,
+      "fin": 0.52,
+      "escena": 0
+    },
+    {
+      "texto": "está",
+      "inicio": 0.52,
+      "fin": 0.74,
+      "escena": 0
+    },
+    {
+      "texto": "más",
+      "inicio": 0.74,
+      "fin": 0.98,
+      "escena": 0
+    },
+    {
+      "texto": "caliente",
+      "inicio": 0.98,
+      "fin": 1.44,
+      "escena": 0
+    },
+    {
+      "texto": "que",
+      "inicio": 1.44,
+      "fin": 1.6,
+      "escena": 0
+    },
+    {
+      "texto": "la",
+      "inicio": 1.6,
+      "fin": 1.7,
+      "escena": 0
+    },
+    {
+      "texto": "superficie",
+      "inicio": 1.7,
+      "fin": 2.34,
+      "escena": 0
+    },
+    {
+      "texto": "del",
+      "inicio": 2.34,
+      "fin": 2.46,
+      "escena": 0
+    },
+    {
+      "texto": "Sol",
+      "inicio": 2.46,
+      "fin": 2.78,
+      "escena": 0
+    },
+    {
+      "texto": "En",
+      "inicio": 3.172,
+      "fin": 3.24,
+      "escena": 1
+    },
+    {
+      "texto": "una",
+      "inicio": 3.24,
+      "fin": 3.4,
+      "escena": 1
+    },
+    {
+      "texto": "fracción",
+      "inicio": 3.4,
+      "fin": 3.76,
+      "escena": 1
+    },
+    {
+      "texto": "de",
+      "inicio": 3.76,
+      "fin": 3.92,
+      "escena": 1
+    },
+    {
+      "texto": "segundo",
+      "inicio": 3.92,
+      "fin": 4.22,
+      "escena": 1
+    },
+    {
+      "texto": "calienta",
+      "inicio": 4.22,
+      "fin": 4.8,
+      "escena": 1
+    },
+    {
+      "texto": "el",
+      "inicio": 4.8,
+      "fin": 4.88,
+      "escena": 1
+    },
+    {
+      "texto": "aire",
+      "inicio": 4.88,
+      "fin": 5.04,
+      "escena": 1
+    },
+    {
+      "texto": "a",
+      "inicio": 5.04,
+      "fin": 5.16,
+      "escena": 1
+    },
+    {
+      "texto": "unos",
+      "inicio": 5.16,
+      "fin": 5.3,
+      "escena": 1
+    },
+    {
+      "texto": "30",
+      "inicio": 5.3,
+      "fin": 5.58,
+      "escena": 1
+    },
+    {
+      "texto": "mil",
+      "inicio": 5.58,
+      "fin": 5.92,
+      "escena": 1
+    },
+    {
+      "texto": "grados",
+      "inicio": 5.92,
+      "fin": 6.64,
+      "escena": 1
+    },
+    {
+      "texto": "La",
+      "inicio": 6.96,
+      "fin": 7.01,
+      "escena": 2
+    },
+    {
+      "texto": "superficie",
+      "inicio": 7,
+      "fin": 7.54,
+      "escena": 2
+    },
+    {
+      "texto": "del",
+      "inicio": 7.54,
+      "fin": 7.66,
+      "escena": 2
+    },
+    {
+      "texto": "Sol",
+      "inicio": 7.66,
+      "fin": 7.9,
+      "escena": 2
+    },
+    {
+      "texto": "está",
+      "inicio": 7.9,
+      "fin": 8.16,
+      "escena": 2
+    },
+    {
+      "texto": "a",
+      "inicio": 8.16,
+      "fin": 8.3,
+      "escena": 2
+    },
+    {
+      "texto": "unos",
+      "inicio": 8.3,
+      "fin": 8.4,
+      "escena": 2
+    },
+    {
+      "texto": "5500",
+      "inicio": 8.4,
+      "fin": 9.36,
+      "escena": 2
+    },
+    {
+      "texto": "grados.",
+      "inicio": 9.36,
+      "fin": 10.24,
+      "escena": 2
+    },
+    {
+      "texto": "El",
+      "inicio": 10.54,
+      "fin": 10.62,
+      "escena": 2
+    },
+    {
+      "texto": "rayo",
+      "inicio": 10.62,
+      "fin": 10.9,
+      "escena": 2
+    },
+    {
+      "texto": "es",
+      "inicio": 10.9,
+      "fin": 10.98,
+      "escena": 2
+    },
+    {
+      "texto": "unas",
+      "inicio": 10.98,
+      "fin": 11.14,
+      "escena": 2
+    },
+    {
+      "texto": "cinco",
+      "inicio": 11.14,
+      "fin": 11.46,
+      "escena": 2
+    },
+    {
+      "texto": "veces",
+      "inicio": 11.46,
+      "fin": 11.78,
+      "escena": 2
+    },
+    {
+      "texto": "más",
+      "inicio": 11.78,
+      "fin": 11.96,
+      "escena": 2
+    },
+    {
+      "texto": "caliente",
+      "inicio": 11.96,
+      "fin": 12.5,
+      "escena": 2
+    },
+    {
+      "texto": "Ese",
+      "inicio": 12.9,
+      "fin": 13.04,
+      "escena": 3
+    },
+    {
+      "texto": "calor",
+      "inicio": 13.04,
+      "fin": 13.3,
+      "escena": 3
+    },
+    {
+      "texto": "expande",
+      "inicio": 13.3,
+      "fin": 13.8,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 13.8,
+      "fin": 13.86,
+      "escena": 3
+    },
+    {
+      "texto": "aire",
+      "inicio": 13.86,
+      "fin": 14,
+      "escena": 3
+    },
+    {
+      "texto": "de",
+      "inicio": 14,
+      "fin": 14.14,
+      "escena": 3
+    },
+    {
+      "texto": "golpe,",
+      "inicio": 14.14,
+      "fin": 14.42,
+      "escena": 3
+    },
+    {
+      "texto": "y",
+      "inicio": 14.42,
+      "fin": 14.78,
+      "escena": 3
+    },
+    {
+      "texto": "eso",
+      "inicio": 14.78,
+      "fin": 14.94,
+      "escena": 3
+    },
+    {
+      "texto": "es",
+      "inicio": 14.94,
+      "fin": 15.06,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 15.06,
+      "fin": 15.16,
+      "escena": 3
+    },
+    {
+      "texto": "trueno.",
+      "inicio": 15.16,
+      "fin": 15.58,
+      "escena": 3
+    },
+    {
+      "texto": "¿Qué",
+      "inicio": 16.742,
+      "fin": 16.8,
+      "escena": 3
+    },
+    {
+      "texto": "dato",
+      "inicio": 16.8,
+      "fin": 16.92,
+      "escena": 3
+    },
+    {
+      "texto": "quieres",
+      "inicio": 16.92,
+      "fin": 17.16,
+      "escena": 3
+    },
+    {
+      "texto": "en",
+      "inicio": 17.16,
+      "fin": 17.4,
+      "escena": 3
+    },
+    {
+      "texto": "el",
+      "inicio": 17.4,
+      "fin": 17.5,
+      "escena": 3
+    },
+    {
+      "texto": "#5?",
+      "inicio": 17.5,
+      "fin": 18.04,
+      "escena": 3
+    }
+  ]
+}

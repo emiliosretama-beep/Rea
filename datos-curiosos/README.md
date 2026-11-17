@@ -1,6 +1,6 @@
 # Datos curiosos (videos verticales con Remotion)
 
-Tres videos de 1080x1920, 30 fps y 20 s, hechos con **una sola plantilla**
+Cuatro videos de 1080x1920, 30 fps y 20 s, hechos con **una sola plantilla**
 (`src/plantilla/DatoCurioso.tsx`) que recibe los datos por props:
 
 | Composición | Tema | Paleta |
@@ -8,6 +8,7 @@ Tres videos de 1080x1920, 30 fps y 20 s, hechos con **una sola plantilla**
 | `Pulpo` | 3 corazones y sangre azul | azul oscuro |
 | `Saltar` | 8 mil millones saltando a la vez | naranja y morado |
 | `Boligrafo` | el agujero de la tapa | verde y amarillo |
+| `Rayo` | un rayo es más caliente que la superficie del Sol | azul tormenta y amarillo eléctrico |
 
 Los textos, duraciones y colores están en `src/datos.ts`. Para un video nuevo
 copia un bloque, cambia el texto y la paleta, y elige los dibujos con `tema`.
@@ -20,6 +21,7 @@ npm run dev              # Remotion Studio (vista previa)
 npm run render:pulpo     # out/Pulpo.mp4
 npm run render:saltar    # out/Saltar.mp4
 npm run render:boligrafo # out/Boligrafo.mp4
+npm run render:rayo      # out/Rayo.mp4
 ```
 
 ## Cómo está hecho
@@ -87,6 +89,14 @@ gancho de forma clara toma unos 3,4 s, y forzarlo a 2 s no se entendía.
   iguala la presión para que la tinta fluya y no se salga.
   [Mental Floss](https://www.mentalfloss.com/article/545682/surprising-reason-why-pen-caps-have-tiny-holes-top),
   [Make Tech Easier (cita a Snopes y BIC)](https://maketecheasier.com/bic-cristal-cap-hole-iso-11540/).
+
+- Rayo: un rayo calienta el aire a unos 27 700-30 000 °C en una fracción de
+  segundo, unas 5 veces la superficie del Sol (~5500 °C); esa expansión
+  explosiva del aire es el trueno.
+  [NOAA SciJinks](https://scijinks.gov/about/k-12-education/severe-weather/what-causes-lightning-and-thunder),
+  [NWS](https://www.weather.gov/mlb/what_is_lightning),
+  [NASA (Sol)](https://www.nasa.gov/wp-content/uploads/2009/12/sun_lithograph.pdf).
+  Ojo: es más caliente que la *superficie* del Sol, no que su núcleo.
 
 ## Licencias
 

@@ -79,6 +79,25 @@ const Particulas: React.FC<{ tema: Tema; paleta: Paleta }> = ({ tema, paleta }) 
             />
           );
         }
+        if (tema === 'rayo') {
+          // Lluvia: rayitas que caen en diagonal.
+          const vel = 18 + rv * 14;
+          const y = ((ry * 2100 + frame * vel) % 2100) - 120;
+          const x = ((rx * 1240 - frame * vel * 0.25) % 1240 + 1240) % 1240 - 80;
+          return (
+            <line
+              key={i}
+              x1={x}
+              y1={y}
+              x2={x - 10}
+              y2={y + 40 + tam * 2}
+              stroke="#9fb3d9"
+              strokeWidth={3}
+              strokeLinecap="round"
+              opacity={0.28}
+            />
+          );
+        }
         // Bolígrafo: gotitas de tinta que bajan en diagonal.
         const vel = 0.8 + rv * 1.6;
         const y = ((ry * 1980 + frame * vel) % 2060) - 70;

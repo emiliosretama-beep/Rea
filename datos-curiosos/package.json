@@ -32,7 +32,8 @@
     "render:pulpo": "remotion render Pulpo out/Pulpo.mp4 --crf=18",
     "render:saltar": "remotion render Saltar out/Saltar.mp4 --crf=18",
     "render:boligrafo": "remotion render Boligrafo out/Boligrafo.mp4 --crf=18",
-    "voz": "node scripts/generar-voz.mjs"
+    "voz": "node scripts/generar-voz.mjs",
+    "render:rayo": "remotion render Rayo out/Rayo.mp4 --crf=18"
   },
   "allowScripts": {
     "esbuild": false
