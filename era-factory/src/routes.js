@@ -1,3 +1,4 @@
+import { FORMATS } from "../public/formats.js";
 import { LANGUAGES, VOICES, resolveNarration, voiceById } from "./voices.js";
 
 // Rutas de la API, sin nada de Node: el servidor las expone por HTTP y la
@@ -48,6 +49,10 @@ function parseChannel(body) {
     out[field] = value;
   }
   if (missing.length) throw new HttpError(400, "Faltan campos del canal.", missing);
+  // Formato del video: Shorts verticales por defecto.
+  const format = body?.format ?? "short";
+  if (!FORMATS[format]) throw new HttpError(400, "Formato de video no válido.");
+  out.format = format;
   return out;
 }
 
@@ -93,6 +98,7 @@ export function createRoutes(factory) {
       summary: summary(),
     })],
     ["GET", /^\/api\/voices$/, () => ({ languages: LANGUAGES, voices: VOICES })],
+    ["GET", /^\/api\/formats$/, () => FORMATS],
     ["GET", /^\/api\/channels$/, () => db.listChannels()],
     ["POST", /^\/api\/channels$/, (_, body) => db.createChannel(parseChannel(body))],
     ["PUT", /^\/api\/channels\/([\w-]+)$/, ([id], body) => {

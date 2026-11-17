@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS channels (
   language TEXT NOT NULL,
   audience TEXT NOT NULL,
   video_type TEXT NOT NULL,
+  format TEXT NOT NULL DEFAULT 'long',
   frequency TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -99,6 +100,7 @@ function channelRow(row) {
     language: row.language,
     audience: row.audience,
     videoType: row.video_type,
+    format: row.format ?? "long",
     frequency: row.frequency,
     createdAt: row.created_at,
   };
@@ -141,6 +143,9 @@ export function openDatabase(path) {
   const columns = db.prepare("PRAGMA table_info(productions)").all().map((c) => c.name);
   if (!columns.includes("material")) db.exec("ALTER TABLE productions ADD COLUMN material TEXT");
   if (!columns.includes("settings")) db.exec("ALTER TABLE productions ADD COLUMN settings TEXT");
+  // Canales anteriores a los Shorts: eran horizontales.
+  const channelColumns = db.prepare("PRAGMA table_info(channels)").all().map((c) => c.name);
+  if (!channelColumns.includes("format")) db.exec("ALTER TABLE channels ADD COLUMN format TEXT NOT NULL DEFAULT 'long'");
 
   const stmt = (sql) => db.prepare(sql);
 
@@ -151,8 +156,8 @@ export function openDatabase(path) {
     createChannel(input) {
       const channel = { id: randomUUID(), createdAt: now(), ...input };
       stmt(
-        `INSERT INTO channels (id, name, niche, language, audience, video_type, frequency, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO channels (id, name, niche, language, audience, video_type, format, frequency, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         channel.id,
         channel.name,
@@ -160,6 +165,7 @@ export function openDatabase(path) {
         channel.language,
         channel.audience,
         channel.videoType,
+        channel.format ?? "long",
         channel.frequency,
         channel.createdAt,
       );
@@ -167,9 +173,9 @@ export function openDatabase(path) {
     },
     updateChannel(id, input) {
       stmt(
-        `UPDATE channels SET name = ?, niche = ?, language = ?, audience = ?, video_type = ?, frequency = ?
+        `UPDATE channels SET name = ?, niche = ?, language = ?, audience = ?, video_type = ?, format = ?, frequency = ?
          WHERE id = ?`,
-      ).run(input.name, input.niche, input.language, input.audience, input.videoType, input.frequency, id);
+      ).run(input.name, input.niche, input.language, input.audience, input.videoType, input.format ?? "long", input.frequency, id);
       return this.getChannel(id);
     },
     getChannel: (id) => channelRow(stmt("SELECT * FROM channels WHERE id = ?").get(id)),

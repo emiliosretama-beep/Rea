@@ -20,6 +20,31 @@ en iPhone, iPad y escritorio.
 Los agentes de fases futuras aparecen en el panel marcados como planificados y
 **no se ejecutan**: no hay botones decorativos.
 
+## Shorts verticales
+
+Cada canal elige su formato: **Shorts verticales 9:16** (por defecto) o
+**videos horizontales 16:9** (`public/formats.js`). En Shorts:
+
+- El analista fija la duración en segundos (15–60 s; 30 s por defecto).
+- El guionista escribe gancho de máximo 15 palabras, 2–3 momentos y un cierre corto.
+- El productor cambia de pantalla cada 2–4 s y monta en 1080×1920, con el texto en la zona
+  segura (lejos de los botones de la derecha y del título de abajo).
+- Subtítulos incrustados por defecto, de 3 palabras y grandes; el .srt también se entrega.
+
+## Producir el video desde la versión online
+
+En la versión online, el botón **Exportar para video** (con el guion aprobado)
+descarga un paquete `.json` con el guion, la miniatura elegida y el formato.
+Con la versión con servidor instalada:
+
+```bash
+node scripts/produce-package.mjs paquete.json --out salida [--plan plan.json] [--voice em_alex] [--speed 1.1] [--subs on|off]
+```
+
+Devuelve `salida/video.mp4`, `subtitulos.srt` y `descripcion.txt`. Con `--plan`
+se fija qué texto aparece en pantalla en cada frase; sin él, se usa uno
+automático (la frase clave recortada).
+
 ## Versión online (iPhone y iPad)
 
 Abre <https://claude.ai/artifact/BsRfL98pX2iei5NMYQH5km> en Safari o en la app

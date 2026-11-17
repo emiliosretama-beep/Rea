@@ -261,7 +261,8 @@ export function createOrchestrator({ db, bus, registry, services, config }) {
         if (!output || typeof output !== "object" || Array.isArray(output))
           throw new OrchestratorError("La versión editada no tiene el formato esperado.", { status: 422 });
         if (agent.normalize) output = agent.normalize(output);
-        const review = agent.validate(output, { inputs: inputsFor(task), edited: true });
+        const production = db.getProduction(task.productionId);
+        const review = agent.validate(output, { inputs: inputsFor(task), edited: true, channel: db.getChannel(production.channelId) });
         if (review.issues.length)
           throw new OrchestratorError("Tu versión editada tiene problemas.", { status: 422, details: review.issues });
         Object.assign(patch, { output, review: { ...review, checkedAt: new Date().toISOString() }, editedByUser: true });

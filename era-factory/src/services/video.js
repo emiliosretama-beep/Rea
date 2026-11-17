@@ -7,7 +7,7 @@ import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MediaError, lastLine, run } from "./process.js";
 
-export const VIDEO = { width: 1920, height: 1080, fps: 30 };
+export const FPS = 30;
 
 export function createVideo(
   { python = "python3", script, fontsDir, mediaRoot, ffmpeg = "ffmpeg" },
@@ -22,9 +22,10 @@ export function createVideo(
     return { ok: true, reason: null };
   }
 
-  async function renderScenes({ scenes, palette, dir, signal, onProgress }) {
+  async function renderScenes({ scenes, palette, size, dir, signal, onProgress }) {
     const job = {
-      ...VIDEO,
+      width: size.width,
+      height: size.height,
       fonts,
       palette,
       scenes: scenes.map((s) => ({ id: s.id, kind: s.kind, text: s.text, context: s.context ?? "", out: join(dir, `${s.id}.png`) })),
@@ -53,15 +54,13 @@ export function createVideo(
   }
 
   async function encode({ scenes, audioFile, totalDuration, burnSubtitles, dir, signal, onProgress }) {
+    // Las escenas ya tienen el tamaño final; los subtítulos incrustados salen del .ass.
     // Lista para el demuxer concat: cada imagen con su duración (la última se repite: así lo exige ffmpeg).
     const list = scenes.flatMap((s) => [`file '${s.id}.png'`, `duration ${s.duration.toFixed(3)}`]);
     list.push(`file '${scenes.at(-1).id}.png'`);
     await writeFile(join(dir, "scenes.txt"), list.join("\n"));
-    let vf = `fps=${VIDEO.fps},format=yuv420p`;
-    if (burnSubtitles)
-      vf +=
-        `,subtitles=subtitles.srt:fontsdir='${fontsDir.replaceAll("'", "")}'` +
-        `:force_style='FontName=Atkinson Hyperlegible,Bold=1,FontSize=17,Outline=2,Shadow=0,MarginV=34,BorderStyle=1'`;
+    let vf = `fps=${FPS},format=yuv420p`;
+    if (burnSubtitles) vf += `,ass=subtitles.ass:fontsdir='${fontsDir.replaceAll("'", "")}'`;
     const args = [
       "-hide_banner", "-loglevel", "error", "-y", "-progress", "pipe:1", "-nostats",
       "-f", "concat", "-safe", "0", "-i", "scenes.txt",
@@ -70,7 +69,7 @@ export function createVideo(
       "-af", "apad",
       "-map", "0:v", "-map", "1:a",
       "-t", totalDuration.toFixed(3),
-      "-c:v", "libx264", "-preset", "veryfast", "-tune", "stillimage", "-crf", "20", "-r", String(VIDEO.fps),
+      "-c:v", "libx264", "-preset", "veryfast", "-tune", "stillimage", "-crf", "20", "-r", String(FPS),
       "-c:a", "aac", "-b:a", "160k",
       "-movflags", "+faststart",
       "video.mp4",
@@ -99,8 +98,9 @@ export function createVideo(
       return availability().ok;
     },
 
+    // size: {width, height} (1920×1080 horizontal, 1080×1920 Shorts); ass: subtítulos para incrustar.
     // -> { folder, video: {file, duration, width, height, sizeBytes}, subtitles: {file}, scenes: [{...scene, file}] }
-    async produce({ productionId, scenes, palette, audioFile, totalDuration, srt, burnSubtitles, signal, onProgress }) {
+    async produce({ productionId, scenes, palette, size, audioFile, totalDuration, srt, ass, burnSubtitles, signal, onProgress }) {
       if (!/^[\w-]+$/.test(productionId)) throw new MediaError("Identificador de producción no válido.");
       const status = availability();
       if (!status.ok) throw new MediaError(status.reason, { kind: "config" });
@@ -110,14 +110,15 @@ export function createVideo(
       await mkdir(dir, { recursive: true });
       try {
         await writeFile(join(dir, "subtitles.srt"), srt);
-        await renderScenes({ scenes, palette, dir, signal, onProgress });
+        if (burnSubtitles) await writeFile(join(dir, "subtitles.ass"), ass);
+        await renderScenes({ scenes, palette, size, dir, signal, onProgress });
         await encode({ scenes, audioFile, totalDuration, burnSubtitles, dir, signal, onProgress });
-        const { size } = await stat(join(dir, "video.mp4"));
+        const { size: bytes } = await stat(join(dir, "video.mp4"));
         for (const old of await readdir(join(mediaRoot, productionId)).catch(() => []))
           if (old.startsWith("video-") && old !== folder) await rm(join(mediaRoot, productionId, old), { recursive: true, force: true });
         return {
           folder,
-          video: { file: `${folder}/video.mp4`, duration: totalDuration, width: VIDEO.width, height: VIDEO.height, sizeBytes: size },
+          video: { file: `${folder}/video.mp4`, duration: totalDuration, width: size.width, height: size.height, sizeBytes: bytes },
           subtitles: { file: `${folder}/subtitles.srt` },
           scenes: scenes.map((s) => ({ ...s, file: `${folder}/${s.id}.png` })),
         };

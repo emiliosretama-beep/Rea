@@ -6,9 +6,10 @@
 //   3. Escenas 1920×1080 con la paleta de la miniatura aprobada + MP4 (ffmpeg),
 //      subtítulos .srt y capítulos para la descripción de YouTube.
 // Necesita tu aprobación (es el video final).
+import { FORMATS, formatOf, formatId } from "../../public/formats.js";
 import { PALETTES } from "../../public/thumbs/catalog.js";
 import { LLMError } from "../errors.js";
-import { END_CARD_SECONDS, buildScenes, subtitleCues, timeSentences, toSrt, youtubeChapters } from "../timeline.js";
+import { END_CARD_SECONDS, buildScenes, subtitleCues, timeSentences, toAss, toSrt, youtubeChapters } from "../timeline.js";
 import { LANGUAGE_RULE, channelBrief, feedbackBlock } from "./shared.js";
 
 const KINDS = ["point", "number", "quote"];
@@ -93,6 +94,7 @@ export const producer = {
     const narration = ctx.inputs.narrator;
     const thumbs = ctx.inputs["thumbnail-designer"];
     const timed = timeSentences(narration.segments);
+    const format = formatOf(ctx.channel);
     const notes = Object.fromEntries((script.sections || []).map((s, i) => [`s${i + 1}`, s.visualNotes]));
 
     ctx.log("Planificando qué se ve en pantalla en cada momento…");
@@ -100,7 +102,7 @@ export const producer = {
       name: "producer.beats",
       system:
         "Eres el editor de video de una productora de YouTube. Pones en pantalla textos cortos que refuerzan " +
-        "lo que se escucha, sin repetir la narración palabra por palabra. Ritmo: un cambio cada 4-10 segundos.",
+        "lo que se escucha, sin repetir la narración palabra por palabra.",
       schema: SCHEMA,
       signal: ctx.signal,
       prompt:
@@ -113,6 +115,8 @@ export const producer = {
               `\n${seg.sentences.map((s, i) => `${i}. ${s.text}`).join("\n")}`,
           )
           .join("\n\n") +
+        `\n\nFormato: ${format.label}. Ritmo: un cambio de pantalla cada ${format.beatEvery} segundos` +
+        (format === FORMATS.short ? "; textos de pocas palabras y muy grandes (se ven en un celular en vertical)." : ".") +
         `\n\nPara CADA sección (usa su id) da de 1 a 4 momentos: en qué frase aparece (fromSentence, en orden), ` +
         `el texto en pantalla (máximo ${MAX_ON_SCREEN} caracteres, idea clave, no la frase completa) y el tipo: ` +
         `point (idea), number (empieza con una cifra que diga la narración), quote (frase para recordar). ` +
@@ -131,17 +135,23 @@ export const producer = {
       callToAction: script.callToAction,
       totalDuration,
     });
-    const burnSubtitles = Boolean(ctx.production.settings?.video?.burnSubtitles);
+    // Si no elegiste nada, manda el formato: los Shorts llevan subtítulos incrustados.
+    const chosen = ctx.production.settings?.video?.burnSubtitles;
+    const burnSubtitles = chosen === undefined ? format.burnSubtitles : Boolean(chosen);
+    const size = { width: format.width, height: format.height };
+    const cues = subtitleCues(timed, { maxWords: format.subtitleWords });
     const paletteName = PALETTES[thumbs.final?.palette] ? thumbs.final.palette : "era";
-    ctx.log(`Montando ${scenes.length} escenas (${Math.round(totalDuration)} s, 1920×1080${burnSubtitles ? ", subtítulos incrustados" : ""})…`);
+    ctx.log(`Montando ${scenes.length} escenas (${Math.round(totalDuration)} s, ${size.width}×${size.height}${burnSubtitles ? ", subtítulos incrustados" : ""})…`);
     let lastPercent = -1;
     const made = await video.produce({
       productionId: ctx.production.id,
       scenes,
       palette: PALETTES[paletteName],
+      size,
       audioFile: video.mediaPath(ctx.production.id, narration.full.file),
       totalDuration,
-      srt: toSrt(subtitleCues(timed)),
+      srt: toSrt(cues),
+      ass: toAss(cues, { ...size, vertical: size.height > size.width }),
       burnSubtitles,
       signal: ctx.signal,
       onProgress(e) {
@@ -157,6 +167,7 @@ export const producer = {
       plan,
       planIssues: [],
       palette: paletteName,
+      format: formatId(ctx.channel),
       burnSubtitles,
       totalDuration,
       narrationFile: narration.full.file,

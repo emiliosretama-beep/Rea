@@ -84,14 +84,20 @@ function wrap(text, width = SRT_LINE) {
   return lines;
 }
 
-// Cada subtítulo: como mucho 2 líneas de 42 caracteres.
-export function subtitleCues(timed) {
+// Cada subtítulo: como mucho 2 líneas de 42 caracteres. Con maxWords (Shorts),
+// trozos de pocas palabras en una sola línea: se leen de un vistazo.
+export function subtitleCues(timed, { maxWords = null } = {}) {
   const cues = [];
   for (const seg of timed)
     for (const s of seg.sentences) {
-      const lines = wrap(s.text);
       const chunks = [];
-      for (let i = 0; i < lines.length; i += 2) chunks.push(lines.slice(i, i + 2));
+      if (maxWords) {
+        const ws = s.text.split(/\s+/).filter(Boolean);
+        for (let i = 0; i < ws.length; i += maxWords) chunks.push([ws.slice(i, i + maxWords).join(" ")]);
+      } else {
+        const lines = wrap(s.text);
+        for (let i = 0; i < lines.length; i += 2) chunks.push(lines.slice(i, i + 2));
+      }
       const total = chunks.reduce((n, c) => n + words(c.join(" ")), 0) || 1;
       let clock = s.start;
       for (const chunk of chunks) {
@@ -111,6 +117,37 @@ const srtTime = (t) => {
 
 export const toSrt = (cues) =>
   cues.map((c, i) => `${i + 1}\n${srtTime(c.start)} --> ${srtTime(c.end)}\n${c.lines.join("\n")}\n`).join("\n");
+
+// ASS para incrustar los subtítulos: tamaño y posición exactos en píxeles del
+// video (con .srt, libass usa una escala propia y el tamaño se adivina).
+const assTime = (t) => {
+  const cs = Math.round(t * 100);
+  return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, "0")}:${String(Math.floor(cs / 100) % 60).padStart(2, "0")}.${String(cs % 100).padStart(2, "0")}`;
+};
+const assText = (t) => t.replace(/\\/g, "\\\\").replace(/[{}]/g, "").replace(/\n/g, " ");
+
+export function toAss(cues, { width, height, vertical }) {
+  const size = Math.round(Math.min(width, height) * (vertical ? 0.095 : 0.045));
+  // Vertical: por encima del título y los botones de YouTube (≈30 % inferior).
+  const marginV = Math.round(height * (vertical ? 0.3 : 0.06));
+  const outline = Math.max(3, Math.round(size * 0.08));
+  return [
+    "[Script Info]",
+    "ScriptType: v4.00+",
+    `PlayResX: ${width}`,
+    `PlayResY: ${height}`,
+    "WrapStyle: 0",
+    "",
+    "[V4+ Styles]",
+    "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+    `Style: Default,Atkinson Hyperlegible,${size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,${outline},0,2,${Math.round(width * 0.08)},${Math.round(width * (vertical ? 0.17 : 0.08))},${marginV},1`,
+    "",
+    "[Events]",
+    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ...cues.map((c) => `Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,,0,0,0,,${c.lines.map(assText).join("\\N")}`),
+    "",
+  ].join("\n");
+}
 
 // ---------- Capítulos de YouTube ----------
 // YouTube los acepta si empiezan en 0:00, hay al menos 3 y cada uno dura 10 s o más.

@@ -1,5 +1,7 @@
 // Piezas comunes de los prompts de los agentes.
 
+import { formatOf } from "../../public/formats.js";
+
 export function channelBrief(channel) {
   return [
     `Canal: ${channel.name}`,
@@ -7,6 +9,7 @@ export function channelBrief(channel) {
     `Idioma de los videos: ${channel.language}`,
     `Público objetivo: ${channel.audience}`,
     `Tipo de videos: ${channel.videoType}`,
+    `Formato: ${formatOf(channel).label}`,
     `Frecuencia de publicación: ${channel.frequency}`,
   ].join("\n");
 }

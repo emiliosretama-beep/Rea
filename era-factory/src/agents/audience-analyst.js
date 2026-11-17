@@ -2,6 +2,7 @@
 // Cruza el perfil del público con la investigación y elige qué video producir.
 // Si hay aprendizajes de videos publicados (fase 5) los usa; si no, lo dice:
 // nunca presenta métricas que no tiene.
+import { FORMATS, formatOf, targetSecondsOf } from "../../public/formats.js";
 import { LANGUAGE_RULE, channelBrief, feedbackBlock, insightsBlock } from "./shared.js";
 
 const SCHEMA = {
@@ -26,12 +27,12 @@ const SCHEMA = {
     decision: {
       type: "object",
       additionalProperties: false,
-      required: ["title", "angle", "format", "targetLengthMinutes", "tone", "why"],
+      required: ["title", "angle", "format", "targetLengthSeconds", "tone", "why"],
       properties: {
         title: { type: "string" },
         angle: { type: "string" },
         format: { type: "string", description: "Ej.: explicación, top, tutorial, historia, análisis." },
-        targetLengthMinutes: { type: "integer" },
+        targetLengthSeconds: { type: "integer", description: "Duración objetivo del video en segundos." },
         tone: { type: "string" },
         why: { type: "string", description: "Por qué esta idea y no las demás para este público." },
       },
@@ -59,6 +60,7 @@ export const audienceAnalyst = {
     const ideas = research.ideas
       .map((idea, i) => `${i}. ${idea.title} — ${idea.angle} (oportunidad ${idea.opportunityScore}/10)`)
       .join("\n");
+    const format = formatOf(ctx.channel);
     ctx.log("Analizando al público y eligiendo la idea con más potencial…");
     const result = await ctx.services.llm.json({
       name: "audience.analyze",
@@ -73,7 +75,9 @@ export const audienceAnalyst = {
         `\n## Resumen de tendencias\n${research.summary}\n\n## Ideas propuestas\n${ideas}` +
         insightsBlock(ctx.insights) +
         `\n\nDescribe al espectador tipo, elige UNA idea (chosenIdeaIndex) y define el video: título final, ` +
-        `enfoque, formato, duración objetivo en minutos, tono y por qué. Añade de 3 a 6 recursos de retención. ` +
+        `enfoque, formato, duración objetivo en segundos (entre ${format.minSeconds} y ${format.maxSeconds}` +
+        `${format === FORMATS.short ? `; para un Short apunta a ${format.defaultSeconds} s y a un solo mensaje` : ""}), ` +
+        `tono y por qué. Añade de 3 a 6 recursos de retención. ` +
         `Si no hay métricas, basa tus recomendaciones en la investigación y dilo. ${LANGUAGE_RULE}` +
         feedbackBlock(ctx),
     });
@@ -89,8 +93,10 @@ export const audienceAnalyst = {
     const ideas = ctx.inputs?.["trend-researcher"]?.ideas || [];
     if (!Number.isInteger(output.chosenIdeaIndex) || output.chosenIdeaIndex < 0 || output.chosenIdeaIndex >= ideas.length)
       issues.push(`La idea elegida (${output.chosenIdeaIndex}) no existe en la lista de ${ideas.length} ideas.`);
-    const minutes = output.decision?.targetLengthMinutes;
-    if (!(minutes >= 1 && minutes <= 60)) issues.push("La duración objetivo debe estar entre 1 y 60 minutos.");
+    const format = formatOf(ctx.channel);
+    const seconds = targetSecondsOf(output.decision);
+    if (!(seconds >= format.minSeconds && seconds <= format.maxSeconds))
+      issues.push(`La duración objetivo (${seconds} s) debe estar entre ${format.minSeconds} y ${format.maxSeconds} s para ${format.label}.`);
     if (!output.decision?.title?.trim()) issues.push("Falta el título del video.");
     if ((output.retentionPlan || []).length < 3) issues.push("El plan de retención necesita al menos 3 recursos.");
     return { issues, warnings: [] };

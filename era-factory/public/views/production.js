@@ -1,6 +1,7 @@
 // Detalle de una producción: línea de producción en vivo, resultados de cada
 // agente, editor de guion y decisiones (aprobar, pedir cambios, reintentar).
-import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast } from "../lib.js";
+import { buildPackage, packageFilename } from "../package.js";
+import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast, saveFile } from "../lib.js";
 import { agentName, debounce, store } from "../store.js";
 import { logList } from "./common.js";
 import { bindNarration, loadVoices, narrationHtml, revoice } from "./narration.js";
@@ -59,6 +60,11 @@ function headerHtml() {
         <p>${esc(channel?.name ?? "")}${production.topicHint ? ` · Tema pedido: ${esc(production.topicHint)}` : ""} · ${esc(timeAgo(production.createdAt))}</p>
         <div style="margin-top:10px">${pill(production.status)}</div></div>
       <div class="actions">
+        ${
+          taskOf("scriptwriter")?.status === "done"
+            ? `<button class="btn primary" data-act="export" title="Guion, miniatura y formato en un archivo para producir el video con servidor">${icon("play")}Exportar para video</button>`
+            : ""
+        }
         ${canCancel ? `<button class="btn danger" data-act="cancel">${icon("x")}Cancelar</button>` : ""}
         ${!canCancel ? `<button class="btn ghost danger" data-act="delete">${icon("trash")}Eliminar</button>` : ""}
       </div>
@@ -231,7 +237,10 @@ function audienceHtml(task) {
         ${idea ? `<p class="src">Basada en la idea: ${esc(idea.title)}</p>` : ""}
         <dl class="kv">
           <div><dt>Formato</dt><dd>${esc(a.decision.format)}</dd></div>
-          <div><dt>Duración objetivo</dt><dd class="mono">${a.decision.targetLengthMinutes} min</dd></div>
+          <div><dt>Duración objetivo</dt><dd class="mono">${(() => {
+            const s = a.decision.targetLengthSeconds ?? a.decision.targetLengthMinutes * 60;
+            return s < 90 ? `${s} s` : `${Math.round(s / 60)} min`;
+          })()}</dd></div>
           <div><dt>Tono</dt><dd>${esc(a.decision.tone)}</dd></div>
           <div><dt>Enfoque</dt><dd>${esc(a.decision.angle)}</dd></div>
         </dl>
@@ -484,7 +493,17 @@ async function act(button) {
   const { act: action, task: taskId } = button.dataset;
   button.disabled = true;
   try {
-    if (action === "cancel") {
+    if (action === "export") {
+      const pkg = buildPackage(state.detail);
+      const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" });
+      try {
+        await saveFile(blob, packageFilename(pkg));
+        toast("Paquete exportado. Mándamelo en el chat y te devuelvo el video.");
+      } catch (err) {
+        if (err?.code !== "declined") throw err;
+      }
+      return;
+    } else if (action === "cancel") {
       await api("POST", `/api/productions/${state.id}/cancel`);
       toast("Producción cancelada.");
     } else if (action === "delete") {

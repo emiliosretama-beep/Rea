@@ -3,6 +3,7 @@
 // 2) Extrae las afirmaciones de hecho y una segunda pasada las contrasta con las
 //    notas de investigación (respaldado / sin respaldo / contradicho).
 // La cadena se detiene aquí: el guion necesita tu aprobación (puedes editarlo).
+import { FORMATS, formatOf, targetSecondsOf } from "../../public/formats.js";
 import { LANGUAGE_RULE, channelBrief, feedbackBlock, invalidSourceIds, sourcesBlock } from "./shared.js";
 
 // Ritmo de narración típico en voz en off (palabras por minuto).
@@ -95,7 +96,15 @@ export const scriptwriter = {
     const audience = ctx.inputs["audience-analyst"];
     const idea = research.ideas[audience.chosenIdeaIndex];
     const d = audience.decision;
-    const targetWords = d.targetLengthMinutes * WORDS_PER_MINUTE;
+    const format = formatOf(ctx.channel);
+    const targetSeconds = targetSecondsOf(d);
+    const targetWords = Math.round((targetSeconds / 60) * WORDS_PER_MINUTE);
+    const structure =
+      format === FORMATS.short
+        ? `Es un Short vertical: un solo mensaje. Gancho de máximo ${format.maxHookWords} palabras que se diga en ` +
+          `2 segundos; de 2 a 3 secciones muy cortas (momentos rápidos, una idea cada una); cierre con UNA llamada ` +
+          `a la acción de máximo 3 segundos. Nada de introducciones ni despedidas largas.`
+        : `Escribe el guion completo: gancho, de 4 a 8 secciones con la narración exacta y notas visuales, cierre y llamada a la acción.`;
 
     ctx.log(`Escribiendo el guion de «${d.title}» (~${targetWords} palabras)…`);
     const script = await ctx.services.llm.json({
@@ -108,13 +117,13 @@ export const scriptwriter = {
       signal: ctx.signal,
       prompt:
         `${channelBrief(ctx.channel)}\n\n## Video decidido\nTítulo: ${d.title}\nEnfoque: ${d.angle}\n` +
-        `Formato: ${d.format}\nDuración objetivo: ${d.targetLengthMinutes} min (~${targetWords} palabras narradas)\n` +
+        `Formato: ${d.format}\nDuración objetivo: ${targetSeconds} s (~${targetWords} palabras narradas)\n` +
         `Tono: ${d.tone}\nGancho propuesto: ${idea?.hook ?? ""}\n\n## Espectador tipo\n${audience.persona.description}\n` +
         `Motivaciones: ${audience.persona.motivations.join("; ")}\nFrustraciones: ${audience.persona.frustrations.join("; ")}\n\n` +
         `## Plan de retención\n- ${audience.retentionPlan.join("\n- ")}\n\n## Notas de investigación\n${research.researchNotes}\n\n` +
         `## Fuentes numeradas\n${sourcesBlock(research.sources)}\n\n` +
-        `Escribe el guion completo: gancho, de 4 a 8 secciones con la narración exacta y notas visuales, cierre ` +
-        `y llamada a la acción. Lista en claims cada dato verificable que uses con el número de su fuente, o null ` +
+        `${structure} Cada sección lleva la narración exacta y notas visuales. ` +
+        `Lista en claims cada dato verificable que uses con el número de su fuente, o null ` +
         `si no tiene. ${LANGUAGE_RULE}` +
         feedbackBlock(ctx),
     });
@@ -141,7 +150,7 @@ export const scriptwriter = {
       return { ...claim, verdict: check?.verdict ?? "sin_respaldo", note: check?.note ?? "No se pudo verificar." };
     });
 
-    return { ...script, claims, ...scriptStats(script), targetSeconds: d.targetLengthMinutes * 60 };
+    return { ...script, claims, ...scriptStats(script), targetSeconds };
   },
 
   validate(output, ctx) {
@@ -150,8 +159,11 @@ export const scriptwriter = {
     const sources = ctx.inputs?.["trend-researcher"]?.sources || [];
     if (!output.title?.trim()) issues.push("Falta el título.");
     if (!output.hook?.trim()) issues.push("Falta el gancho inicial.");
-    else if (countWords(output.hook) > 70) issues.push("El gancho es demasiado largo (más de 70 palabras).");
-    if ((output.sections || []).length < 3) issues.push("El guion necesita al menos 3 secciones.");
+    const format = formatOf(ctx.channel);
+    if (output.hook?.trim() && countWords(output.hook) > format.maxHookWords)
+      issues.push(`El gancho es demasiado largo (más de ${format.maxHookWords} palabras para ${format.label}).`);
+    if ((output.sections || []).length < format.minSections)
+      issues.push(`El guion necesita al menos ${format.minSections} secciones.`);
     for (const [i, s] of (output.sections || []).entries())
       if (!s.narration?.trim()) issues.push(`La sección ${i + 1} no tiene narración.`);
 

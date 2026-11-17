@@ -10,7 +10,7 @@ import { createServer } from "../server.js";
 import { loadConfig } from "../src/config.js";
 import { createTTS } from "../src/services/tts.js";
 import { createVideo } from "../src/services/video.js";
-import { END_CARD_SECONDS, buildScenes, subtitleCues, timeSentences, toSrt } from "../src/timeline.js";
+import { END_CARD_SECONDS, buildScenes, subtitleCues, timeSentences, toAss, toSrt } from "../src/timeline.js";
 import { makeFactory } from "./helpers.js";
 
 const config = loadConfig({});
@@ -33,7 +33,8 @@ test("video real: narración, escenas y MP4 1920×1080 con audio, entregado por 
   const scenes = buildScenes(timed, {}, { title: "Prueba", channel: "Canal", callToAction: "Gracias", totalDuration: total });
   const r = await video.produce({
     productionId: "p1", scenes, palette: PALETTES.menta, audioFile: video.mediaPath("p1", n.full.file),
-    totalDuration: total, srt: toSrt(subtitleCues(timed)), burnSubtitles: true,
+    size: { width: 1920, height: 1080 }, totalDuration: total, srt: toSrt(subtitleCues(timed)),
+    ass: toAss(subtitleCues(timed), { width: 1920, height: 1080, vertical: false }), burnSubtitles: true,
   });
   const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height:format=duration", "-of", "json", join(mediaRoot, "p1", r.video.file)]));
   const v = probe.streams.find((s) => s.codec_type === "video");

@@ -78,7 +78,7 @@ export function openMemoryDatabase(initial = {}) {
 
     // ---- canales ----
     createChannel(input) {
-      const channel = { id: newId(), createdAt: now(), ...input };
+      const channel = { id: newId(), createdAt: now(), format: "long", ...input };
       channels.set(channel.id, channel);
       changed("channels", channel.id);
       return clone(channel);
@@ -86,13 +86,15 @@ export function openMemoryDatabase(initial = {}) {
     updateChannel(id, input) {
       const channel = channels.get(id);
       if (!channel) return null;
-      const { name, niche, language, audience, videoType, frequency } = input;
-      Object.assign(channel, { name, niche, language, audience, videoType, frequency });
+      const { name, niche, language, audience, videoType, frequency, format = "long" } = input;
+      Object.assign(channel, { name, niche, language, audience, videoType, frequency, format });
       changed("channels", id);
       return clone(channel);
     },
-    getChannel: (id) => clone(channels.get(id)) ?? null,
-    listChannels: () => [...channels.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(clone),
+    // Canales guardados antes de los Shorts no tienen formato: eran horizontales.
+    getChannel: (id) => (channels.has(id) ? clone({ format: "long", ...channels.get(id) }) : null),
+    listChannels: () =>
+      [...channels.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((c) => clone({ format: "long", ...c })),
     deleteChannel(id) {
       if (!channels.delete(id)) return false;
       changed("channels", id, true);

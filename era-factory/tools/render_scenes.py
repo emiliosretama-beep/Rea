@@ -96,51 +96,82 @@ def is_light(color):
     return 0.299 * r + 0.587 * g + 0.114 * b > 160
 
 
+def zones(w, h):
+    """Zona útil para el texto según la orientación.
+
+    Horizontal: el tercio inferior queda para los subtítulos.
+    Vertical (Shorts): arriba va la barra del teléfono, abajo el título y el
+    canal que pone YouTube, y a la derecha los botones (me gusta, comentar):
+    el texto vive en el centro-izquierda, por encima de los subtítulos.
+    """
+    if h > w:
+        return {"left": round(w * 0.08), "right": round(w * 0.17), "top": round(h * 0.16), "bottom": round(h * 0.58)}
+    return {"left": round(w * 0.07), "right": round(w * 0.07), "top": round(h * 0.09), "bottom": round(h * 0.62)}
+
+
 def render(scene, job):
     w, h = job["width"], job["height"]
+    u = min(w, h)  # el tamaño de letra se mide contra el lado corto
+    vertical = h > w
     pal = job["palette"]
     fonts = job["fonts"]
     img = background(w, h, pal)
     draw = ImageDraw.Draw(img)
-    pad = round(w * 0.07)
+    z = zones(w, h)
+    pad = z["left"]
+    box_w = w - z["left"] - z["right"]
     text_color = rgb(pal["text"])
     accent = rgb(pal["accent"])
     outline = (255, 255, 255) if is_light(pal["bg1"]) else (0, 0, 0)
-    box_w = w - pad * 2
-    top = round(h * 0.09)
+    top = z["top"]
     kind = scene["kind"]
     text = scene.get("text", "").strip()
     context = scene.get("context", "").strip()
 
     if context:
-        small = ImageFont.truetype(fonts["body"], round(h * 0.035))
+        small = ImageFont.truetype(fonts["body"], round(u * 0.035 * (1.4 if vertical else 1)))
         draw.text((pad, top), context.upper(), font=small, fill=accent)
-        top += round(h * 0.075)
+        top += round(u * 0.075 * (1.4 if vertical else 1))
 
-    avail = round(h * 0.62) - top  # zona útil: arriba del tercio de subtítulos
+    avail = z["bottom"] - top
     if kind in ("title", "section", "end"):
-        font, lines, size = fit(draw, text.upper(), fonts["display"], box_w, avail - round(h * 0.06), round(h * 0.17), 48)
-        y0 = centered_top(top, avail - round(h * 0.06), lines, size, 1.05)
+        room = avail - round(u * 0.06)
+        font, lines, size = fit(draw, text.upper(), fonts["display"], box_w, room, round(u * 0.17 * (1.25 if vertical else 1)), 48,
+                                max_lines=6 if vertical else 4)
+        y0 = centered_top(top, room, lines, size, 1.05)
         draw_lines(draw, lines, font, size, pad, y0, text_color, stroke=outline)
         underline(draw, lines, font, pad, y0 + (len(lines) - 1) * size * 1.05, accent, w, h)
     elif kind == "number":
         match = re.match(r"^\s*([\d.,%]+)\s*(.*)$", text)
         number, rest = (match.group(1), match.group(2)) if match else (text, "")
-        nfont, nlines, nsize = fit(draw, number, fonts["display"], box_w * 0.45, avail, round(h * 0.42), 80, max_lines=1)
-        top = centered_top(top, avail, nlines, nsize, 1.0)
-        draw_lines(draw, nlines, nfont, nsize, pad, top - nsize * 0.08, accent, stroke=outline)
-        x = pad + draw.textlength(nlines[0], font=nfont) + round(w * 0.03)
-        if rest:
-            font, lines, size = fit(draw, rest, fonts["body"], w - pad - x, avail, round(h * 0.1), 36)
-            draw_lines(draw, lines, font, size, x, top + (nsize - len(lines) * size * 1.05) / 2, text_color)
+        if vertical:
+            # Cifra arriba y texto debajo: en vertical no caben de lado.
+            nfont, nlines, nsize = fit(draw, number, fonts["display"], box_w, avail * 0.5, round(u * 0.5), 80, max_lines=1)
+            rfont, rlines, rsize = (fit(draw, rest, fonts["body"], box_w, avail * 0.4, round(u * 0.11), 36, spacing=1.15) if rest else (None, [], 0))
+            block = nsize + len(rlines) * rsize * 1.15
+            y0 = top + max(0, (avail - block) / 2)
+            draw_lines(draw, nlines, nfont, nsize, pad, y0 - nsize * 0.08, accent, stroke=outline)
+            if rest:
+                draw_lines(draw, rlines, rfont, rsize, pad, y0 + nsize, text_color, spacing=1.15)
+        else:
+            nfont, nlines, nsize = fit(draw, number, fonts["display"], box_w * 0.45, avail, round(u * 0.42), 80, max_lines=1)
+            top = centered_top(top, avail, nlines, nsize, 1.0)
+            draw_lines(draw, nlines, nfont, nsize, pad, top - nsize * 0.08, accent, stroke=outline)
+            x = pad + draw.textlength(nlines[0], font=nfont) + round(w * 0.03)
+            if rest:
+                font, lines, size = fit(draw, rest, fonts["body"], w - z["right"] - x, avail, round(u * 0.1), 36)
+                draw_lines(draw, lines, font, size, x, top + (nsize - len(lines) * size * 1.05) / 2, text_color)
     elif kind == "quote":
-        font, lines, size = fit(draw, text, fonts["body"], box_w * 0.9, avail - round(h * 0.08), round(h * 0.11), 36, spacing=1.15)
-        y0 = centered_top(top + round(h * 0.08), avail - round(h * 0.08), lines, size, 1.15)
-        qfont = ImageFont.truetype(fonts["display"], round(h * 0.26))
-        draw.text((pad - round(w * 0.01), y0 - round(h * 0.13)), "“", font=qfont, fill=accent)
-        draw_lines(draw, lines, font, size, pad + round(w * 0.05), y0, text_color, spacing=1.15)
+        room = avail - round(u * 0.08)
+        font, lines, size = fit(draw, text, fonts["body"], box_w * 0.92, room, round(u * 0.11 * (1.15 if vertical else 1)), 36, spacing=1.15,
+                                max_lines=7 if vertical else 4)
+        y0 = centered_top(top + round(u * 0.08), room, lines, size, 1.15)
+        qfont = ImageFont.truetype(fonts["display"], round(u * 0.26))
+        draw.text((pad - round(u * 0.01), y0 - round(u * 0.13)), "“", font=qfont, fill=accent)
+        draw_lines(draw, lines, font, size, pad + round(u * 0.05), y0, text_color, spacing=1.15)
     else:  # point
-        font, lines, size = fit(draw, text, fonts["body"], box_w, avail, round(h * 0.115), 36, spacing=1.15)
+        font, lines, size = fit(draw, text, fonts["body"], box_w, avail, round(u * 0.115 * (1.15 if vertical else 1)), 36, spacing=1.15,
+                                max_lines=7 if vertical else 4)
         draw_lines(draw, lines, font, size, pad, centered_top(top, avail, lines, size, 1.15), text_color, spacing=1.15)
     img.save(scene["out"], "PNG", optimize=False)
 

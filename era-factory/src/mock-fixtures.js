@@ -42,7 +42,7 @@ export const MOCK_FIXTURES = {
       title: `${S} Idea de video 1: explicado en 3 minutos`,
       angle: "Explicación directa con ejemplos",
       format: "explicación",
-      targetLengthMinutes: 1,
+      targetLengthSeconds: 60,
       tone: "cercano y claro",
       why: "Mayor oportunidad y encaja con el público.",
     },
