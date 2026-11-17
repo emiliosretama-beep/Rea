@@ -104,7 +104,10 @@ export async function producePackage(pkg, { plan, out, voice, speed, subs, confi
   await copyFile(join(work, id, made.video.file), files.video);
   await copyFile(join(work, id, made.subtitles.file), files.subtitles);
   const chapters = format.width > format.height ? youtubeChapters(timed, total).text : "";
-  const tags = (pkg.script.tags ?? []).map((t) => `#${t.replace(/\s+/g, "")}`).join(" ");
+  // Si la descripción ya trae hashtags, no se añaden otros (YouTube penaliza el exceso).
+  const tags = /#\p{L}/u.test(pkg.script.description ?? "")
+    ? ""
+    : (pkg.script.tags ?? []).slice(0, 5).map((t) => `#${t.replace(/\s+/g, "")}`).join(" ");
   await writeFile(files.description, [pkg.script.title, "", pkg.script.description, chapters, tags].filter(Boolean).join("\n\n") + "\n");
   if (coverFile) {
     files.cover = join(out, "portada.png");
