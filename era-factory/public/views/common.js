@@ -5,6 +5,8 @@ import { agentName, store } from "../store.js";
 // Aviso honesto del modo de IA: sin key no hay agentes; en mock nada es real.
 export function llmBanner() {
   const mode = store.status?.llm.mode;
+  const cloud = store.status?.cloud;
+  if (cloud) return cloudBanners(mode, cloud);
   if (mode === "none")
     return `<div class="banner error">${icon("alert")}<div><strong>Los agentes no pueden trabajar todavía.</strong>
       <p>Falta <span class="mono">ANTHROPIC_API_KEY</span> en <span class="mono">era-factory/.env</span>. Copia <span class="mono">.env.example</span>, pega tu key y reinicia el servidor.</p></div></div>`;
@@ -12,6 +14,24 @@ export function llmBanner() {
     return `<div class="banner warn">${icon("alert")}<div><strong>Modo simulación.</strong>
       <p>Los resultados son datos de prueba fijos, no IA ni investigación real. Quita <span class="mono">FACTORY_LLM=mock</span> para trabajar de verdad.</p></div></div>`;
   return "";
+}
+
+// Avisos de la versión online (claude.ai).
+function cloudBanners(mode, cloud) {
+  const out = [];
+  if (cloud.readOnly)
+    out.push(`<div class="banner warn">${icon("alert")}<div><strong>Modo lectura: ERA Factory está trabajando en otro dispositivo.</strong>
+      <p>Para no producir el mismo video dos veces, solo un dispositivo trabaja a la vez. Lo que ves puede estar desactualizado.</p>
+      <div class="actions" style="margin-top:10px"><button class="btn small primary" data-takeover>Usar en este dispositivo</button></div></div></div>`);
+  if (mode === "none")
+    out.push(`<div class="banner error">${icon("alert")}<div><strong>Claude no está disponible en esta vista.</strong>
+      <p>Abre ERA Factory desde claude.ai con tu sesión iniciada para que los agentes puedan trabajar.</p></div></div>`);
+  if (cloud.storage === "local")
+    out.push(`<div class="banner warn">${icon("alert")}<div><strong>Tus datos se guardan solo en este navegador.</strong>
+      <p>No se pudo conectar con el guardado en la nube (¿sesión cerrada?). No los verás en otros dispositivos.</p></div></div>`);
+  if (cloud.error)
+    out.push(`<div class="banner error">${icon("alert")}<div><strong>No se pudo guardar.</strong><p>${esc(cloud.error)}</p></div></div>`);
+  return out.join("");
 }
 
 export function productionRow(p) {
@@ -23,7 +43,7 @@ export function productionRow(p) {
       return `<i class="${esc(cls)}" title="${esc(a.name)}: ${esc(STATUS_LABEL[cls] ?? cls)}"></i>`;
     })
     .join("");
-  return `<a class="row" href="#/producciones/${esc(p.id)}">
+  return `<a class="row" href="#produccion-${esc(p.id)}">
     <div class="grow">
       <div class="title">${esc(p.title)}</div>
       <div class="meta">${esc(p.channelName)} · ${esc(timeAgo(p.updatedAt))}</div>
@@ -49,7 +69,7 @@ export function agentCard(agent, task, { compact = false } = {}) {
   const doing = !agent.implemented
     ? "Aún no programado."
     : busy
-      ? `Trabajando · <a href="#/producciones/${esc(task.productionId)}">ver producción</a>`
+      ? `Trabajando · <a href="#produccion-${esc(task.productionId)}">ver producción</a>`
       : "Esperando una tarea.";
   return `<div class="agent${busy ? " busy" : ""}${agent.implemented ? "" : " planned"}">
     <div class="avatar">${icon(agent.id)}</div>

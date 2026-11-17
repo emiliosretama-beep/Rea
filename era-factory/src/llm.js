@@ -8,15 +8,9 @@
 //   mock   -> datos de prueba fijos (FACTORY_LLM=mock, solo desarrollo y tests)
 //   none   -> sin credenciales: cada llamada falla con un error de configuración
 import Anthropic from "@anthropic-ai/sdk";
+import { LLMError } from "./errors.js";
 
-export class LLMError extends Error {
-  constructor(message, { kind = "llm", retryable = false } = {}) {
-    super(message);
-    this.name = "LLMError";
-    this.kind = kind;
-    this.retryable = retryable;
-  }
-}
+export { LLMError };
 
 const MAX_PAUSE_RESUMES = 3;
 
@@ -76,6 +70,7 @@ export function claudeLLM({ model, maxSearches }, client = new Anthropic()) {
 
   return {
     mode: "claude",
+    webSearch: true,
     async json({ name, system, prompt, schema, effort = "medium", maxTokens = 32000, signal }) {
       try {
         const stream = client.beta.messages.stream(
@@ -141,7 +136,7 @@ function noneLLM() {
       { kind: "config" },
     );
   };
-  return { mode: "none", json: fail, research: fail };
+  return { mode: "none", webSearch: false, json: fail, research: fail };
 }
 
 // Modo de prueba: devuelve datos fijos por nombre de llamada. Se inyecta en
@@ -167,6 +162,7 @@ export function mockLLM(fixtures, { delayMs = 0 } = {}) {
   };
   return {
     mode: "mock",
+    webSearch: true,
     calls,
     json: (args) => answer("json", args),
     research: (args) => answer("research", args),

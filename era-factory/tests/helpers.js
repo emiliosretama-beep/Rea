@@ -1,5 +1,6 @@
 import { loadConfig } from "../src/config.js";
 import { createFactory } from "../src/factory.js";
+import { openMemoryDatabase } from "../src/db-memory.js";
 import { mockLLM } from "../src/llm.js";
 import { MOCK_FIXTURES } from "../src/mock-fixtures.js";
 
@@ -17,7 +18,9 @@ export const offlineYouTube = { connected: false, topVideos: async () => null };
 export async function makeFactory({ fixtures = {}, youtube = offlineYouTube, env = {} } = {}) {
   const config = loadConfig({ FACTORY_MAX_ATTEMPTS: "3", ...env });
   const llm = mockLLM({ ...MOCK_FIXTURES, ...fixtures });
-  const factory = await createFactory(config, { dbPath: ":memory:", llm, youtube });
+  // FACTORY_TEST_DB=memory corre la misma batería contra la base de la versión online.
+  const db = process.env.FACTORY_TEST_DB === "memory" ? openMemoryDatabase() : undefined;
+  const factory = await createFactory(config, { dbPath: ":memory:", db, llm, youtube });
   const events = [];
   factory.bus.subscribe((e) => events.push(e));
   return { factory, llm, events };

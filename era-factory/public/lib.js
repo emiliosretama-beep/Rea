@@ -21,7 +21,19 @@ export class ApiError extends Error {
   }
 }
 
+// En la versión online no hay servidor: un "backend" local (src/cloud/boot.js)
+// responde las mismas rutas dentro de la página.
+export const backend = () => globalThis.__ERA_BACKEND__ ?? null;
+
 export async function api(method, path, body) {
+  const local = backend();
+  if (local) {
+    try {
+      return await local.request(method, path, body);
+    } catch (err) {
+      throw new ApiError(err.message || "Error inesperado.", err.status ?? 500, err.details);
+    }
+  }
   let res;
   try {
     res = await fetch(path, {
@@ -35,6 +47,34 @@ export async function api(method, path, body) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error || `Error ${res.status}`, res.status, data.details);
   return data;
+}
+
+// Confirmación dentro de la página (claude.ai no muestra confirm()).
+// Resuelve true si la persona confirma.
+export function askConfirm({ title, body = "", confirmLabel = "Confirmar", danger = false }) {
+  return new Promise((resolve) => {
+    const previous = document.activeElement;
+    const wrap = document.createElement("div");
+    wrap.className = "modal-backdrop";
+    wrap.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-t" aria-describedby="modal-b">
+      <h2 id="modal-t">${esc(title)}</h2>${body ? `<p id="modal-b" class="muted">${esc(body)}</p>` : ""}
+      <div class="actions"><button class="btn ${danger ? "danger" : "primary"}" data-ok>${esc(confirmLabel)}</button>
+      <button class="btn ghost" data-cancel>Cancelar</button></div></div>`;
+    const close = (value) => {
+      wrap.remove();
+      document.removeEventListener("keydown", onKey);
+      previous?.focus?.();
+      resolve(value);
+    };
+    const onKey = (e) => e.key === "Escape" && close(false);
+    wrap.addEventListener("click", (e) => {
+      if (e.target === wrap || e.target.closest("[data-cancel]")) close(false);
+      else if (e.target.closest("[data-ok]")) close(true);
+    });
+    document.addEventListener("keydown", onKey);
+    document.body.append(wrap);
+    wrap.querySelector("[data-cancel]").focus();
+  });
 }
 
 export function toast(message, kind = "info") {

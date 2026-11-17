@@ -24,8 +24,13 @@ propia ERA Studio.
   cada fase.
 - No simules funciones: un agente sin programar se registra con `planned()` y
   no entra en la cadena. Las fuentes que citan los agentes salen siempre de
-  resultados reales (búsqueda web, YouTube), nunca del texto del modelo.
+  resultados reales (búsqueda web, YouTube) o del material que pega el
+  usuario, nunca del texto del modelo.
 - Prueba con `npm test` y con el navegador a 360 px (`FACTORY_LLM=mock`).
+- La versión online está en <https://claude.ai/artifact/BsRfL98pX2iei5NMYQH5km>
+  y se genera con `npm run build:online`. Republícala en esa misma URL tras
+  cada cambio de `public/` o `src/`. Allí no hay `confirm()`, `fetch` externo
+  ni búsqueda web.
 
 ## ERA Studio
 

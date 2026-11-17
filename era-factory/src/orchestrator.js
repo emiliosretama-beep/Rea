@@ -11,7 +11,7 @@
 //                                     ↘ awaiting_approval → done (aprobada)
 //                                     ↘ failed | cancelled
 // Estados de producción: queued, running, awaiting_approval, failed, cancelled, completed
-import { LLMError } from "./llm.js";
+import { LLMError } from "./errors.js";
 
 export class OrchestratorError extends Error {
   constructor(message, { status = 400, details } = {}) {
@@ -230,7 +230,7 @@ export function createOrchestrator({ db, bus, registry, services, config }) {
   return {
     steps: () => registry.pipeline().map((a) => ({ agentId: a.id, requiresApproval: a.requiresApproval })),
 
-    startProduction({ channelId, topicHint }) {
+    startProduction({ channelId, topicHint, material }) {
       const channel = db.getChannel(channelId);
       if (!channel) throw new OrchestratorError("Canal no encontrado.", { status: 404 });
       const steps = this.steps();
@@ -239,6 +239,7 @@ export function createOrchestrator({ db, bus, registry, services, config }) {
         channelId,
         title: topicHint ? topicHint.slice(0, 120) : `Nuevo video · ${channel.name}`,
         topicHint: topicHint || null,
+        material: material || null,
         steps,
       });
       bus.publish("production", production);

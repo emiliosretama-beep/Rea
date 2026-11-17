@@ -49,6 +49,21 @@ const SYSTEM =
   "Eres el investigador de tendencias de una productora de YouTube. Buscas temas con demanda real y " +
   "poca saturación. Basas cada afirmación en lo que encuentras, nunca en suposiciones.";
 
+// Cada línea del material que pegó el usuario es una fuente. Si trae un
+// enlace, se conserva; el resto de la línea es su título.
+export function materialSources(material) {
+  return String(material || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 2)
+    .slice(0, 40)
+    .map((line) => {
+      const url = line.match(/https?:\/\/\S+/)?.[0] ?? null;
+      const title = (url ? line.replace(url, "") : line).replace(/^[-*•\d.)\s]+/, "").trim();
+      return { url, title: title || url, kind: "usuario" };
+    });
+}
+
 function formatViews(n) {
   return n === null ? "?" : n.toLocaleString("es-MX");
 }
@@ -87,7 +102,16 @@ export const trendResearcher = {
           .join("\n")
       : "No hay datos de YouTube disponibles.";
 
-    ctx.log("Investigando tendencias en la web…");
+    const userSources = materialSources(production.material);
+    const materialBlock = userSources.length
+      ? `\n\n## Material que aportó el productor (fuentes de primera mano)\n${userSources
+          .map((s) => `- ${s.title}${s.url ? ` (${s.url})` : ""}`)
+          .join("\n")}`
+      : "";
+    const webSearch = Boolean(services.llm.webSearch);
+    ctx.log(webSearch ? "Investigando tendencias en la web…" : "Analizando el nicho (esta versión no tiene búsqueda web)…");
+    if (!webSearch && !userSources.length)
+      ctx.log("Sin búsqueda web ni material aportado: las ideas se basan en el conocimiento general de Claude.", "warn");
     const research = await services.llm.research({
       name: "trends.research",
       system: SYSTEM,
@@ -97,7 +121,13 @@ export const trendResearcher = {
         (production.topicHint ? `\nEl productor quiere un video sobre: ${production.topicHint}\n` : "") +
         `\n## Videos más vistos del nicho en YouTube (últimos 30 días)\n${ytBlock}` +
         insightsBlock(ctx.insights) +
-        `\n\nInvestiga en la web qué temas del nicho tienen interés AHORA (noticias, lanzamientos, debates, ` +
+        materialBlock +
+        (webSearch
+          ? ""
+          : `\n\nNo tienes acceso a internet en esta tarea. Trabaja con tu conocimiento general y con el material ` +
+            `aportado. Distingue con claridad lo que sale del material de lo que es conocimiento general, y no ` +
+            `presentes como reciente nada que no puedas respaldar.`) +
+        `\n\nInvestiga ${webSearch ? "en la web " : ""}qué temas del nicho tienen interés AHORA (noticias, lanzamientos, debates, ` +
         `preguntas frecuentes, temas emergentes) para este público y en este idioma. Identifica huecos: temas ` +
         `con demanda y poca oferta de calidad. Escribe tus hallazgos con detalle y menciona de dónde sale cada uno.` +
         feedbackBlock(ctx),
@@ -105,6 +135,7 @@ export const trendResearcher = {
 
     const sources = [
       ...research.sources.map((s) => ({ url: s.url, title: s.title, kind: "web" })),
+      ...userSources,
       ...(youtubeVideos || []).map((v) => ({ url: v.url, title: `${v.title} (${v.channel})`, kind: "youtube" })),
     ].map((s, i) => ({ id: i + 1, ...s }));
     ctx.log(`Investigación terminada con ${sources.length} fuentes. Estructurando ideas…`);
@@ -117,14 +148,20 @@ export const trendResearcher = {
       prompt:
         `${channelBrief(channel)}\n\n## Notas de investigación\n${research.text}\n\n## Fuentes numeradas\n` +
         `${sourcesBlock(sources)}\n\nConvierte la investigación en: un resumen, de 3 a 6 tendencias y de 5 a 8 ` +
-        `ideas de video concretas para este canal. Cita en sourceIds SOLO números de la lista de fuentes. ` +
+        `ideas de video concretas para este canal. Cita en sourceIds SOLO números de la lista de fuentes` +
+        (webSearch ? ". " : "; si algo sale solo de tu conocimiento general, deja sourceIds vacío. ") +
         `${LANGUAGE_RULE}` +
         feedbackBlock(ctx),
     });
 
     return {
       generatedAt: new Date().toISOString(),
-      dataSources: { web: research.sources.length, youtube: youtubeVideos ? youtubeVideos.length : null },
+      dataSources: {
+        webSearch,
+        web: research.sources.length,
+        user: userSources.length,
+        youtube: youtubeVideos ? youtubeVideos.length : null,
+      },
       sources,
       youtubeVideos: youtubeVideos || [],
       researchNotes: research.text,
@@ -136,19 +173,30 @@ export const trendResearcher = {
     const issues = [];
     const warnings = [];
     const sources = output.sources || [];
-    if (!sources.length) issues.push("La investigación no encontró ninguna fuente verificable.");
+    // Sin búsqueda web (versión online) no se puede exigir fuente a todo: se avisa.
+    const strict = output.dataSources?.webSearch !== false;
+    if (!sources.length) {
+      if (strict) issues.push("La investigación no encontró ninguna fuente verificable.");
+      else warnings.push("Sin búsqueda web ni material aportado: verifica que estos temas sigan vigentes antes de producir.");
+    }
+    let unsourced = 0;
     if ((output.trends || []).length < 3) issues.push("Se necesitan al menos 3 tendencias.");
     if ((output.ideas || []).length < 4) issues.push("Se necesitan al menos 4 ideas de video.");
     for (const [i, item] of [...(output.trends || []), ...(output.ideas || [])].entries()) {
       const label = item.title || item.topic || `elemento ${i + 1}`;
-      if (!item.sourceIds?.length) issues.push(`«${label}» no cita ninguna fuente.`);
+      if (!item.sourceIds?.length) {
+        if (strict) issues.push(`«${label}» no cita ninguna fuente.`);
+        else unsourced++;
+      }
       const bad = invalidSourceIds(item.sourceIds, sources);
       if (bad.length) issues.push(`«${label}» cita fuentes que no existen: ${bad.join(", ")}.`);
     }
     for (const idea of output.ideas || [])
       if (!(idea.opportunityScore >= 1 && idea.opportunityScore <= 10))
         issues.push(`La puntuación de «${idea.title}» debe estar entre 1 y 10.`);
-    if (output.dataSources?.youtube === null)
+    if (unsourced && sources.length)
+      warnings.push(`${unsourced} tendencias o ideas salen del conocimiento general de Claude, sin fuente: confírmalas.`);
+    if (output.dataSources?.youtube === null && strict)
       warnings.push("Investigación sin datos de YouTube (añade YOUTUBE_API_KEY para ver vistas reales).");
     return { issues, warnings };
   },

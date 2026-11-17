@@ -1,0 +1,717 @@
+<title>ERA Factory</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Fábrica de canales de YouTube con agentes de IA que investigan, deciden y escriben bajo tu supervisión.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+<style>
+/* ERA Factory — centro de operaciones. Mobile-first: la base es el iPhone (360 px). */
+:root {
+  --noche: #0a0f1e;
+  --panel: #121a2f;
+  --panel-2: #18223b;
+  --borde: rgba(148, 161, 191, 0.16);
+  --borde-fuerte: rgba(148, 161, 191, 0.3);
+  --texto: #e9edf7;
+  --suave: #94a1bf;
+  --era: #f04e23;
+  --era-suave: rgba(240, 78, 35, 0.16);
+  --ok: #3ecf8e;
+  --espera: #f5b544;
+  --error: #ff6b6b;
+  --info: #7aa7ff;
+  --r-xl: 22px;
+  --r-lg: 16px;
+  --r-md: 11px;
+  --sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
+  --tabbar: 64px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; } /* que ninguna clase (p. ej. .btn) anule hidden */
+html, body { margin: 0; }
+body {
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(240, 78, 35, 0.1), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(122, 167, 255, 0.08), transparent 60%),
+    var(--noche);
+  background-attachment: fixed;
+  color: var(--texto);
+  font: 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+a { color: inherit; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--era); outline-offset: 2px; border-radius: 6px; }
+.mono { font-family: var(--mono); font-size: 0.86em; }
+.muted { color: var(--suave); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- Estructura ---------- */
+.shell { min-height: 100dvh; }
+.side {
+  position: fixed; inset: auto 0 0 0; z-index: 20;
+  height: calc(var(--tabbar) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(10, 15, 30, 0.82);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--borde);
+}
+.brand, .side-status { display: none; }
+.nav { display: grid; grid-template-columns: repeat(4, 1fr); height: var(--tabbar); }
+.nav a {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  text-decoration: none; color: var(--suave); font-size: 11px; font-weight: 600;
+  position: relative; -webkit-tap-highlight-color: transparent;
+}
+.nav a svg { width: 23px; height: 23px; }
+.nav a[aria-current="page"] { color: var(--texto); }
+.nav a[aria-current="page"] svg { color: var(--era); }
+.nav .badge-dot {
+  position: absolute; top: 9px; left: calc(50% + 8px);
+  min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px;
+  background: var(--espera); color: #1a1200; font-size: 10px; font-weight: 700;
+  display: grid; place-items: center;
+}
+.view {
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(var(--tabbar) + 28px + env(safe-area-inset-bottom));
+  max-width: 1180px; margin: 0 auto;
+}
+#view { outline: none;
+}
+
+@media (min-width: 900px) {
+  .side {
+    inset: 0 auto 0 0; width: 236px; height: auto; padding: 22px 14px;
+    border-top: 0; border-right: 1px solid var(--borde);
+    display: flex; flex-direction: column; gap: 26px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-size: 17px; padding: 0 8px; }
+  .brand strong { color: var(--era); letter-spacing: 0.04em; }
+  .nav { display: flex; flex-direction: column; gap: 4px; height: auto; }
+  .nav a { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: var(--r-md); font-size: 14px; }
+  .nav a:hover { background: var(--panel); color: var(--texto); }
+  .nav a[aria-current="page"] { background: var(--panel-2); }
+  .nav a svg { width: 20px; height: 20px; }
+  .nav .badge-dot { position: static; margin-left: auto; }
+  .side-status { display: grid; gap: 8px; margin-top: auto; font-size: 12.5px; }
+  .view { margin-left: 236px; padding: 30px 34px 48px; }
+}
+
+/* ---------- Tipografía y cabeceras ---------- */
+h1 { font-size: 24px; line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+h3 { font-size: 15px; margin: 0 0 6px; }
+p { margin: 0 0 10px; }
+#notice:empty { display: none; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+.page-head p { margin: 6px 0 0; color: var(--suave); max-width: 60ch; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--suave); text-decoration: none; font-size: 13px; margin-bottom: 10px; }
+@media (min-width: 900px) { h1 { font-size: 28px; } }
+
+/* ---------- Superficies (doble borde: carcasa + núcleo) ---------- */
+.card {
+  background: rgba(18, 26, 47, 0.72);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-xl);
+  padding: 6px;
+  box-shadow: 0 18px 50px -30px rgba(0, 0, 0, 0.8);
+}
+.card > .core { background: var(--panel); border-radius: calc(var(--r-xl) - 6px); padding: 16px; }
+.card + .card, .stack > * + * { margin-top: 14px; }
+.plain { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-lg); padding: 14px; }
+.grid { display: grid; gap: 14px; }
+@media (min-width: 720px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1040px) { .grid.main { grid-template-columns: 1.45fr 1fr; align-items: start; } }
+
+/* ---------- Botones (píldora) ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--borde-fuerte); background: var(--panel-2);
+  font-weight: 600; font-size: 14px; cursor: pointer; text-decoration: none;
+  transition: transform 0.15s var(--curva), background 0.2s;
+  -webkit-tap-highlight-color: transparent; white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn:hover { background: #1f2a47; }
+.btn.primary { background: var(--era); border-color: var(--era); color: #fff; }
+.btn.primary:hover { background: #ff5f33; }
+.btn.ok { background: var(--ok); border-color: var(--ok); color: #04150d; }
+.btn.danger { color: var(--error); }
+.btn.ghost { background: transparent; }
+.btn.small { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn svg { width: 18px; height: 18px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------- Estados ---------- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; background: var(--panel-2); color: var(--suave); white-space: nowrap;
+}
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st-running, .st-queued { color: var(--era); background: var(--era-suave); }
+.st-done, .st-completed { color: var(--ok); background: rgba(62, 207, 142, 0.12); }
+.st-awaiting_approval { color: var(--espera); background: rgba(245, 181, 68, 0.13); }
+.st-failed { color: var(--error); background: rgba(255, 107, 107, 0.12); }
+.st-cancelled, .st-pending, .st-planned { color: var(--suave); }
+.st-running::before { animation: latido 1.2s infinite; }
+@keyframes latido { 50% { opacity: 0.25; } }
+
+.banner {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-lg);
+  border: 1px solid; margin-bottom: 16px; font-size: 14px;
+}
+.banner svg { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.banner.warn { border-color: rgba(245, 181, 68, 0.4); background: rgba(245, 181, 68, 0.08); }
+.banner.error { border-color: rgba(255, 107, 107, 0.4); background: rgba(255, 107, 107, 0.08); }
+.banner.info { border-color: rgba(122, 167, 255, 0.35); background: rgba(122, 167, 255, 0.07); }
+.banner p { margin: 2px 0 0; color: var(--suave); }
+
+/* ---------- Centro: franja de cifras ---------- */
+.strip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--borde); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--borde); margin-bottom: 16px; }
+.strip div { background: var(--panel); padding: 12px 14px; }
+.strip b { display: block; font: 500 22px/1.1 var(--mono); }
+.strip span { color: var(--suave); font-size: 12.5px; }
+@media (min-width: 720px) { .strip { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---------- Listas ---------- */
+.list { display: grid; gap: 8px; }
+.row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px;
+  background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-lg);
+  text-decoration: none; transition: border-color 0.2s;
+}
+a.row:hover { border-color: var(--borde-fuerte); }
+.row .grow { flex: 1; min-width: 0; }
+.row .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.row .meta { color: var(--suave); font-size: 12.5px; }
+.empty { text-align: center; padding: 26px 16px; color: var(--suave); }
+.empty strong { display: block; color: var(--texto); margin-bottom: 4px; }
+
+/* Mini cadena de una producción (puntos por agente) */
+.dots { display: flex; gap: 4px; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--borde-fuerte); }
+.dots i.done { background: var(--ok); }
+.dots i.running { background: var(--era); animation: latido 1.2s infinite; }
+.dots i.awaiting_approval { background: var(--espera); }
+.dots i.failed { background: var(--error); }
+.dots i.planned { background: transparent; border: 1px dashed var(--borde-fuerte); }
+
+/* ---------- Equipo / agentes ---------- */
+.agent { display: flex; gap: 12px; align-items: flex-start; }
+.avatar {
+  flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
+  background: var(--panel-2); border: 1px solid var(--borde); color: var(--suave);
+}
+.avatar svg { width: 21px; height: 21px; }
+.agent.busy .avatar { color: var(--era); border-color: rgba(240, 78, 35, 0.5); box-shadow: 0 0 0 4px var(--era-suave); }
+.agent.planned { opacity: 0.62; }
+.agent .grow { flex: 1; min-width: 0; }
+.agent .doing { font-size: 13px; color: var(--suave); margin-top: 2px; }
+.agent-grid { display: grid; gap: 12px; }
+@media (min-width: 720px) { .agent-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1100px) { .agent-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- Elemento memorable: la línea de producción ---------- */
+.line { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 0; }
+.node { position: relative; display: flex; gap: 12px; align-items: center; padding: 9px 0; text-decoration: none; }
+.node .avatar { position: relative; z-index: 1; background: var(--panel); }
+.node .grow { flex: 1; min-width: 0; }
+.node .name { font-weight: 600; font-size: 14px; }
+.node .sub { font-size: 12.5px; color: var(--suave); }
+/* conducto vertical (móvil) */
+.node:not(:last-child)::after {
+  content: ""; position: absolute; left: 19.5px; top: 49px; bottom: -9px; width: 1px;
+  background: var(--borde-fuerte);
+}
+.node.done:not(:last-child)::after { background: var(--ok); }
+.node.running:not(:last-child)::after {
+  background: linear-gradient(var(--era), var(--era)) 0 0 / 100% 0 no-repeat, var(--borde-fuerte);
+  animation: flujo-v 1.4s var(--curva) infinite;
+}
+@keyframes flujo-v { to { background-size: 100% 100%; } }
+.node.done .avatar { color: var(--ok); border-color: rgba(62, 207, 142, 0.45); }
+.node.running .avatar { color: var(--era); border-color: var(--era); box-shadow: 0 0 0 5px var(--era-suave); }
+.node.awaiting_approval .avatar { color: var(--espera); border-color: var(--espera); }
+.node.failed .avatar { color: var(--error); border-color: var(--error); }
+.node.planned .avatar { border-style: dashed; }
+.node.planned { opacity: 0.55; }
+.node[aria-current="step"] .name { color: var(--era); }
+.node.summary .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 899px) { .node.planned:not(.summary) { display: none; } }
+@media (min-width: 900px) { .node.summary { display: none; } .node:nth-last-child(2):has(+ .summary)::after { content: none; } }
+textarea[data-path] { overflow: hidden; }
+
+@media (min-width: 900px) {
+  .line { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .node { flex-direction: column; text-align: center; gap: 8px; padding: 4px 2px; }
+  .node .avatar { width: 46px; height: 46px; border-radius: 15px; }
+  .node:not(:last-child)::after { left: calc(50% + 30px); right: calc(-50% + 30px); top: 27px; bottom: auto; width: auto; height: 1px; }
+  .node.running:not(:last-child)::after {
+    background: linear-gradient(90deg, var(--era), var(--era)) 0 0 / 0 100% no-repeat, var(--borde-fuerte);
+    animation-name: flujo-h;
+  }
+  @keyframes flujo-h { to { background-size: 100% 100%; } }
+}
+
+/* ---------- Pestañas de la producción ---------- */
+.tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; margin: 18px 0 14px; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button {
+  flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--borde);
+  background: transparent; color: var(--suave); font-weight: 600; font-size: 13.5px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--texto); border-color: var(--borde-fuerte); }
+
+/* ---------- Contenido de agentes ---------- */
+.kv { display: grid; gap: 10px; }
+.kv dt { color: var(--suave); font-size: 12.5px; }
+.kv dd { margin: 2px 0 0; }
+@media (min-width: 720px) { .kv { grid-template-columns: 1fr 1fr; } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 4px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--borde); font-size: 12.5px; }
+.score { font-family: var(--mono); font-weight: 500; color: var(--era); }
+.idea.chosen { border-color: rgba(240, 78, 35, 0.6); box-shadow: inset 0 0 0 1px rgba(240, 78, 35, 0.35); }
+.src { font-size: 12.5px; color: var(--suave); }
+.src a { color: var(--info); text-decoration: none; }
+.src a:hover { text-decoration: underline; }
+.sources { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.sources li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; font-size: 13.5px; overflow-wrap: anywhere; }
+.sources .n { font-family: var(--mono); color: var(--suave); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+th { color: var(--suave); font-weight: 600; font-size: 12px; }
+td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
+.prose { white-space: pre-wrap; color: #cfd6e8; }
+
+/* ---------- Editor de guion ---------- */
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--suave); }
+.field .hint { font-size: 12px; color: var(--suave); }
+input[type="text"], textarea, select {
+  width: 100%; padding: 11px 13px; border-radius: var(--r-md);
+  background: #0d1426; border: 1px solid var(--borde-fuerte); font-size: 16px; /* 16px: iOS no hace zoom */
+}
+textarea { resize: vertical; min-height: 96px; line-height: 1.55; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--era); box-shadow: 0 0 0 3px var(--era-suave); }
+.section-edit { border: 1px solid var(--borde); border-radius: var(--r-lg); padding: 14px; margin-bottom: 12px; background: rgba(13, 20, 38, 0.6); }
+.section-edit .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--suave); }
+.stats b { color: var(--texto); font-family: var(--mono); font-weight: 500; }
+.claim { display: grid; gap: 4px; padding: 10px 12px; border-radius: var(--r-md); background: #0d1426; border-left: 3px solid var(--borde-fuerte); font-size: 13.5px; }
+.claim.respaldado { border-left-color: var(--ok); }
+.claim.sin_respaldo { border-left-color: var(--espera); }
+.claim.contradicho { border-left-color: var(--error); }
+.decision-bar {
+  position: sticky; bottom: calc(var(--tabbar) + 10px + env(safe-area-inset-bottom)); z-index: 5;
+  margin-top: 16px; padding: 10px; border-radius: var(--r-xl);
+  background: rgba(18, 26, 47, 0.94); border: 1px solid var(--borde-fuerte);
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.9);
+}
+@media (min-width: 900px) { .decision-bar { bottom: 16px; } }
+.decision-bar .actions .btn { flex: 1 1 auto; }
+
+/* ---------- Registro ---------- */
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.log li { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px dashed rgba(148, 161, 191, 0.1); }
+.log time { font-family: var(--mono); font-size: 11.5px; color: var(--suave); padding-top: 2px; }
+.log .warn { color: var(--espera); }
+.log .error { color: var(--error); }
+.log .success { color: var(--ok); }
+.log .who { color: var(--suave); }
+.log.tall { max-height: 460px; overflow-y: auto; }
+
+/* ---------- Formularios de canal ---------- */
+.form-grid { display: grid; gap: 0 14px; }
+@media (min-width: 720px) { .form-grid { grid-template-columns: 1fr 1fr; } .form-grid .full { grid-column: 1 / -1; } }
+.form-error { color: var(--error); font-size: 13.5px; margin: 0 0 12px; }
+
+/* ---------- Filtros ---------- */
+.filters { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+
+/* ---------- Avisos ---------- */
+.toasts { position: fixed; left: 16px; right: 16px; bottom: calc(var(--tabbar) + 14px + env(safe-area-inset-bottom)); z-index: 50; display: grid; gap: 8px; justify-items: center; pointer-events: none; }
+@media (min-width: 900px) { .toasts { left: auto; right: 24px; bottom: 24px; justify-items: end; } }
+.toast {
+  pointer-events: auto; max-width: 420px; padding: 11px 16px; border-radius: var(--r-lg);
+  background: #1f2a47; border: 1px solid var(--borde-fuerte); font-size: 14px;
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.9);
+  animation: entra 0.35s var(--curva);
+}
+.toast.error { border-color: rgba(255, 107, 107, 0.55); }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+
+.skeleton { height: 120px; border-radius: var(--r-xl); background: linear-gradient(90deg, var(--panel), var(--panel-2), var(--panel)); background-size: 200% 100%; animation: brillo 1.4s infinite; }
+@keyframes brillo { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- Confirmación (sustituye a confirm(), que claude.ai no muestra) ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: end center;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(5, 8, 18, 0.7);
+  animation: entra 0.25s var(--curva);
+}
+.modal {
+  width: 100%; max-width: 440px; padding: 20px; border-radius: var(--r-xl);
+  background: var(--panel); border: 1px solid var(--borde-fuerte); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.9);
+}
+.modal h2 { margin-bottom: 6px; }
+.modal .actions { margin-top: 16px; }
+.modal .actions .btn { flex: 1 1 auto; }
+@media (min-width: 600px) { .modal-backdrop { place-items: center; } }
+
+
+.view { padding-top: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 900px) { .view { padding: 30px 34px 48px; } }
+</style>
+<div class="shell">
+      <aside class="side" aria-label="Navegación principal">
+        <a class="brand" href="#centro" aria-label="ERA Factory, inicio">
+          <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22sun%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23FFB089%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220.5%22%20stop-color%3D%22%23F04E23%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FFFFFF%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3Cmask%20id%3D%22cut%22%3E%0A%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%23fff%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2232%22%20y%3D%2222.4%22%20width%3D%2222%22%20height%3D%225.6%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2232%22%20y%3D%2236%22%20width%3D%2222%22%20height%3D%225.6%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%2247.5%22%20y%3D%2227.5%22%20width%3D%228%22%20height%3D%229%22%20fill%3D%22%23000%22%2F%3E%0A%20%20%20%20%3C%2Fmask%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3C!--%20Logo%20ERA%20(compartido%20con%20ERA%20Studio)%3A%20el%20sol%20que%20sale%20es%20una%20E%20(concepto%20%22Nueva%20Era%22)%20--%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2314183A%22%2F%3E%0A%20%20%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2222%22%20fill%3D%22url(%23sun)%22%20mask%3D%22url(%23cut)%22%2F%3E%0A%3C%2Fsvg%3E" alt="" width="30" height="30" />
+          <span><strong>ERA</strong> Factory</span>
+        </a>
+        <nav class="nav" id="nav"></nav>
+        <div class="side-status" id="side-status"></div>
+      </aside>
+      <main class="view"><div id="notice"></div><div id="view" tabindex="-1"><div class="skeleton"></div></div></main>
+    </div>
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<script type="module">
+globalThis.__ERA_CLOUD__ = true;
+var o=e=>String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t]);function he(e){try{let t=new URL(e);return t.protocol==="https:"||t.protocol==="http:"?t.href:null}catch{return null}}var K=class extends Error{constructor(t,n,a){super(t),this.status=n,this.details=a}},se=()=>globalThis.__ERA_BACKEND__??null;async function C(e,t,n){let a=se();if(a)try{return await a.request(e,t,n)}catch(p){throw new K(p.message||"Error inesperado.",p.status??500,p.details)}let s;try{s=await fetch(t,{method:e,headers:n?{"Content-Type":"application/json"}:void 0,body:n?JSON.stringify(n):void 0})}catch{throw new K("No hay conexi\xF3n con el servidor de ERA Factory. \xBFEst\xE1 encendido?",0)}let i=await s.json().catch(()=>({}));if(!s.ok)throw new K(i.error||`Error ${s.status}`,s.status,i.details);return i}function Z({title:e,body:t="",confirmLabel:n="Confirmar",danger:a=!1}){return new Promise(s=>{let i=document.activeElement,p=document.createElement("div");p.className="modal-backdrop",p.innerHTML=`<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-t" aria-describedby="modal-b">
+      <h2 id="modal-t">${o(e)}</h2>${t?`<p id="modal-b" class="muted">${o(t)}</p>`:""}
+      <div class="actions"><button class="btn ${a?"danger":"primary"}" data-ok>${o(n)}</button>
+      <button class="btn ghost" data-cancel>Cancelar</button></div></div>`;let d=v=>{p.remove(),document.removeEventListener("keydown",l),i?.focus?.(),s(v)},l=v=>v.key==="Escape"&&d(!1);p.addEventListener("click",v=>{v.target===p||v.target.closest("[data-cancel]")?d(!1):v.target.closest("[data-ok]")&&d(!0)}),document.addEventListener("keydown",l),document.body.append(p),p.querySelector("[data-cancel]").focus()})}function j(e,t="info"){let n=document.getElementById("toasts"),a=document.createElement("div");a.className=`toast ${t}`,a.textContent=e,n.append(a),setTimeout(()=>a.remove(),t==="error"?7e3:3800)}var Ke={centro:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5.5h4V20"/>',canales:'<rect x="3" y="5.5" width="18" height="13" rx="3"/><path d="m10.5 9.5 4 2.5-4 2.5z"/>',producciones:'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".8"/><circle cx="4" cy="12" r=".8"/><circle cx="4" cy="18" r=".8"/>',agentes:'<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.6A4.5 4.5 0 0 1 21 19"/>',plus:'<path d="M12 5v14M5 12h14"/>',check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',retry:'<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4.5v4h4"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',back:'<path d="M15 5 8 12l7 7"/>',alert:'<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2v.1"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.1"/>',trash:'<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',play:'<path d="M7 4.8v14.4L19 12z"/>',"trend-researcher":'<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/><path d="M7.5 12 10 9.5l1.8 1.8L14 9"/>',"audience-analyst":'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',scriptwriter:'<path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 12h6M9 15.5h6"/>',narrator:'<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5"/>',"thumbnail-designer":'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="m21 15.5-5-4.5-8.5 8"/>',producer:'<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 10.5 5-3v9l-5-3"/>',"performance-analyst":'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},w=e=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${Ke[e]||Ke.info}</svg>`,oe={pending:"En cola",queued:"En cola",running:"Trabajando",awaiting_approval:"Espera tu aprobaci\xF3n",done:"Terminado",completed:"Completada",failed:"Fall\xF3",cancelled:"Cancelada",planned:"Planificado"},G=(e,t)=>`<span class="pill st-${o(e)}">${o(t??oe[e]??e)}</span>`;function re(e){if(!e)return"";let t=Math.round((Date.now()-new Date(e).getTime())/1e3);return t<45?"ahora":t<3600?`hace ${Math.round(t/60)} min`:t<86400?`hace ${Math.round(t/3600)} h`:new Date(e).toLocaleDateString("es-MX",{day:"numeric",month:"short"})}var Je=e=>new Date(e).toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",hour12:!1}),ve=e=>{let t=Math.floor(e/60),n=Math.round(e%60);return`${t}:${String(n).padStart(2,"0")}`},qe=e=>e==null?"\u2014":Number(e).toLocaleString("es-MX");var O={status:null,listeners:new Set},Pe=null;function Y(){return Pe??=C("GET","/api/status").then(e=>{O.status=e;for(let t of O.listeners)t(e);return e}).finally(()=>Pe=null),Pe}var V=e=>O.status?.agents.find(t=>t.id===e)?.name??e;function H(e,t=180){let n;return(...a)=>{clearTimeout(n),n=setTimeout(()=>e(...a),t)}}function Xe(){let e=O.status?.llm.mode,t=O.status?.cloud;return t?Bt(e,t):e==="none"?`<div class="banner error">${w("alert")}<div><strong>Los agentes no pueden trabajar todav\xEDa.</strong>
+      <p>Falta <span class="mono">ANTHROPIC_API_KEY</span> en <span class="mono">era-factory/.env</span>. Copia <span class="mono">.env.example</span>, pega tu key y reinicia el servidor.</p></div></div>`:e==="mock"?`<div class="banner warn">${w("alert")}<div><strong>Modo simulaci\xF3n.</strong>
+      <p>Los resultados son datos de prueba fijos, no IA ni investigaci\xF3n real. Quita <span class="mono">FACTORY_LLM=mock</span> para trabajar de verdad.</p></div></div>`:""}function Bt(e,t){let n=[];return t.readOnly&&n.push(`<div class="banner warn">${w("alert")}<div><strong>Modo lectura: ERA Factory est\xE1 trabajando en otro dispositivo.</strong>
+      <p>Para no producir el mismo video dos veces, solo un dispositivo trabaja a la vez. Lo que ves puede estar desactualizado.</p>
+      <div class="actions" style="margin-top:10px"><button class="btn small primary" data-takeover>Usar en este dispositivo</button></div></div></div>`),e==="none"&&n.push(`<div class="banner error">${w("alert")}<div><strong>Claude no est\xE1 disponible en esta vista.</strong>
+      <p>Abre ERA Factory desde claude.ai con tu sesi\xF3n iniciada para que los agentes puedan trabajar.</p></div></div>`),t.storage==="local"&&n.push(`<div class="banner warn">${w("alert")}<div><strong>Tus datos se guardan solo en este navegador.</strong>
+      <p>No se pudo conectar con el guardado en la nube (\xBFsesi\xF3n cerrada?). No los ver\xE1s en otros dispositivos.</p></div></div>`),t.error&&n.push(`<div class="banner error">${w("alert")}<div><strong>No se pudo guardar.</strong><p>${o(t.error)}</p></div></div>`),n.join("")}function ie(e){let n=(O.status?.agents??[]).map(a=>{let s=e.tasks?.find(p=>p.agentId===a.id),i=s?s.status:"planned";return`<i class="${o(i)}" title="${o(a.name)}: ${o(oe[i]??i)}"></i>`}).join("");return`<a class="row" href="#produccion-${o(e.id)}">
+    <div class="grow">
+      <div class="title">${o(e.title)}</div>
+      <div class="meta">${o(e.channelName)} \xB7 ${o(re(e.updatedAt))}</div>
+      <div class="dots" style="margin-top:7px" aria-hidden="true">${n}</div>
+    </div>
+    ${G(e.status)}
+  </a>`}function ce(e,{showAgent:t=!0,tall:n=!1}={}){return e.length?`<ol class="log${n?" tall":""}">${e.map(a=>`<li><time datetime="${o(a.createdAt)}">${o(Je(a.createdAt))}</time>
+      <div class="${o(a.level)}">${t&&a.agentId&&!a.message.startsWith(V(a.agentId))?`<span class="who">${o(V(a.agentId))} \xB7 </span>`:""}${o(a.message)}</div></li>`).join("")}</ol>`:'<p class="muted">Sin actividad todav\xEDa.</p>'}function ye(e,t,{compact:n=!1}={}){let a=!!t,s=e.implemented?a?G("running"):G("pending","Libre"):G("planned",`Fase ${e.phase}`),i=e.implemented?a?`Trabajando \xB7 <a href="#produccion-${o(t.productionId)}">ver producci\xF3n</a>`:"Esperando una tarea.":"A\xFAn no programado.";return`<div class="agent${a?" busy":""}${e.implemented?"":" planned"}">
+    <div class="avatar">${w(e.id)}</div>
+    <div class="grow">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <strong>${o(e.name)}</strong>${s}
+      </div>
+      <div class="doing">${i}</div>
+      ${n?"":`<p class="muted" style="margin:8px 0 0;font-size:13.5px">${o(e.description)}</p>`}
+    </div>
+  </div>`}var be=null;async function Qe(){let[e,t,n]=await Promise.all([Y(),C("GET","/api/productions"),C("GET","/api/logs?limit=40")]),a=e.summary,s=t.filter(l=>["awaiting_approval","failed"].includes(l.status)),i=t.filter(l=>["running","queued"].includes(l.status)),p=new Map(e.activity.map(l=>[l.agentId,l])),d=e.agents.filter(l=>!l.implemented);be.innerHTML=`
+    <header class="page-head">
+      <div><h1>Centro de operaciones</h1><p>Tu equipo de agentes investiga, escribe y produce. T\xFA supervisas y apruebas.</p></div>
+      ${a.channels?`<a class="btn primary" href="#canales">${w("play")}Producir un video</a>`:""}
+    </header>
+    <div class="strip" role="list">
+      <div role="listitem"><b>${a.channels}</b><span>Canales</span></div>
+      <div role="listitem"><b>${a.active}</b><span>En producci\xF3n</span></div>
+      <div role="listitem"><b>${a.awaitingApproval}</b><span>Esperan aprobaci\xF3n</span></div>
+      <div role="listitem"><b>${a.completed}</b><span>Completadas</span></div>
+    </div>
+    <div class="grid main">
+      <div class="stack">
+        ${a.channels?"":`<section class="card"><div class="core empty"><strong>Empieza creando tu primer canal.</strong>
+                <p>Dinos el nicho, el idioma y el p\xFAblico; el equipo se encarga del resto.</p>
+                <a class="btn primary" href="#canales-nuevo">${w("plus")}Crear canal</a></div></section>`}
+        <section class="card"><div class="core">
+          <h2>Necesita tu atenci\xF3n</h2>
+          ${s.length?`<div class="list">${s.map(ie).join("")}</div>`:'<p class="muted">Nada pendiente. Cuando un guion est\xE9 listo o algo falle, aparecer\xE1 aqu\xED.</p>'}
+        </div></section>
+        <section class="card"><div class="core">
+          <h2>En producci\xF3n</h2>
+          ${i.length?`<div class="list">${i.map(ie).join("")}</div>`:'<p class="muted">No hay videos en marcha.</p>'}
+        </div></section>
+      </div>
+      <div class="stack">
+        <section class="card"><div class="core">
+          <h2>Equipo en vivo</h2>
+          <div class="list">${e.agents.filter(l=>l.implemented).map(l=>ye(l,p.get(l.id),{compact:!0})).join("")}</div>
+          ${d.length?`<p class="muted" style="margin:12px 0 0;font-size:13.5px">${d.length} agentes m\xE1s en el plan: ${d.map(l=>l.name).join(", ")}. <a href="#agentes">Ver plan</a></p>`:""}
+        </div></section>
+        <section class="card"><div class="core">
+          <h2>Actividad reciente</h2>
+          ${ce(n.slice(-14).reverse())}
+        </div></section>
+      </div>
+    </div>`}var Ht=H(()=>be&&Qe().catch(()=>{}),300),Ze={async render(e){be=e,await Qe()},onEvent:()=>Ht(),leave:()=>be=null};var et=[{key:"name",label:"Nombre del canal",placeholder:"Ej.: Tecnolog\xEDa en 8 minutos",max:80},{key:"niche",label:"Tem\xE1tica o nicho",placeholder:"Ej.: inteligencia artificial para estudiantes",max:200},{key:"language",label:"Idioma",placeholder:"Espa\xF1ol",max:40,list:"langs"},{key:"frequency",label:"Frecuencia de publicaci\xF3n",type:"select",options:["1 por semana","2 por semana","3 por semana","Diario","Cada 15 d\xEDas","1 al mes"]},{key:"audience",label:"P\xFAblico objetivo",placeholder:"Ej.: estudiantes de prepa y universidad en M\xE9xico que quieren usar IA sin complicarse",type:"textarea",max:400,full:!0},{key:"videoType",label:"Tipo de videos",placeholder:"Ej.: explicaciones de 8-10 min con ejemplos en pantalla",max:200,full:!0}];function Ft(e,t=""){let n=`f-${e.key}`,a;return e.type==="textarea"?a=`<textarea id="${n}" name="${e.key}" maxlength="${e.max}" placeholder="${o(e.placeholder)}" required>${o(t)}</textarea>`:e.type==="select"?a=`<select id="${n}" name="${e.key}">${e.options.map(s=>`<option${s===t?" selected":""}>${o(s)}</option>`).join("")}${t&&!e.options.includes(t)?`<option selected>${o(t)}</option>`:""}</select>`:a=`<input type="text" id="${n}" name="${e.key}" maxlength="${e.max}" placeholder="${o(e.placeholder)}" value="${o(t)}" required${e.list?` list="${e.list}"`:""} />`,`<div class="field${e.full?" full":""}"><label for="${n}">${o(e.label)}</label>${a}</div>`}function zt(e){return`
+    <a class="back" href="#canales">${w("back")}Canales</a>
+    <header class="page-head"><div><h1>${e?"Editar canal":"Nuevo canal"}</h1>
+      <p>Con esto el equipo sabe para qui\xE9n trabaja. Cuanto m\xE1s concreto sea el p\xFAblico, mejores ideas.</p></div></header>
+    <section class="card"><div class="core">
+      <form id="channel-form" novalidate>
+        <div class="form-grid">${et.map(t=>Ft(t,e?.[t.key]??(t.key==="language"?"Espa\xF1ol":""))).join("")}</div>
+        <datalist id="langs"><option>Espa\xF1ol</option><option>Ingl\xE9s</option><option>Portugu\xE9s</option><option>Franc\xE9s</option></datalist>
+        <p class="form-error" id="form-error" hidden></p>
+        <div class="actions">
+          <button class="btn primary" type="submit">${w("check")}${e?"Guardar cambios":"Crear canal"}</button>
+          <a class="btn ghost" href="#canales">Cancelar</a>
+        </div>
+      </form>
+    </div></section>`}function Ut(e){return`<section class="card"><div class="core">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+      <div style="min-width:0"><h2 style="margin:0">${o(e.name)}</h2>
+        <p class="muted" style="margin:4px 0 0">${o(e.niche)} \xB7 ${o(e.language)} \xB7 ${o(e.frequency)}</p></div>
+      <a class="btn small ghost" href="#canal-${o(e.id)}" aria-label="Editar ${o(e.name)}">${w("edit")}</a>
+    </div>
+    <p style="margin:10px 0 14px;font-size:14px">${o(e.audience)}</p>
+    <form class="produce" data-channel="${o(e.id)}">
+      <div class="field" style="margin-bottom:10px">
+        <label for="topic-${o(e.id)}">Tema concreto (opcional)</label>
+        <input type="text" id="topic-${o(e.id)}" name="topicHint" maxlength="300" placeholder="D\xE9jalo vac\xEDo y el investigador propone el tema" />
+      </div>
+      <details class="field" style="margin-bottom:12px"${O.status?.llm.webSearch?"":" open"}>
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--suave)">Material de investigaci\xF3n (opcional)</summary>
+        <textarea id="material-${o(e.id)}" name="material" rows="4" maxlength="6000" style="margin-top:8px"
+          placeholder="Pega enlaces o t\xEDtulos que hayas visto: videos de YouTube que funcionan, noticias, preguntas de tu p\xFAblico. Uno por l\xEDnea."></textarea>
+        <span class="hint">${O.status?.llm.webSearch?"Se suma a la b\xFAsqueda web del investigador.":"Esta versi\xF3n no busca en internet: lo que pegues aqu\xED son las fuentes reales del investigador. Sin material, las ideas salen del conocimiento general de Claude."}</span>
+      </details>
+      <button class="btn primary" type="submit">${w("play")}Producir un video</button>
+    </form>
+  </div></section>`}async function Gt(e){let t=await C("GET","/api/channels");e.innerHTML=`
+    <header class="page-head"><div><h1>Canales</h1><p>Cada canal tiene su nicho y su p\xFAblico. Lanza un video y el equipo se pone a trabajar.</p></div>
+      <a class="btn primary" href="#canales-nuevo">${w("plus")}Nuevo canal</a></header>
+    ${t.length?`<div class="grid two">${t.map(Ut).join("")}</div>`:`<section class="card"><div class="core empty"><strong>A\xFAn no tienes canales.</strong><p>Crea uno para empezar a producir.</p>
+            <a class="btn primary" href="#canales-nuevo">${w("plus")}Crear canal</a></div></section>`}`,e.querySelectorAll("form.produce").forEach(n=>n.addEventListener("submit",async a=>{a.preventDefault();let s=n.querySelector("button");s.disabled=!0;try{let i=await C("POST","/api/productions",{channelId:n.dataset.channel,topicHint:n.topicHint.value,material:n.material.value});j("Producci\xF3n creada. El investigador empieza ya."),location.hash=`#produccion-${i.id}`}catch(i){j(i.message,"error"),s.disabled=!1}}))}async function Yt(e,t){let n=t?(await C("GET","/api/channels")).find(s=>s.id===t):null;if(t&&!n)throw new K("Este canal ya no existe.",404);e.innerHTML=zt(n),n&&(e.querySelector(".actions").insertAdjacentHTML("beforeend",`<button class="btn danger ghost" type="button" id="delete">${w("trash")}Eliminar canal</button>`),e.querySelector("#delete").addEventListener("click",async()=>{if(await Z({title:`\xBFEliminar \xAB${n.name}\xBB?`,body:"Tambi\xE9n se borran todas sus producciones. No se puede deshacer.",confirmLabel:"Eliminar canal",danger:!0}))try{await C("DELETE",`/api/channels/${n.id}`),j("Canal eliminado."),location.hash="#canales"}catch(i){j(i.message,"error")}}));let a=e.querySelector("#channel-form");a.addEventListener("submit",async s=>{s.preventDefault();let i=Object.fromEntries(new FormData(a)),p=e.querySelector("#form-error"),d=et.filter(l=>!String(i[l.key]||"").trim());if(d.length){p.textContent=`Completa: ${d.map(l=>l.label.toLowerCase()).join(", ")}.`,p.hidden=!1,a.querySelector(`[name="${d[0].key}"]`).focus();return}try{await C(n?"PUT":"POST",n?`/api/channels/${n.id}`:"/api/channels",i),j(n?"Canal actualizado.":"Canal creado."),location.hash="#canales"}catch(l){p.textContent=l.message,p.hidden=!1}})}var $e={render(e,[t]){return t?Yt(e,t==="nuevo"?null:t):Gt(e)}};var Vt=[["all","Todas"],["attention","Necesitan atenci\xF3n"],["active","En curso"],["completed","Completadas"],["closed","Canceladas"]],tt={all:()=>!0,attention:e=>["awaiting_approval","failed"].includes(e.status),active:e=>["running","queued"].includes(e.status),completed:e=>e.status==="completed",closed:e=>e.status==="cancelled"},le=null,we="all";async function Oe(){let e=await C("GET","/api/productions"),t=e.filter(tt[we]);le.innerHTML=`
+    <header class="page-head"><div><h1>Producciones</h1><p>Historial de todos los videos de todos tus canales.</p></div></header>
+    <div class="filters" role="toolbar" aria-label="Filtrar">${Vt.map(([n,a])=>`<button class="btn small${n===we?"":" ghost"}" data-filter="${n}" aria-pressed="${n===we}">${o(a)} <span class="mono">${e.filter(tt[n]).length}</span></button>`).join("")}</div>
+    ${t.length?`<div class="list">${t.map(ie).join("")}</div>`:`<div class="card"><div class="core empty"><strong>No hay producciones aqu\xED.</strong>${e.length?"Prueba con otro filtro.":'Lanza la primera desde <a href="#canales">Canales</a>.'}</div></div>`}`,le.querySelectorAll("[data-filter]").forEach(n=>n.addEventListener("click",()=>{we=n.dataset.filter,Oe()}))}var Wt=H(()=>le&&Oe().catch(()=>{}),300),nt={async render(e){le=e,await Oe()},onEvent:e=>e.type!=="log"?Wt():null,leave:()=>le=null};var Kt=150,st=[{id:"trend-researcher",label:"Investigaci\xF3n"},{id:"audience-analyst",label:"Audiencia"},{id:"scriptwriter",label:"Guion"},{id:"log",label:"Registro"}],h={root:null,id:null,detail:null,tab:null,follow:!0,draft:null,dirty:!1,signature:""},W=e=>h.detail.tasks.find(t=>t.agentId===e),ot=e=>e?`${e.status}:${e.attempt}:${e.updatedAt}`:"none",Se=e=>(String(e||"").match(/\S+/g)||[]).length;function _e(e,t){let n=(e||[]).map(a=>t.find(s=>s.id===a)).filter(Boolean).map(a=>{let s=he(a.url);return s?`<a href="${o(s)}" target="_blank" rel="noopener noreferrer" title="${o(a.title)}">[${a.id}]</a>`:`[${a.id}]`});return n.length?`<span class="src">Fuentes: ${n.join(" ")}</span>`:'<span class="src">Sin fuente</span>'}function Ne(){let e=h.detail.tasks,t=e.find(a=>["awaiting_approval","failed","running","cancelled"].includes(a.status));return t?t.agentId:e.filter(a=>a.status==="done").at(-1)?.agentId??"trend-researcher"}function rt(){let{production:e,channel:t}=h.detail,n=["running","queued"].includes(e.status);return`
+    <a class="back" href="#producciones">${w("back")}Producciones</a>
+    <header class="page-head">
+      <div style="min-width:0"><h1>${o(e.title)}</h1>
+        <p>${o(t?.name??"")}${e.topicHint?` \xB7 Tema pedido: ${o(e.topicHint)}`:""} \xB7 ${o(re(e.createdAt))}</p>
+        <div style="margin-top:10px">${G(e.status)}</div></div>
+      <div class="actions">
+        ${n?`<button class="btn danger" data-act="cancel">${w("x")}Cancelar</button>`:""}
+        ${n?"":`<button class="btn ghost danger" data-act="delete">${w("trash")}Eliminar</button>`}
+      </div>
+    </header>`}function De(){let e=O.status?.agents??[];return`<section class="card" aria-label="L\xEDnea de producci\xF3n"><div class="core"><div class="line">${e.map(t=>{let n=W(t.id),a=n?n.status:"planned",s=n?oe[a]+(n.attempt>1&&a!=="done"?` \xB7 intento ${n.attempt}`:""):`Fase ${t.phase}`,i=st.some(l=>l.id===t.id),p=h.tab===t.id?' aria-current="step"':"",d=`<div class="avatar">${w(t.id)}</div><div class="grow"><div class="name">${o(t.name)}</div><div class="sub">${o(s)}</div></div>`;return i?`<a class="node ${o(a)}" href="#" data-tab="${t.id}"${p}>${d}</a>`:`<a class="node planned" href="#agentes" title="A\xFAn no programado">${d}</a>`}).join("")}${Jt(e)}</div></div></section>`}function Jt(e){let t=e.filter(n=>!n.implemented);return t.length?`<a class="node planned summary" href="#agentes"><div class="avatar">${w("plus")}</div>
+    <div class="grow"><div class="name">${t.length} agentes m\xE1s en camino</div>
+    <div class="sub">${o(t.map(n=>n.name).join(", "))}</div></div></a>`:""}function Be(){return`<div class="tabs" role="tablist">${st.map(e=>`<button role="tab" data-tab="${e.id}" aria-selected="${h.tab===e.id}">${o(e.label)}</button>`).join("")}</div>`}function Xt(e){let t=V(e.agentId),n=h.detail.logs.filter(a=>a.taskId===e.id).slice(-8);if(e.status==="pending"){let a=h.detail.tasks.filter(s=>s.position<e.position&&s.status!=="done");return`<div class="card"><div class="core empty"><strong>En cola.</strong>${a.length?`Empieza cuando termine ${o(V(a.at(-1).agentId))}.`:"Empieza en un momento."}${e.error?`<p class="muted" style="margin-top:8px">${o(e.error)}</p>`:""}</div></div>`}if(e.status==="running")return`<div class="card"><div class="core"><h2>${o(t)} est\xE1 trabajando\u2026</h2>
+      <p class="muted">Intento ${e.attempt}. Esto puede tardar uno o dos minutos; puedes salir de esta p\xE1gina.</p>${ce(n,{showAgent:!1})}</div></div>`;if(e.status==="failed"||e.status==="cancelled"){let a=e.review?.issues?.length?`<ul>${e.review.issues.map(s=>`<li>${o(s)}</li>`).join("")}</ul>`:"";return`<div class="banner ${e.status==="failed"?"error":"warn"}">${w("alert")}<div>
+        <strong>${e.status==="failed"?`${o(t)} no pudo terminar.`:"Tarea cancelada."}</strong>
+        <p>${o(e.error??"")}</p>${a}
+        <div class="actions" style="margin-top:10px"><button class="btn small primary" data-act="retry" data-task="${o(e.id)}">${w("retry")}${e.status==="failed"?"Reintentar":"Reanudar"}</button></div>
+      </div></div>`}return""}function xe(e){let t=e.review?.warnings??[];return t.length?`<div class="banner warn">${w("alert")}<div><strong>Revisa antes de seguir</strong>
+    <ul style="margin:6px 0 0;padding-left:18px;color:var(--suave)">${t.map(n=>`<li>${o(n)}</li>`).join("")}</ul></div></div>`:""}function Te(e,t="Pedir cambios a la IA"){return`<details class="plain" style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">${o(t)}</summary>
+    <form class="changes" data-task="${o(e.id)}" style="margin-top:12px">
+      <div class="field"><label for="notes-${o(e.id)}">\xBFQu\xE9 quieres cambiar?</label>
+        <textarea id="notes-${o(e.id)}" name="notes" maxlength="2000" placeholder="Ej.: enf\xF3cate en principiantes y quita la parte de precios"></textarea>
+        <span class="hint">El agente rehace su trabajo con tus notas. Lo que depend\xEDa de \xE9l se vuelve a generar.</span></div>
+      <button class="btn" type="submit">${w("retry")}Rehacer con estos cambios</button>
+    </form></details>`}function Qt(e){let t=e.output,n=W("audience-analyst")?.output?.chosenIdeaIndex,a=t.youtubeVideos?.length?`<section class="card"><div class="core"><h2>Lo m\xE1s visto del nicho en YouTube (30 d\xEDas)</h2><div class="table-wrap"><table>
+        <thead><tr><th>Video</th><th class="num">Vistas</th><th class="num">Duraci\xF3n</th></tr></thead><tbody>${t.youtubeVideos.map(s=>{let i=he(s.url);return`<tr><td>${i?`<a href="${o(i)}" target="_blank" rel="noopener noreferrer">${o(s.title)}</a>`:o(s.title)}<div class="src">${o(s.channel)}</div></td>
+              <td class="num">${qe(s.views)}</td><td class="num">${s.durationSeconds?ve(s.durationSeconds):"\u2014"}</td></tr>`}).join("")}</tbody></table></div></div></section>`:t.dataSources.webSearch===!1?`<div class="banner info">${w("info")}<div><strong>Investigaci\xF3n sin internet.</strong><p>Esta versi\xF3n de ERA Factory no puede buscar en la web ni en YouTube. ${t.dataSources.user?"Se usaron tu material y el conocimiento general de Claude.":"Las ideas salen del conocimiento general de Claude: confirma que sigan vigentes."} Para la pr\xF3xima, pega en \xABMaterial de investigaci\xF3n\xBB enlaces o t\xEDtulos que veas en YouTube.</p></div></div>`:`<div class="banner info">${w("info")}<div><strong>Sin datos de YouTube.</strong><p>Esta investigaci\xF3n us\xF3 solo b\xFAsqueda web. A\xF1ade <span class="mono">YOUTUBE_API_KEY</span> para ver vistas reales de la competencia.</p></div></div>`;return`
+    ${xe(e)}
+    <section class="card"><div class="core"><h2>Resumen del nicho</h2><p>${o(t.summary)}</p>
+      <p class="src">${[t.dataSources.webSearch===!1?"sin b\xFAsqueda web":`${t.dataSources.web} fuentes web`,t.dataSources.user?`${t.dataSources.user} aportadas por ti`:"",t.dataSources.youtube===null?"sin YouTube":`${t.dataSources.youtube} videos de YouTube`,re(t.generatedAt)].filter(Boolean).map(o).join(" \xB7 ")}</p></div></section>
+    <section class="card"><div class="core"><h2>Tendencias</h2><div class="list">${t.trends.map(s=>`<div class="plain"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${o(s.topic)}</strong>
+          <span class="chip">Competencia ${o(s.competition)}</span></div><p style="margin:6px 0">${o(s.whyNow)}</p>${_e(s.sourceIds,t.sources)}</div>`).join("")}</div></div></section>
+    <section class="card"><div class="core"><h2>Ideas de video</h2><div class="list">${t.ideas.map((s,i)=>`<div class="plain idea${i===n?" chosen":""}">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><strong>${o(s.title)}</strong>
+            <span class="score" title="Oportunidad">${s.opportunityScore}/10</span></div>
+          ${i===n?`<div style="margin-top:6px">${G("running","Elegida por el analista")}</div>`:""}
+          <p style="margin:8px 0 4px">${o(s.angle)}</p>
+          <p class="muted" style="margin:0 0 6px;font-style:italic">\u201C${o(s.hook)}\u201D</p>
+          <p style="font-size:13.5px;margin:0 0 6px">${o(s.whyItWorks)}</p>${_e(s.sourceIds,t.sources)}</div>`).join("")}</div></div></section>
+    ${a}
+    <section class="card"><div class="core"><h2>Fuentes consultadas</h2>${t.sources.length?"":'<p class="muted">Ninguna: ver el aviso de arriba.</p>'}<ol class="sources">${t.sources.map(s=>{let i=he(s.url);return`<li><span class="n">[${s.id}]</span><span>${i?`<a class="src" style="color:var(--info)" href="${o(i)}" target="_blank" rel="noopener noreferrer">${o(s.title)}</a>`:o(s.title)}
+          <span class="src"> \xB7 ${{youtube:"YouTube",usuario:"Aportada por ti",web:"Web"}[s.kind]??"Web"}</span></span></li>`}).join("")}</ol>
+      <details style="margin-top:14px"><summary class="muted" style="cursor:pointer">Notas completas de la investigaci\xF3n</summary><p class="prose" style="margin-top:10px">${o(t.researchNotes)}</p></details>
+    </div></section>
+    ${Te(e)}`}function Zt(e){let t=e.output,a=W("trend-researcher")?.output?.ideas?.[t.chosenIdeaIndex];return`
+    ${xe(e)}
+    ${t.metrics?.available?"":`<div class="banner info">${w("info")}<div><strong>Sin m\xE9tricas reales todav\xEDa.</strong><p>${o(t.metrics?.note??"")}</p></div></div>`}
+    <div class="grid two">
+      <section class="card"><div class="core"><h2>Espectador tipo: ${o(t.persona.name)}</h2>
+        <p>${o(t.persona.description)}</p>
+        <dl class="kv"><div><dt>Edad</dt><dd>${o(t.persona.ageRange)}</dd></div></dl>
+        <h3 style="margin-top:12px">Le mueve</h3><ul>${t.persona.motivations.map(s=>`<li>${o(s)}</li>`).join("")}</ul>
+        <h3>Le frustra</h3><ul>${t.persona.frustrations.map(s=>`<li>${o(s)}</li>`).join("")}</ul>
+        <h3>Prefiere</h3><div class="chips">${t.contentPreferences.map(s=>`<span class="chip">${o(s)}</span>`).join("")}</div>
+      </div></section>
+      <section class="card"><div class="core"><h2>Decisi\xF3n</h2>
+        <p style="font-weight:600;font-size:16px">${o(t.decision.title)}</p>
+        ${a?`<p class="src">Basada en la idea: ${o(a.title)}</p>`:""}
+        <dl class="kv">
+          <div><dt>Formato</dt><dd>${o(t.decision.format)}</dd></div>
+          <div><dt>Duraci\xF3n objetivo</dt><dd class="mono">${t.decision.targetLengthMinutes} min</dd></div>
+          <div><dt>Tono</dt><dd>${o(t.decision.tone)}</dd></div>
+          <div><dt>Enfoque</dt><dd>${o(t.decision.angle)}</dd></div>
+        </dl>
+        <h3 style="margin-top:12px">Por qu\xE9</h3><p>${o(t.decision.why)}</p>
+        <h3>Plan de retenci\xF3n</h3><ul>${t.retentionPlan.map(s=>`<li>${o(s)}</li>`).join("")}</ul>
+      </div></section>
+    </div>
+    ${Te(e)}`}function it(e,t){if(!e?.length)return'<p class="muted">El guion no tiene datos verificables.</p>';let n={respaldado:"Respaldado",sin_respaldo:"Sin respaldo",contradicho:"Contradicho"};return`<div class="list">${e.map(a=>`<div class="claim ${o(a.verdict)}"><strong>${o(n[a.verdict]??a.verdict)}</strong><span>${o(a.text)}</span>
+        <span class="src">${o(a.note)} ${a.sourceId?_e([a.sourceId],t):""}</span></div>`).join("")}</div>`}function He(e){let t=Se(e.hook)+e.sections.reduce((a,s)=>a+Se(s.narration),0)+Se(e.outro)+Se(e.callToAction),n=Math.round(t/Kt*60);return`<span>Palabras <b>${qe(t)}</b></span><span>Duraci\xF3n estimada <b>${ve(n)}</b></span>
+    ${e.targetSeconds?`<span>Objetivo <b>${ve(e.targetSeconds)}</b></span>`:""}<span>Secciones <b>${e.sections.length}</b></span>`}function en(e){let t=e.output,n=W("trend-researcher")?.output?.sources??[];return`
+    ${xe(e)}
+    <div class="banner info">${w("check")}<div><strong>Guion aprobado${e.editedByUser?" con tus cambios":""}.</strong>
+      <p>La siguiente parada es el narrador (fase 2), que a\xFAn no est\xE1 programado.</p></div></div>
+    <section class="card"><div class="core"><div class="stats">${He(t)}</div>
+      <h2 style="margin-top:14px">Gancho</h2><p class="prose">${o(t.hook)}</p>
+      ${t.sections.map((a,s)=>`<h3 style="margin-top:16px">${s+1}. ${o(a.heading)}</h3><p class="prose">${o(a.narration)}</p><p class="src">En pantalla: ${o(a.visualNotes)}</p>`).join("")}
+      <h3 style="margin-top:16px">Cierre</h3><p class="prose">${o(t.outro)}</p><p class="prose">${o(t.callToAction)}</p>
+    </div></section>
+    <section class="card"><div class="core"><h2>Verificaci\xF3n de datos</h2>${it(t.claims,n)}</div></section>
+    <section class="card"><div class="core"><h2>Para YouTube</h2><p class="prose">${o(t.description)}</p><div class="chips">${t.tags.map(a=>`<span class="chip">${o(a)}</span>`).join("")}</div></div></section>
+    ${Te(e,"Rehacer el guion con cambios")}`}function tn(e){let t=h.draft,n=W("trend-researcher")?.output?.sources??[],a=(s,i,p,d)=>`<div class="field"><label for="ed-${s}">${o(d)}</label><textarea id="ed-${s}" data-path="${s}" rows="${p}">${o(i)}</textarea></div>`;return`
+    ${xe(e)}
+    <section class="card"><div class="core">
+      <h2>El guion espera tu aprobaci\xF3n</h2>
+      <p class="muted">L\xE9elo, edita lo que quieras aqu\xED mismo y apru\xE9balo. Tambi\xE9n puedes pedir a la IA que lo rehaga.</p>
+      <div class="stats" id="stats">${He(t)}</div>
+    </div></section>
+    <section class="card"><div class="core">
+      <div class="field"><label for="ed-title">T\xEDtulo</label><input type="text" id="ed-title" data-path="title" maxlength="140" value="${o(t.title)}" /></div>
+      ${a("hook",t.hook,3,"Gancho (primeros segundos)")}
+      ${t.sections.map((s,i)=>`<div class="section-edit"><div class="head"><strong class="mono">Secci\xF3n ${i+1}</strong></div>
+          <div class="field"><label for="ed-h${i}">Encabezado</label><input type="text" id="ed-h${i}" data-path="sections.${i}.heading" value="${o(s.heading)}" /></div>
+          ${a(`sections.${i}.narration`,s.narration,6,"Narraci\xF3n")}
+          ${a(`sections.${i}.visualNotes`,s.visualNotes,2,"Qu\xE9 se ve en pantalla")}</div>`).join("")}
+      ${a("outro",t.outro,3,"Cierre")}
+      ${a("callToAction",t.callToAction,2,"Llamada a la acci\xF3n")}
+      ${a("description",t.description,4,"Descripci\xF3n para YouTube")}
+      <div class="field"><label for="ed-tags">Etiquetas (separadas por comas)</label><input type="text" id="ed-tags" data-path="tags" value="${o(t.tags.join(", "))}" /></div>
+    </div></section>
+    <section class="card"><div class="core"><h2>Verificaci\xF3n de datos</h2>
+      <p class="muted" style="font-size:13.5px">Contrastado con las notas de investigaci\xF3n. Lo "sin respaldo" conf\xEDrmalo t\xFA antes de publicar.</p>
+      ${it(t.claims,n)}</div></section>
+    ${Te(e)}
+    <div class="decision-bar" role="region" aria-label="Decisi\xF3n">
+      <div class="actions">
+        <button class="btn ok" data-act="approve" data-task="${o(e.id)}">${w("check")}<span id="approve-label">${h.dirty?"Guardar y aprobar":"Aprobar guion"}</span></button>
+        <button class="btn ghost" data-act="discard" ${h.dirty?"":"hidden"}>Descartar mis cambios</button>
+      </div>
+    </div>`}function nn(e,t,n){let a=t.split("."),s=e;for(let i of a.slice(0,-1))s=s[i];s[a.at(-1)]=n}function at(e){e.style.height="auto",e.style.height=`${e.scrollHeight+2}px`}function an(){h.root.querySelectorAll("textarea[data-path]").forEach(at),h.root.querySelectorAll("[data-path]").forEach(e=>e.addEventListener("input",()=>{e.tagName==="TEXTAREA"&&at(e);let t=e.dataset.path==="tags"?e.value.split(",").map(n=>n.trim()).filter(Boolean):e.value;nn(h.draft,e.dataset.path,t),h.dirty||(h.dirty=!0,h.root.querySelector("#approve-label").textContent="Guardar y aprobar",h.root.querySelector('[data-act="discard"]').hidden=!1),h.root.querySelector("#stats").innerHTML=He(h.draft)}))}function sn(){if(h.tab==="log")return`<section class="card"><div class="core"><h2>Registro de la producci\xF3n</h2>${ce(h.detail.logs.slice().reverse(),{tall:!0})}</div></section>`;let e=W(h.tab);if(!e)return'<div class="empty">Este agente no forma parte de esta producci\xF3n.</div>';let t=Xt(e);if(!e.output||["pending","running"].includes(e.status))return t;let n=e.agentId==="trend-researcher"?Qt(e):e.agentId==="audience-analyst"?Zt(e):e.status==="awaiting_approval"?tn(e):en(e);return t+n}function ke(){let e=W(h.tab);e?.agentId==="scriptwriter"&&e.status==="awaiting_approval"&&!h.draft&&(h.draft=structuredClone(e.output),h.dirty=!1),h.signature=ot(e);let t=h.root.querySelector("#panel");t.innerHTML=sn(),h.draft&&e?.status==="awaiting_approval"&&e.agentId==="scriptwriter"&&an()}function Re(){h.root.innerHTML=`${rt()}<div id="line">${De()}</div><div id="tabs">${Be()}</div><div id="panel"></div>`,ke()}async function on(e){h.dirty&&h.tab==="scriptwriter"&&e!=="scriptwriter"&&!await Z({title:"Tienes cambios sin guardar en el guion",body:"Si sales ahora se pierden.",confirmLabel:"Salir sin guardar",danger:!0})||(e!=="scriptwriter"&&(h.draft=null,h.dirty=!1),h.tab=e,h.root.querySelector("#line").innerHTML=De(),h.root.querySelector("#tabs").innerHTML=Be(),ke())}async function Ee(){h.detail=await C("GET",`/api/productions/${h.id}`)}var rn=H(async()=>{if(!h.root)return;try{await Ee()}catch{return}let e=h.root.querySelector(".page-head");if(!e)return;let t=document.createElement("div");t.innerHTML=rt(),h.root.querySelector(".back").replaceWith(t.querySelector(".back")),e.replaceWith(t.querySelector(".page-head")),h.follow&&!h.dirty&&Ne()!==h.tab&&(h.tab=Ne(),h.root.querySelector("#tabs").innerHTML=Be()),h.root.querySelector("#line").innerHTML=De();let n=W(h.tab);(h.tab==="log"||ot(n)!==h.signature&&!h.dirty)&&(n?.status!=="awaiting_approval"&&(h.draft=null),ke())},250);async function cn(e){let{act:t,task:n}=e.dataset;e.disabled=!0;try{if(t==="cancel")await C("POST",`/api/productions/${h.id}/cancel`),j("Producci\xF3n cancelada.");else if(t==="delete"){if(!await Z({title:"\xBFEliminar esta producci\xF3n?",body:"Se borra todo su contenido. No se puede deshacer.",confirmLabel:"Eliminar",danger:!0}))return;await C("DELETE",`/api/productions/${h.id}`),j("Producci\xF3n eliminada."),location.hash="#producciones";return}else if(t==="retry")await C("POST",`/api/tasks/${n}/retry`),j("Tarea de nuevo en la cola.");else if(t==="discard"){h.draft=null,h.dirty=!1,ke();return}else if(t==="approve"){let a=h.dirty?{output:h.draft}:{};await C("POST",`/api/tasks/${n}/approve`,a),h.draft=null,h.dirty=!1,j("Guion aprobado.")}await Ee(),Re()}catch(a){let s=Array.isArray(a.details)?` ${a.details.join(" \xB7 ")}`:"";j(a.message+s,"error")}finally{e.disabled=!1}}var ct={async render(e,[t]){Object.assign(h,{root:e,id:t,detail:null,draft:null,dirty:!1,tab:null,follow:!0}),await Ee(),h.tab=Ne(),Re(),e.onclick=n=>{let a=n.target.closest("[data-tab]");if(a)return n.preventDefault(),h.follow=!1,on(a.dataset.tab);let s=n.target.closest("button[data-act]");s&&cn(s)},e.onsubmit=async n=>{let a=n.target.closest("form.changes");if(!a)return;n.preventDefault();let s=a.notes.value.trim();if(!s)return j("Escribe qu\xE9 quieres cambiar.","error");try{await C("POST",`/api/tasks/${a.dataset.task}/changes`,{notes:s}),h.draft=null,h.dirty=!1,j("Enviado. El agente rehace su trabajo con tus notas."),await Ee(),Re()}catch(i){j(i.message,"error")}},window.onbeforeunload=()=>h.dirty?!0:void 0},onEvent(e){let t=e.payload;(t?.productionId??t?.id)===h.id&&rn()},canLeave(e){return h.dirty?(Z({title:"Tienes cambios sin guardar en el guion",body:"Si sales ahora se pierden.",confirmLabel:"Salir sin guardar",danger:!0}).then(t=>{t&&(h.dirty=!1,location.hash=e)}),!1):!0},leave(){h.root.onclick=null,h.root.onsubmit=null,window.onbeforeunload=null,h.root=null}};var Ae=null;async function lt(){let e=await Y(),t=new Map(e.activity.map(a=>[a.agentId,a])),n=e.agents.filter(a=>a.implemented).length;Ae.innerHTML=`
+    <header class="page-head"><div><h1>Agentes</h1>
+      <p>${n} de ${e.agents.length} agentes trabajan ya. Los dem\xE1s est\xE1n en el plan por fases y no se ejecutan hasta estar programados.</p></div></header>
+    <div class="agent-grid">${e.agents.map(a=>`<section class="card"><div class="core">${ye(a,t.get(a.id))}
+        <p class="muted" style="font-size:12.5px;margin:12px 0 0">
+          ${a.dependsOn.length?`Recibe de: ${a.dependsOn.map(s=>o(V(s))).join(", ")}`:"Primer eslab\xF3n de la cadena."}
+          ${a.requiresApproval?" \xB7 Necesita tu aprobaci\xF3n":""}</p>
+      </div></section>`).join("")}</div>`}var ln=H(()=>Ae&&lt().catch(()=>{}),300),dt={async render(e){Ae=e,await lt()},onEvent:e=>e.type==="task"?ln():null,leave:()=>Ae=null};var dn=[{href:"#centro",label:"Centro",icon:"centro",match:/^(centro)?$/},{href:"#canales",label:"Canales",icon:"canales",match:/^canal/},{href:"#producciones",label:"Producciones",icon:"producciones",match:/^produccion/},{href:"#agentes",label:"Agentes",icon:"agentes",match:/^agentes$/}],un=[[/^(?:centro)?$/,Ze],[/^canales$/,$e],[/^canales-(nuevo)$/,$e],[/^canal-([\w-]+)$/,$e],[/^producciones$/,nt],[/^produccion-([\w-]+)$/,ct],[/^agentes$/,dt]],de=document.getElementById("view"),z=null,ut=location.hash,gt=()=>location.hash.slice(1);function ht(){let e=gt(),t=O.status?.summary.awaitingApproval??0;document.getElementById("nav").innerHTML=dn.map(n=>{let a=n.match.test(e)?' aria-current="page"':"",s=n.icon==="producciones"&&t?`<span class="badge-dot" aria-label="${t} esperan aprobaci\xF3n">${t}</span>`:"";return`<a href="${n.href}"${a}>${w(n.icon)}<span>${n.label}</span>${s}</a>`}).join("")}function pn(){let e=O.status;if(!e)return;let t={claude:["st-done",`IA real \xB7 ${e.llm.model}`],cloud:["st-done","Claude \xB7 tu cuenta"],mock:["st-awaiting_approval","Simulaci\xF3n (sin IA real)"],none:["st-failed",e.cloud?"Claude no disponible aqu\xED":"Sin API key de Anthropic"]}[e.llm.mode],n=[`<span class="pill ${t[0]}">${o(t[1])}</span>`];if(e.cloud){let a=e.cloud,s=a.error?["st-failed","Error al guardar"]:a.storage==="cloud"?["st-done",a.saving?"Guardando\u2026":"Guardado en la nube"]:["st-awaiting_approval","Guardado solo aqu\xED"];n.push(`<span class="pill ${s[0]}">${o(s[1])}</span>`),a.readOnly&&n.push('<span class="pill st-awaiting_approval">Modo lectura</span>')}else n.push(`<span class="pill ${e.youtube.connected?"st-done":"st-pending"}">YouTube ${e.youtube.connected?"conectado":"sin conectar"}</span>`);document.getElementById("side-status").innerHTML=n.join("")}var pt="";function mn(){let e=Xe();e!==pt&&(pt=e,document.getElementById("notice").innerHTML=e)}async function Ie(){let e=gt(),t=un.find(([a])=>a.test(e));if(z?.view.canLeave&&!z.view.canLeave(location.hash)){history.replaceState(null,"",ut||"#centro");return}if(ut=location.hash,ht(),z?.view.leave?.(),!t){de.innerHTML='<div class="empty"><strong>Esta p\xE1gina no existe.</strong><a class="btn" href="#centro">Ir al centro</a></div>',z=null;return}let n=e.match(t[0]).slice(1);z={view:t[1],params:n},de.innerHTML='<div class="skeleton"></div>';try{await t[1].render(de,n)}catch(a){de.innerHTML=`<div class="banner error">${w("alert")}<div><strong>No se pudo cargar.</strong><p>${o(a.message)}</p></div></div>`}de.focus({preventScroll:!0})}function mt(e){if(fn(),e.type==="reset"){z?.view.leave?.(),z=null,Ie();return}if(e.type==="cloud"){e.payload.readOnly!==ft&&(ft=e.payload.readOnly,Y().then(Ie).catch(()=>{}));return}z?.view.onEvent?.(e,z.params)}var ft=!1,fn=H(()=>Y().catch(()=>{}),250);function gn(){let e=se();if(e){e.subscribe(mt);return}let t=new EventSource("/api/events");t.onmessage=a=>mt(JSON.parse(a.data));let n=!1;t.onerror=()=>{n||j("Se perdi\xF3 la conexi\xF3n en vivo. Reintentando\u2026","error"),n=!0},t.onopen=()=>{n&&j("Conexi\xF3n en vivo recuperada."),n=!1}}document.addEventListener("click",async e=>{let t=e.target.closest("[data-takeover]");if(!t||!se())return;t.disabled=!0,await se().takeOver()?j("Listo: ERA Factory trabaja ahora en este dispositivo."):(j("El otro dispositivo sigue trabajando. Ci\xE9rralo all\xED o espera un minuto y vuelve a intentarlo.","error"),t.disabled=!1)});async function Fe(){O.listeners.add(()=>{ht(),pn(),mn()}),window.addEventListener("hashchange",Ie),await Y().catch(()=>{}),await Ie(),gn()}globalThis.__ERA_CLOUD__||Fe();var _=class extends Error{constructor(t,{kind:n="llm",retryable:a=!1}={}){super(t),this.name="LLMError",this.kind=n,this.retryable=a}};var Le=class extends Error{constructor(t,{reason:n}={}){super(t),this.name="YouTubeError",this.reason=n}};function J(e){return[`Canal: ${e.name}`,`Nicho / tem\xE1tica: ${e.niche}`,`Idioma de los videos: ${e.language}`,`P\xFAblico objetivo: ${e.audience}`,`Tipo de videos: ${e.videoType}`,`Frecuencia de publicaci\xF3n: ${e.frequency}`].join(`
+`)}function X(e){return e.feedback?`
+
+## Correcciones obligatorias para esta versi\xF3n
+${e.feedback}`:""}function Ce(e){return e?.length?`
+
+## Aprendizajes de videos anteriores (analista de rendimiento)
+${e.map(n=>`- (${n.source}, ${n.createdAt.slice(0,10)}) ${JSON.stringify(n.content)}`).join(`
+`)}`:`
+
+No hay m\xE9tricas de videos publicados todav\xEDa.`}function ue(e){return e?.length?e.map(t=>`[${t.id}] ${t.title} \u2014 ${t.url}`).join(`
+`):"(sin fuentes)"}var vt=()=>new Date().toISOString().slice(0,10),ee="Escribe todo el contenido destinado al video (t\xEDtulos, ganchos, narraci\xF3n) en el idioma del canal. No inventes datos, cifras, fechas ni citas: si algo no est\xE1 en las fuentes, dilo como opini\xF3n o no lo digas.";function je(e,t){let n=new Set(t.map(a=>a.id));return(e||[]).filter(a=>!n.has(a))}var hn={type:"object",additionalProperties:!1,required:["summary","trends","ideas"],properties:{summary:{type:"string",description:"Resumen de 3-5 frases del estado del nicho ahora mismo."},trends:{type:"array",items:{type:"object",additionalProperties:!1,required:["topic","whyNow","competition","sourceIds"],properties:{topic:{type:"string"},whyNow:{type:"string",description:"Por qu\xE9 es relevante ahora, con la evidencia."},competition:{type:"string",enum:["baja","media","alta"]},sourceIds:{type:"array",items:{type:"integer"}}}}},ideas:{type:"array",items:{type:"object",additionalProperties:!1,required:["title","angle","hook","whyItWorks","opportunityScore","sourceIds"],properties:{title:{type:"string",description:"T\xEDtulo de video atractivo y honesto (sin clickbait enga\xF1oso)."},angle:{type:"string",description:"El enfoque diferencial frente a lo que ya existe."},hook:{type:"string",description:"Primera frase del video para captar atenci\xF3n."},whyItWorks:{type:"string"},opportunityScore:{type:"integer",description:"1 (poca) a 10 (mucha oportunidad)."},sourceIds:{type:"array",items:{type:"integer"}}}}}}},yt="Eres el investigador de tendencias de una productora de YouTube. Buscas temas con demanda real y poca saturaci\xF3n. Basas cada afirmaci\xF3n en lo que encuentras, nunca en suposiciones.";function vn(e){return String(e||"").split(/\r?\n/).map(t=>t.trim()).filter(t=>t.length>2).slice(0,40).map(t=>{let n=t.match(/https?:\/\/\S+/)?.[0]??null,a=(n?t.replace(n,""):t).replace(/^[-*•\d.)\s]+/,"").trim();return{url:n,title:a||n,kind:"usuario"}})}function yn(e){return e===null?"?":e.toLocaleString("es-MX")}var bt={id:"trend-researcher",name:"Investigador de tendencias",role:"Investigaci\xF3n",phase:1,implemented:!0,description:"Busca tendencias y temas emergentes del nicho (web + YouTube) y propone ideas de video con fuentes.",dependsOn:[],requiresApproval:!1,async run(e){let{channel:t,production:n,services:a,signal:s}=e,i=n.topicHint?`${t.niche} ${n.topicHint}`:t.niche,p=null;if(a.youtube.connected){e.log("Consultando los videos m\xE1s vistos del nicho en YouTube (\xFAltimos 30 d\xEDas)\u2026");try{p=await a.youtube.topVideos(i,{language:t.language,signal:s}),e.log(`YouTube devolvi\xF3 ${p.length} videos.`)}catch(f){if(!(f instanceof Le))throw f;e.log(`YouTube no disponible: ${f.message} Se sigue solo con la web.`,"warn")}}else e.log("Sin YOUTUBE_API_KEY: la investigaci\xF3n usa solo b\xFAsqueda web.","warn");let d=p?.length?p.map(f=>`- "${f.title}" (${f.channel}) \xB7 ${yn(f.views)} vistas \xB7 ${f.publishedAt?.slice(0,10)}`).join(`
+`):"No hay datos de YouTube disponibles.",l=vn(n.material),v=l.length?`
+
+## Material que aport\xF3 el productor (fuentes de primera mano)
+${l.map(f=>`- ${f.title}${f.url?` (${f.url})`:""}`).join(`
+`)}`:"",y=!!a.llm.webSearch;e.log(y?"Investigando tendencias en la web\u2026":"Analizando el nicho (esta versi\xF3n no tiene b\xFAsqueda web)\u2026"),!y&&!l.length&&e.log("Sin b\xFAsqueda web ni material aportado: las ideas se basan en el conocimiento general de Claude.","warn");let r=await a.llm.research({name:"trends.research",system:yt,signal:s,prompt:`Fecha de hoy: ${vt()}.
+
+${J(t)}
+`+(n.topicHint?`
+El productor quiere un video sobre: ${n.topicHint}
+`:"")+`
+## Videos m\xE1s vistos del nicho en YouTube (\xFAltimos 30 d\xEDas)
+${d}`+Ce(e.insights)+v+(y?"":`
+
+No tienes acceso a internet en esta tarea. Trabaja con tu conocimiento general y con el material aportado. Distingue con claridad lo que sale del material de lo que es conocimiento general, y no presentes como reciente nada que no puedas respaldar.`)+`
+
+Investiga ${y?"en la web ":""}qu\xE9 temas del nicho tienen inter\xE9s AHORA (noticias, lanzamientos, debates, preguntas frecuentes, temas emergentes) para este p\xFAblico y en este idioma. Identifica huecos: temas con demanda y poca oferta de calidad. Escribe tus hallazgos con detalle y menciona de d\xF3nde sale cada uno.`+X(e)}),c=[...r.sources.map(f=>({url:f.url,title:f.title,kind:"web"})),...l,...(p||[]).map(f=>({url:f.url,title:`${f.title} (${f.channel})`,kind:"youtube"}))].map((f,I)=>({id:I+1,...f}));e.log(`Investigaci\xF3n terminada con ${c.length} fuentes. Estructurando ideas\u2026`);let m=await a.llm.json({name:"trends.structure",system:yt,schema:hn,signal:s,prompt:`${J(t)}
+
+## Notas de investigaci\xF3n
+${r.text}
+
+## Fuentes numeradas
+${ue(c)}
+
+Convierte la investigaci\xF3n en: un resumen, de 3 a 6 tendencias y de 5 a 8 ideas de video concretas para este canal. Cita en sourceIds SOLO n\xFAmeros de la lista de fuentes`+(y?". ":"; si algo sale solo de tu conocimiento general, deja sourceIds vac\xEDo. ")+`${ee}`+X(e)});return{generatedAt:new Date().toISOString(),dataSources:{webSearch:y,web:r.sources.length,user:l.length,youtube:p?p.length:null},sources:c,youtubeVideos:p||[],researchNotes:r.text,...m}},validate(e){let t=[],n=[],a=e.sources||[],s=e.dataSources?.webSearch!==!1;a.length||(s?t.push("La investigaci\xF3n no encontr\xF3 ninguna fuente verificable."):n.push("Sin b\xFAsqueda web ni material aportado: verifica que estos temas sigan vigentes antes de producir."));let i=0;(e.trends||[]).length<3&&t.push("Se necesitan al menos 3 tendencias."),(e.ideas||[]).length<4&&t.push("Se necesitan al menos 4 ideas de video.");for(let[p,d]of[...e.trends||[],...e.ideas||[]].entries()){let l=d.title||d.topic||`elemento ${p+1}`;d.sourceIds?.length||(s?t.push(`\xAB${l}\xBB no cita ninguna fuente.`):i++);let v=je(d.sourceIds,a);v.length&&t.push(`\xAB${l}\xBB cita fuentes que no existen: ${v.join(", ")}.`)}for(let p of e.ideas||[])p.opportunityScore>=1&&p.opportunityScore<=10||t.push(`La puntuaci\xF3n de \xAB${p.title}\xBB debe estar entre 1 y 10.`);return i&&a.length&&n.push(`${i} tendencias o ideas salen del conocimiento general de Claude, sin fuente: conf\xEDrmalas.`),e.dataSources?.youtube===null&&s&&n.push("Investigaci\xF3n sin datos de YouTube (a\xF1ade YOUTUBE_API_KEY para ver vistas reales)."),{issues:t,warnings:n}}};var bn={type:"object",additionalProperties:!1,required:["persona","contentPreferences","chosenIdeaIndex","decision","retentionPlan"],properties:{persona:{type:"object",additionalProperties:!1,required:["name","description","ageRange","motivations","frustrations"],properties:{name:{type:"string",description:"Nombre ficticio del espectador tipo."},description:{type:"string"},ageRange:{type:"string"},motivations:{type:"array",items:{type:"string"}},frustrations:{type:"array",items:{type:"string"}}}},contentPreferences:{type:"array",items:{type:"string"}},chosenIdeaIndex:{type:"integer",description:"\xCDndice (desde 0) de la idea elegida en la lista."},decision:{type:"object",additionalProperties:!1,required:["title","angle","format","targetLengthMinutes","tone","why"],properties:{title:{type:"string"},angle:{type:"string"},format:{type:"string",description:"Ej.: explicaci\xF3n, top, tutorial, historia, an\xE1lisis."},targetLengthMinutes:{type:"integer"},tone:{type:"string"},why:{type:"string",description:"Por qu\xE9 esta idea y no las dem\xE1s para este p\xFAblico."}}},retentionPlan:{type:"array",items:{type:"string"},description:"Recursos concretos para mantener la retenci\xF3n en este video."}}},$t={id:"audience-analyst",name:"Analista de audiencia",role:"Audiencia",phase:1,implemented:!0,description:"Define al espectador tipo, elige la mejor idea para \xE9l y fija formato, duraci\xF3n y tono.",dependsOn:["trend-researcher"],requiresApproval:!1,async run(e){let t=e.inputs["trend-researcher"],n=t.ideas.map((s,i)=>`${i}. ${s.title} \u2014 ${s.angle} (oportunidad ${s.opportunityScore}/10)`).join(`
+`);e.log("Analizando al p\xFAblico y eligiendo la idea con m\xE1s potencial\u2026");let a=await e.services.llm.json({name:"audience.analyze",system:"Eres el analista de audiencia de una productora de YouTube. Piensas en lo que el espectador necesita y en qu\xE9 le hace quedarse hasta el final.",schema:bn,signal:e.signal,prompt:`${J(e.channel)}
+`+(e.production.topicHint?`
+El productor pidi\xF3 este tema: ${e.production.topicHint}
+`:"")+`
+## Resumen de tendencias
+${t.summary}
+
+## Ideas propuestas
+${n}`+Ce(e.insights)+`
+
+Describe al espectador tipo, elige UNA idea (chosenIdeaIndex) y define el video: t\xEDtulo final, enfoque, formato, duraci\xF3n objetivo en minutos, tono y por qu\xE9. A\xF1ade de 3 a 6 recursos de retenci\xF3n. Si no hay m\xE9tricas, basa tus recomendaciones en la investigaci\xF3n y dilo. ${ee}`+X(e)});return a.metrics=e.insights.length?{available:!0,note:`Se usaron ${e.insights.length} aprendizajes de videos publicados.`}:{available:!1,note:"Sin m\xE9tricas reales todav\xEDa: recomendaciones basadas en la investigaci\xF3n."},a},validate(e,t){let n=[],a=t.inputs?.["trend-researcher"]?.ideas||[];(!Number.isInteger(e.chosenIdeaIndex)||e.chosenIdeaIndex<0||e.chosenIdeaIndex>=a.length)&&n.push(`La idea elegida (${e.chosenIdeaIndex}) no existe en la lista de ${a.length} ideas.`);let s=e.decision?.targetLengthMinutes;return s>=1&&s<=60||n.push("La duraci\xF3n objetivo debe estar entre 1 y 60 minutos."),e.decision?.title?.trim()||n.push("Falta el t\xEDtulo del video."),(e.retentionPlan||[]).length<3&&n.push("El plan de retenci\xF3n necesita al menos 3 recursos."),{issues:n,warnings:[]}}};var wt=150,$n={type:"object",additionalProperties:!1,required:["title","hook","sections","outro","callToAction","claims","description","tags"],properties:{title:{type:"string"},hook:{type:"string",description:"Primeros 10-20 segundos: promesa clara y tensi\xF3n."},sections:{type:"array",items:{type:"object",additionalProperties:!1,required:["heading","narration","visualNotes"],properties:{heading:{type:"string"},narration:{type:"string",description:"Texto exacto que se narra."},visualNotes:{type:"string",description:"Qu\xE9 se ve en pantalla mientras tanto."}}}},outro:{type:"string"},callToAction:{type:"string"},claims:{type:"array",description:"Cada afirmaci\xF3n de hecho verificable del guion (cifras, fechas, nombres, eventos).",items:{type:"object",additionalProperties:!1,required:["text","sourceId"],properties:{text:{type:"string"},sourceId:{anyOf:[{type:"integer"},{type:"null"}]}}}},description:{type:"string",description:"Descripci\xF3n para YouTube."},tags:{type:"array",items:{type:"string"}}}},wn={type:"object",additionalProperties:!1,required:["checks"],properties:{checks:{type:"array",items:{type:"object",additionalProperties:!1,required:["claimIndex","verdict","note"],properties:{claimIndex:{type:"integer"},verdict:{type:"string",enum:["respaldado","sin_respaldo","contradicho"]},note:{type:"string"}}}}}},pe=e=>(String(e||"").match(/\S+/g)||[]).length;function ze(e){let t=pe(e.hook)+(e.sections||[]).reduce((n,a)=>n+pe(a.narration),0)+pe(e.outro)+pe(e.callToAction);return{wordCount:t,estimatedSeconds:Math.round(t/wt*60)}}var St={id:"scriptwriter",name:"Guionista",role:"Guion",phase:1,implemented:!0,description:"Escribe el guion completo con gancho, secciones y llamada a la acci\xF3n, y verifica sus datos.",dependsOn:["trend-researcher","audience-analyst"],requiresApproval:!0,async run(e){let t=e.inputs["trend-researcher"],n=e.inputs["audience-analyst"],a=t.ideas[n.chosenIdeaIndex],s=n.decision,i=s.targetLengthMinutes*wt;e.log(`Escribiendo el guion de \xAB${s.title}\xBB (~${i} palabras)\u2026`);let p=await e.services.llm.json({name:"script.write",system:"Eres el guionista principal de una productora de YouTube. Escribes guiones que enganchan desde la primera frase y mantienen la atenci\xF3n, con datos exactos y voz natural para narrar.",schema:$n,effort:"high",signal:e.signal,prompt:`${J(e.channel)}
+
+## Video decidido
+T\xEDtulo: ${s.title}
+Enfoque: ${s.angle}
+Formato: ${s.format}
+Duraci\xF3n objetivo: ${s.targetLengthMinutes} min (~${i} palabras narradas)
+Tono: ${s.tone}
+Gancho propuesto: ${a?.hook??""}
+
+## Espectador tipo
+${n.persona.description}
+Motivaciones: ${n.persona.motivations.join("; ")}
+Frustraciones: ${n.persona.frustrations.join("; ")}
+
+## Plan de retenci\xF3n
+- ${n.retentionPlan.join(`
+- `)}
+
+## Notas de investigaci\xF3n
+${t.researchNotes}
+
+## Fuentes numeradas
+${ue(t.sources)}
+
+Escribe el guion completo: gancho, de 4 a 8 secciones con la narraci\xF3n exacta y notas visuales, cierre y llamada a la acci\xF3n. Lista en claims cada dato verificable que uses con el n\xFAmero de su fuente, o null si no tiene. ${ee}`+X(e)}),d=[];p.claims.length&&(e.log(`Verificando ${p.claims.length} afirmaciones contra la investigaci\xF3n\u2026`),d=(await e.services.llm.json({name:"script.factcheck",system:"Eres el verificador de datos de la productora. Eres estricto: si las notas no respaldan claramente una afirmaci\xF3n, es 'sin_respaldo'.",schema:wn,signal:e.signal,prompt:`## Notas de investigaci\xF3n
+${t.researchNotes}
+
+## Fuentes
+${ue(t.sources)}
+
+## Afirmaciones del guion
+${p.claims.map((y,r)=>`${r}. ${y.text} [fuente: ${y.sourceId??"ninguna"}]`).join(`
+`)}
+
+Para cada afirmaci\xF3n (claimIndex) di si las notas y fuentes la respaldan, no la respaldan o la contradicen, con una nota breve.`})).checks);let l=p.claims.map((v,y)=>{let r=d.find(c=>c.claimIndex===y);return{...v,verdict:r?.verdict??"sin_respaldo",note:r?.note??"No se pudo verificar."}});return{...p,claims:l,...ze(p),targetSeconds:s.targetLengthMinutes*60}},validate(e,t){let n=[],a=[],s=t.inputs?.["trend-researcher"]?.sources||[];e.title?.trim()||n.push("Falta el t\xEDtulo."),e.hook?.trim()?pe(e.hook)>70&&n.push("El gancho es demasiado largo (m\xE1s de 70 palabras)."):n.push("Falta el gancho inicial."),(e.sections||[]).length<3&&n.push("El guion necesita al menos 3 secciones.");for(let[d,l]of(e.sections||[]).entries())l.narration?.trim()||n.push(`La secci\xF3n ${d+1} no tiene narraci\xF3n.`);let i=je((e.claims||[]).map(d=>d.sourceId).filter(d=>d!==null),s);i.length&&n.push(`Hay afirmaciones que citan fuentes inexistentes: ${i.join(", ")}.`);for(let d of e.claims||[])d.verdict==="contradicho"?(t.edited?a:n).push(`Dato contradicho por la investigaci\xF3n: \xAB${d.text}\xBB. ${d.note}`):d.verdict==="sin_respaldo"&&a.push(`Dato sin respaldo, rev\xEDsalo antes de aprobar: \xAB${d.text}\xBB.`);let{estimatedSeconds:p}=ze(e);if(e.targetSeconds){let d=p/e.targetSeconds;d<.4||d>2?n.push(`La duraci\xF3n estimada (${Math.round(p/60)} min) est\xE1 muy lejos del objetivo (${Math.round(e.targetSeconds/60)} min).`):(d<.75||d>1.35)&&a.push(`Duraci\xF3n estimada ${Math.round(p/60)} min frente a ${Math.round(e.targetSeconds/60)} min de objetivo.`)}return{issues:n,warnings:a}},normalize:e=>({...e,...ze(e)}),titleFrom:e=>e.title?.trim()||null};function me({id:e,name:t,role:n,phase:a,description:s}){return{id:e,name:t,role:n,phase:a,description:s,implemented:!1,dependsOn:[],requiresApproval:!1,run(){throw new Error(`${t} a\xFAn no est\xE1 implementado (fase ${a}).`)},validate:()=>({issues:[`${t} a\xFAn no est\xE1 implementado.`],warnings:[]})}}var Sn=[bt,$t,St,me({id:"narrator",name:"Narrador",role:"Voz",phase:2,description:"Convierte el guion aprobado en narraci\xF3n con Kokoro TTS (voces e idiomas a elegir) y marca los tiempos de cada secci\xF3n."}),me({id:"thumbnail-designer",name:"Dise\xF1ador de miniaturas",role:"Miniaturas",phase:3,description:"Genera 10 propuestas de miniatura 1280\xD7720, las compara, recomienda las mejores y deja editar la final."}),me({id:"producer",name:"Productor",role:"Producci\xF3n",phase:4,description:"Re\xFAne guion, audio e im\xE1genes y arma el video final con ffmpeg."}),me({id:"performance-analyst",name:"Analista de rendimiento",role:"Anal\xEDticas",phase:5,description:"Lee las m\xE9tricas reales de YouTube Analytics (OAuth), detecta qu\xE9 funcion\xF3 y env\xEDa aprendizajes al investigador y al guionista."})];function Et(e=Sn){let t=new Map(e.map(n=>[n.id,n]));return{get:n=>t.get(n),all:()=>e,pipeline:()=>e.filter(n=>n.implemented),describe:()=>e.map(({id:n,name:a,role:s,phase:i,description:p,implemented:d,dependsOn:l,requiresApproval:v})=>({id:n,name:a,role:s,phase:i,description:p,implemented:d,dependsOn:l,requiresApproval:v}))}}function xt(){let e=new Set;return{publish(t,n){let a={type:t,payload:n,at:new Date().toISOString()};for(let s of[...e])try{s(a)}catch(i){console.error(i)}},subscribe(t){return e.add(t),()=>e.delete(t)}}}var q=class extends Error{constructor(t,{status:n=400,details:a}={}){super(t),this.name="OrchestratorError",this.status=n,this.details=a}},En=2e3;function Tt({db:e,bus:t,registry:n,services:a,config:s}){let{maxAttempts:i,concurrency:p}=s.orchestrator,d=new Map,l=[],v=new Set,y=!1,r=u=>{let g=n.get(u);if(!g)throw new q(`Agente desconocido: ${u}`,{status:500});return g};function c(u,g,b){let $=e.addLog({productionId:u?.productionId??null,taskId:u?.id??null,agentId:u?.agentId??null,level:g,message:b});return t.publish("log",$),$}function m(u,g){let b=e.updateTask(u,g);return t.publish("task",b),b}function f(u,g){let b=e.getProduction(u);if(!b||b.status===g)return b;let $=e.updateProduction(u,{status:g});return t.publish("production",$),$}function I(u){return u.some(g=>g.status==="running")?"running":u.some(g=>g.status==="awaiting_approval")?"awaiting_approval":u.some(g=>g.status==="failed")?"failed":u.some(g=>g.status==="cancelled")?"cancelled":u.every(g=>g.status==="done")?"completed":"queued"}function T(u,g=0){if(!y){if(g){let b=setTimeout(()=>{v.delete(b),T(u)},g);v.add(b);return}l.includes(u)||l.push(u),queueMicrotask(E)}}function E(){for(;!y&&d.size<p&&l.length;){let u=l.shift(),g=x(u);g&&N(g)}}function x(u){let g=e.getProduction(u);if(!g||g.status==="cancelled")return null;let b=e.listTasks(u);for(let $ of b)if($.status!=="done"){if($.status==="pending"&&!d.has($.id))return $;break}return f(u,I(b)),null}function P(u,g){let b=e.getProduction(u.productionId),$=e.getChannel(b.channelId),S=r(u.agentId),A=e.listTasks(u.productionId),L={};for(let M of S.dependsOn){let U=A.find(ge=>ge.agentId===M);if(!U||U.status!=="done")throw new q(`Falta el resultado de ${M} para ${S.id}.`,{status:500});L[M]=U.output}return{channel:$,production:b,inputs:L,insights:e.listInsights($.id),feedback:u.feedback,attempt:u.attempt,services:a,signal:g.signal,log:(M,U="info")=>c(u,U,M)}}async function N(u){let g=r(u.agentId),b=new AbortController;d.set(u.id,b);let $=u.attempt+1,S=m(u.id,{status:"running",attempt:$,error:null,startedAt:new Date().toISOString(),finishedAt:null});f(S.productionId,"running"),c(S,"info",`${g.name}: comienza (intento ${$} de ${i}).`);try{let A=P(S,b),L=await g.run(A);if(b.signal.aborted)throw new _("Tarea cancelada.",{kind:"cancelled"});let M={...g.validate(L,A),checkedAt:new Date().toISOString()};if(M.issues.length){let ae=M.issues.join(" \xB7 ");if($<i){c(S,"warn",`Revisi\xF3n rechazada, se repite con correcciones: ${ae}`),m(S.id,{status:"pending",output:L,review:M,feedback:B(M.issues)});return}c(S,"error",`Revisi\xF3n rechazada tras ${$} intentos: ${ae}`),m(S.id,{status:"failed",output:L,review:M,error:`No pas\xF3 la revisi\xF3n de calidad: ${ae}`,finishedAt:new Date().toISOString()});return}for(let ae of M.warnings)c(S,"warn",ae);let U=g.titleFrom?.(L);U&&t.publish("production",e.updateProduction(S.productionId,{title:U}));let ge=S.requiresApproval?"awaiting_approval":"done";m(S.id,{status:ge,output:L,review:M,finishedAt:new Date().toISOString()}),c(S,"success",ge==="done"?`${g.name}: terminado y revisado.`:`${g.name}: listo. Esperando tu aprobaci\xF3n.`)}catch(A){let L=A instanceof _||A instanceof q?A:new _(A.message),M=new Date().toISOString();L.kind==="cancelled"||b.signal.aborted?(m(S.id,{status:"cancelled",error:"Cancelada por el usuario.",finishedAt:M}),c(S,"warn",`${g.name}: cancelado.`)):L.retryable&&$<i?(m(S.id,{status:"pending",error:L.message}),c(S,"warn",`${g.name}: ${L.message} Reintento autom\xE1tico.`),T(S.productionId,En*$)):(m(S.id,{status:"failed",error:L.message,finishedAt:M}),c(S,"error",`${g.name}: ${L.message}`),L instanceof _||console.error(A))}finally{d.delete(u.id);let A=e.getTask(u.id);(A?.status!=="pending"||!A.error)&&T(u.productionId),queueMicrotask(E)}}function B(u){return`La revisi\xF3n autom\xE1tica encontr\xF3 estos problemas. Corr\xEDgelos:
+- ${u.join(`
+- `)}`}function R(u){let g=e.getTask(u);if(!g)throw new q("Tarea no encontrada.",{status:404});return g}function D(u){for(let g of e.listTasks(u.productionId))g.position<=u.position||g.status==="pending"||m(g.id,{status:"pending",attempt:0,output:null,review:null,feedback:null,error:null,editedByUser:!1})}return{steps:()=>n.pipeline().map(u=>({agentId:u.id,requiresApproval:u.requiresApproval})),startProduction({channelId:u,topicHint:g,material:b}){let $=e.getChannel(u);if(!$)throw new q("Canal no encontrado.",{status:404});let S=this.steps();if(!S.length)throw new q("No hay agentes disponibles.",{status:500});let A=e.createProduction({channelId:u,title:g?g.slice(0,120):`Nuevo video \xB7 ${$.name}`,topicHint:g||null,material:b||null,steps:S});return t.publish("production",A),c({productionId:A.id},"info",`Producci\xF3n creada para \xAB${$.name}\xBB. Asignando agentes.`),T(A.id),A},approve(u,{output:g}={}){let b=R(u);if(b.status!=="awaiting_approval")throw new q("Esta tarea no est\xE1 esperando aprobaci\xF3n.",{status:409});let $={status:"done",finishedAt:new Date().toISOString()};if(g!==void 0){let A=r(b.agentId);if(!g||typeof g!="object"||Array.isArray(g))throw new q("La versi\xF3n editada no tiene el formato esperado.",{status:422});A.normalize&&(g=A.normalize(g));let L=A.validate(g,{inputs:ne(b),edited:!0});if(L.issues.length)throw new q("Tu versi\xF3n editada tiene problemas.",{status:422,details:L.issues});Object.assign($,{output:g,review:{...L,checkedAt:new Date().toISOString()},editedByUser:!0});let M=A.titleFrom?.(g);M&&t.publish("production",e.updateProduction(b.productionId,{title:M}))}let S=m(b.id,$);return c(S,"success",g!==void 0?"Aprobado con tus cambios.":"Aprobado."),T(b.productionId),S},requestChanges(u,g){let b=R(u);if(!["awaiting_approval","done","failed"].includes(b.status))throw new q("Esta tarea no se puede rehacer ahora.",{status:409});let $=String(g||"").trim();if(!$)throw new q("Escribe qu\xE9 quieres cambiar.");D(b);let S=m(b.id,{status:"pending",attempt:0,error:null,feedback:`El productor humano pidi\xF3 estos cambios sobre tu versi\xF3n anterior:
+${$}`,editedByUser:!1});return c(S,"info",`Cambios solicitados: ${$}`),f(b.productionId,"queued"),T(b.productionId),S},retry(u){let g=R(u);if(!["failed","cancelled"].includes(g.status))throw new q("Solo se reintentan tareas fallidas o canceladas.",{status:409});let b=m(g.id,{status:"pending",attempt:0,error:null});for(let $ of e.listTasks(g.productionId))$.position>g.position&&$.status==="cancelled"&&m($.id,{status:"pending",attempt:0,error:null});return c(b,"info","Reintento manual."),f(g.productionId,"queued"),T(g.productionId),b},cancel(u){if(!e.getProduction(u))throw new q("Producci\xF3n no encontrada.",{status:404});for(let b of e.listTasks(u)){let $=d.get(b.id);$?$.abort():b.status==="pending"&&m(b.id,{status:"cancelled",error:"Cancelada por el usuario."})}return f(u,"cancelled")},recover(){for(let u of e.listTasksByStatus("running"))m(u.id,{status:"pending",attempt:Math.max(0,u.attempt-1)}),c(u,"warn","El servidor se reinici\xF3 durante esta tarea; se reanuda.");for(let u of e.listProductions())["queued","running"].includes(u.status)&&T(u.id)},activity:()=>[...d.keys()].map(u=>e.getTask(u)).filter(Boolean),async stop(){y=!0;for(let u of v)clearTimeout(u);for(let u of d.values())u.abort();for(;d.size;)await new Promise(u=>setTimeout(u,10))},async idle(){for(;d.size||l.length||v.size;)await new Promise(u=>setTimeout(u,5))}};function ne(u){let g=r(u.agentId),b=e.listTasks(u.productionId);return Object.fromEntries(g.dependsOn.map($=>[$,b.find(S=>S.agentId===$)?.output]))}}function kt({config:e,db:t,services:n,registry:a=Et()}){let s=xt(),i=Tt({db:t,bus:s,registry:a,services:n,config:e});return{config:e,db:t,bus:s,services:n,registry:a,orchestrator:i,async close(){await i.stop(),t.close()}}}var F=class extends Error{constructor(t,n,a){super(n),this.status=t,this.details=a}};function xn(e,t){return{llm:{mode:e.llm.mode,model:e.llm.mode==="claude"?e.llm.model:null,webSearch:!!t.llm.webSearch},youtube:{connected:!!t.youtube.connected,region:e.youtube.regionCode}}}var Tn=6e3,kn={name:80,niche:200,language:40,audience:400,videoType:200,frequency:80};function At(e){let t={},n=[];for(let[a,s]of Object.entries(kn)){let i=typeof e?.[a]=="string"?e[a].trim():"";if(!i)n.push(a);else if(i.length>s)throw new F(400,`El campo ${a} supera ${s} caracteres.`);t[a]=i}if(n.length)throw new F(400,"Faltan campos del canal.",n);return t}function It(e){let{db:t,orchestrator:n,registry:a,config:s,services:i}=e,p=l=>{let v=t.getProduction(l);if(!v)throw new F(404,"Producci\xF3n no encontrada.");return{production:v,channel:t.getChannel(v.channelId),tasks:t.listTasks(l),logs:t.listLogs({productionId:l,limit:300})}},d=()=>{let l=t.listProductions(),v=y=>l.filter(r=>r.status===y).length;return{channels:t.listChannels().length,productions:l.length,active:v("running")+v("queued"),awaitingApproval:v("awaiting_approval"),failed:v("failed"),completed:v("completed")}};return[["GET",/^\/api\/status$/,()=>({...xn(s,i),agents:a.describe(),activity:n.activity(),summary:d()})],["GET",/^\/api\/channels$/,()=>t.listChannels()],["POST",/^\/api\/channels$/,(l,v)=>t.createChannel(At(v))],["PUT",/^\/api\/channels\/([\w-]+)$/,([l],v)=>{if(!t.getChannel(l))throw new F(404,"Canal no encontrado.");return t.updateChannel(l,At(v))}],["DELETE",/^\/api\/channels\/([\w-]+)$/,([l])=>{for(let v of t.listProductions({channelId:l}))["running","queued"].includes(v.status)&&n.cancel(v.id);if(!t.deleteChannel(l))throw new F(404,"Canal no encontrado.");return{ok:!0}}],["GET",/^\/api\/productions$/,(l,v,y)=>{let r=new Map(t.listChannels().map(c=>[c.id,c]));return t.listProductions({channelId:y.searchParams.get("channelId")||void 0}).map(c=>({...c,channelName:r.get(c.channelId)?.name??"",tasks:t.listTasks(c.id).map(({agentId:m,status:f})=>({agentId:m,status:f}))}))}],["POST",/^\/api\/productions$/,(l,v)=>{let y=(r,c)=>typeof r=="string"?r.trim().slice(0,c):"";return n.startProduction({channelId:String(v.channelId||""),topicHint:y(v.topicHint,300),material:y(v.material,Tn)})}],["GET",/^\/api\/productions\/([\w-]+)$/,([l])=>p(l)],["DELETE",/^\/api\/productions\/([\w-]+)$/,([l])=>{if(t.getProduction(l)?.status==="running"&&n.cancel(l),!t.deleteProduction(l))throw new F(404,"Producci\xF3n no encontrada.");return{ok:!0}}],["POST",/^\/api\/productions\/([\w-]+)\/cancel$/,([l])=>n.cancel(l)],["POST",/^\/api\/tasks\/([\w-]+)\/approve$/,([l],v)=>n.approve(l,{output:v.output})],["POST",/^\/api\/tasks\/([\w-]+)\/changes$/,([l],v)=>n.requestChanges(l,v.notes)],["POST",/^\/api\/tasks\/([\w-]+)\/retry$/,([l])=>n.retry(l)],["GET",/^\/api\/logs$/,(l,v,y)=>t.listLogs({limit:Math.min(Number(y.searchParams.get("limit"))||60,300)})]]}function Lt(e){return e===null?"null":Array.isArray(e)?"array":Number.isInteger(e)?"integer":typeof e}function An(e,t){return e===t||e==="number"&&t==="integer"}function Q(e,t,n="respuesta"){let a=[];if(t.anyOf)return t.anyOf.some(p=>Q(e,p,n).length===0)||a.push(`${n}: no coincide con ning\xFAn formato permitido`),a;let s=Lt(e);if(t.type&&!An(t.type,s))return a.push(`${n}: se esperaba ${t.type} y lleg\xF3 ${s}`),a;if(t.enum&&!t.enum.includes(e)&&a.push(`${n}: valor no permitido \xAB${e}\xBB`),s==="object"&&t.properties){for(let i of t.required??[])i in e||a.push(`${n}.${i}: falta`);for(let[i,p]of Object.entries(t.properties))i in e&&a.push(...Q(e[i],p,`${n}.${i}`))}return s==="array"&&t.items&&e.forEach((i,p)=>a.push(...Q(i,t.items,`${n}[${p}]`))),a}function fe(e,t){if(t.anyOf){let n=t.anyOf.find(a=>Q(e,a).length===0);return n?fe(e,n):e}return Lt(e)==="object"&&t.properties?Object.fromEntries(Object.entries(e).filter(([n])=>n in t.properties).map(([n,a])=>[n,fe(a,t.properties[n])])):Array.isArray(e)&&t.items?e.map(n=>fe(n,t.items)):e}var Ct=new Set(["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed","session_expired"]),Ue={not_granted:"No diste permiso para que ERA Factory use Claude. Recarga la p\xE1gina y ac\xE9ptalo.",sampling_disabled:"Claude no est\xE1 disponible en esta cuenta.",session_expired:"Tu sesi\xF3n de Claude caduc\xF3. Vuelve a iniciar sesi\xF3n y recarga.",rate_limited:"Llegaste al l\xEDmite de uso de tu cuenta de Claude. Espera un rato y pulsa Reintentar.",refused:"Claude no puede hacer esta tarea tal como est\xE1 planteada. Cambia el tema o pide cambios.",prompt_too_large:"Hay demasiado texto para una sola tarea. Acorta el material de investigaci\xF3n.",empty_completion:"Claude no devolvi\xF3 respuesta. Pulsa Reintentar.",invalid_json:"La respuesta lleg\xF3 incompleta o sin el formato esperado. Pulsa Reintentar.",upstream_error:"Fall\xF3 la conexi\xF3n con Claude. Pulsa Reintentar."};function In(e,t){let n=e?.code??"upstream_error";if(n==="cancelled")return new _("Tarea cancelada.",{kind:"cancelled"});let a=Ue[n]??(Ct.has(n)?Ue.not_granted:Ue.upstream_error);return new _(`${a} (${t})`,{kind:Ct.has(n)?"config":"llm"})}var jt=(e,t)=>`[Tarea interna: ${e}]
+${t}
+
+`;function Ln(e){return`
+
+## Formato de respuesta
+Responde SOLO con un objeto JSON v\xE1lido (sin texto antes ni despu\xE9s, sin bloque de c\xF3digo) que cumpla exactamente este JSON Schema:
+`+JSON.stringify(e)}function Mt(e,{tierFor:t=()=>"default"}={}){async function n(a,s,i){try{return await a(s,{cache:!1,...i})}catch(p){throw In(p,i.name)}}return{mode:"cloud",webSearch:!1,async json({name:a,system:s="",prompt:i,schema:p,signal:d}){let l=jt(a,s)+i+Ln(p),v={signal:d,modelTier:t(a),name:a},y=await n((c,m)=>e.json(c,Ge(m)),l,v),r=Q(y,p);if(r.length){let c=l+`
+
+## Correcci\xF3n
+Tu respuesta anterior no cumpl\xEDa el formato:
+- ${r.slice(0,12).join(`
+- `)}
+Respuesta anterior:
+${JSON.stringify(y).slice(0,2e4)}
+
+Devuelve el JSON completo corregido.`;if(y=await n((m,f)=>e.json(m,Ge(f)),c,v),r=Q(y,p),r.length)throw new _(`La respuesta de Claude no tiene el formato esperado (${r[0]}). Pulsa Reintentar.`)}return fe(y,p)},async research({name:a,system:s="",prompt:i,signal:p}){let d={signal:p,modelTier:t(a),name:a},{text:l,truncated:v}=await n((y,r)=>e(y,Ge(r)),jt(a,s)+i,d);if(v)throw new _(`La investigaci\xF3n se cort\xF3 por longitud. Pulsa Reintentar. (${a})`);return{text:l,sources:[]}}}}function Ge({name:e,...t}){return t}var te=()=>new Date().toISOString(),k=e=>e===void 0?void 0:structuredClone(e),Cn=new Set(["status","attempt","output","review","feedback","error","editedByUser","startedAt","finishedAt"]),Me=()=>globalThis.crypto?.randomUUID?.()??"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,e=>{let t=Math.random()*16|0;return(e==="x"?t:t&3|8).toString(16)});function Ye(e={}){let t=new Map,n=new Map,a=new Map,s=[],i=0,p=new Set,d=(r,c,m=!1)=>{for(let f of p)f({collection:r,id:c,deleted:m})};function l({channels:r=[],productions:c=[],insights:m=[]}={}){for(let f of r)t.set(f.id,k(f));for(let f of c){let{tasks:I=[],logs:T=[],...E}=k(f);n.set(E.id,{production:E,tasks:I,logs:T});for(let x of T)i=Math.max(i,x.id)}for(let f of m)a.set(f.id,k(f))}l(e);let v=r=>n.get(r),y=r=>{for(let c of n.values()){let m=c.tasks.find(f=>f.id===r);if(m)return{rec:c,task:m}}return null};return{close(){},onChange(r){return p.add(r),()=>p.delete(r)},exportDoc(r,c){if(r==="channels")return k(t.get(c))??null;if(r==="insights")return k(a.get(c))??null;let m=v(c);return m?k({...m.production,tasks:m.tasks,logs:m.logs}):null},createChannel(r){let c={id:Me(),createdAt:te(),...r};return t.set(c.id,c),d("channels",c.id),k(c)},updateChannel(r,c){let m=t.get(r);if(!m)return null;let{name:f,niche:I,language:T,audience:E,videoType:x,frequency:P}=c;return Object.assign(m,{name:f,niche:I,language:T,audience:E,videoType:x,frequency:P}),d("channels",r),k(m)},getChannel:r=>k(t.get(r))??null,listChannels:()=>[...t.values()].sort((r,c)=>c.createdAt.localeCompare(r.createdAt)).map(k),deleteChannel(r){if(!t.delete(r))return!1;d("channels",r,!0);for(let[c,m]of n)m.production.channelId===r&&(n.delete(c),d("productions",c,!0));for(let[c,m]of a)m.channelId===r&&(a.delete(c),d("insights",c,!0));return!0},createProduction({channelId:r,title:c,topicHint:m,material:f,steps:I}){if(!t.has(r))throw new Error("FOREIGN KEY: canal inexistente");let T=te(),E={id:Me(),channelId:r,title:c,topicHint:m??null,material:f??null,status:"queued",createdAt:T,updatedAt:T},x=I.map((P,N)=>({id:Me(),productionId:E.id,agentId:P.agentId,position:N,requiresApproval:!!P.requiresApproval,status:"pending",attempt:0,output:null,review:null,feedback:null,error:null,editedByUser:!1,startedAt:null,finishedAt:null,updatedAt:T}));return n.set(E.id,{production:E,tasks:x,logs:[]}),d("productions",E.id),k(E)},getProduction:r=>k(v(r)?.production)??null,listProductions({channelId:r}={}){return[...n.values()].map(c=>c.production).filter(c=>!r||c.channelId===r).sort((c,m)=>m.createdAt.localeCompare(c.createdAt)).map(k)},updateProduction(r,{status:c,title:m}){let f=v(r);return f?(c!==void 0&&(f.production.status=c),m!==void 0&&(f.production.title=m),f.production.updatedAt=te(),d("productions",r),k(f.production)):null},deleteProduction(r){return n.delete(r)?(d("productions",r,!0),!0):!1},getTask:r=>k(y(r)?.task)??null,listTasks:r=>k(v(r)?.tasks??[]),listTasksByStatus(r){return[...n.values()].flatMap(c=>c.tasks).filter(c=>c.status===r).sort((c,m)=>c.updatedAt.localeCompare(m.updatedAt)).map(k)},updateTask(r,c){let m=y(r);if(!m)return null;for(let[f,I]of Object.entries(c)){if(!Cn.has(f))throw new Error(`Campo de tarea desconocido: ${f}`);m.task[f]=f==="editedByUser"?!!I:k(I)??null}return m.task.updatedAt=te(),d("productions",m.rec.production.id),k(m.task)},addLog({productionId:r=null,taskId:c=null,agentId:m=null,level:f="info",message:I}){let T={id:++i,productionId:r,taskId:c,agentId:m,level:f,message:I,createdAt:te()},E=r&&v(r);return E?(E.logs.push(T),E.logs.length>150&&(E.logs=E.logs.slice(-150)),d("productions",r)):s=[...s,T].slice(-60),k(T)},listLogs({productionId:r,limit:c=200}={}){let m=r?v(r)?.logs??[]:[...n.values()].flatMap(f=>f.logs).concat(s);return k(m.sort((f,I)=>f.id-I.id).slice(-c))},addInsight({channelId:r,source:c,content:m}){let f={id:Me(),channelId:r,source:c,content:k(m),createdAt:te()};return a.set(f.id,f),d("insights",f.id),k(f)},listInsights:r=>[...a.values()].filter(c=>c.channelId===r).sort((c,m)=>m.createdAt.localeCompare(c.createdAt)).slice(0,20).map(k)}}var jn=["channels","productions","insights"],Ve=600,Mn=15e3,qn=45e3,Pn=15e3,qt="era-factory:local-v1",Pt=e=>JSON.parse(JSON.stringify(e));async function Ot({db:e,userId:t,holder:n,onStatus:a=()=>{}}){let s=`data/users/${t}`,i=e.doc(`${s}/meta/runner`);async function p(){let y={};for(let r of jn){let c=await e.collection(`${s}/${r}`).get();y[r]=c.docs.filter(m=>m.exists).map(m=>Pt(m.data()))}return y}async function d(){try{return(await i.acquire({holder:n,ttlMs:qn})).acquired}catch{return!1}}function l(y){let r=new Map,c=null,m=!1,f=E=>{clearTimeout(c),c=setTimeout(I,E)};async function I(){if(m)return f(Ve);m=!0,a({saving:!0});try{for(let[E,{collection:x,id:P}]of[...r]){r.delete(E);let N=e.doc(`${s}/${x}/${P}`),B=y.exportDoc(x,P);try{B?await N.set(Pt(B)):await N.delete()}catch(R){r.has(E)||r.set(E,{collection:x,id:P}),a({saving:!1,error:On(R)}),f(Mn);return}}a({saving:!1,error:null,savedAt:new Date().toISOString()})}finally{m=!1}}let T=y.onChange(({collection:E,id:x})=>{r.set(`${E}/${x}`,{collection:E,id:x}),f(Ve)});return{flushNow:()=>r.size?I():Promise.resolve(),stop:()=>{T(),clearTimeout(c)},get pending(){return r.size}}}async function v(){let y=Ye(await p());return{memory:y,saver:l(y)}}return{kind:"cloud",open:v,takeTurn:d,renewEveryMs:Pn}}function On(e){let t=e?.code;return t==="quota_exceeded"||t==="resource_exhausted"?"La base de datos est\xE1 llena. Elimina producciones antiguas.":t==="invalid_argument"?"Un documento es demasiado grande para guardarse.":"No se pudo guardar en la nube. Se reintentar\xE1."}function _t({onStatus:e=()=>{}}={}){function t(){try{return JSON.parse(localStorage.getItem(qt)||"{}")}catch{return{}}}return{kind:"local",renewEveryMs:0,takeTurn:async()=>!0,async open(){let n=Ye(t()),a=null,s=()=>{let p={channels:n.listChannels(),productions:n.listProductions().map(d=>n.exportDoc("productions",d.id)),insights:n.listChannels().flatMap(d=>n.listInsights(d.id))};try{localStorage.setItem(qt,JSON.stringify(p)),e({saving:!1,error:null,savedAt:new Date().toISOString()})}catch{e({saving:!1,error:"Este navegador no deja guardar datos; se perder\xE1n al cerrar."})}},i=n.onChange(()=>{clearTimeout(a),a=setTimeout(s,Ve)});return{memory:n,saver:{flushNow:async()=>s(),stop:()=>{i(),clearTimeout(a)},pending:0}}}}}var Nt=3e4,_n=new Set(["POST","PUT","DELETE"]),Nn=e=>e==="script.write"||e==="trends.research"?"complex":"default",Rt={llm:{mode:"cloud",model:null},youtube:{apiKey:null,regionCode:"MX"},orchestrator:{maxAttempts:3,concurrency:1}},Rn={mode:"none",webSearch:!1,async json(){throw new _("Claude no est\xE1 disponible en esta vista. Abre ERA Factory en claude.ai con tu sesi\xF3n iniciada.",{kind:"config"})},async research(){return this.json()}},We=async e=>{try{return await globalThis.claude?.use?.(e)??null}catch{return null}};async function Dt(){let[e,t,n]=await Promise.all([We("sample"),We("db"),We("user")]),a=n?await n.id().catch(()=>null):null,s=`tab-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`,i=new Set,p=x=>i.forEach(P=>P(x)),d={storage:"local",readOnly:!1,saving:!1,error:null,savedAt:null},l=x=>{Object.assign(d,x),p({type:"cloud",payload:{...d},at:new Date().toISOString()})},v=t&&a?await Ot({db:t,userId:a,holder:s,onStatus:l}):_t({onStatus:l});d.storage=v.kind;let y={llm:e?Mt(e,{tierFor:Nn}):Rn,youtube:{connected:!1,topVideos:async()=>null}};e||(Rt.llm.mode="none");let r=null,c=null,m=null;async function f(){let{memory:x,saver:P}=await v.open(),N=kt({config:Rt,db:x,services:y}),B=N.bus.subscribe(p);r={factory:N,routes:It(N),saver:P,off:B};let R=await v.takeTurn();d.readOnly=!R,R?(N.orchestrator.recover(),v.renewEveryMs&&(c=setInterval(T,v.renewEveryMs))):m=setInterval(()=>document.visibilityState==="visible"&&E(),Nt),l({}),p({type:"reset",payload:null,at:new Date().toISOString()})}async function I(){clearInterval(c),clearInterval(m),r&&(await r.saver.flushNow().catch(()=>{}),r.saver.stop(),r.off(),await r.factory.orchestrator.stop(),r=null)}async function T(){await v.takeTurn()||(clearInterval(c),r&&(r.saver.stop(),r.saver={flushNow:async()=>{},stop(){}},await r.factory.orchestrator.stop()),l({readOnly:!0}),m=setInterval(()=>document.visibilityState==="visible"&&E(),Nt))}async function E(){return d.readOnly?await v.takeTurn()?(await I(),await f(),!d.readOnly):!1:!0}return document.addEventListener("visibilitychange",()=>{document.visibilityState==="hidden"&&r?.saver.flushNow().catch(()=>{})}),await f(),{mode:"cloud",takeOver:E,subscribe(x){return i.add(x),()=>i.delete(x)},async request(x,P,N={}){let B=new URL(P,"https://era.local");if(_n.has(x)&&d.readOnly)throw{status:423,message:"ERA Factory est\xE1 trabajando en otro dispositivo. Pulsa \xABUsar en este dispositivo\xBB para cambiar."};let R=r?.routes.find(([D,ne])=>D===x&&ne.test(B.pathname));if(!R)throw{status:404,message:"Ruta no encontrada."};try{let D=B.pathname.match(R[1]).slice(1),ne=await R[2](D,structuredClone(N),B),u=structuredClone(ne);return B.pathname==="/api/status"&&(u.cloud={...d}),u}catch(D){throw D instanceof F||D instanceof q?{status:D.status,message:D.message,details:D.details}:(console.error(D),{status:500,message:"Error interno de ERA Factory."})}}}}var Dn=document.getElementById("view");try{globalThis.__ERA_BACKEND__=await Dt(),await Fe()}catch(e){console.error(e),Dn.innerHTML='<div class="banner error"><div><strong>ERA Factory no pudo arrancar.</strong><p>Recarga la p\xE1gina. Si sigue pasando, av\xEDsame con este mensaje: '+String(e?.message||e).replace(/[<>&]/g,"")+"</p></div></div>"}
+
+</script>

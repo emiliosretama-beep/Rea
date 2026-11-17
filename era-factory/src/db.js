@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS productions (
   channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   topic_hint TEXT,
+  material TEXT,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -109,6 +110,7 @@ function productionRow(row) {
     channelId: row.channel_id,
     title: row.title,
     topicHint: row.topic_hint,
+    material: row.material,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -133,6 +135,9 @@ export function openDatabase(path) {
   const db = new DatabaseSync(path);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA);
+  // Migración: bases creadas antes de que existiera el material de investigación.
+  const columns = db.prepare("PRAGMA table_info(productions)").all().map((c) => c.name);
+  if (!columns.includes("material")) db.exec("ALTER TABLE productions ADD COLUMN material TEXT");
 
   const stmt = (sql) => db.prepare(sql);
 
@@ -169,15 +174,15 @@ export function openDatabase(path) {
     deleteChannel: (id) => stmt("DELETE FROM channels WHERE id = ?").run(id).changes > 0,
 
     // ---- producciones (un video) ----
-    createProduction({ channelId, title, topicHint, steps }) {
+    createProduction({ channelId, title, topicHint, material, steps }) {
       const id = randomUUID();
       const ts = now();
       db.exec("BEGIN");
       try {
         stmt(
-          `INSERT INTO productions (id, channel_id, title, topic_hint, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'queued', ?, ?)`,
-        ).run(id, channelId, title, topicHint ?? null, ts, ts);
+          `INSERT INTO productions (id, channel_id, title, topic_hint, material, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)`,
+        ).run(id, channelId, title, topicHint ?? null, material ?? null, ts, ts);
         const insertTask = stmt(
           `INSERT INTO tasks (id, production_id, agent_id, position, requires_approval, status, updated_at)
            VALUES (?, ?, ?, ?, ?, 'pending', ?)`,

@@ -1,17 +1,22 @@
-// Bus de eventos en memoria: el orquestador publica y el servidor lo reenvía a
-// cada navegador conectado por SSE (/api/events) para el progreso en vivo.
-import { EventEmitter } from "node:events";
-
+// Bus de eventos en memoria: el coordinador publica y la interfaz escucha
+// (por SSE en el servidor, directamente en la versión online). Sin
+// dependencias de Node para que corra igual en el navegador.
 export function createEventBus() {
-  const emitter = new EventEmitter();
-  emitter.setMaxListeners(100);
+  const listeners = new Set();
   return {
     publish(type, payload) {
-      emitter.emit("event", { type, payload, at: new Date().toISOString() });
+      const event = { type, payload, at: new Date().toISOString() };
+      for (const listener of [...listeners]) {
+        try {
+          listener(event);
+        } catch (err) {
+          console.error(err);
+        }
+      }
     },
     subscribe(listener) {
-      emitter.on("event", listener);
-      return () => emitter.off("event", listener);
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
   };
 }

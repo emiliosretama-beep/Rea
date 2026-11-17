@@ -20,7 +20,30 @@ en iPhone, iPad y escritorio.
 Los agentes de fases futuras aparecen en el panel marcados como planificados y
 **no se ejecutan**: no hay botones decorativos.
 
-## Cómo usarlo
+## Versión online (iPhone y iPad)
+
+Abre <https://claude.ai/artifact/BsRfL98pX2iei5NMYQH5km> en Safari o en la app
+de Claude. No necesita servidor ni API key:
+
+- **IA**: usa tu cuenta de Claude (la primera vez pide permiso). Cada tarea
+  gasta uso de tu plan; los agentes trabajan de uno en uno.
+- **Datos**: se guardan en la nube de claude.ai, privados (`data/users/<tu id>/`),
+  y los ves igual en el iPhone y en el iPad.
+- **Un dispositivo trabaja a la vez**: si la abres en dos, el segundo queda en
+  modo lectura (botón «Usar en este dispositivo») para no producir dos veces.
+- **Trabaja mientras la página está abierta.** Si la cierras a media tarea,
+  se reanuda al volver a abrirla.
+- **Sin búsqueda web**: una página de claude.ai no puede navegar ni llamar a
+  YouTube. Pega en «Material de investigación» enlaces o títulos que veas; se
+  convierten en las fuentes numeradas del investigador. Sin material, las
+  ideas salen del conocimiento general de Claude y se marcan para que las
+  confirmes.
+
+Se genera con `npm run build:online` (empaqueta `public/` y `src/` con esbuild
+en `online/era-factory.html`) y se publica en esa misma URL. Edita siempre
+`public/` y `src/`, nunca el HTML generado.
+
+## Cómo usarlo con servidor (búsqueda web y YouTube)
 
 Requisitos: Node.js 22.13 o superior.
 
@@ -57,9 +80,15 @@ era-factory/
 │   ├── factory.js          ensambla todo (servidor y tests)
 │   ├── agents/             un archivo por agente + registro (index.js)
 │   ├── services/youtube.js YouTube Data API v3
+│   ├── db-memory.js        misma interfaz que db.js, en memoria (versión online)
+│   ├── routes.js           rutas de la API (servidor y versión online)
+│   ├── schema.js           validador de JSON Schema (versión online)
+│   ├── cloud/              versión online: arranque, IA vía sample, guardado y turno
 │   └── mock-fixtures.js    datos del modo simulación y de los tests
-├── public/                 interfaz (HTML + CSS + JS sin framework)
-└── tests/                  node:test (sin dependencias extra)
+├── public/                 interfaz (HTML + CSS + JS sin framework), común a las dos versiones
+├── scripts/build-online.mjs  arma la versión online
+├── online/era-factory.html   versión online generada
+└── tests/                  node:test
 ```
 
 ### El coordinador
@@ -108,8 +137,15 @@ agotar intentos, sin API key, pedir cambios, edición aprobada, cancelar y
 reanudar, recuperación tras reinicio), el adaptador de Claude con un cliente
 simulado, el de YouTube con respuestas simuladas y la API HTTP con SSE.
 
+`npm test` también corre la batería del coordinador contra la base en memoria
+de la versión online, y prueba sus piezas (IA vía `sample` simulada, guardado
+y turno con una `db` simulada). La versión online completa se probó en
+Chromium con un `window.claude` simulado (flujo completo, dos dispositivos,
+recuperación de datos).
+
 **Lo que no se ha probado contra los servicios reales**: las llamadas a la API
-de Anthropic y a YouTube (en el entorno de desarrollo no había keys). Los tests
+de Anthropic y a YouTube (en el entorno de desarrollo no había keys), ni
+`sample` y `db` reales de claude.ai (requieren tu sesión y tu permiso). Los tests
 verifican la forma de las peticiones y el manejo de respuestas; la primera
 ejecución con tus keys es la prueba real.
 

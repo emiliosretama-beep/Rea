@@ -1,8 +1,8 @@
 // Detalle de una producción: línea de producción en vivo, resultados de cada
 // agente, editor de guion y decisiones (aprobar, pedir cambios, reintentar).
-import { STATUS_LABEL, api, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast } from "../lib.js";
+import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast } from "../lib.js";
 import { agentName, debounce, store } from "../store.js";
-import { llmBanner, logList } from "./common.js";
+import { logList } from "./common.js";
 
 const WORDS_PER_MINUTE = 150; // mismo ritmo que usa el guionista en el servidor
 const TABS = [
@@ -46,7 +46,7 @@ function headerHtml() {
   const { production, channel } = state.detail;
   const canCancel = ["running", "queued"].includes(production.status);
   return `
-    <a class="back" href="#/producciones">${icon("back")}Producciones</a>
+    <a class="back" href="#producciones">${icon("back")}Producciones</a>
     <header class="page-head">
       <div style="min-width:0"><h1>${esc(production.title)}</h1>
         <p>${esc(channel?.name ?? "")}${production.topicHint ? ` · Tema pedido: ${esc(production.topicHint)}` : ""} · ${esc(timeAgo(production.createdAt))}</p>
@@ -70,7 +70,7 @@ function lineHtml() {
       const inner = `<div class="avatar">${icon(a.id)}</div><div class="grow"><div class="name">${esc(a.name)}</div><div class="sub">${esc(sub)}</div></div>`;
       return tab
         ? `<a class="node ${esc(status)}" href="#" data-tab="${a.id}"${current}>${inner}</a>`
-        : `<a class="node planned" href="#/agentes" title="Aún no programado">${inner}</a>`;
+        : `<a class="node planned" href="#agentes" title="Aún no programado">${inner}</a>`;
     })
     .join("")}${plannedSummary(agents)}</div></div></section>`;
 }
@@ -79,7 +79,7 @@ function lineHtml() {
 function plannedSummary(agents) {
   const planned = agents.filter((a) => !a.implemented);
   if (!planned.length) return "";
-  return `<a class="node planned summary" href="#/agentes"><div class="avatar">${icon("plus")}</div>
+  return `<a class="node planned summary" href="#agentes"><div class="avatar">${icon("plus")}</div>
     <div class="grow"><div class="name">${planned.length} agentes más en camino</div>
     <div class="sub">${esc(planned.map((a) => a.name).join(", "))}</div></div></a>`;
 }
@@ -148,11 +148,23 @@ function researchHtml(task) {
               <td class="num">${number(v.views)}</td><td class="num">${v.durationSeconds ? minutes(v.durationSeconds) : "—"}</td></tr>`;
           })
           .join("")}</tbody></table></div></div></section>`
-    : `<div class="banner info">${icon("info")}<div><strong>Sin datos de YouTube.</strong><p>Esta investigación usó solo búsqueda web. Añade <span class="mono">YOUTUBE_API_KEY</span> para ver vistas reales de la competencia.</p></div></div>`;
+    : r.dataSources.webSearch === false
+      ? `<div class="banner info">${icon("info")}<div><strong>Investigación sin internet.</strong><p>Esta versión de ERA Factory no puede buscar en la web ni en YouTube. ${
+          r.dataSources.user ? "Se usaron tu material y el conocimiento general de Claude." : "Las ideas salen del conocimiento general de Claude: confirma que sigan vigentes."
+        } Para la próxima, pega en «Material de investigación» enlaces o títulos que veas en YouTube.</p></div></div>`
+      : `<div class="banner info">${icon("info")}<div><strong>Sin datos de YouTube.</strong><p>Esta investigación usó solo búsqueda web. Añade <span class="mono">YOUTUBE_API_KEY</span> para ver vistas reales de la competencia.</p></div></div>`;
   return `
     ${warningsBlock(task)}
     <section class="card"><div class="core"><h2>Resumen del nicho</h2><p>${esc(r.summary)}</p>
-      <p class="src">${r.dataSources.web} fuentes web · ${r.dataSources.youtube === null ? "sin YouTube" : `${r.dataSources.youtube} videos de YouTube`} · ${esc(timeAgo(r.generatedAt))}</p></div></section>
+      <p class="src">${[
+        r.dataSources.webSearch === false ? "sin búsqueda web" : `${r.dataSources.web} fuentes web`,
+        r.dataSources.user ? `${r.dataSources.user} aportadas por ti` : "",
+        r.dataSources.youtube === null ? "sin YouTube" : `${r.dataSources.youtube} videos de YouTube`,
+        timeAgo(r.generatedAt),
+      ]
+        .filter(Boolean)
+        .map(esc)
+        .join(" · ")}</p></div></section>
     <section class="card"><div class="core"><h2>Tendencias</h2><div class="list">${r.trends
       .map(
         (t) => `<div class="plain"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(t.topic)}</strong>
@@ -171,11 +183,11 @@ function researchHtml(task) {
       )
       .join("")}</div></div></section>
     ${yt}
-    <section class="card"><div class="core"><h2>Fuentes consultadas</h2><ol class="sources">${r.sources
+    <section class="card"><div class="core"><h2>Fuentes consultadas</h2>${r.sources.length ? "" : `<p class="muted">Ninguna: ver el aviso de arriba.</p>`}<ol class="sources">${r.sources
       .map((s) => {
         const url = safeUrl(s.url);
         return `<li><span class="n">[${s.id}]</span><span>${url ? `<a class="src" style="color:var(--info)" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>` : esc(s.title)}
-          <span class="src"> · ${s.kind === "youtube" ? "YouTube" : "Web"}</span></span></li>`;
+          <span class="src"> · ${{ youtube: "YouTube", usuario: "Aportada por ti", web: "Web" }[s.kind] ?? "Web"}</span></span></li>`;
       })
       .join("")}</ol>
       <details style="margin-top:14px"><summary class="muted" style="cursor:pointer">Notas completas de la investigación</summary><p class="prose" style="margin-top:10px">${esc(r.researchNotes)}</p></details>
@@ -356,12 +368,12 @@ function drawPanel() {
 }
 
 function drawAll() {
-  state.root.innerHTML = `${headerHtml()}${llmBanner()}<div id="line">${lineHtml()}</div><div id="tabs">${tabsHtml()}</div><div id="panel"></div>`;
+  state.root.innerHTML = `${headerHtml()}<div id="line">${lineHtml()}</div><div id="tabs">${tabsHtml()}</div><div id="panel"></div>`;
   drawPanel();
 }
 
-function selectTab(tab) {
-  if (state.dirty && state.tab === "scriptwriter" && tab !== "scriptwriter" && !confirm("Tienes cambios sin guardar en el guion. ¿Salir de todos modos?"))
+async function selectTab(tab) {
+  if (state.dirty && state.tab === "scriptwriter" && tab !== "scriptwriter" && !(await askConfirm({ title: "Tienes cambios sin guardar en el guion", body: "Si sales ahora se pierden.", confirmLabel: "Salir sin guardar", danger: true })))
     return;
   if (tab !== "scriptwriter") {
     state.draft = null;
@@ -411,10 +423,11 @@ async function act(button) {
       await api("POST", `/api/productions/${state.id}/cancel`);
       toast("Producción cancelada.");
     } else if (action === "delete") {
-      if (!confirm("¿Eliminar esta producción y todo su contenido? No se puede deshacer.")) return;
+      const ok = await askConfirm({ title: "¿Eliminar esta producción?", body: "Se borra todo su contenido. No se puede deshacer.", confirmLabel: "Eliminar", danger: true });
+      if (!ok) return;
       await api("DELETE", `/api/productions/${state.id}`);
       toast("Producción eliminada.");
-      location.hash = "#/producciones";
+      location.hash = "#producciones";
       return;
     } else if (action === "retry") {
       await api("POST", `/api/tasks/${taskId}/retry`);
@@ -480,7 +493,16 @@ export const productionView = {
     const p = event.payload;
     if ((p?.productionId ?? p?.id) === state.id) refresh();
   },
-  canLeave: () => !state.dirty || confirm("Tienes cambios sin guardar en el guion. ¿Salir de todos modos?"),
+  // La confirmación es asíncrona: se cancela la navegación y, si confirma, se repite.
+  canLeave(target) {
+    if (!state.dirty) return true;
+    askConfirm({ title: "Tienes cambios sin guardar en el guion", body: "Si sales ahora se pierden.", confirmLabel: "Salir sin guardar", danger: true }).then((ok) => {
+      if (!ok) return;
+      state.dirty = false;
+      location.hash = target;
+    });
+    return false;
+  },
   leave() {
     state.root.onclick = null;
     state.root.onsubmit = null;

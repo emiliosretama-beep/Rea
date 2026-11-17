@@ -1,6 +1,6 @@
 // Canales: crear y editar canales, y lanzar la producción de un video.
-import { ApiError, api, esc, icon, toast } from "../lib.js";
-import { llmBanner } from "./common.js";
+import { ApiError, api, askConfirm, esc, icon, toast } from "../lib.js";
+import { store } from "../store.js";
 
 const FIELDS = [
   { key: "name", label: "Nombre del canal", placeholder: "Ej.: Tecnología en 8 minutos", max: 80 },
@@ -32,7 +32,7 @@ function fieldHtml(f, value = "") {
 
 function formHtml(channel) {
   return `
-    <a class="back" href="#/canales">${icon("back")}Canales</a>
+    <a class="back" href="#canales">${icon("back")}Canales</a>
     <header class="page-head"><div><h1>${channel ? "Editar canal" : "Nuevo canal"}</h1>
       <p>Con esto el equipo sabe para quién trabaja. Cuanto más concreto sea el público, mejores ideas.</p></div></header>
     <section class="card"><div class="core">
@@ -42,7 +42,7 @@ function formHtml(channel) {
         <p class="form-error" id="form-error" hidden></p>
         <div class="actions">
           <button class="btn primary" type="submit">${icon("check")}${channel ? "Guardar cambios" : "Crear canal"}</button>
-          <a class="btn ghost" href="#/canales">Cancelar</a>
+          <a class="btn ghost" href="#canales">Cancelar</a>
         </div>
       </form>
     </div></section>`;
@@ -53,7 +53,7 @@ function channelCard(c) {
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
       <div style="min-width:0"><h2 style="margin:0">${esc(c.name)}</h2>
         <p class="muted" style="margin:4px 0 0">${esc(c.niche)} · ${esc(c.language)} · ${esc(c.frequency)}</p></div>
-      <a class="btn small ghost" href="#/canales/${esc(c.id)}" aria-label="Editar ${esc(c.name)}">${icon("edit")}</a>
+      <a class="btn small ghost" href="#canal-${esc(c.id)}" aria-label="Editar ${esc(c.name)}">${icon("edit")}</a>
     </div>
     <p style="margin:10px 0 14px;font-size:14px">${esc(c.audience)}</p>
     <form class="produce" data-channel="${esc(c.id)}">
@@ -61,6 +61,16 @@ function channelCard(c) {
         <label for="topic-${esc(c.id)}">Tema concreto (opcional)</label>
         <input type="text" id="topic-${esc(c.id)}" name="topicHint" maxlength="300" placeholder="Déjalo vacío y el investigador propone el tema" />
       </div>
+      <details class="field" style="margin-bottom:12px"${store.status?.llm.webSearch ? "" : " open"}>
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--suave)">Material de investigación (opcional)</summary>
+        <textarea id="material-${esc(c.id)}" name="material" rows="4" maxlength="6000" style="margin-top:8px"
+          placeholder="Pega enlaces o títulos que hayas visto: videos de YouTube que funcionan, noticias, preguntas de tu público. Uno por línea."></textarea>
+        <span class="hint">${
+          store.status?.llm.webSearch
+            ? "Se suma a la búsqueda web del investigador."
+            : "Esta versión no busca en internet: lo que pegues aquí son las fuentes reales del investigador. Sin material, las ideas salen del conocimiento general de Claude."
+        }</span>
+      </details>
       <button class="btn primary" type="submit">${icon("play")}Producir un video</button>
     </form>
   </div></section>`;
@@ -70,13 +80,12 @@ async function drawList(root) {
   const channels = await api("GET", "/api/channels");
   root.innerHTML = `
     <header class="page-head"><div><h1>Canales</h1><p>Cada canal tiene su nicho y su público. Lanza un video y el equipo se pone a trabajar.</p></div>
-      <a class="btn primary" href="#/canales/nuevo">${icon("plus")}Nuevo canal</a></header>
-    ${llmBanner()}
+      <a class="btn primary" href="#canales-nuevo">${icon("plus")}Nuevo canal</a></header>
     ${
       channels.length
         ? `<div class="grid two">${channels.map(channelCard).join("")}</div>`
         : `<section class="card"><div class="core empty"><strong>Aún no tienes canales.</strong><p>Crea uno para empezar a producir.</p>
-            <a class="btn primary" href="#/canales/nuevo">${icon("plus")}Crear canal</a></div></section>`
+            <a class="btn primary" href="#canales-nuevo">${icon("plus")}Crear canal</a></div></section>`
     }`;
   root.querySelectorAll("form.produce").forEach((form) =>
     form.addEventListener("submit", async (e) => {
@@ -87,9 +96,10 @@ async function drawList(root) {
         const production = await api("POST", "/api/productions", {
           channelId: form.dataset.channel,
           topicHint: form.topicHint.value,
+          material: form.material.value,
         });
         toast("Producción creada. El investigador empieza ya.");
-        location.hash = `#/producciones/${production.id}`;
+        location.hash = `#produccion-${production.id}`;
       } catch (err) {
         toast(err.message, "error");
         button.disabled = false;
@@ -108,11 +118,17 @@ async function drawForm(root, id) {
       `<button class="btn danger ghost" type="button" id="delete">${icon("trash")}Eliminar canal</button>`,
     );
     root.querySelector("#delete").addEventListener("click", async () => {
-      if (!confirm(`¿Eliminar «${channel.name}» y todas sus producciones? No se puede deshacer.`)) return;
+      const ok = await askConfirm({
+        title: `¿Eliminar «${channel.name}»?`,
+        body: "También se borran todas sus producciones. No se puede deshacer.",
+        confirmLabel: "Eliminar canal",
+        danger: true,
+      });
+      if (!ok) return;
       try {
         await api("DELETE", `/api/channels/${channel.id}`);
         toast("Canal eliminado.");
-        location.hash = "#/canales";
+        location.hash = "#canales";
       } catch (err) {
         toast(err.message, "error");
       }
@@ -133,7 +149,7 @@ async function drawForm(root, id) {
     try {
       await api(channel ? "PUT" : "POST", channel ? `/api/channels/${channel.id}` : "/api/channels", data);
       toast(channel ? "Canal actualizado." : "Canal creado.");
-      location.hash = "#/canales";
+      location.hash = "#canales";
     } catch (err) {
       error.textContent = err.message;
       error.hidden = false;

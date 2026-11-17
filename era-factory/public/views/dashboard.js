@@ -1,7 +1,7 @@
 // Centro de operaciones: qué necesita tu atención, el equipo en vivo y la actividad.
 import { api, icon } from "../lib.js";
 import { debounce, refreshStatus } from "../store.js";
-import { agentCard, llmBanner, logList, productionRow } from "./common.js";
+import { agentCard, logList, productionRow } from "./common.js";
 
 let root = null;
 
@@ -20,9 +20,8 @@ async function draw() {
   root.innerHTML = `
     <header class="page-head">
       <div><h1>Centro de operaciones</h1><p>Tu equipo de agentes investiga, escribe y produce. Tú supervisas y apruebas.</p></div>
-      ${s.channels ? `<a class="btn primary" href="#/canales">${icon("play")}Producir un video</a>` : ""}
+      ${s.channels ? `<a class="btn primary" href="#canales">${icon("play")}Producir un video</a>` : ""}
     </header>
-    ${llmBanner()}
     <div class="strip" role="list">
       <div role="listitem"><b>${s.channels}</b><span>Canales</span></div>
       <div role="listitem"><b>${s.active}</b><span>En producción</span></div>
@@ -35,7 +34,7 @@ async function draw() {
           !s.channels
             ? `<section class="card"><div class="core empty"><strong>Empieza creando tu primer canal.</strong>
                 <p>Dinos el nicho, el idioma y el público; el equipo se encarga del resto.</p>
-                <a class="btn primary" href="#/canales/nuevo">${icon("plus")}Crear canal</a></div></section>`
+                <a class="btn primary" href="#canales-nuevo">${icon("plus")}Crear canal</a></div></section>`
             : ""
         }
         <section class="card"><div class="core">
@@ -54,7 +53,7 @@ async function draw() {
             .filter((a) => a.implemented)
             .map((a) => agentCard(a, busy.get(a.id), { compact: true }))
             .join("")}</div>
-          ${planned.length ? `<p class="muted" style="margin:12px 0 0;font-size:13.5px">${planned.length} agentes más en el plan: ${planned.map((a) => a.name).join(", ")}. <a href="#/agentes">Ver plan</a></p>` : ""}
+          ${planned.length ? `<p class="muted" style="margin:12px 0 0;font-size:13.5px">${planned.length} agentes más en el plan: ${planned.map((a) => a.name).join(", ")}. <a href="#agentes">Ver plan</a></p>` : ""}
         </div></section>
         <section class="card"><div class="core">
           <h2>Actividad reciente</h2>

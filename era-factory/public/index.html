@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>ERA Factory · Centro de operaciones</title>
+    <title>ERA Factory</title>
     <meta name="description" content="Fábrica de canales de YouTube: agentes de IA que investigan, escriben y producen videos bajo tu supervisión." />
     <meta name="theme-color" content="#0a0f1e" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -18,14 +18,14 @@
   <body>
     <div class="shell">
       <aside class="side" aria-label="Navegación principal">
-        <a class="brand" href="#/" aria-label="ERA Factory, inicio">
+        <a class="brand" href="#centro" aria-label="ERA Factory, inicio">
           <img src="/favicon.svg" alt="" width="30" height="30" />
           <span><strong>ERA</strong> Factory</span>
         </a>
         <nav class="nav" id="nav"></nav>
         <div class="side-status" id="side-status"></div>
       </aside>
-      <main id="view" class="view" tabindex="-1"></main>
+      <main class="view"><div id="notice"></div><div id="view" tabindex="-1"></div></main>
     </div>
     <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
     <script type="module" src="/app.js"></script>

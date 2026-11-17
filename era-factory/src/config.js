@@ -34,11 +34,3 @@ export function loadConfig(env = process.env) {
     },
   };
 }
-
-// Lo que la interfaz puede saber de la configuración (sin secretos).
-export function publicStatus(config) {
-  return {
-    llm: { mode: config.llm.mode, model: config.llm.mode === "claude" ? config.llm.model : null },
-    youtube: { connected: Boolean(config.youtube.apiKey), region: config.youtube.regionCode },
-  };
-}

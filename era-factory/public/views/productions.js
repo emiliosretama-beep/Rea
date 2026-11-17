@@ -34,7 +34,7 @@ async function draw() {
       shown.length
         ? `<div class="list">${shown.map(productionRow).join("")}</div>`
         : `<div class="card"><div class="core empty"><strong>No hay producciones aquí.</strong>${
-            productions.length ? "Prueba con otro filtro." : `Lanza la primera desde <a href="#/canales">Canales</a>.`
+            productions.length ? "Prueba con otro filtro." : `Lanza la primera desde <a href="#canales">Canales</a>.`
           }</div></div>`
     }`;
   root.querySelectorAll("[data-filter]").forEach((b) =>
