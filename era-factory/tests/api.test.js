@@ -29,7 +29,8 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
 
   const status = await api("GET", "/api/status");
   assert.equal(status.data.agents.length, 7);
-  assert.equal(status.data.agents.filter((a) => a.implemented).length, 5);
+  assert.equal(status.data.agents.filter((a) => a.implemented).length, 6);
+  assert.equal(status.data.video.ok, true);
   assert.equal(status.data.tts.ok, true);
   assert.equal(JSON.stringify(status.data).includes("apiKey"), false);
 
@@ -90,6 +91,12 @@ test("flujo completo por la API: canal, producción, eventos y aprobación", asy
   assert.equal(rejected.status, 422);
   assert.ok(rejected.data.details.some((d) => /paleta desconocida/.test(d)));
   chooseThumbnail(factory, thumbs);
+  await factory.orchestrator.idle();
+  const video = tasksOf(factory, production.id).producer;
+  assert.equal(video.status, "awaiting_approval");
+  const settings = await api("PUT", `/api/productions/${production.id}/settings`, { video: { burnSubtitles: true } });
+  assert.equal(settings.data.settings.video.burnSubtitles, true);
+  assert.equal((await api("POST", `/api/tasks/${video.id}/approve`, {})).data.status, "done");
   await factory.orchestrator.idle();
   const list = (await api("GET", "/api/productions")).data;
   assert.equal(list[0].status, "completed");

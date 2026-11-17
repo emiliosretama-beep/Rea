@@ -21,6 +21,7 @@ export function publicStatus(config, services) {
     },
     youtube: { connected: Boolean(services.youtube.connected), region: config.youtube.regionCode },
     tts: services.tts ? services.tts.availability() : { ok: false, reason: "La voz necesita la versión con servidor." },
+    video: services.video ? services.video.availability() : { ok: false, reason: "El montaje necesita la versión con servidor." },
   };
 }
 
@@ -137,6 +138,7 @@ export function createRoutes(factory) {
         const resolved = resolveNarration(null, body.narration);
         settings.narration = { voice: resolved.voice, speed: resolved.speed };
       }
+      if (body.video !== undefined) settings.video = { burnSubtitles: Boolean(body.video?.burnSubtitles) };
       return db.updateProduction(id, { settings });
     }],
     ["POST", /^\/api\/productions\/([\w-]+)\/cancel$/, ([id]) => orchestrator.cancel(id)],

@@ -46,6 +46,11 @@ test("la cadena avanza sola hasta el guion y espera aprobación", async (t) => {
   chooseThumbnail(factory, thumbs, 3);
   await factory.orchestrator.idle();
   assert.equal(tasksOf(factory, production.id)["thumbnail-designer"].output.final.layout, "big-number");
+  // Por último, el productor monta el video y espera la aprobación final.
+  const video = tasksOf(factory, production.id).producer;
+  assert.equal(video.status, "awaiting_approval");
+  factory.orchestrator.approve(video.id);
+  await factory.orchestrator.idle();
   assert.equal(factory.db.getProduction(production.id).status, "completed");
 });
 

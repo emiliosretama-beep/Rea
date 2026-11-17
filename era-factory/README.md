@@ -1,11 +1,11 @@
 # ERA Factory
 
 Fábrica de canales de YouTube: un equipo de agentes de IA coordinados que
-investiga, decide, escribe, narra y diseña las miniaturas de tus videos, y (en próximas fases) los produce.
+investiga, decide, escribe, narra, diseña las miniaturas y monta tus videos.
 Tú supervisas, editas y apruebas desde un centro de operaciones que funciona
 en iPhone, iPad y escritorio.
 
-## Estado actual: fase 3 terminada
+## Estado actual: fase 4 terminada
 
 | Agente | Estado | Qué hace |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ en iPhone, iPad y escritorio.
 | 3. Guionista | ✅ Funciona | Guion completo (gancho, secciones con narración y notas visuales, cierre, CTA, descripción, etiquetas) + segunda pasada que verifica cada dato contra la investigación. **Necesita tu aprobación.** |
 | 4. Narrador | ✅ Funciona (solo con servidor) | Kokoro TTS local: 54 voces en 9 idiomas, velocidad 0,7–1,3×. MP3 por sección + pista completa con pausas; los tiempos de cada sección salen de la duración real del audio. Reproductor sincronizado con el guion. **Necesita tu aprobación.** |
 | 5. Diseñador de miniaturas | ✅ Funciona (también online) | Claude propone 10 miniaturas distintas (8 diseños, 6 fondos, 8 paletas con contraste comprobado, 16 iconos) y recomienda 3. Se dibujan con Canvas; comparas, ves cómo quedan en el feed, editas en vivo y descargas el PNG 1280×720. La revisión rechaza cifras que no estén en el guion y propuestas repetidas. **Aprobar exige elegir una.** Son composiciones gráficas: sin fotos. |
-| 6. Productor | Fase 4 | Montaje con ffmpeg: audio + imágenes + guion → MP4. |
+| 6. Productor | ✅ Funciona (solo con servidor) | Claude decide qué texto aparece en pantalla en cada frase; escenas 1920×1080 con la paleta de la miniatura (Pillow); MP4 H.264 + AAC con ffmpeg; subtítulos .srt (o incrustados) y capítulos de YouTube cuando cumplen sus reglas. Los tiempos de escena salen del audio real; dentro de una sección, los subtítulos son aproximados (±1 s). **Necesita tu aprobación.** |
 | 7. Analista de rendimiento | Fase 5 | YouTube Analytics (OAuth): métricas reales → aprendizajes para 1 y 3. |
 
 Los agentes de fases futuras aparecen en el panel marcados como planificados y
@@ -34,9 +34,9 @@ de Claude. No necesita servidor ni API key:
 - **Trabaja mientras la página está abierta.** Si la cierras a media tarea,
   se reanuda al volver a abrirla.
 - **Descargas**: las miniaturas se descargan con el diálogo de claude.ai (tú confirmas).
-- **Sin voz**: el narrador necesita Python, Kokoro y ffmpeg, que no caben en una
-  página de claude.ai. Allí aparece como «Solo con servidor» y la cadena
-  termina en el guion aprobado.
+- **Sin voz ni video**: el narrador y el productor necesitan Python, Kokoro y
+  ffmpeg, que no caben en una página de claude.ai. Allí aparecen como «Solo con
+  servidor» y la cadena termina en la miniatura aprobada.
 - **Sin búsqueda web**: una página de claude.ai no puede navegar ni llamar a
   YouTube. Pega en «Material de investigación» enlaces o títulos que veas; se
   convierten en las fuentes numeradas del investigador. Sin material, las
@@ -55,11 +55,12 @@ Requisitos: Node.js 22.13 o superior.
 cd era-factory
 npm install
 cp .env.example .env     # pega tu ANTHROPIC_API_KEY (y opcionalmente YOUTUBE_API_KEY)
-bash tools/setup_kokoro.sh   # voz: instala kokoro-onnx y baja el modelo (~115 MB)
+bash tools/setup.sh         # voz y video: Kokoro (~115 MB), Pillow y fuentes
 npm start                # http://127.0.0.1:5180
 ```
 
-Requisitos del narrador: Python 3.10+, `ffmpeg` con `libmp3lame` y ~120 MB
+Requisitos de voz y video: Python 3.10+, `ffmpeg` con `libmp3lame`, `libx264`,
+`aac` y `libass`, y ~120 MB
 de disco para el modelo int8 (`KOKORO_VARIANT=fp16` o `full` para más
 calidad y más peso). Narrar tarda aproximadamente lo mismo que dura el audio
 en una CPU normal. El audio se guarda en `data/media/` y se borra con su
@@ -92,6 +93,9 @@ era-factory/
 │   ├── agents/             un archivo por agente + registro (index.js)
 │   ├── services/youtube.js YouTube Data API v3
 │   ├── services/tts.js     narración: Kokoro (Python) + ffmpeg
+│   ├── services/video.js   montaje: escenas (Pillow) + MP4 (ffmpeg)
+│   ├── services/process.js lanzar Python/ffmpeg con progreso y cancelación
+│   ├── timeline.js         frases, escenas, subtítulos SRT y capítulos
 │   ├── voices.js           catálogo de voces e idiomas de Kokoro
 │   (public/thumbs/)        catálogo y dibujador de miniaturas, compartidos con el agente
 │   ├── db-memory.js        misma interfaz que db.js, en memoria (versión online)
@@ -104,6 +108,8 @@ era-factory/
 ├── online/era-factory.html   versión online generada
 ├── tools/tts_kokoro.py     motor de voz (JSON por stdin, WAV por segmento)
 ├── tools/setup_kokoro.sh   instala kokoro-onnx y descarga el modelo
+├── tools/render_scenes.py  escenas del video (Pillow)
+├── tools/setup.sh          todo lo del servidor: Kokoro, Pillow y fuentes
 └── tests/                  node:test (incluye una prueba REAL con Kokoro si está instalado)
 ```
 
@@ -139,7 +145,7 @@ Crea `src/agents/<id>.js` con el contrato documentado en `src/agents/index.js`
 | **1 ✅** | Núcleo, coordinador, agentes 1-3, centro de operaciones | Anthropic API (obligatoria), YouTube Data API v3 (opcional, gratis con cuota) |
 | **2 ✅** | Narrador: Kokoro TTS local (`kokoro-onnx` 0.6.1), selector de voz, idioma y velocidad, audio por sección, reproductor sincronizado | Ninguno (local). Modelo int8 + voces desde GitHub (~115 MB) |
 | **3 ✅** | Miniaturas: 10 propuestas dibujadas con Canvas, comparación, recomendación, editor en vivo y descarga PNG 1280×720 | Ninguno (fuente Anton de Google Fonts). Fotos o imágenes con IA: pendiente de decidir |
-| 4 | Productor: montaje con ffmpeg (audio + escenas + subtítulos) → MP4 descargable | ffmpeg (local) |
+| **4 ✅** | Productor: escenas, montaje MP4, subtítulos, capítulos y descripción para YouTube | ffmpeg (libx264, aac, libass), Pillow y fuentes OFL (Anton, Atkinson Hyperlegible) |
 | 5 | Analista de rendimiento: métricas reales y bucle de aprendizaje; subida a YouTube opcional | YouTube Analytics API + YouTube Data API con OAuth 2.0 |
 
 ## Pruebas

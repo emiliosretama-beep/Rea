@@ -106,7 +106,6 @@ export function thumbnailsHtml(task, context) {
 
 // Dibuja los canvas de la pestaña y conecta el editor.
 export async function bindThumbnails(root, task, { productionId, onDirty, onDone }) {
-  await ensureFonts();
   const o = task.output;
   const finalSpec = () => edit.draft ?? o.final;
   const paint = () => {
@@ -114,7 +113,6 @@ export async function bindThumbnails(root, task, { productionId, onDirty, onDone
     const f = finalSpec();
     if (f) root.querySelectorAll('canvas[data-spec="final"]').forEach((c) => drawThumbnail(c, f));
   };
-  paint();
 
   const showProblems = () => {
     const problems = checkSpec(edit.draft);
@@ -197,4 +195,10 @@ export async function bindThumbnails(root, task, { productionId, onDirty, onDone
       }
     }),
   );
+
+  // Los botones ya responden; el dibujo espera a la fuente Anton (en el
+  // iPhone con mala conexión puede tardar) y se repite al tenerla.
+  paint();
+  await ensureFonts();
+  paint();
 }

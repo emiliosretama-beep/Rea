@@ -42,12 +42,32 @@ export function fakeTTS({ fail } = {}) {
   };
 }
 
-export async function makeFactory({ fixtures = {}, youtube = offlineYouTube, tts = fakeTTS(), env = {} } = {}) {
+// Montaje simulado: devuelve lo mismo que el servicio real, sin ffmpeg.
+export function fakeVideo({ fail } = {}) {
+  const calls = [];
+  return {
+    calls,
+    availability: () => ({ ok: true, reason: null }),
+    mediaPath: (pid, file) => `/media-root/${pid}/${file}`,
+    async produce(job) {
+      calls.push(job);
+      if (fail) throw fail;
+      return {
+        folder: "video-x",
+        video: { file: "video-x/video.mp4", duration: job.totalDuration, width: 1920, height: 1080, sizeBytes: 1000 },
+        subtitles: { file: "video-x/subtitles.srt" },
+        scenes: job.scenes.map((s) => ({ ...s, file: `video-x/${s.id}.png` })),
+      };
+    },
+  };
+}
+
+export async function makeFactory({ fixtures = {}, youtube = offlineYouTube, tts = fakeTTS(), video = fakeVideo(), env = {} } = {}) {
   const config = loadConfig({ FACTORY_MAX_ATTEMPTS: "3", ...env });
   const llm = mockLLM({ ...MOCK_FIXTURES, ...fixtures });
   // FACTORY_TEST_DB=memory corre la misma batería contra la base de la versión online.
   const db = process.env.FACTORY_TEST_DB === "memory" ? openMemoryDatabase() : undefined;
-  const factory = await createFactory(config, { dbPath: ":memory:", db, llm, youtube, tts });
+  const factory = await createFactory(config, { dbPath: ":memory:", db, llm, youtube, tts, video });
   const events = [];
   factory.bus.subscribe((e) => events.push(e));
   return { factory, llm, events };

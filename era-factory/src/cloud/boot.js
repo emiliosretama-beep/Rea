@@ -23,9 +23,11 @@ const CONFIG = {
 };
 
 // La voz necesita Python, Kokoro y ffmpeg: no caben en una página de claude.ai.
-const ONLINE_REGISTRY = createRegistry({
-  unavailable: { narrator: "solo funciona en la versión con servidor (Kokoro necesita Python y ffmpeg)" },
-});
+export const ONLINE_UNAVAILABLE = {
+  narrator: "solo funciona en la versión con servidor (Kokoro necesita Python y ffmpeg)",
+  producer: "solo funciona en la versión con servidor (el montaje necesita Python y ffmpeg)",
+};
+const ONLINE_REGISTRY = createRegistry({ unavailable: ONLINE_UNAVAILABLE });
 
 const unavailableLLM = {
   mode: "none",

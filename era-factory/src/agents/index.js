@@ -18,6 +18,7 @@ import { audienceAnalyst } from "./audience-analyst.js";
 import { scriptwriter } from "./scriptwriter.js";
 import { narrator } from "./narrator.js";
 import { thumbnailDesigner } from "./thumbnail-designer.js";
+import { producer } from "./producer.js";
 import { planned } from "./planned.js";
 
 const AGENTS = [
@@ -26,13 +27,7 @@ const AGENTS = [
   scriptwriter,
   narrator,
   thumbnailDesigner,
-  planned({
-    id: "producer",
-    name: "Productor",
-    role: "Producción",
-    phase: 4,
-    description: "Reúne guion, audio e imágenes y arma el video final con ffmpeg.",
-  }),
+  producer,
   planned({
     id: "performance-analyst",
     name: "Analista de rendimiento",

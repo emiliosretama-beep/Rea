@@ -57,11 +57,12 @@ function streamEvents(factory, req, res) {
   });
 }
 
-// Audio generado: /media/<producción>/<carpeta>/<archivo>.mp3. Safari en
+// Audio y video generados: /media/<producción>/<carpeta>/<archivo>. Safari en
 // iPhone/iPad solo reproduce audio si el servidor acepta peticiones por rangos.
 async function serveMedia(factory, req, res, pathname) {
-  const match = /^\/media\/([\w-]+)\/(narration-[\w-]+)\/([\w-]+\.mp3)$/.exec(pathname);
+  const match = /^\/media\/([\w-]+)\/((?:narration|video)-[\w-]+)\/([\w-]+\.(mp3|mp4|srt|png))$/.exec(pathname);
   if (!match) return res.writeHead(404).end();
+  const type = { mp3: "audio/mpeg", mp4: "video/mp4", srt: "application/x-subrip; charset=utf-8", png: "image/png" }[match[4]];
   const file = join(factory.config.media.root, match[1], match[2], match[3]);
   let info;
   try {
@@ -69,7 +70,7 @@ async function serveMedia(factory, req, res, pathname) {
   } catch {
     return res.writeHead(404).end();
   }
-  const headers = { "Content-Type": "audio/mpeg", "Accept-Ranges": "bytes", "Cache-Control": "private, max-age=31536000, immutable" };
+  const headers = { "Content-Type": type, "Accept-Ranges": "bytes", "Cache-Control": "private, max-age=31536000, immutable" };
   const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
   if (!range) {
     res.writeHead(200, { ...headers, "Content-Length": info.size });

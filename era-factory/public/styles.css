@@ -403,3 +403,20 @@ input[type="range"] { width: 100%; accent-color: var(--era); min-height: 36px; }
 /* La vista previa del editor se queda a la vista mientras cambias campos. */
 .th-sticky { position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 4; padding: 6px; margin: 12px -6px; border-radius: var(--r-lg); background: var(--panel); }
 @media (min-width: 900px) { .th-sticky { max-width: 560px; } }
+
+/* ---------- Video ---------- */
+#final-video { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-md); background: #000; display: block; }
+/* En el celular, las escenas son una tira que se desliza de lado. */
+.scene-list { list-style: none; margin: 0; padding: 0 0 6px; display: grid; grid-auto-flow: column; grid-auto-columns: 168px; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; }
+.scene-list li { scroll-snap-align: start; }
+.scene { width: 100%; display: grid; gap: 6px; text-align: left; padding: 6px; border-radius: var(--r-md); border: 1px solid var(--borde); background: rgba(13, 20, 38, 0.6); cursor: pointer; }
+.scene img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; background: #000; }
+.scene .mono { color: var(--suave); font-size: 12px; }
+.scene-text { font-size: 13px; min-height: 2.6em; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+@media (min-width: 900px) { .scene-list { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); overflow: visible; } }
+.copy-block { margin-top: 12px; }
+.copy-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.copy-head h3 { margin: 0; }
+.mono-block { margin: 8px 0 0; padding: 12px; border-radius: var(--r-md); background: #0d1426; border: 1px solid var(--borde); font-size: 13px; max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.check input { width: 22px; height: 22px; margin: 0; accent-color: var(--era); flex: none; }

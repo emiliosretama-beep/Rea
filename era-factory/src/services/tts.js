@@ -4,48 +4,18 @@
 // la pista completa con una pausa entre secciones. Los tiempos de cada
 // sección salen de la duración REAL de su audio, no de una estimación.
 // Archivos: <mediaRoot>/<productionId>/narration-<versión>/
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { LLMError } from "../errors.js";
 import { LANGUAGES } from "../voices.js";
+import { MediaError, run } from "./process.js";
 
 const SAMPLE_RATE = 24000;
 const SECTION_PAUSE_S = 0.6;
 const MP3_BITRATE = "128k";
 
-export class TTSError extends LLMError {}
-
-function run(cmd, args, { input, signal, onLine } = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    let buffer = "";
-    const abort = () => child.kill("SIGKILL");
-    signal?.addEventListener("abort", abort, { once: true });
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-      buffer += chunk;
-      let nl;
-      while ((nl = buffer.indexOf("\n")) >= 0) {
-        const line = buffer.slice(0, nl).trim();
-        buffer = buffer.slice(nl + 1);
-        if (line) onLine?.(line);
-      }
-    });
-    child.stderr.on("data", (chunk) => (stderr = (stderr + chunk).slice(-4000)));
-    child.on("error", (err) => reject(err));
-    child.on("close", (code) => {
-      signal?.removeEventListener("abort", abort);
-      if (signal?.aborted) reject(new TTSError("Tarea cancelada.", { kind: "cancelled" }));
-      else if (code === 0) resolve({ stdout, stderr });
-      else reject(Object.assign(new Error(`${cmd} terminó con código ${code}`), { stdout, stderr }));
-    });
-    if (input !== undefined) child.stdin.end(input);
-  });
-}
+export { MediaError as TTSError };
+const TTSError = MediaError;
 
 export function createTTS(
   { python = "python3", script, modelPath, voicesPath, mediaRoot, ffmpeg = "ffmpeg", engineLabel = "Kokoro v1.0" },

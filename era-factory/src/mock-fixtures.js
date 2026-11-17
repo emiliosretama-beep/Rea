@@ -95,6 +95,15 @@ export const MOCK_FIXTURES = {
       { index: 5, reason: "La pregunta engancha al público joven." },
     ],
   },
+  "producer.beats": {
+    segments: [
+      { id: "hook", beats: [{ fromSentence: 0, onScreen: `${S} De qué va este video`, kind: "point" }] },
+      { id: "s1", beats: [{ fromSentence: 2, onScreen: "Lo básico primero", kind: "point" }, { fromSentence: 7, onScreen: "Paso a paso", kind: "quote" }] },
+      { id: "s2", beats: [{ fromSentence: 1, onScreen: "Cambia cómo lo usas", kind: "point" }] },
+      { id: "s3", beats: [{ fromSentence: 1, onScreen: "3 pasos concretos", kind: "number" }] },
+      { id: "outro", beats: [{ fromSentence: 1, onScreen: "Suscríbete", kind: "point" }] },
+    ],
+  },
   "script.factcheck": {
     checks: [
       { claimIndex: 0, verdict: "respaldado", note: "Coincide con la fuente 1." },

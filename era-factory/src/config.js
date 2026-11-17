@@ -34,6 +34,10 @@ export function loadConfig(env = process.env) {
       voicesPath: env.KOKORO_VOICES || fileURLToPath(new URL("../tools/models/voices-v1.0.bin", import.meta.url)),
       ffmpeg: env.FACTORY_FFMPEG || "ffmpeg",
     },
+    video: {
+      script: fileURLToPath(new URL("../tools/render_scenes.py", import.meta.url)),
+      fontsDir: env.FACTORY_FONTS || fileURLToPath(new URL("../tools/fonts", import.meta.url)),
+    },
     youtube: {
       apiKey: env.YOUTUBE_API_KEY || null,
       regionCode: env.YOUTUBE_REGION || "MX",

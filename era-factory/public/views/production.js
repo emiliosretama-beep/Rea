@@ -3,7 +3,8 @@
 import { STATUS_LABEL, api, askConfirm, esc, icon, minutes, number, pill, safeUrl, timeAgo, toast } from "../lib.js";
 import { agentName, debounce, store } from "../store.js";
 import { logList } from "./common.js";
-import { bindNarration, loadVoices, narrationHtml, narrationUnavailableHtml, revoice } from "./narration.js";
+import { bindNarration, loadVoices, narrationHtml, revoice } from "./narration.js";
+import { bindVideo, remount, videoHtml } from "./video.js";
 import { bindThumbnails, resetThumbnailEditor, thumbnailsHtml } from "./thumbnails.js";
 
 const WORDS_PER_MINUTE = 150; // mismo ritmo que usa el guionista en el servidor
@@ -14,6 +15,7 @@ const TABS = [
   { id: "scriptwriter", label: "Guion" },
   { id: "narrator", label: "Voz" },
   { id: "thumbnail-designer", label: "Miniaturas" },
+  { id: "producer", label: "Video" },
   { id: "log", label: "Registro" },
 ];
 
@@ -89,7 +91,7 @@ function plannedSummary(agents) {
   const planned = agents.filter((a) => !a.implemented);
   if (!planned.length) return "";
   return `<a class="node planned summary" href="#agentes"><div class="avatar">${icon("plus")}</div>
-    <div class="grow"><div class="name">${planned.length} agentes más</div>
+    <div class="grow"><div class="name">${planned.length} ${planned.length === 1 ? "agente más" : "agentes más"}</div>
     <div class="sub">${esc(planned.map((a) => a.name + (a.unavailableReason ? " (solo con servidor)" : "")).join(", "))}</div></div></a>`;
 }
 
@@ -357,14 +359,19 @@ function bindEditor() {
 function panelHtml() {
   if (state.tab === "log")
     return `<section class="card"><div class="core"><h2>Registro de la producción</h2>${logList(state.detail.logs.slice().reverse(), { tall: true })}</div></section>`;
-  if (state.tab === "narrator") {
-    const agent = store.status?.agents.find((a) => a.id === "narrator");
-    if (!agent?.implemented) return narrationUnavailableHtml(agent?.unavailableReason);
-  }
+  // Agentes que esta versión no puede ejecutar (voz y video en la versión online).
+  const agent = store.status?.agents.find((a) => a.id === state.tab);
+  if (agent && !agent.implemented)
+    return `<div class="banner info">${icon("info")}<div><strong>${esc(agent.name)}: no disponible en esta versión.</strong>
+      <p>${esc(agent.name)} ${esc(agent.unavailableReason ?? `llega en la fase ${agent.phase}`)}.</p></div></div>`;
   const task = taskOf(state.tab);
   if (!task)
     return `<div class="card"><div class="core empty"><strong>Este agente no forma parte de esta producción.</strong>Se creó antes de que existiera. Lanza un video nuevo para usarlo.</div></div>`;
   const block = taskStatusBlock(task);
+  if (task.agentId === "producer") {
+    if (!task.output?.video || ["pending", "running"].includes(task.status)) return block;
+    return block + videoHtml(task, { productionId: state.id, description: taskOf("scriptwriter")?.output?.description ?? "" });
+  }
   if (task.agentId === "thumbnail-designer") {
     if (!task.output || ["pending", "running"].includes(task.status)) return block;
     return block + thumbnailsHtml(task, thumbContext());
@@ -408,6 +415,7 @@ function drawPanel() {
   panel.innerHTML = panelHtml();
   if (state.draft && task?.status === "awaiting_approval" && task.agentId === "scriptwriter") bindEditor();
   if (state.tab === "narrator") bindNarration(panel);
+  if (state.tab === "producer") bindVideo(panel);
   if (state.tab === "thumbnail-designer" && task?.output && !["pending", "running"].includes(task.status))
     bindThumbnails(panel, task, {
       productionId: state.id,
@@ -494,6 +502,9 @@ async function act(button) {
       state.dirty = false;
       drawPanel();
       return;
+    } else if (action === "remount") {
+      await remount(state.root, state.id, taskId);
+      toast("Montando el video de nuevo…");
     } else if (action === "revoice") {
       await revoice(state.root, state.id, taskId);
       toast("Generando la narración con la nueva voz…");
@@ -502,7 +513,8 @@ async function act(button) {
       await api("POST", `/api/tasks/${taskId}/approve`, body);
       state.draft = null;
       state.dirty = false;
-      toast(taskOf("narrator")?.id === taskId ? "Narración aprobada." : "Guion aprobado.");
+      const agentId = state.detail.tasks.find((t) => t.id === taskId)?.agentId;
+      toast({ narrator: "Narración aprobada.", producer: "Video final aprobado." }[agentId] ?? "Guion aprobado.");
     }
     await load();
     drawAll();

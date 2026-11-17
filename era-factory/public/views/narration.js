@@ -69,11 +69,6 @@ export function narrationHtml(task, { productionId, current }) {
     }`;
 }
 
-export function narrationUnavailableHtml(reason) {
-  return `<div class="banner info">${icon("info")}<div><strong>La voz no está disponible en esta versión.</strong>
-    <p>El narrador ${esc(reason ?? "necesita la versión con servidor")}. Tu guion aprobado queda listo para narrarlo allí.</p></div></div>`;
-}
-
 // Eventos de la pestaña: saltar a una sección, resaltar la que suena y cambiar de voz.
 export function bindNarration(root) {
   const player = root.querySelector("#narr-player");

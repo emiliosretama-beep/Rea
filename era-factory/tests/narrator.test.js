@@ -83,11 +83,14 @@ test("idioma sin voces o Kokoro sin instalar: falla una vez con instrucciones cl
   assert.match(tasksOf(second.factory, p2.id).narrator.error, /setup_kokoro/);
 });
 
-test("versión online: el narrador queda fuera de la cadena y explica por qué", async () => {
+test("versión online: voz y montaje quedan fuera de la cadena y explican por qué", async () => {
   const { createRegistry } = await import("../src/agents/index.js");
-  const registry = createRegistry({ unavailable: { narrator: "solo funciona en la versión con servidor" } });
+  const { ONLINE_UNAVAILABLE } = await import("../src/cloud/boot.js");
+  const registry = createRegistry({ unavailable: ONLINE_UNAVAILABLE });
   assert.deepEqual(registry.pipeline().map((a) => a.id), ["trend-researcher", "audience-analyst", "scriptwriter", "thumbnail-designer"]);
-  const info = registry.describe().find((a) => a.id === "narrator");
-  assert.equal(info.implemented, false);
-  assert.match(info.unavailableReason, /versión con servidor/);
+  for (const id of ["narrator", "producer"]) {
+    const info = registry.describe().find((a) => a.id === id);
+    assert.equal(info.implemented, false);
+    assert.match(info.unavailableReason, /versión con servidor/);
+  }
 });
