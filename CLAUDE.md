@@ -28,3 +28,11 @@ propia ERA Studio.
   archivos de `public/`, nunca `online/rea-studio.html` a mano.
 - Emilio usa sobre todo iPhone y iPad: prueba cada cambio de interfaz en
   pantalla táctil y a 360 px de ancho.
+
+## Skills del proyecto (`.claude/skills/`)
+
+Adaptadas de ECC (affaan-m/ECC, MIT). Úsalas junto con las skills de Emilio:
+
+- `auditoria-botones`: botones o toques que "no hacen nada" o fallan en iPhone/iPad.
+- `seo-web`: SEO y vista previa al compartir de las webs de clientes y juegos.
+- `pulido-interfaz`: pase final de detalles; complementa a `web-pro-empresas`.
