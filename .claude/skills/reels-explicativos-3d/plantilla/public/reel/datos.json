@@ -1,0 +1,13 @@
+{
+  "id": "vacio",
+  "fps": 30,
+  "ancho": 1080,
+  "alto": 1920,
+  "duracionFrames": 60,
+  "escenas": [],
+  "voces": [],
+  "sonidos": [],
+  "musica": null,
+  "palabras": [],
+  "portada": { "escena": "", "frame": 0, "titulo": "Ejecuta hacer_reel.py" }
+}

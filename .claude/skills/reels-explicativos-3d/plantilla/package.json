@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "studio": "remotion studio",
-    "render": "remotion render Reel out/reel.mp4 --gl=angle --concurrency=2"
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Reel out/reel.mp4",
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",

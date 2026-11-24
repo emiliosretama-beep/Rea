@@ -1,0 +1,66 @@
+{
+  "id": "cielo-azul",
+  "titulo": "¿Por qué el cielo es azul y el atardecer naranja?",
+  "voz": { "motor": "piper", "modelo": "es_MX-claude-high", "velocidad": 1.0 },
+  "musica": true,
+  "marca": "",
+  "portada": {
+    "escena": "gancho",
+    "segundo": 3.0,
+    "titulo": "¿Por qué el cielo es azul?",
+    "subtitulo": "y el atardecer naranja"
+  },
+  "escenas": [
+    {
+      "id": "gancho",
+      "visual": "gancho",
+      "narracion": "¿Por qué el cielo es azul… pero al atardecer se pone naranja?",
+      "efecto": "whoosh"
+    },
+    {
+      "id": "luz-blanca",
+      "visual": "luz-blanca",
+      "narracion": "La luz del Sol parece blanca, pero en realidad es una mezcla de todos los colores.",
+      "efecto": "pop"
+    },
+    {
+      "id": "ondas",
+      "visual": "ondas",
+      "narracion": "Y cada color viaja como una onda. El azul tiene ondas cortas. El rojo, ondas largas.",
+      "efecto": "whoosh"
+    },
+    {
+      "id": "choque",
+      "visual": "choque",
+      "narracion": "Cuando la luz entra al aire, choca con moléculas diminutas de nitrógeno y oxígeno. Y esas moléculas desvían mucho más el azul que el rojo.",
+      "efecto": [{ "nombre": "impacto", "en": 0.7, "volumen": 0.5 }, { "nombre": "ding", "en": 1.2, "volumen": 0.35 }]
+    },
+    {
+      "id": "cielo-azul",
+      "visual": "cielo-azul",
+      "narracion": "Ese azul rebota por todo el cielo y te llega desde cualquier dirección. Por eso lo ves azul.",
+      "efecto": "whoosh"
+    },
+    {
+      "id": "atardecer",
+      "visual": "atardecer",
+      "narracion": "Pero al atardecer, la luz llega de lado y cruza casi cuarenta veces más aire. El azul se pierde por el camino, y solo te llegan los naranjas y rojos.",
+      "efecto": [{ "nombre": "riser", "antes": true, "volumen": 0.45 }, { "nombre": "impacto", "en": 0.0, "volumen": 0.4 }]
+    },
+    {
+      "id": "cierre",
+      "visual": "cierre",
+      "narracion": "Así que cada atardecer es luz que viajó más lejos para llegar a ti. Sígueme para más porqués.",
+      "efecto": [{ "nombre": "ding", "en": 2.6, "volumen": 0.4 }]
+    }
+  ],
+  "post": {
+    "texto": "¿Por qué el cielo es azul y el atardecer naranja? 🌅\n\nLa luz del Sol trae todos los colores. El aire desvía mucho más el azul (ondas cortas) que el rojo (ondas largas): eso se llama dispersión de Rayleigh. Al atardecer la luz cruza casi 40 veces más aire, el azul se pierde por el camino y solo nos llegan los naranjas y rojos.\n\n¿Qué otro «¿por qué?» quieres que explique? 👇",
+    "hashtags": ["#ciencia", "#física", "#porqué", "#cielo", "#atardecer", "#datoscuriosos", "#aprendeenreels"]
+  },
+  "fuentes": [
+    "NASA Space Place — Why is the sky blue?: https://spaceplace.nasa.gov/blue-sky/",
+    "NOAA NESDIS — Why is the sky blue?: https://www.nesdis.noaa.gov/about/k-12-education/atmosphere/why-the-sky-blue",
+    "Masa de aire en el horizonte ≈ 38 (Wikipedia, Air mass (astronomy)): https://en.wikipedia.org/wiki/Air_mass_(astronomy)"
+  ]
+}
