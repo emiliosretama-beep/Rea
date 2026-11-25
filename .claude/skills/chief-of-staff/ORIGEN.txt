@@ -1,0 +1,3 @@
+Origen: https://github.com/mattpocock/skills (commit d653911, 2026-11-25)
+Licencia: MIT (ver LICENSE).
+Revisada el 2026-11-25: solo instrucciones en texto, sin scripts, claves ni conexiones externas.
