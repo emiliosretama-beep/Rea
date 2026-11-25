@@ -311,7 +311,7 @@ def main():
     crudo = carpeta / "reel-sin-normalizar.mp4"
     print(f"  renderizando con {a.concurrencia} hilos... (en la nube tarda 2-4 min por cada 10 s)")
     sh(["npx", "remotion", "render", "src/index.ts", "Reel", str(crudo), f"--props={props}",
-        f"--concurrency={a.concurrencia}", "--log=error", *navegador()], cwd=proyecto)
+        f"--concurrency={a.concurrencia}", "--log=error", "--timeout=180000", *navegador()], cwd=proyecto)
     # 7. volumen estandar de Instagram/TikTok (-14 LUFS)
     sh(["ffmpeg", "-y", "-v", "error", "-i", str(crudo), "-c:v", "copy", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
         "-ar", "48000", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(carpeta / "reel.mp4")])
@@ -320,7 +320,7 @@ def main():
 
     if not a.sin_portada:
         sh(["npx", "remotion", "still", "src/index.ts", "Portada", str(carpeta / "portada.jpg"), f"--props={props}",
-            "--jpeg-quality=92", "--log=error", *navegador()], cwd=proyecto)
+            "--jpeg-quality=92", "--log=error", "--timeout=180000", *navegador()], cwd=proyecto)
         print(f"OK portada: {carpeta / 'portada.jpg'}")
 
     # 8. revision: un fotograma por escena + hoja de contactos
