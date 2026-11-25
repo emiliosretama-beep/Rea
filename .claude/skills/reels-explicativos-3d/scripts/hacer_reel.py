@@ -313,7 +313,9 @@ def main():
     sh(["npx", "remotion", "render", "src/index.ts", "Reel", str(crudo), f"--props={props}",
         f"--concurrency={a.concurrencia}", "--log=error", "--timeout=180000", *navegador()], cwd=proyecto)
     # 7. volumen estandar de Instagram/TikTok (-14 LUFS)
-    sh(["ffmpeg", "-y", "-v", "error", "-i", str(crudo), "-c:v", "copy", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
+    # se re-codifica el video a un bitrate razonable: el grano de pelicula infla mucho el archivo
+    sh(["ffmpeg", "-y", "-v", "error", "-i", str(crudo), "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+        "-maxrate", "12M", "-bufsize", "24M", "-pix_fmt", "yuv420p", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
         "-ar", "48000", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(carpeta / "reel.mp4")])
     crudo.unlink()
     print(f"OK video: {carpeta / 'reel.mp4'} ({duracion(carpeta / 'reel.mp4'):.1f} s)")

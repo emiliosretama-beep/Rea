@@ -95,7 +95,7 @@ export const Portada: React.FC<ReelDatos> = (datos) => {
       </Freeze>
       <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 35%, transparent 70%, rgba(0,0,0,0.5) 100%)" }} />
       {/* desde negativo: en la portada el titular ya esta completo (sin animacion de entrada) */}
-      <Titular texto={datos.portada.titulo} desde={-30} y={300} tamano={128} rotacion={-3} />
+      {datos.portada.titulo ? <Titular texto={datos.portada.titulo} desde={-30} y={300} tamano={128} rotacion={-3} /> : null}
       {datos.portada.subtitulo ? (
         <Titular texto={datos.portada.subtitulo} desde={-30} y={1380} tamano={78} color="#111" fondo="#ffcc33" rotacion={2} />
       ) : null}
