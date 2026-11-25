@@ -90,6 +90,22 @@ Kokoro y el alineador Parakeet en
 - La franja de subtítulos está en y = 965; la etiqueta de capítulo en y ≈ 64.
 - `capText()` conserva los puntos internos (`Claude.ai`) y pone todo en minúsculas.
 
+## Curso Claude Code 101 (lecciones en `claude-code-101/`)
+
+- **Personaje:** Emilio pidió que Claude sea el **monito pixelado de Claude Code**
+  (no el orbe). Está en `claude-code-101/leccion01/web/env8.js`: `clawd(ctx, x, y,
+  tamañoPíxel, t, {wave, look, walk, happy, sweat, glow, alpha, flip})`, con `x, y` en
+  los pies. Ese archivo también redefine `orb()` para que la laptop y los paneles de
+  la plantilla muestren al monito. Para una lección nueva: copiar la plantilla,
+  luego `env8.js` y la línea `<script src="env8.js">` de `index.html` de la lección 1.
+  Es un dibujo hecho a mano del personaje de Anthropic: sirve para estudiar; si un
+  video se publica, avisar a Emilio de que es su mascota.
+- **Leer la lección:** el entorno "Rea" ya permite `academy.claude.com`. La página
+  trae el resumen en HTML; la **transcripción del video** sale al dar clic en la
+  pestaña "Transcripción" con Playwright (script `claude-code-101/leer_leccion.js`).
+- Las lecciones de este curso son cortas (≈5 min de video): para llegar a ≈3.5–4 min
+  se agrega un ejemplo propio por idea y, si hace falta, un mapa del curso al final.
+
 ## 4. Al entregar
 
 Resumen corto: tabla de capítulos con lo que se aprende, qué revisar

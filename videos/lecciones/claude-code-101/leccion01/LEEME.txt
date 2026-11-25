@@ -1,0 +1,2 @@
+# Solo los archivos que cambian respecto a ../../plantilla.
+# Para regenerar: copiar la plantilla y encima esta carpeta; luego pasos 6-10 del README.
