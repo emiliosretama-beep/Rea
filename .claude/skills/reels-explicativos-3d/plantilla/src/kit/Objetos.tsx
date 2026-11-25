@@ -273,12 +273,24 @@ export const Etiqueta3D: React.FC<{
   color?: string;
   fondo?: string | null; // pastilla detras del texto
   opacidad?: number;
-}> = ({ texto, posicion = [0, 0, 0], alto = 0.6, color = "#ffffff", fondo = "rgba(10,12,24,0.72)", opacidad = 1 }) => {
+  mono?: boolean; // fuente monoespaciada (etiquetas de "codigo")
+  borde?: string | null; // color del borde de la pastilla
+}> = ({
+  texto,
+  posicion = [0, 0, 0],
+  alto = 0.6,
+  color = "#ffffff",
+  fondo = "rgba(10,12,24,0.72)",
+  opacidad = 1,
+  mono = false,
+  borde = null,
+}) => {
   const { tex, aspecto } = useMemo(() => {
     const px = 140;
     const c = document.createElement("canvas");
     const g = c.getContext("2d")!;
-    g.font = `900 ${px}px ReelFont, sans-serif`;
+    const fuente = mono ? `700 ${px}px ReelMono, monospace` : `900 ${px}px ReelFont, sans-serif`;
+    g.font = fuente;
     const w = Math.ceil(g.measureText(texto).width) + px;
     c.width = w;
     c.height = Math.ceil(px * 1.6);
@@ -287,10 +299,15 @@ export const Etiqueta3D: React.FC<{
       g2.fillStyle = fondo;
       const r = c.height / 2;
       g2.beginPath();
-      g2.roundRect(0, 0, c.width, c.height, r);
+      g2.roundRect(4, 4, c.width - 8, c.height - 8, mono ? 18 : r);
       g2.fill();
+      if (borde) {
+        g2.lineWidth = 6;
+        g2.strokeStyle = borde;
+        g2.stroke();
+      }
     }
-    g2.font = `900 ${px}px ReelFont, sans-serif`;
+    g2.font = fuente;
     g2.fillStyle = color;
     g2.textAlign = "center";
     g2.textBaseline = "middle";
@@ -299,7 +316,7 @@ export const Etiqueta3D: React.FC<{
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
     return { tex: t, aspecto: c.width / c.height };
-  }, [texto, color, fondo]);
+  }, [texto, color, fondo, mono, borde]);
   useLayoutEffect(() => () => tex.dispose(), [tex]);
   return (
     <sprite

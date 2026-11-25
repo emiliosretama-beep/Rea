@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { AbsoluteFill, Audio, Freeze, Sequence, continueRender, delayRender, staticFile } from "remotion";
 import type { ReelDatos } from "./tipos";
 import { VISUALES } from "./escenas";
-import { Marca, Subtitulos, Titular } from "./kit";
+import { Marca, Subtitulos, Titular, cargarFuente3D } from "./kit";
 
 /** Carga la fuente del reel antes de dibujar nada (el texto 3D se pinta en un canvas). */
 const useFuente = () => {
@@ -10,9 +10,10 @@ const useFuente = () => {
   const [handle] = useState(() => delayRender("Cargando fuente"));
   useEffect(() => {
     const f = new FontFace("ReelFont", `url(${staticFile("fuentes/InterDisplay-Black.otf")})`, { weight: "900" });
-    f.load()
-      .then((cargada) => {
-        document.fonts.add(cargada);
+    const mono = new FontFace("ReelMono", `url(${staticFile("fuentes/JetBrainsMono-Bold.ttf")})`, { weight: "700" });
+    Promise.all([f.load(), mono.load(), cargarFuente3D().catch(() => null)])
+      .then(([a, b]) => {
+        [a, b].forEach((c) => document.fonts.add(c));
         setLista(true);
         continueRender(handle);
       })
@@ -35,7 +36,7 @@ const Visual: React.FC<{ datos: ReelDatos; indice: number }> = ({ datos, indice 
       </AbsoluteFill>
     );
   }
-  return <Comp frames={e.frames} extra={e.extra ?? {}} />;
+  return <Comp frames={e.frames} desde={e.desde} extra={e.extra ?? {}} />;
 };
 
 export const Reel: React.FC<ReelDatos> = (datos) => {
@@ -72,8 +73,12 @@ export const Reel: React.FC<ReelDatos> = (datos) => {
           }}
         />
       ) : null}
-      <Subtitulos palabras={datos.palabras} />
-      <Marca total={datos.duracionFrames} usuario={datos.marca} />
+      {datos.subtitulos === "ninguno" ? null : datos.subtitulos === "cine" ? (
+        <Subtitulos palabras={datos.palabras} tamano={64} centroY={1330} acento="#ff8a4c" />
+      ) : (
+        <Subtitulos palabras={datos.palabras} />
+      )}
+      <Marca total={datos.duracionFrames} usuario={datos.marca} color={datos.subtitulos === "cine" ? "#ff8a4c" : undefined} />
     </AbsoluteFill>
   );
 };

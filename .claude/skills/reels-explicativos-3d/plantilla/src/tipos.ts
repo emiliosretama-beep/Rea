@@ -27,10 +27,12 @@ export type ReelDatos = {
   palabras: Palabra[];
   portada: { escena: string; frame: number; titulo: string; subtitulo?: string };
   marca?: string; // @usuario que se ve abajo, opcional
+  subtitulos?: "grande" | "cine" | "ninguno"; // estilo de subtitulos
 };
 
 // Lo que recibe cada componente de escena.
 export type PropsEscena = {
   frames: number; // duracion de la escena
+  desde: number; // fotograma del reel donde empieza (para contadores)
   extra: Record<string, unknown>;
 };

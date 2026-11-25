@@ -1,0 +1,59 @@
+{
+  "id": "eragames-cine",
+  "titulo": "Esto no es una grabación · ERAGames",
+  "estilo": "escritorio-cine",
+  "voz": { "motor": "piper", "modelo": "es_MX-claude-high", "velocidad": 1.08 },
+  "musica": true,
+  "volumen_musica": 0.1,
+  "subtitulos": "cine",
+  "portada": {
+    "escena": "gancho",
+    "segundo": 1.4,
+    "titulo": "Esto no es una grabación",
+    "subtitulo": "ERAGames"
+  },
+  "escenas": [
+    {
+      "id": "gancho",
+      "visual": "gancho",
+      "narracion": "Esto no es una grabación.",
+      "pausa": 0.9,
+      "efecto": [{ "nombre": "impacto", "en": 0.0, "volumen": 0.35 }, { "nombre": "whoosh", "en": 2.5, "volumen": 0.3 }]
+    },
+    {
+      "id": "modelo",
+      "visual": "modelo",
+      "narracion": "Es un auto de rally hecho con código, pieza por pieza.",
+      "efecto": [{ "nombre": "tic", "en": 0.3, "volumen": 0.3 }, { "nombre": "pop", "en": 2.6, "volumen": 0.35 }]
+    },
+    {
+      "id": "camara",
+      "visual": "camara",
+      "narracion": "Con lente de cincuenta milímetros y desenfoque real.",
+      "efecto": "whoosh"
+    },
+    {
+      "id": "luz",
+      "visual": "luz",
+      "narracion": "Una sola luz: el sol del atardecer entrando por la persiana.",
+      "efecto": [{ "nombre": "tic", "en": 0.4, "volumen": 0.25 }, { "nombre": "tic", "en": 0.8, "volumen": 0.25 }]
+    },
+    {
+      "id": "movimiento",
+      "visual": "movimiento",
+      "narracion": "Y cada movimiento sigue una curva suave.",
+      "efecto": "whoosh"
+    },
+    {
+      "id": "cierre",
+      "visual": "cierre",
+      "narracion": "Juégalo gratis. Busca ERAGames.",
+      "efecto": [{ "nombre": "riser", "antes": true, "volumen": 0.35 }, { "nombre": "impacto", "en": 0.1, "volumen": 0.45 }, { "nombre": "ding", "en": 1.4, "volumen": 0.3 }]
+    }
+  ],
+  "post": {
+    "texto": "Esto no es una grabación. 🎬\n\nTodo lo que ves —el escritorio, la luz del atardecer, el autito de rally— está hecho con código, sin filmar nada.\n\nEl auto viene de nuestros juegos de rally para navegador. Juégalo gratis: busca ERAGames en itch.io 🏁",
+    "hashtags": ["#ERAGames", "#gamedev", "#indiegame", "#threejs", "#3D", "#juegosgratis", "#rally"]
+  },
+  "fuentes": []
+}

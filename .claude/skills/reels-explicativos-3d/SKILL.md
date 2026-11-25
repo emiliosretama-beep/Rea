@@ -7,8 +7,10 @@ description: >
   sonido sintetizados, portada y texto del post. Entrega reel.mp4 (1080x1920, 30 fps, 30-60 s),
   portada.jpg y texto-del-post.txt. Úsala siempre que Emilio pida "un reel de por qué...",
   "explícame en un reel", "video explicativo 3D", "reel de ciencia / curiosidades / datos",
-  "hazme un reel viral que explique...", o mencione crearvideoviral, aunque no diga "3D" ni
-  "skill". Nunca publica sola en Instagram ni en ninguna red.
+  "hazme un reel viral que explique...", "reel cinematográfico", "esto no es una grabación",
+  presentar un juego o producto con look de cine, o mencione crearvideoviral, aunque no diga
+  "3D" ni "skill". Tiene dos estilos: explicativo y escritorio cinematográfico. Nunca publica
+  sola en Instagram ni en ninguna red.
 ---
 
 # Reels explicativos 3D
@@ -50,9 +52,11 @@ reels-explicativos-3d/
   scripts/hacer_reel.py      reel.json + escena.tsx -> reel.mp4, portada.jpg, post, revisión
   scripts/vistazo.mjs        renderiza solo unos fotogramas (pruebas rápidas)
   scripts/generar_sonidos.py whoosh, pop, ding, riser, impacto, tic y música de fondo
+  scripts/fuente_a_typeface.py convierte una fuente a JSON para texto 3D
   sonidos/*.wav              los efectos ya generados
-  plantilla/                 proyecto Remotion (kit 3D en src/kit, sin node_modules)
-  ejemplos/cielo-azul/       reel completo de ejemplo: reel.json + escena.tsx
+  plantilla/                 proyecto Remotion (kit 3D en src/kit, estilo cine en src/kit/cine)
+  ejemplos/cielo-azul/       estilo explicativo: reel.json + escena.tsx
+  ejemplos/eragames-cine/    estilo escritorio cinematográfico: reel.json + escena.tsx
 ```
 
 ## Paso 0: preparar el taller (una vez por sesión)
@@ -155,6 +159,62 @@ Reglas de composición (aprendidas en el ejemplo):
   atención (rayos, partículas clave), no en todo: si todo brilla, nada destaca.
 - Una idea visual por escena, con algo que se mueva desde el primer fotograma.
 - Usa el mismo lenguaje visual en todo el reel (colores de cada concepto, tipo de cámara).
+
+## Estilos
+
+Elige el estilo según el tema y ponlo en `reel.json` (`"estilo"`, informativo) y en los
+componentes que uses en `escena.tsx`.
+
+### Estilo "explicativo" (por defecto)
+
+El de `ejemplos/cielo-azul`: fondos degradados, objetos simbólicos brillantes (rayos,
+ondas, planetas), bloom fuerte y subtítulos grandes. Ideal para ciencia y "¿por qué...?".
+
+### Estilo "escritorio cinematográfico" (`ejemplos/eragames-cine`)
+
+Una habitación real al atardecer: escritorio de madera, computadora CRT beige, taza, planta,
+teclado, hoja de notas, y la luz del sol entrando por una persiana. Cada escena es otro plano
+de cámara sobre el mismo decorado. Sirve para presentar un producto, un juego o "cómo se hizo"
+con look de cine, y para ganchos tipo "Esto no es una grabación".
+
+Reglas de cine (ya vienen aplicadas por defecto en los bloques):
+
+- Lente de 35 mm (planos generales) o 50 mm (detalles): `mm={35}` / `mm={50}`.
+- Profundidad de campo física: `enfoque` = distancia en metros de la cámara al sujeto;
+  `apertura` más alta = fondo más desenfocado (0.002 casi todo nítido, 0.03 muy desenfocado).
+- Cámara nunca fija: `CamaraCine` siempre tiene una deriva leve, aunque `desde` = `hasta`.
+- UNA sola luz motivada: `SolDePersiana` (sombras reales de los listones y una ventana que
+  limita el parche de rayas) + un rebote muy suave. No agregues luces de estudio.
+- Neblina (`niebla`), `HacesDeLuz`, `Polvo`, bloom cálido (halation), grano y viñeta.
+- Tone mapping ACES (`THREE.ACESFilmicToneMapping`).
+- Movimientos con easing suave: `Easing.bezier(0.2, 0.8, 0.2, 1)`.
+- Escala en metros: la mesa está en y = 0 y la pared en z = -0.62. El parche de sol cae en la
+  pared hacia x ≈ 0, y ≈ 0.65 (`SOL_POR_DEFECTO`).
+
+Bloques del estilo (`import { ... } from "../kit"`):
+
+| Bloque | Para qué |
+|---|---|
+| `EscenaCine` | Lienzo del estilo: sombras, ACES, neblina, DOF (`BokehPass`), bloom, grano. Prop `modo`: `"final"` o `"wire"` (maqueta de líneas blancas sobre fondo claro). |
+| `PantallaPartida` | La misma escena mitad wireframe y mitad terminada; `corte` 0→1 la barre (transición wireframe → render). Dibuja dos lienzos solo mientras hace falta. |
+| `CamaraCine` | `desde`/`hasta`, `mira`/`miraHasta`, `mm`, `deriva`. |
+| `Pieza` | Cualquier objeto: en `final` es un mesh con sombras; en `wire` su contorno (`EdgesGeometry` con líneas gruesas). Usa `caja()`, `cilindro()`, `geo()` para no recrear geometrías. |
+| `Texto3D` | Letras gruesas extruidas con bisel que reciben luz y sombra (fuente `inter-black.typeface.json`, con acentos). |
+| `EtiquetaCodigo` | Etiqueta monoespaciada pegada a un objeto con una línea fina: `car.drift({ angle: 32 })`. |
+| `SolDePersiana`, `HacesDeLuz`, `Polvo` | La luz del atardecer por la persiana, los haces en la neblina y las motas de polvo. |
+| `Habitacion`, `CRT` (con terminal que escribe sola), `Teclado`, `Taza`, `Planta`, `Hoja`, `LenteCamara`, `AutoRally` | Decorado low-poly listo. |
+| `bezier()`, `CurvaVisible` | Curva bezier visible para explicar movimiento; `curva.getPointAt(t)` y `getTangentAt(t)` para mover objetos por ella. |
+| `TituloMono`, `EtiquetaPasada`, `ContadorFrames` | HUD 2D: título de concepto en mono naranja, "FRAME 0001 · PASS: WIRE" y contador de fotogramas. |
+
+En `reel.json` usa `"subtitulos": "cine"` (más pequeños y discretos) o `"ninguno"`. Cada
+componente de escena recibe también `desde` (fotograma donde empieza) para el contador.
+
+Para texto 3D con otra fuente: `python3 scripts/fuente_a_typeface.py fuente.otf salida.json`
+(necesita `pip install fonttools`).
+
+Límites honestos del estilo: es low-poly (cajas y cilindros con buen material y luz), no
+fotorrealista; el desenfoque es un efecto de posproceso (BokehPass), no un trazado de rayos,
+y en la nube renderiza a ~4-8 s por segundo de video (más durante la pantalla partida).
 
 ## Paso 4: probar rápido antes del render completo
 

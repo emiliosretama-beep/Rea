@@ -5,3 +5,4 @@ export * from "./Camara";
 export * from "./Objetos";
 export * from "./Texto2D";
 export * from "./Globo";
+export * from "./cine";

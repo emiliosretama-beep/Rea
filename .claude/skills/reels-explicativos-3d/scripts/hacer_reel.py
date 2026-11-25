@@ -283,6 +283,7 @@ def main():
         "portada": {"escena": esc_port["id"], "frame": min(esc_port["frames"] - 1, round(float(port.get("segundo", 1.5)) * FPS)),
                     "titulo": port.get("titulo", reel.get("titulo", "")), "subtitulo": port.get("subtitulo")},
         "marca": reel.get("marca") or None,
+        "subtitulos": reel.get("subtitulos", "grande"),
     }
     props = pub / "reel" / "datos.json"
     props.write_text(json.dumps(datos, ensure_ascii=False, indent=1))
@@ -290,8 +291,8 @@ def main():
     print(f"OK datos: {len(escenas)} escenas, {len(palabras)} palabras, {t:.1f} s ({total} fotogramas)")
     for x in escenas:
         print(f"   {x['id']:<14} {x['desde'] / FPS:6.2f}s  {x['frames'] / FPS:5.2f}s")
-    if not 25 <= t <= 65:
-        print(f"  aviso: el reel dura {t:.1f} s; lo ideal es 30-60 s")
+    if not 15 <= t <= 65:
+        print(f"  aviso: el reel dura {t:.1f} s; lo ideal es 20-60 s")
 
     # 5. texto del post
     post = reel.get("post", {})
