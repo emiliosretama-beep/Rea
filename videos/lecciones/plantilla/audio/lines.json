@@ -1,0 +1,296 @@
+[
+ {
+  "i": 0,
+  "text": "Bienvenido a la primera lecci\u00f3n del curso Claude 101: \u00bfQu\u00e9 es Claude?",
+  "start": 0.0,
+  "dur": 3.716
+ },
+ {
+  "i": 1,
+  "text": "En unos minutos vas a saber qu\u00e9 es, qu\u00e9 puede hacer por ti y desde d\u00f3nde puedes usarlo.",
+  "start": 3.956,
+  "dur": 5.017
+ },
+ {
+  "i": 2,
+  "text": "Empecemos por lo b\u00e1sico.",
+  "start": 9.093,
+  "dur": 1.607
+ },
+ {
+  "i": 3,
+  "text": "Claude es un asistente de inteligencia artificial, pensado para ayudarte en tu vida y en tu trabajo.",
+  "start": 10.82,
+  "dur": 5.54
+ },
+ {
+  "i": 4,
+  "text": "Pero la idea no es solo que responda preguntas: es que funcione como un compa\u00f1ero de pensamiento.",
+  "start": 16.48,
+  "dur": 5.44
+ },
+ {
+  "i": 5,
+  "text": "Alguien con quien analizar un problema, ordenar ideas y llegar a mejores soluciones.",
+  "start": 22.04,
+  "dur": 4.719
+ },
+ {
+  "i": 6,
+  "text": "Adem\u00e1s, Claude sigue principios claros.",
+  "start": 26.879,
+  "dur": 2.201
+ },
+ {
+  "i": 7,
+  "text": "Est\u00e1 entrenado para evitar respuestas t\u00f3xicas o discriminatorias, y para no ayudar con cosas ilegales o poco \u00e9ticas.",
+  "start": 29.2,
+  "dur": 7.02
+ },
+ {
+  "i": 8,
+  "text": "A este enfoque se le llama IA constitucional: Claude se entrena para alinearse con valores humanos y actuar de forma transparente.",
+  "start": 36.34,
+  "dur": 7.417
+ },
+ {
+  "i": 9,
+  "text": "Segundo punto: Claude es m\u00e1s que un chatbot.",
+  "start": 43.876,
+  "dur": 2.505
+ },
+ {
+  "i": 10,
+  "text": "Maneja conversaciones y tareas de texto de forma confiable y predecible: resumir, buscar informaci\u00f3n, escribir de forma creativa o en equipo, responder preguntas y programar.",
+  "start": 46.501,
+  "dur": 10.392
+ },
+ {
+  "i": 11,
+  "text": "Y tambi\u00e9n se puede guiar.",
+  "start": 57.013,
+  "dur": 1.492
+ },
+ {
+  "i": 12,
+  "text": "Puedes decirle qu\u00e9 personalidad, qu\u00e9 tono y qu\u00e9 comportamiento quieres, y lo sigue.",
+  "start": 58.625,
+  "dur": 4.348
+ },
+ {
+  "i": 13,
+  "text": "Seg\u00fan sus clientes, esto se traduce en menos respuestas da\u00f1inas, conversaciones m\u00e1s f\u00e1ciles y mejor control.",
+  "start": 63.093,
+  "dur": 6.457
+ },
+ {
+  "i": 14,
+  "text": "En pocas palabras: llegas al resultado que buscas con menos esfuerzo.",
+  "start": 69.67,
+  "dur": 4.0
+ },
+ {
+  "i": 15,
+  "text": "Ahora veamos sus cinco grandes capacidades.",
+  "start": 73.79,
+  "dur": 2.548
+ },
+ {
+  "i": 16,
+  "text": "Uno: escritura y creaci\u00f3n de contenido.",
+  "start": 76.458,
+  "dur": 2.342
+ },
+ {
+  "i": 17,
+  "text": "Desde una publicaci\u00f3n para redes, hasta un correo profesional o un informe complejo.",
+  "start": 78.921,
+  "dur": 4.76
+ },
+ {
+  "i": 18,
+  "text": "Puedes ir mejorando la estructura y la claridad junto con \u00e9l, hasta que el texto suene a ti.",
+  "start": 83.801,
+  "dur": 5.018
+ },
+ {
+  "i": 19,
+  "text": "Dos: investigaci\u00f3n y an\u00e1lisis.",
+  "start": 88.938,
+  "dur": 1.878
+ },
+ {
+  "i": 20,
+  "text": "Claude explora distintos \u00e1ngulos, re\u00fane hallazgos y analiza datos, y puedes subirle tus documentos.",
+  "start": 90.936,
+  "dur": 5.694
+ },
+ {
+  "i": 21,
+  "text": "Su ventana de contexto es de m\u00e1s de doscientos mil tokens: unas quinientas p\u00e1ginas o m\u00e1s.",
+  "start": 96.751,
+  "dur": 5.278
+ },
+ {
+  "i": 22,
+  "text": "Y en los planes Pro, Max, Ultra, Team y Enterprise, con los modelos compatibles, llega hasta un mill\u00f3n de tokens.",
+  "start": 102.149,
+  "dur": 6.12
+ },
+ {
+  "i": 23,
+  "text": "Tres: programaci\u00f3n.",
+  "start": 108.389,
+  "dur": 1.231
+ },
+ {
+  "i": 24,
+  "text": "Es una de sus mayores fortalezas: escribe, depura y explica c\u00f3digo en muchos lenguajes.",
+  "start": 109.741,
+  "dur": 5.17
+ },
+ {
+  "i": 25,
+  "text": "Cuatro: resoluci\u00f3n de problemas y razonamiento.",
+  "start": 115.03,
+  "dur": 2.79
+ },
+ {
+  "i": 26,
+  "text": "Matem\u00e1ticas, an\u00e1lisis estrat\u00e9gico, investigaci\u00f3n.",
+  "start": 117.941,
+  "dur": 3.166
+ },
+ {
+  "i": 27,
+  "text": "Claude puede responder casi al instante, o pensar antes de responder, paso a paso. A esa capacidad se le llama Thinking.",
+  "start": 121.226,
+  "dur": 6.948
+ },
+ {
+  "i": 28,
+  "text": "Y cinco: aprender cosas nuevas.",
+  "start": 128.295,
+  "dur": 2.027
+ },
+ {
+  "i": 29,
+  "text": "Claude se adapta a tu forma y a tu ritmo de aprender.",
+  "start": 130.442,
+  "dur": 3.004
+ },
+ {
+  "i": 30,
+  "text": "Incluso puede guiar tu razonamiento en lugar de darte la respuesta, para que desarrolles tu pensamiento cr\u00edtico.",
+  "start": 133.566,
+  "dur": 6.217
+ },
+ {
+  "i": 31,
+  "text": "Muy bien. \u00bfY d\u00f3nde puedes usar a Claude?",
+  "start": 139.903,
+  "dur": 2.129
+ },
+ {
+  "i": 32,
+  "text": "Claude es la inteligencia detr\u00e1s de varias herramientas.",
+  "start": 142.271,
+  "dur": 3.196
+ },
+ {
+  "i": 33,
+  "text": "La principal es Claude.ai, en el navegador, y en sus apps de escritorio y de celular.",
+  "start": 145.587,
+  "dur": 5.124
+ },
+ {
+  "i": 34,
+  "text": "Ah\u00ed conversas, escribes, investigas, analizas y creas archivos. Es la que usa este curso.",
+  "start": 150.831,
+  "dur": 5.444
+ },
+ {
+  "i": 35,
+  "text": "Claude Code es para programadores: edita archivos, ejecuta comandos y crea commits.",
+  "start": 156.395,
+  "dur": 4.799
+ },
+ {
+  "i": 36,
+  "text": "Claude Tag es Claude dentro de Slack: lo etiquetas en un hilo, o le hablas desde cualquier canal.",
+  "start": 161.314,
+  "dur": 5.209
+ },
+ {
+  "i": 37,
+  "text": "Claude Design convierte una idea, un boceto o una captura en una interfaz funcional, con un prototipo interactivo que puedes ajustar.",
+  "start": 166.643,
+  "dur": 7.598
+ },
+ {
+  "i": 38,
+  "text": "Y Claude for Microsoft 365 aparece como panel lateral en Excel, PowerPoint, Word y Outlook, trabajando sobre el documento abierto.",
+  "start": 174.361,
+  "dur": 8.967
+ },
+ {
+  "i": 39,
+  "text": "Hay planes Free, Pro, Max, Ultra, Team y Enterprise.",
+  "start": 183.448,
+  "dur": 2.902
+ },
+ {
+  "i": 40,
+  "text": "Y si inicias sesi\u00f3n, tus conversaciones, proyectos, memoria y preferencias se sincronizan entre tus dispositivos.",
+  "start": 186.47,
+  "dur": 6.718
+ },
+ {
+  "i": 41,
+  "text": "Repasemos.",
+  "start": 193.308,
+  "dur": 0.831
+ },
+ {
+  "i": 42,
+  "text": "Claude es un asistente de IA y un compa\u00f1ero de pensamiento, dise\u00f1ado con principios.",
+  "start": 194.259,
+  "dur": 4.845
+ },
+ {
+  "i": 43,
+  "text": "Es m\u00e1s que un chatbot, y puedes guiar su tono y su comportamiento.",
+  "start": 199.224,
+  "dur": 3.604
+ },
+ {
+  "i": 44,
+  "text": "Tiene cinco fortalezas: escribir, investigar, programar, razonar y ense\u00f1arte.",
+  "start": 202.948,
+  "dur": 4.616
+ },
+ {
+  "i": 45,
+  "text": "Y lo encuentras en la web, en el escritorio, en el celular, y dentro de otras herramientas.",
+  "start": 207.684,
+  "dur": 4.799
+ },
+ {
+  "i": 46,
+  "text": "Antes de seguir, piensa en esto: \u00bfqu\u00e9 tareas de tu semana podr\u00edan mejorar con Claude como compa\u00f1ero de pensamiento?",
+  "start": 212.603,
+  "dur": 6.591
+ },
+ {
+  "i": 47,
+  "text": "Revisa tu calendario y elige una.",
+  "start": 219.433,
+  "dur": 2.265
+ },
+ {
+  "i": 48,
+  "text": "En la pr\u00f3xima lecci\u00f3n: tu primera conversaci\u00f3n con Claude.",
+  "start": 221.819,
+  "dur": 3.396
+ }
+]

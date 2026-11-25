@@ -47,3 +47,10 @@ propia ERA Studio.
   voces `ef_dora`, `em_alex` o `em_santa` (`tts_kokoro.py` viene fijo en
   inglés). El alineador Parakeet es inglés: usa sus tiempos pero el texto del
   guion para los subtítulos.
+
+## Videos de lecciones (horizontales, para estudiar)
+
+- Cuando Emilio mande una lección de un curso (p. ej. un link de
+  academy.claude.com), sigue `videos/lecciones/README.md`: corre primero
+  `bash videos/setup.sh`, copia `videos/lecciones/plantilla/` (motor 1920x1080
+  con la Lección 1 de Claude 101 como ejemplo) y produce un video de ≈4 min.

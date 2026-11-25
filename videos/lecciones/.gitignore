@@ -1,0 +1,7 @@
+# se regeneran en cada lección
+*/audio/*.wav
+*/seg/
+*/stills/
+*/chk/
+*.mp4
+*.jpg
