@@ -42,6 +42,8 @@ propia ERA Studio.
   que clonar nada: en cada sesión nueva basta `bash videos/setup.sh`
   (paquetes de Node, Playwright 1.63.0 = Chromium de `/opt/pw-browsers`, voz
   ~1 GB). No correr `kit/setup.sh` ni `playwright install`.
+- En este repo usa `animacion` aunque también aparezca la skill de claude.ai
+  `videos-verticales-ia`: su contenido ya está en `estilos/remotion-ia`.
 - Toda skill nueva de animación o video se agrega como estilo dentro de
   `animacion` (pasos en su `SKILL.md`), revisándola antes con `skills-scout`.
 - Voz: Kokoro (thewh1teagle/kokoro-onnx). En español usa `lang="es"` y las
