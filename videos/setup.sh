@@ -19,7 +19,8 @@ cd "$KIT"
 [ -d node_modules/three ] || npm install --no-audit --no-fund
 node -e "process.exit(require('./node_modules/playwright/package.json').version==='1.63.0'?0:1)" 2>/dev/null || npm install --no-audit --no-fund playwright@1.63.0
 mkdir -p vendor
-[ -s vendor/gsap.min.js ] || curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js -o vendor/gsap.min.js
+[ -s vendor/gsap.min.js ] || curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js -o vendor/gsap.min.js \
+  || { npm install --no-audit --no-fund --no-save gsap@3.12.5 && cp node_modules/gsap/dist/gsap.min.js vendor/gsap.min.js; }   # si el proxy bloquea cdnjs
 
 say "voz Kokoro y alineador Parakeet"
 [ -x .venv/bin/python ] || python3 -m venv .venv
