@@ -48,3 +48,15 @@ craft-anything-cli doctor
 craft-anything-cli mcp            # y luego: enable_toolset browser → web_site_open → web_site_capture
 craft-anything-cli rebuild http://127.0.0.1:8765/ "Recreate this website as a single HTML file" --rounds 1
 ```
+
+## Comparación por tipo de objetivo (modo estudiar, Clean room)
+
+| Objetivo | Tiempo | Qué sacó | Qué no pudo |
+|---|---|---|---|
+| ERA Studio (app web propia) | ~8 s | Colores, fuente, radios, tamaños por ancho, sin scroll lateral | 0 menús (ERA no usa `aria-expanded`) |
+| Sitio de REA (8 400 px de alto, MIT) | ~13 s | 25 títulos, 77 enlaces, 2 fuentes, anchos de columna, **5 secciones desplegables abiertas y fotografiadas** | Nada notable |
+| Minijuego "Tramo Rápido" (canvas, hecho para la prueba) | ~6 s | Colores del fondo, la pista y el botón; tamaño del canvas; título | No juega: solo ve el primer cuadro. No sabe de controles, conos, tiempo ni reglas |
+| Video mp4 (8 s, hecho con ffmpeg) | <1 s | Solo tamaño y huella SHA-256 | En Clean room se niega; en Deep dice "un archivo que todavía no reconocemos" |
+
+Conclusión: es fuerte con páginas web, sirve poco para juegos de navegador en modo
+estudiar (los ve como una página estática) y no analiza video.
