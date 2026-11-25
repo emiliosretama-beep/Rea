@@ -1,0 +1,13 @@
+Skill combinada "animacion" (armada el 2026-11-25).
+
+- estilos/* (salvo remotion-ia) y kit/: https://github.com/artemnovitckii/claude-animation-skills
+  commit 86f7010 (2026-11-17), licencia MIT (ver LICENSE, Artem Novitckii).
+  Cambios: cada SKILL.md se renombró a GUIA.md; zach-3d-films (alias de
+  zach-d-films) quedó como fila de la tabla; kit/package.json pide
+  playwright 1.63.0 en vez de 1.49.1 para usar el Chromium del contenedor.
+  Revisado: instrucciones, plantillas y scripts de render locales. Sin
+  claves ni envío de datos; solo descarga GSAP (cdnjs), modelos de voz
+  (GitHub releases) y hyperframes por npx.
+- estilos/remotion-ia/GUIA.md: copia de la skill propia de Emilio
+  "videos-verticales-ia" (sincronizada desde claude.ai).
+- Lecciones horizontales: siguen en /videos/lecciones del repo.

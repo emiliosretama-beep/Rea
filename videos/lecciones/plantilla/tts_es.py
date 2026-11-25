@@ -2,7 +2,7 @@
 #   tts_kokoro.py [voice] [speed]     defaults: am_michael 1.12 (other voices: af_heart, am_adam, bf_emma, bm_george ...)
 import json, sys, os, shutil, tempfile, numpy as np, soundfile as sf
 ROOT = "/root/.claude/skills/stick-figure/engine"
-KIT = "/home/user/artemnovitckii/claude-animation-skills/kit"  # lo instala videos/setup.sh
+KIT = "/home/user/Rea/.claude/skills/animacion/kit"  # lo instala videos/setup.sh
 from kokoro_onnx import Kokoro, EspeakConfig
 import espeakng_loader
 

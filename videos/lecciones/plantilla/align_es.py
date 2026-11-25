@@ -1,7 +1,7 @@
 # Alineación frase por frase para español: usa audio/line_XX.wav y audio/lines.json de tts_es.py.
 # El ASR (Parakeet, inglés) solo aporta tiempos; el texto sale siempre del guion.
 import json, re, glob, os, shutil, difflib, unicodedata, numpy as np, soundfile as sf, sherpa_onnx
-KIT = "/home/user/artemnovitckii/claude-animation-skills/kit"
+KIT = "/home/user/Rea/.claude/skills/animacion/kit"
 d = glob.glob(KIT + "/models/sherpa-onnx-nemo-parakeet*")[0]
 rec = sherpa_onnx.OfflineRecognizer.from_transducer(encoder=f"{d}/encoder.int8.onnx", decoder=f"{d}/decoder.int8.onnx",
     joiner=f"{d}/joiner.int8.onnx", tokens=f"{d}/tokens.txt", model_type="nemo_transducer")

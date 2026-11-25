@@ -1,0 +1,5 @@
+# Lo instala videos/setup.sh en cada contenedor; no se sube
+kit/node_modules/
+kit/.venv/
+kit/models/
+kit/vendor/

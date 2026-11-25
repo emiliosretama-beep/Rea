@@ -35,14 +35,15 @@ propia ERA Studio.
   de animación quiere (no lo elijas tú): `/stick-figure`, `/zach-d-films`,
   `/map-route`, `/graph`, `/breakdown`, `/minimalistic-graphics`,
   `/low-poly`, `/minecraft`, `/kurzgesagt`, `/dan-koe`, o videos con
-  Remotion/IA (skill `videos-verticales-ia`). Puede mezclar varios.
-- Las skills vienen de <https://github.com/artemnovitckii/claude-animation-skills>.
-  El contenedor es efímero: en cada sesión nueva hay que clonarlo en
-  `/home/user/artemnovitckii/claude-animation-skills`, enlazar `skills/*` en
-  `~/.claude/skills/`, `npm install` en `kit/` y luego
-  `npm install playwright@1.63.0` (coincide con el Chromium de `/opt/pw-browsers`;
-  no correr `playwright install`). Para voz: `kit/setup.sh --voice` sin el
-  paso de Playwright (crea `kit/.venv` y baja ~1 GB de modelos).
+  Remotion/IA (`remotion-ia`). Puede mezclar varios.
+- Todos esos estilos están en **una sola skill**, `.claude/skills/animacion`
+  (`estilos/<estilo>/GUIA.md` + el `kit/` compartido), copiada de
+  <https://github.com/artemnovitckii/claude-animation-skills> (MIT). Ya no hay
+  que clonar nada: en cada sesión nueva basta `bash videos/setup.sh`
+  (paquetes de Node, Playwright 1.63.0 = Chromium de `/opt/pw-browsers`, voz
+  ~1 GB). No correr `kit/setup.sh` ni `playwright install`.
+- Toda skill nueva de animación o video se agrega como estilo dentro de
+  `animacion` (pasos en su `SKILL.md`), revisándola antes con `skills-scout`.
 - Voz: Kokoro (thewh1teagle/kokoro-onnx). En español usa `lang="es"` y las
   voces `ef_dora`, `em_alex` o `em_santa` (`tts_kokoro.py` viene fijo en
   inglés). El alineador Parakeet es inglés: usa sus tiempos pero el texto del

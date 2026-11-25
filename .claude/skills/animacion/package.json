@@ -1,0 +1,5 @@
+{
+  "//": "Los motores usan require(); sin esto heredan \"type\": \"module\" del package.json de REA",
+  "private": true,
+  "type": "commonjs"
+}

@@ -13,10 +13,10 @@ tiene todo lo necesario para hacerlo en un chat nuevo.
 ```bash
 bash /home/user/Rea/videos/setup.sh     # ~1 GB la primera vez; luego se salta lo instalado
 ```
-Deja: skills de animación en `~/.claude/skills/`, Playwright 1.63.0 (el del
+Deja, dentro de la skill `animacion` del repo: Playwright 1.63.0 (el del
 Chromium de `/opt/pw-browsers`; **no** correr `playwright install`), la voz
 Kokoro y el alineador Parakeet en
-`/home/user/artemnovitckii/claude-animation-skills/kit`.
+`/home/user/Rea/.claude/skills/animacion/kit`.
 
 ## 1. Formato acordado con Emilio (no cambiar sin preguntarle)
 
@@ -50,7 +50,7 @@ Kokoro y el alineador Parakeet en
    (p. ej. `("Projects", "Próyects")`). Los multi-palabra van antes que los cortos.
 6. **Voz y tiempos:**
    ```bash
-   PY=/home/user/artemnovitckii/claude-animation-skills/kit/.venv/bin/python
+   PY=/home/user/Rea/.claude/skills/animacion/kit/.venv/bin/python
    rm -f audio/words_ref.json
    $PY tts_es.py em_alex 1.02 && cp audio/vo_kokoro.wav audio/vo.wav && $PY align_es.py
    ```
@@ -70,7 +70,7 @@ Kokoro y el alineador Parakeet en
 8. **Revisar fotogramas a MITAD de cada escena** (no al final: ahí cae la
    transición con barrido y sale movido):
    ```bash
-   export NODE_PATH=/home/user/artemnovitckii/claude-animation-skills/kit/node_modules
+   export NODE_PATH=/home/user/Rea/.claude/skills/animacion/kit/node_modules
    node render_h.js stills 12.5,40.2,...      # escribe stills/s_*.jpg
    ```
    Verificar: nada importante en la franja de subtítulos (y ≈ 900–1010),

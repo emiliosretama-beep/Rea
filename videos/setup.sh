@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 # Prepara un contenedor nuevo para hacer videos (Claude Code en la nube).
-# Instala las skills de animación, Playwright compatible con el Chromium del
+# Las skills de animación ya vienen en el repo (.claude/skills/animacion); esto
+# instala sus paquetes de Node, Playwright compatible con el Chromium del
 # contenedor y la voz Kokoro + el alineador Parakeet (~1 GB, solo la primera vez).
+# Sustituye a kit/setup.sh, que corre "playwright install" (no se debe en la nube).
 # Se puede correr varias veces: lo que ya está instalado se salta.
 #   bash videos/setup.sh
 set -euo pipefail
-REPO=/home/user/artemnovitckii/claude-animation-skills
-KIT=$REPO/kit
+KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.claude/skills/animacion/kit"
 say() { printf '\n== %s\n' "$*"; }
-
-say "skills de animación"
-[ -d "$REPO/.git" ] || GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/artemnovitckii/claude-animation-skills "$REPO"
-mkdir -p ~/.claude/skills
-for d in "$REPO"/skills/*/; do n=$(basename "$d"); [ -e ~/.claude/skills/$n ] || ln -sfn "${d%/}" ~/.claude/skills/$n; done
 
 say "paquetes de Node (three.js, Playwright 1.63.0 = Chromium de /opt/pw-browsers)"
 cd "$KIT"
 [ -d node_modules/three ] || npm install --no-audit --no-fund
 node -e "process.exit(require('./node_modules/playwright/package.json').version==='1.63.0'?0:1)" 2>/dev/null || npm install --no-audit --no-fund playwright@1.63.0
 mkdir -p vendor
-[ -s vendor/gsap.min.js ] || curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js -o vendor/gsap.min.js
+[ -s vendor/gsap.min.js ] || curl -fsSL https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js -o vendor/gsap.min.js \
+  || (T=$(mktemp -d) && cd "$T" && npm pack -s gsap@3.12.5 >/dev/null && tar xzf gsap-3.12.5.tgz package/dist/gsap.min.js && cp package/dist/gsap.min.js "$KIT/vendor/")  # si cdnjs está bloqueado
+
+say "hyperframes (render de los estilos rápidos y 3D)"
+# onnxruntime-node intenta bajar binarios de GPU que ya no existen (404) y aborta la instalación
+npm_config_onnxruntime_node_install_cuda=skip npx --yes hyperframes@0.8.34 --version >/dev/null 2>&1 || echo "aviso: hyperframes no se pudo instalar"
 
 say "voz Kokoro y alineador Parakeet"
 [ -x .venv/bin/python ] || python3 -m venv .venv
